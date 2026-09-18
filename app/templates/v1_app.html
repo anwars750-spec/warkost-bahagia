@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Warkost Bahagia — V1</title><link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header><b>☕ Warkost Bahagia • V1</b><nav><span id="userEmail"></span><button id="logoutBtn">Logout</button></nav></header>
+<main>
+<section class="hero"><h1 id="workspaceTitle">Memuat workspace...</h1><p id="workspaceDescription"></p></section>
+<section class="card">
+<h2>Authenticated Session</h2>
+<div id="sessionInfo">Memverifikasi session...</div>
+</section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/static/v1-auth.js"></script>
+<script>window.addEventListener('DOMContentLoaded',()=>window.WarkostV1?.initApp());</script>
+</body>
+</html>
