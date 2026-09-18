@@ -33,7 +33,7 @@ Deno.test("orchestrator creates a validated payment instruction", async () => {
     amount: 23000,
     currency: "IDR",
     expiresAt: new Date(Date.now() + 1800000).toISOString(),
-    idempotencyKey: "test:" + input.orderReference,
+    idempotencyKey: "test:WB-1",
   });
   if (result.reference !== "REF-WB-1") throw new Error("reference mismatch");
   clearPaymentProvidersForTests();
@@ -57,7 +57,7 @@ Deno.test("orchestrator rejects provider mismatch", async () => {
     await createPaymentOrchestrator().createPayment("test", {
       orderReference: "WB-2", amount: 23000, currency: "IDR",
       expiresAt: new Date(Date.now() + 1800000).toISOString(),
-    idempotencyKey: "test:" + input.orderReference,
+      idempotencyKey: "test:WB-2",
     });
     throw new Error("mismatch accepted");
   } catch (error) {
