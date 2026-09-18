@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="id">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{u['role']|upper}} — Warkost Bahagia</title><link rel="stylesheet" href="/static/app.css"></head>
+<body>
+<header><b>Warkost Bahagia • {{u['role']|upper}}</b><nav>
+{% if u['role'] in ['admin','owner'] %}<a href="#overview">Dashboard</a><a href="#products">Menu & Stock</a><a href="#campaign">Campaign</a><a href="#settings">Delivery</a><a href="#reports">Sales Report</a>{% endif %}
+{% if u['role'] in ['kasir','kitchen','driver'] %}<span class="role-note">{{ 'Cross-check Order' if u['role']=='kasir' else ('Kitchen Queue' if u['role']=='kitchen' else 'Delivery') }}</span>{% endif %}<a href="/logout">Logout</a></nav></header>
+<main>
+{% if u['role'] in ['admin','owner'] %}<div class="sidebar-grid"><aside class="card side"><h3>Admin Menu</h3><a href="#overview">Dashboard</a><a href="#orders">Pesanan</a><a href="#products">Menu & Harga</a><a href="#products">Stock</a><a href="#campaign">Campaign & Promo</a><a href="#settings">Delivery Settings</a><a href="#printer">Printer</a><a href="#reports">Sales Report</a></aside><div>{% endif %}
+{% if u['role'] in ['admin','owner'] %}<section id="overview" class="stats"><div><small>Total Order</small><strong id="orders">0</strong></div><div><small>Revenue Selesai</small><strong id="revenue">Rp 0</strong></div><div><small>Completed</small><strong id="completed">0</strong></div></section>{% endif %}
+<section id="orders" class="card"><div class="section-title"><h2>{% if u['role']=='kasir' %}Kasir — Cross-check Order{% elif u['role']=='kitchen' %}Kitchen Queue{% elif u['role']=='driver' %}Delivery{% else %}Order Queue{% endif %}</h2><span class="role-note">{{u['role']|upper}}</span></div><div id="queue"></div></section>
+{% if u['role'] in ['admin','owner'] %}
+<section id="products" class="card"><h2>Menu, Harga & Stock</h2><form class="admin-form" onsubmit="saveProduct(event)"><input id="pname" placeholder="Nama menu" required><input id="pprice" type="number" min="0" placeholder="Harga" required><input id="pstock" type="number" min="0" placeholder="Stock" required><input id="pmin" type="number" min="0" placeholder="Min. stock" required><button class="primary">Tambah</button></form><div class="table-wrap"><table class="data-table"><thead><tr><th>Menu</th><th>Harga</th><th>Stock</th><th>Status</th><th></th></tr></thead><tbody id="productRows"></tbody></table></div></section>
+<section id="campaign" class="card"><h2>Campaign & Promo — Foundation</h2><p>Campaign sudah disiapkan sebagai fondasi. Engine diskon per menu, harga awal, harga promo, periode, quota, dan aturan promo akan menjadi milestone berikutnya.</p><input id="cname" placeholder="Nama campaign"><button class="primary" onclick="addCampaign()">Buat Campaign</button><div id="campaignRows"></div></section>
+<section id="settings" class="card"><h2>Delivery Settings</h2><p>Aturan ongkir: sampai radius gratis = Rp0. Di atas radius gratis sampai radius maksimal = tarif tambahan. Di atas radius maksimal = tidak dilayani.</p><div class="admin-form delivery-settings-form"><input id="freeRadius" type="number" min="0" step="0.1" placeholder="Radius gratis (km)"><input id="extraFee" type="number" min="0" step="500" placeholder="Ongkir tambahan"><input id="maxRadius" type="number" min="0.1" step="0.1" placeholder="Radius maksimal (km)"><span></span><button onclick="saveDeliverySettings()">Simpan Aturan</button></div><hr><h3>Titik Lokasi Warkost</h3><p class="role-note">Titik ini menjadi pusat perhitungan jarak. Set dari perangkat yang berada tepat di Warkost, lalu verifikasi sebelum disimpan.</p><div class="admin-form location-settings-form"><input id="cafeLat" type="number" step="any" placeholder="Latitude Warkost"><input id="cafeLon" type="number" step="any" placeholder="Longitude Warkost"><button type="button" onclick="captureCafeLocation()">📍 Ambil Titik Warkost</button><button type="button" onclick="saveCafeLocation()">Simpan Titik & Verifikasi</button></div><p id="cafeLocationStatus"></p><p id="settingMsg"></p></section>
+<section id="printer" class="card"><h2>Printer</h2><div class="admin-form"><input id="printerName" placeholder="Printer name"><input id="printerIp" placeholder="IP LAN"><input id="printerPort" type="number" value="9100"><span></span><button onclick="savePrinter()">Simpan</button></div></section>
+<section id="reports" class="card"><h2>Sales Report</h2><div id="reportBox">Memuat...</div></section>
+{% endif %}
+{% if u['role']=='driver' %}<section class="card"><h2>Driver</h2><button class="primary" onclick="toggleOnline()" id="online">Set Online</button><div id="stops"></div></section>{% endif %}
+{% if u['role'] in ['admin','owner'] %}</div></div>{% endif %}
+</main>
+<script>
+const role={{ u['role']|tojson }};
+const rupiah=n=>'Rp '+Number(n||0).toLocaleString('id-ID');
+function esc(v){const d=document.createElement('div');d.textContent=v??'';return d.innerHTML;}
+function actionButtons(o){
+  if(role==='kasir' && o.status==='pending_payment' && o.payment_status==='paid') return `<button onclick="st(${o.id},'confirmed')">Cross-check OK</button>`;
+  if(role==='kitchen' && o.status==='confirmed') return `<button onclick="st(${o.id},'processing')">Mulai Proses</button>`;
+  if(role==='kitchen' && o.status==='processing') return `<button onclick="st(${o.id},'ready')">Siap</button>`;
+  if(['admin','owner'].includes(role)){
+    if(o.status==='pending_payment' && o.payment_status==='paid') return `<button onclick="st(${o.id},'confirmed')">Konfirmasi</button> <button onclick="st(${o.id},'cancelled')">Batalkan</button>`;
+    if(o.status==='confirmed') return `<button onclick="st(${o.id},'processing')">Proses</button> <button onclick="st(${o.id},'cancelled')">Batalkan</button>`;
+    if(o.status==='processing') return `<button onclick="st(${o.id},'ready')">Ready</button> <button onclick="st(${o.id},'cancelled')">Batalkan</button>`;
+    if(o.status==='ready') return `<button onclick="st(${o.id},'completed')">Selesaikan</button>`;
+  }
+  return '';
+}
+async function load(){
+ const q=await fetch('/api/admin/orders');
+ if(q.ok){let rows=await q.json();queue.innerHTML=rows.map(o=>`<div class="order card" style="margin:12px 0"><b>${esc(o.order_no)}</b> — ${esc(o.customer_name)} — <b>${rupiah(o.total)}</b><br><small>${esc(o.status)} • ${esc(o.payment_status)} • ${esc(o.address)}</small><div style="margin-top:10px">${actionButtons(o)}</div></div>`).join('')||'<p>Belum ada order.</p>';}
+ if(['admin','owner'].includes(role)){
+  const rep=await fetch('/api/report');if(rep.ok){let d=await rep.json();orders.textContent=d.summary.orders;revenue.textContent=rupiah(d.summary.revenue);completed.textContent=d.summary.completed;reportBox.innerHTML=d.products.map(p=>`<div>${esc(p.name)} — ${p.qty} qty — ${rupiah(p.revenue)}</div>`).join('')||'Belum ada penjualan selesai.'}
+  loadProducts();loadCampaigns();loadSettings();loadPrinter();
+ }
+}
+async function st(id,status){let r=await fetch('/api/order/'+id+'/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});let d=await r.json();if(!r.ok)alert(d.error||'Gagal');load()}
+async function loadProducts(){let r=await fetch('/api/admin/products');if(!r.ok)return;let rows=await r.json();productRows.innerHTML=rows.map(p=>`<tr class="${p.stock<=p.stock_minimum?'low-stock':''}"><td>${esc(p.name)}</td><td>${rupiah(p.price)}</td><td>${p.stock}</td><td>${p.active?'Aktif':'Nonaktif'}</td><td><button onclick="editProduct(${p.id},${JSON.stringify(p.name)},${p.price},${p.stock},${p.stock_minimum})">Edit</button> <button onclick="deleteProduct(${p.id})">Nonaktifkan</button></td></tr>`).join('')}
+async function saveProduct(e){e.preventDefault();let r=await fetch('/api/admin/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:pname.value,price:pprice.value,stock:pstock.value,stock_minimum:pmin.value})});if(!r.ok)alert((await r.json()).error||'Gagal');e.target.reset();loadProducts()}
+async function editProduct(id,n,p,s,m){let nn=prompt('Nama menu',n);if(nn===null)return;let pp=prompt('Harga',p),ss=prompt('Stock',s),mm=prompt('Minimum stock',m);let r=await fetch('/api/admin/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,name:nn,price:pp,stock:ss,stock_minimum:mm})});if(!r.ok)alert((await r.json()).error||'Gagal');loadProducts()}
+async function deleteProduct(id){if(!confirm('Nonaktifkan menu ini?'))return;await fetch('/api/admin/products/'+id,{method:'DELETE'});loadProducts()}
+async function addCampaign(){let r=await fetch('/api/campaigns',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:cname.value})});alert(r.ok?'Campaign dibuat':(await r.json()).error);cname.value='';loadCampaigns()}
+async function loadCampaigns(){let r=await fetch('/api/campaigns');if(r.ok){let rows=await r.json();campaignRows.innerHTML=rows.map(c=>`<div style="padding:10px 0;border-bottom:1px solid #eee"><b>${esc(c.name)}</b> <span class="badge">${c.active?'ACTIVE':'OFF'}</span></div>`).join('')||'<p>Belum ada campaign.</p>'}}
+async function loadSettings(){let r=await fetch('/api/admin/settings');if(r.ok){let s=await r.json();freeRadius.value=s.delivery_free_radius_km||5;extraFee.value=s.delivery_extra_fee||5000;maxRadius.value=s.max_delivery_radius_km||8;cafeLat.value=s.cafe_latitude||'';cafeLon.value=s.cafe_longitude||''}}
+async function saveDeliverySettings(){let r=await fetch('/api/admin/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({delivery_free_radius_km:freeRadius.value,delivery_extra_fee:extraFee.value,max_delivery_radius_km:maxRadius.value})});let d=await r.json();settingMsg.textContent=r.ok?'Aturan delivery tersimpan.':(d.error||'Gagal menyimpan aturan.')}
+async function saveCafeLocation(){if(!cafeLat.value||!cafeLon.value){cafeLocationStatus.textContent='Titik Warkost wajib diisi.';return;}if(!confirm('Pastikan perangkat/koordinat ini benar-benar menunjuk ke lokasi Warkost Bahagia. Simpan dan tandai sebagai titik resmi?'))return;let r=await fetch('/api/admin/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cafe_latitude:cafeLat.value,cafe_longitude:cafeLon.value,cafe_location_verified:'1',cafe_location_accuracy_m:window.cafeAccuracy||''})});let d=await r.json();cafeLocationStatus.textContent=r.ok?'✓ Titik Warkost tersimpan dan diverifikasi.':(d.error||'Gagal menyimpan titik.')}
+function captureCafeLocation(){if(!navigator.geolocation){cafeLocationStatus.textContent='Browser tidak mendukung lokasi.';return;}cafeLocationStatus.textContent='Mengambil titik Warkost dari perangkat…';navigator.geolocation.getCurrentPosition(pos=>{cafeLat.value=pos.coords.latitude;cafeLon.value=pos.coords.longitude;cafeLocationStatus.textContent='Titik didapat. Pastikan perangkat benar-benar berada di lokasi Warkost sebelum menyimpan.';},err=>{cafeLocationStatus.textContent='Gagal mengambil lokasi. Pastikan izin lokasi aktif.';},{enableHighAccuracy:true,timeout:15000,maximumAge:0});}
+async function loadPrinter(){let r=await fetch('/api/printer');if(r.ok){let p=await r.json();printerName.value=p.name||'';printerIp.value=p.ip_address||'';printerPort.value=p.port||9100}}
+async function savePrinter(){let r=await fetch('/api/printer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:printerName.value,ip_address:printerIp.value,port:printerPort.value})});alert(r.ok?'Setting printer tersimpan':'Gagal')}
+async function toggleOnline(){let on=online.dataset.on!=='1';let r=await fetch('/api/driver/online',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({online:on})});if(r.ok){online.dataset.on=on?'1':'0';online.textContent=on?'🟢 ONLINE':'Set Online';loadStops()}}
+async function loadStops(){if(role!=='driver')return;let r=await fetch('/api/driver/stops');if(r.ok){let rows=await r.json();stops.innerHTML=rows.map(s=>`<div class="card" style="margin:12px 0"><b>#${esc(s.order_no)}</b> • ${esc(s.customer_name)}<br>${esc(s.address)}<br><small>${s.distance_km?s.distance_km.toFixed(2)+' km':''}</small><br><button onclick="claim(${s.order_id})">Sudah Diambil</button><form onsubmit="complete(event,${s.id})"><input type="file" accept="image/*" required><button>Foto & Selesai</button></form></div>`).join('')||'<p>Tidak ada delivery.</p>'}}
+async function claim(id){let r=await fetch('/api/driver/claim/'+id,{method:'POST'});let d=await r.json();if(!r.ok)alert(d.error);loadStops()}
+async function complete(e,id){e.preventDefault();let r=await fetch('/api/driver/complete/'+id,{method:'POST',body:new FormData(e.target)});let d=await r.json();if(!r.ok)alert(d.error);loadStops();load()}
+load();if(role==='driver')loadStops();setInterval(load,5000);if(role==='driver')setInterval(loadStops,5000);
+</script></body></html>
