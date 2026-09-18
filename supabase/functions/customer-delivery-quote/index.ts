@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
+// JWT verification is enforced at the Edge Function gateway; application-level role validation remains below.
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
 Deno.serve(async (req)=>{
   if(req.method==="OPTIONS") return new Response("ok",{headers:cors});
