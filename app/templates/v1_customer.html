@@ -2,44 +2,71 @@
 <html lang="id">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Warkost Bahagia — Customer V1</title><link rel="stylesheet" href="/static/app.css">
+<title>Warkost Bahagia — Customer</title><link rel="stylesheet" href="/static/app.css">
 </head>
-<body>
-<header><b>☕ Warkost Bahagia</b><nav><span id="userEmail"></span><button id="logoutBtn">Logout</button></nav></header>
-<main class="v1-customer">
-  <section class="hero"><h1>Pesan sekarang</h1><p>Menu, keranjang, checkout, dan order V1 langsung menggunakan Supabase.</p></section>
-  <div id="pageMsg" aria-live="polite"></div>
-  <section>
-    <div class="section-title"><h2>Menu</h2><span id="productCount" class="badge"></span></div>
-    <div id="menu" class="grid"></div>
+<body class="customer-app">
+<header class="customer-topbar">
+  <a class="customer-brand" href="/v1/customer"><span class="brand-mark">☕</span><span><b>Warkost</b><small>Bahagia</small></span></a>
+  <div class="customer-actions">
+    <a href="/v1/customer/orders" class="icon-link" aria-label="Pesanan Saya">▣<span>Pesanan</span></a>
+    <button id="logoutBtn" class="customer-avatar" aria-label="Logout">A</button>
+  </div>
+</header>
+
+<main class="customer-main">
+  <section class="customer-welcome">
+    <div><small>SELAMAT DATANG</small><h1>Ngopi lebih bahagia,<br>pesan dari sini.</h1><p>Good food. Good coffee. Happier together.</p></div>
+    <div class="welcome-cup">☕</div>
   </section>
-  <section class="card" style="margin-top:24px">
-    <div class="section-title"><h2>Keranjang</h2><button id="clearCartBtn">Kosongkan</button></div>
-    <div id="cartItems"></div>
-    <div class="totals">
+
+  <div id="pageMsg" aria-live="polite"></div>
+
+  <section class="customer-search">
+    <span>⌕</span><input id="menuSearch" placeholder="Cari menu favorit kamu..." autocomplete="off">
+  </section>
+
+  <section class="customer-section">
+    <div class="section-heading"><div><small>MENU</small><h2>Pilih favoritmu</h2></div><span id="productCount" class="badge"></span></div>
+    <div id="categoryChips" class="category-chips"></div>
+    <div id="menu" class="customer-product-grid"></div>
+  </section>
+
+  <section class="customer-cart-section" id="cartSection">
+    <div class="section-heading"><div><small>KERANJANG</small><h2>Pesanan kamu</h2></div><button id="clearCartBtn" class="text-button">Kosongkan</button></div>
+    <div id="cartItems" class="customer-cart-list"></div>
+    <div class="customer-totals">
       <div><span>Subtotal</span><b id="subtotal">Rp0</b></div>
-      <div><span>Delivery</span><b id="deliveryFee">Rp0</b></div>
+      <div><span>Delivery</span><b id="deliveryFee">Dihitung saat checkout</b></div>
       <div class="grand"><span>Total</span><b id="total">Rp0</b></div>
     </div>
   </section>
-  <section class="card" style="margin-top:24px">
-    <h2>Checkout</h2>
-    <div class="checkout-grid">
-      <input id="name" placeholder="Nama penerima" autocomplete="name" required>
-      <input id="phone" placeholder="Nomor HP aktif" autocomplete="tel" required>
+
+  <section class="customer-checkout" id="checkoutSection">
+    <div class="section-heading"><div><small>CHECKOUT</small><h2>Kirim ke mana?</h2></div></div>
+    <div class="checkout-fields">
+      <label>Nama penerima<input id="name" placeholder="Nama penerima" autocomplete="name" required></label>
+      <label>Nomor HP aktif<input id="phone" placeholder="08xxxxxxxxxx" autocomplete="tel" required></label>
       <div class="address-picker">
-        <label for="addressSearch"><b>Alamat pengantaran</b></label>
+        <label>Alamat pengantaran</label>
         <div id="addressSearch" class="maps-autocomplete"></div>
-        <input id="address" placeholder="Alamat terpilih" readonly>
+        <input id="address" placeholder="Pilih alamat dari rekomendasi peta" readonly>
         <div id="map" class="order-map"></div>
         <div id="locationStatus" class="location-status">Pilih alamat dari rekomendasi peta.</div>
         <input id="lat" type="hidden"><input id="lon" type="hidden">
       </div>
-      <textarea id="notes" rows="3" placeholder="Catatan order (opsional)"></textarea>
+      <label>Catatan order <span class="optional">(opsional)</span><textarea id="notes" rows="3" placeholder="Contoh: tanpa gula, jangan pedas..."></textarea></label>
     </div>
-    <button id="placeOrderBtn" class="primary" style="margin-top:16px">Buat Pesanan</button>
+    <button id="placeOrderBtn" class="customer-primary">Buat Pesanan</button>
   </section>
 </main>
+
+<nav class="customer-bottom-nav" aria-label="Navigasi customer">
+  <a class="active" href="/v1/customer"><span>⌂</span><small>Beranda</small></a>
+  <a href="/v1/customer/orders"><span>▣</span><small>Pesanan</small></a>
+  <a href="#cartSection" id="cartNav"><span>🛒</span><small>Keranjang <b id="cartBadge">0</b></small></a>
+  <button id="accountNav"><span>♙</span><small>Akun</small></button>
+</nav>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/static/v1-auth.js"></script>
 <script src="/static/v1-customer.js"></script>
