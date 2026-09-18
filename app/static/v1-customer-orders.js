@@ -8,7 +8,8 @@ async function init(){
   const cfg=await (await fetch('/api/v1/config')).json(); if(!cfg.url||!cfg.anon_key)throw Error('Supabase V1 belum dikonfigurasi.');
   client=supabase.createClient(cfg.url,cfg.anon_key);
   const {data:{session}}=await client.auth.getSession(); if(!session){location='/v1/login';return;}
-  document.getElementById('userEmail').textContent=session.user.email||'';
+  const userEmailEl=document.getElementById('userEmail');
+  if(userEmailEl) userEmailEl.textContent=session.user.email||'';
   document.getElementById('logoutBtn').onclick=async()=>{await client.auth.signOut();location='/v1/login';};
   await load(session.user.id);
  }catch(e){document.getElementById('ordersMsg').innerHTML='<div class="error">'+esc(e.message)+'</div>';}
