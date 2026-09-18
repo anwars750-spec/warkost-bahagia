@@ -18,6 +18,7 @@ export type CreatePaymentInput = {
   amount: number;
   currency: string;
   expiresAt: string;
+  idempotencyKey: string;
 };
 
 export type PaymentInstruction = {
