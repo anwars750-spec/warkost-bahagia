@@ -153,7 +153,7 @@ def v1_config():
 @bp.route('/api/v1/edge/<function_name>', methods=['POST'])
 def v1_edge_proxy(function_name):
     """Allowlist-only proxy for customer V1 Edge Functions."""
-    if function_name not in ('delivery-quote','order-create','driver-operations'):
+    if function_name not in ('delivery-quote','order-create','driver-operations','fulfillment-transition'):
         return jsonify(error='Edge function tidak diizinkan'),404
     token = request.headers.get('Authorization','').strip()
     if not token.startswith('Bearer '):
