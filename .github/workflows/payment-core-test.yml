@@ -1,0 +1,23 @@
+name: Payment Core Test Harness
+
+on:
+  push:
+    branches: ["migration/supabase-v1"]
+    paths:
+      - "supabase/functions/payment-webhook/**"
+      - ".github/workflows/payment-core-test.yml"
+  pull_request:
+    paths:
+      - "supabase/functions/payment-webhook/**"
+      - ".github/workflows/payment-core-test.yml"
+
+jobs:
+  payment-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Run payment webhook harness
+        run: deno test --allow-env supabase/functions/payment-webhook/harness.test.ts
