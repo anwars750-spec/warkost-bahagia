@@ -23,6 +23,18 @@ async function init(){
 async function refresh(){
  await loadCategories();
  await loadProducts();
+ await loadAudit();
+}
+async function loadAudit(){
+ const {data,error}=await client.from('audit_logs').select('id,action,entity_type,entity_id,old_value,new_value,created_at').order('created_at',{ascending:false}).limit(30);
+ if(error){document.getElementById('auditRows').innerHTML='<tr><td colspan="4">Audit belum dapat dimuat.</td></tr>';return;}
+ const rows=data||[];
+ document.getElementById('auditRows').innerHTML=rows.length?rows.map(x=>{
+  const oldName=x.old_value?.name||'',newName=x.new_value?.name||'',oldPrice=x.old_value?.selling_price,newPrice=x.new_value?.selling_price;
+  let change=oldName||newName||'-';
+  if(oldPrice!==undefined||newPrice!==undefined) change+=' • Harga jual '+rupiah(oldPrice)+' → '+rupiah(newPrice);
+  return '<tr><td>'+esc(new Date(x.created_at).toLocaleString('id-ID'))+'</td><td><span class="badge">'+esc(x.action)+'</span></td><td>'+esc(x.entity_type)+'</td><td>'+esc(change)+'</td></tr>';
+ }).join(''):'<tr><td colspan="4">Belum ada aktivitas.</td></tr>';
 }
 async function loadCategories(){
  const {data,error}=await client.from('categories').select('id,name,station,description,sort_order,active').order('sort_order',{ascending:true}).order('name',{ascending:true});
