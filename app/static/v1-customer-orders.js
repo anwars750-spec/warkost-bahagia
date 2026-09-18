@@ -17,7 +17,7 @@ async function load(uid){
  const {data,error}=await client.from('orders').select('id,order_number,order_status,subtotal,discount_total,delivery_fee,total_amount,delivery_address,estimated_delivery_minutes,created_at').eq('customer_id',uid).order('created_at',{ascending:false});
  if(error)throw error;
  const el=document.getElementById('orders');
- el.innerHTML=data?.length?data.map(o=>'<article class="card"><div class="section-title"><h2>'+esc(o.order_number)+'</h2><span class="badge">'+esc(labels[o.order_status]||o.order_status)+'</span></div><p>'+new Date(o.created_at).toLocaleString('id-ID')+'</p><p>'+esc(o.delivery_address)+'</p><div class="totals"><div><span>Subtotal</span><b>'+rupiah(o.subtotal)+'</b></div><div><span>Ongkir</span><b>'+rupiah(o.delivery_fee)+'</b></div><div class="grand"><span>Total</span><b>'+rupiah(o.total_amount)+'</b></div></div></article>').join(''):'<div class="card"><p>Belum ada pesanan.</p><a href="/v1/customer">Mulai pesan →</a></div>';
+ el.innerHTML=data?.length?data.map(o=>'<article class="card"><div class="section-title"><h2>'+esc(o.order_number)+'</h2><span class="badge">'+esc(labels[o.order_status]||o.order_status)+'</span></div><p>'+new Date(o.created_at).toLocaleString('id-ID')+'</p><p>'+esc(o.delivery_address)+'</p><div class="totals"><div><span>Subtotal</span><b>'+rupiah(o.subtotal)+'</b></div><div><span>Ongkir</span><b>'+rupiah(o.delivery_fee)+'</b></div><div class="grand"><span>Total</span><b>'+rupiah(o.total_amount)+'</b></div></div><a class="primary" href="/v1/customer/order?id='+encodeURIComponent(o.id)+'">Lihat tracking</a></article>').join(''):'<div class="card"><p>Belum ada pesanan.</p><a href="/v1/customer">Mulai pesan →</a></div>';
 }
 document.addEventListener('DOMContentLoaded',init);
 })();
