@@ -133,6 +133,9 @@ def v1_app():
 @bp.route('/v1/operations')
 def v1_operations():
     return render_template('v1_operations.html')
+@bp.route('/v1/admin')
+def v1_admin():
+    return render_template('v1_admin.html')
 
 @bp.route('/v1/driver')
 def v1_driver():
