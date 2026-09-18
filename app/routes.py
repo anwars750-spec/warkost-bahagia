@@ -104,6 +104,23 @@ def login():
         return render_template('login.html',error='Login gagal. Gunakan akun demo atau akun yang sudah terdaftar.')
     return render_template('login.html')
 
+@bp.route('/v1/login')
+def v1_login():
+    return render_template('v1_login.html')
+
+@bp.route('/v1/app')
+def v1_app():
+    return render_template('v1_app.html')
+
+@bp.route('/api/v1/config')
+def v1_config():
+    # Supabase anon key is a public browser credential; protect it with Supabase
+    # RLS and configure allowed APIs/quotas in the Supabase/Google dashboards.
+    return jsonify(
+        url=os.environ.get('SUPABASE_URL','').strip(),
+        anon_key=os.environ.get('SUPABASE_ANON_KEY','').strip()
+    )
+
 @bp.route('/logout')
 def logout(): session.clear(); return redirect(url_for('main.index'))
 
