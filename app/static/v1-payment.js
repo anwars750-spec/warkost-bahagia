@@ -12,7 +12,7 @@ async function init(){try{
  client.channel('payment-'+orderId).on('postgres_changes',{event:'UPDATE',schema:'public',table:'payments',filter:'order_id=eq.'+orderId},()=>load(session.user.id)).subscribe();
 }catch(e){show(e.message||'Gagal memuat pembayaran.');}}
 async function load(uid){
- const {data:o,error:oe}=await client.from('orders').select('id,order_number,total_amount,order_status,payment_status').eq('id',orderId).eq('customer_id',uid).single();if(oe)throw oe;
+ const {data:o,error:oe}=await client.from('orders').select('id,order_number,total_amount,order_status').eq('id',orderId).eq('customer_id',uid).single();if(oe)throw oe;
  const {data:p,error:pe}=await client.from('payments').select('status,method,provider,amount,provider_reference,paid_at,expired_at,created_at').eq('order_id',orderId).single();if(pe)throw pe;
  document.getElementById('orderNumber').textContent=o.order_number;document.getElementById('summary').innerHTML='<div class="totals"><div class="grand"><span>Total</span><b>'+rupiah(o.total_amount)+'</b></div></div>';
  const box=document.getElementById('paymentBox');
