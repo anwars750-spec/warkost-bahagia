@@ -130,6 +130,10 @@ def v1_customer():
 def v1_app():
     return render_template('v1_app.html')
 
+@bp.route('/v1/operations')
+def v1_operations():
+    return render_template('v1_operations.html')
+
 @bp.route('/api/v1/config')
 def v1_config():
     # Supabase anon key is a public browser credential; protect it with Supabase
