@@ -2,6 +2,20 @@
 let client,products=[],cart=new Map(),mapState={map:null,marker:null,ready:false,autocomplete:null};
 
 const rupiah=n=>'Rp'+Number(n||0).toLocaleString('id-ID');
+function showConfirm({subtotal,deliveryFee,total,items}){
+ return new Promise(resolve=>{
+  const old=document.getElementById('orderConfirmModal');if(old)old.remove();
+  const itemHtml=items.map(x=>'<div class="confirm-item"><span>'+esc(x.product.name)+' × '+x.quantity+'</span><b>'+rupiah(Number(x.product.selling_price)*x.quantity)+'</b></div>').join('');
+  const modal=document.createElement('div');modal.id='orderConfirmModal';modal.className='order-confirm-backdrop';
+  modal.innerHTML='<div class="order-confirm" role="dialog" aria-modal="true" aria-labelledby="confirmTitle"><div class="confirm-head"><div><small>KONFIRMASI PESANAN</small><h2 id="confirmTitle">Pesanan sudah benar?</h2></div><button type="button" id="confirmClose" aria-label="Tutup">×</button></div><div class="confirm-items">'+itemHtml+'</div><div class="confirm-total"><span>Subtotal</span><b>'+rupiah(subtotal)+'</b></div><div class="confirm-total"><span>Delivery</span><b>'+rupiah(deliveryFee)+'</b></div><div class="confirm-total grand"><span>Total</span><b>'+rupiah(total)+'</b></div><div class="confirm-actions"><button type="button" id="confirmCancel">Kembali</button><button type="button" id="confirmSubmit" class="primary">Ya, Lanjutkan / Buat Pesanan</button></div></div>';
+  document.body.appendChild(modal);
+  const close=v=>{modal.remove();resolve(v);};
+  document.getElementById('confirmClose').onclick=()=>close(false);
+  document.getElementById('confirmCancel').onclick=()=>close(false);
+  document.getElementById('confirmSubmit').onclick=()=>close(true);
+  modal.addEventListener('click',e=>{if(e.target===modal)close(false);});
+ });
+}
 const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 function message(t,type='error'){document.getElementById('pageMsg').innerHTML=t?'<div class="'+type+'">'+esc(t)+'</div>':'';}
 function getItems(){return [...cart.values()].map(x=>({product_id:x.product.id,quantity:x.quantity}));}
@@ -131,7 +145,7 @@ async function createOrder(){
  catch(e){message(e.message||'Alamat tidak tersedia untuk delivery.');return;}
  const deliveryFee=Number(q.delivery_fee||0);
  const btn=document.getElementById('placeOrderBtn');
- const confirmed=window.confirm('Buat pesanan sekarang?\\n\\nSubtotal: '+rupiah(t.subtotal)+'\\nDelivery: '+rupiah(deliveryFee)+'\\nTotal: '+rupiah(t.subtotal+deliveryFee));
+ const confirmed=await showConfirm({subtotal:t.subtotal,deliveryFee,total:t.subtotal+deliveryFee,items:[...cart.values()]});
  if(!confirmed)return;
  btn.disabled=true;btn.textContent='Membuat pesanan...';
  try{
