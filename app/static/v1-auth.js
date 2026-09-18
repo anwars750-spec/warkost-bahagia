@@ -28,7 +28,7 @@
       if(error) throw error;
       const profile=await getProfile(client,data.user.id);
       sessionStorage.setItem('warkost_v1_role',profile.role);
-      window.location='/v1/app';
+      window.location=profile.role==='customer'?'/v1/customer':'/v1/app';
     }catch(err){msg(err.message||'Login V1 gagal.');}
   }
 
