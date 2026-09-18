@@ -134,6 +134,10 @@ def v1_app():
 def v1_operations():
     return render_template('v1_operations.html')
 
+@bp.route('/v1/driver')
+def v1_driver():
+    return render_template('v1_driver.html')
+
 @bp.route('/api/v1/config')
 def v1_config():
     # Supabase anon key is a public browser credential; protect it with Supabase
@@ -146,7 +150,7 @@ def v1_config():
 @bp.route('/api/v1/edge/<function_name>', methods=['POST'])
 def v1_edge_proxy(function_name):
     """Allowlist-only proxy for customer V1 Edge Functions."""
-    if function_name not in ('delivery-quote','order-create'):
+    if function_name not in ('delivery-quote','order-create','driver-operations'):
         return jsonify(error='Edge function tidak diizinkan'),404
     token = request.headers.get('Authorization','').strip()
     if not token.startswith('Bearer '):
@@ -158,7 +162,7 @@ def v1_edge_proxy(function_name):
     try:
         body=request.get_data(cache=True)
         req=urllib.request.Request(
-            supabase_url.rstrip('/') + '/functions/v1/customer-' + function_name,
+            supabase_url.rstrip('/') + ('/functions/v1/driver-operations' if function_name=='driver-operations' else '/functions/v1/customer-' + function_name),
             data=body,
             headers={'Authorization':token,'Content-Type':'application/json'},
             method='POST'
