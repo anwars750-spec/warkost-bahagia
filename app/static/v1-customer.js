@@ -76,7 +76,7 @@ function renderCart(){
  el.innerHTML=cart.size?[...cart.values()].map(x=>'<div class="cartrow"><div><b>'+esc(x.product.name)+'</b><br><small>'+rupiah(x.product.selling_price)+' × '+x.quantity+'</small></div><div class="qty"><button data-minus="'+x.product.id+'">−</button><b>'+x.quantity+'</b><button data-plus="'+x.product.id+'">+</button></div></div>').join(''):'<p>Keranjang kosong.</p>';
  document.querySelectorAll('[data-minus]').forEach(b=>b.onclick=()=>change(b.dataset.minus,-1));
  document.querySelectorAll('[data-plus]').forEach(b=>b.onclick=()=>change(b.dataset.plus,1));
- const t=totals();document.getElementById('subtotal').textContent=rupiah(t.subtotal);document.getElementById('total').textContent=rupiah(t.total);
+ const t=totals();document.getElementById('subtotal').textContent=rupiah(t.subtotal);document.getElementById('total').textContent=rupiah(t.subtotal);
  document.getElementById('deliveryFee').textContent='Dihitung saat checkout';
 }
 async function initMaps(){
