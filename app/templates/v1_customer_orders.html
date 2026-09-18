@@ -1,10 +1,7 @@
 <!doctype html>
-<html lang="id">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Warkost Bahagia — Pesanan Saya</title><link rel="stylesheet" href="/static/app.css"></head>
-<body>
-<header><b>☕ Warkost Bahagia</b><nav><a href="/v1/customer">Menu</a><span id="userEmail"></span><button id="logoutBtn">Logout</button></nav></header>
-<main><section class="hero"><h1>Pesanan Saya</h1><p>Status order Anda diambil langsung dari Supabase.</p></section><div id="ordersMsg"></div><section id="orders" class="grid"></section></main>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/static/v1-customer-orders.js"></script>
-</body></html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Warkost Bahagia — Pesanan</title><link rel="stylesheet" href="/static/app.css"></head>
+<body class="customer-app">
+<header class="customer-topbar"><a class="customer-brand" href="/v1/customer"><span class="brand-mark">☕</span><span><b>Warkost</b><small>Bahagia</small></span></a><div class="customer-actions"><button id="logoutBtn" class="customer-avatar">A</button></div></header>
+<main class="customer-main"><section class="customer-page-head"><small>AKTIVITAS</small><h1>Pesanan Saya</h1><p>Pantau pesanan dan status pengantaranmu.</p></section><div id="ordersMsg"></div><section id="orders" class="customer-order-list"></section></main>
+<nav class="customer-bottom-nav"><a href="/v1/customer"><span>⌂</span><small>Beranda</small></a><a class="active" href="/v1/customer/orders"><span>▣</span><small>Pesanan</small></a><a href="/v1/customer#cartSection"><span>🛒</span><small>Keranjang</small></a><button><span>♙</span><small>Akun</small></button></nav>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="/static/v1-customer-orders.js"></script></body></html>
