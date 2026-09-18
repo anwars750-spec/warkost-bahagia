@@ -24,7 +24,7 @@ begin
     from public.profiles
     where role = v_role and is_active = true
     on conflict do nothing;
-    get diagnostics v_count = v_count + row_count;
+    v_count := v_count + (select count(*) from public.notifications where order_id=p_order_id and type=p_type and user_id in (select id from public.profiles where role=v_role));
   end loop;
   return v_count;
 end;
