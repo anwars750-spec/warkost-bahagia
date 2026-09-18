@@ -20,4 +20,4 @@ jobs:
         with:
           deno-version: v2.x
       - name: Run payment webhook harness
-        run: deno test --allow-env supabase/functions/payment-webhook/harness.test.ts
+        run: deno test --allow-env supabase/functions/payment-webhook/harness.test.ts supabase/functions/payment-webhook/core-validation.test.ts supabase/functions/payment-webhook/idempotency.test.ts supabase/functions/payment-webhook/state-machine.test.ts
