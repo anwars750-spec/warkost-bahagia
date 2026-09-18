@@ -59,7 +59,8 @@ async function init(){
   const {data:profile,error:pe}=await client.from('profiles').select('full_name,phone,role,is_active').eq('id',session.user.id).single();
   if(pe)throw pe;
   if(profile.role!=='customer'||!profile.is_active){await client.auth.signOut();throw new Error('Workspace ini hanya untuk customer aktif.');}
-  document.getElementById('userEmail').textContent=session.user.email||'';
+  const userEmailEl=document.getElementById('userEmail');
+  if(userEmailEl) userEmailEl.textContent=session.user.email||'';
   document.getElementById('name').value=profile.full_name||'';
   document.getElementById('phone').value=profile.phone||'';
   document.getElementById('logoutBtn').onclick=async()=>{await client.auth.signOut();location='/v1/login';};
@@ -178,7 +179,7 @@ function bindCustomerUI(){
  document.getElementById('placeOrderBtn').onclick=createOrder;
  document.getElementById('menuSearch').addEventListener('input',renderMenu);
  document.getElementById('cartNav').onclick=e=>{e.preventDefault();document.getElementById('cartSection').scrollIntoView({behavior:'smooth'});};
- document.getElementById('accountNav').onclick=()=>{document.getElementById('userEmail').scrollIntoView({behavior:'smooth',block:'center'});};
+ document.getElementById('accountNav').onclick=()=>window.scrollTo({top:0,behavior:'smooth'});
 }
 document.addEventListener('DOMContentLoaded',init);
 })();
