@@ -50,19 +50,19 @@ begin
   end if;
 
   select
-    coalesce((select value::numeric from public.settings where key='delivery_free_radius_km'),5),
-    coalesce((select value::numeric from public.settings where key='max_delivery_radius_km'),8),
-    coalesce((select value::numeric from public.settings where key='delivery_extra_fee'),5000)
+    coalesce((select (value_json #>> '{}')::numeric from public.settings where key='delivery_free_radius_km'),5),
+    coalesce((select (value_json #>> '{}')::numeric from public.settings where key='max_delivery_radius_km'),8),
+    coalesce((select (value_json #>> '{}')::numeric from public.settings where key='delivery_extra_fee'),5000)
   into v_free_radius,v_max_radius,v_extra_fee;
 
   if v_free_radius<0 or v_max_radius<=0 or v_free_radius>v_max_radius or v_extra_fee<0
     then raise exception 'Delivery settings are invalid'; end if;
 
   v_distance := 6371 * 2 * asin(sqrt(
-    power(sin(radians(p_latitude - coalesce((select value::numeric from public.settings where key='cafe_latitude'),-6.9218))/2),2)
-    + cos(radians(coalesce((select value::numeric from public.settings where key='cafe_latitude'),-6.9218)))
+    power(sin(radians(p_latitude - coalesce((select (value_json #>> '{}')::numeric from public.settings where key='cafe_latitude'),-6.9218))/2),2)
+    + cos(radians(coalesce((select (value_json #>> '{}')::numeric from public.settings where key='cafe_latitude'),-6.9218)))
     * cos(radians(p_latitude))
-    * power(sin(radians(p_longitude - coalesce((select value::numeric from public.settings where key='cafe_longitude'),106.9270))/2),2)
+    * power(sin(radians(p_longitude - coalesce((select (value_json #>> '{}')::numeric from public.settings where key='cafe_longitude'),106.9270))/2),2)
   ));
 
   if v_distance > v_max_radius then raise exception 'Location is outside delivery radius'; end if;
