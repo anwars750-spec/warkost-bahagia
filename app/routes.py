@@ -139,6 +139,32 @@ def v1_config():
         anon_key=os.environ.get('SUPABASE_ANON_KEY','').strip()
     )
 
+@bp.route('/api/payment/create', methods=['POST'])
+def payment_create():
+    token = request.headers.get('Authorization','').strip()
+    if not token.startswith('Bearer '):
+        return jsonify(error='Authentication required'),401
+    supabase_url = os.environ.get('SUPABASE_URL','').strip()
+    if not supabase_url:
+        return jsonify(error='Supabase V1 belum dikonfigurasi.'),503
+    import urllib.request, urllib.error, json as _json
+    try:
+        body = request.get_data(cache=True)
+        req = urllib.request.Request(
+            supabase_url.rstrip('/') + '/functions/v1/payment-create',
+            data=body,
+            headers={'Authorization':token,'Content-Type':'application/json'},
+            method='POST'
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return jsonify(_json.loads(resp.read().decode('utf-8'))), resp.status
+    except urllib.error.HTTPError as exc:
+        try: payload=_json.loads(exc.read().decode('utf-8'))
+        except Exception: payload={'error':'Payment service error'}
+        return jsonify(payload),exc.code
+    except Exception:
+        return jsonify(error='Payment service tidak dapat dihubungi.'),502
+
 @bp.route('/logout')
 def logout(): session.clear(); return redirect(url_for('main.index'))
 
