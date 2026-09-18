@@ -1,12 +1,14 @@
 <!doctype html>
-<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Warkost Bahagia — Tracking</title><link rel="stylesheet" href="/static/app.css"></head>
-<body>
-<header><b>☕ Warkost Bahagia</b><nav><a href="/v1/customer/orders">Pesanan</a><button id="logoutBtn">Logout</button></nav></header>
-<main><section class="hero"><h1 id="orderNumber">Tracking Pesanan</h1><p id="orderMeta">Memuat...</p></section>
-<div id="msg"></div><section class="card"><h2>Status Pesanan</h2><div id="statusTimeline"></div></section>
-<section class="card" style="margin-top:20px"><h2>Ringkasan</h2><div id="summary"></div></section>
-<section class="card" style="margin-top:20px"><h2>Pengantaran</h2><div id="delivery"></div></section>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Warkost Bahagia — Tracking</title><link rel="stylesheet" href="/static/app.css"></head>
+<body class="customer-app">
+<header class="customer-topbar"><a class="customer-brand" href="/v1/customer"><span class="brand-mark">☕</span><span><b>Warkost</b><small>Bahagia</small></span></a><a class="back-icon" href="/v1/customer/orders">←</a></header>
+<main class="customer-main customer-narrow">
+<a class="back-link" href="/v1/customer/orders">← Semua Pesanan</a>
+<section class="tracking-head"><small id="orderMeta">MEMUAT...</small><h1 id="orderNumber">Tracking Pesanan</h1></section>
+<div id="msg"></div>
+<section class="tracking-status"><div class="section-heading"><div><small>STATUS</small><h2>Perjalanan pesanan</h2></div></div><div id="statusTimeline"></div></section>
+<section class="tracking-card"><small>RINGKASAN</small><h2>Detail pesanan</h2><div id="summary"></div></section>
+<section class="tracking-card"><small>PENGANTARAN</small><h2>Alamat & delivery</h2><div id="delivery"></div></section>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="/static/v1-customer-order-detail.js"></script>
-</body></html>
+<nav class="customer-bottom-nav"><a href="/v1/customer"><span>⌂</span><small>Beranda</small></a><a class="active" href="/v1/customer/orders"><span>▣</span><small>Pesanan</small></a><a href="/v1/customer#cartSection"><span>🛒</span><small>Keranjang</small></a><button><span>♙</span><small>Akun</small></button></nav>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="/static/v1-customer-order-detail.js"></script></body></html>
