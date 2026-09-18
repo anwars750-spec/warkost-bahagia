@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Warkost Bahagia — Customer V1</title><link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header><b>☕ Warkost Bahagia</b><nav><span id="userEmail"></span><button id="logoutBtn">Logout</button></nav></header>
+<main class="v1-customer">
+  <section class="hero"><h1>Pesan sekarang</h1><p>Menu, keranjang, checkout, dan order V1 langsung menggunakan Supabase.</p></section>
+  <div id="pageMsg" aria-live="polite"></div>
+  <section>
+    <div class="section-title"><h2>Menu</h2><span id="productCount" class="badge"></span></div>
+    <div id="menu" class="grid"></div>
+  </section>
+  <section class="card" style="margin-top:24px">
+    <div class="section-title"><h2>Keranjang</h2><button id="clearCartBtn">Kosongkan</button></div>
+    <div id="cartItems"></div>
+    <div class="totals">
+      <div><span>Subtotal</span><b id="subtotal">Rp0</b></div>
+      <div><span>Delivery</span><b id="deliveryFee">Rp0</b></div>
+      <div class="grand"><span>Total</span><b id="total">Rp0</b></div>
+    </div>
+  </section>
+  <section class="card" style="margin-top:24px">
+    <h2>Checkout</h2>
+    <div class="checkout-grid">
+      <input id="name" placeholder="Nama penerima" autocomplete="name" required>
+      <input id="phone" placeholder="Nomor HP aktif" autocomplete="tel" required>
+      <div class="address-picker">
+        <label for="addressSearch"><b>Alamat pengantaran</b></label>
+        <div id="addressSearch" class="maps-autocomplete"></div>
+        <input id="address" placeholder="Alamat terpilih" readonly>
+        <div id="map" class="order-map"></div>
+        <div id="locationStatus" class="location-status">Pilih alamat dari rekomendasi peta.</div>
+        <input id="lat" type="hidden"><input id="lon" type="hidden">
+      </div>
+      <textarea id="notes" rows="3" placeholder="Catatan order (opsional)"></textarea>
+    </div>
+    <button id="placeOrderBtn" class="primary" style="margin-top:16px">Buat Pesanan</button>
+  </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/static/v1-auth.js"></script>
+<script src="/static/v1-customer.js"></script>
+</body>
+</html>
