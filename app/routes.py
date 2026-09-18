@@ -110,6 +110,10 @@ def login():
 def v1_login():
     return render_template('v1_login.html')
 
+@bp.route('/v1/customer/order')
+def v1_customer_order_detail():
+    return render_template('v1_customer_order_detail.html')
+
 @bp.route('/v1/customer/orders')
 def v1_customer_orders():
     return render_template('v1_customer_orders.html')
