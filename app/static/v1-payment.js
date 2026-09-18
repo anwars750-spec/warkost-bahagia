@@ -14,14 +14,14 @@ async function init(){try{
 async function load(uid){
  const {data:o,error:oe}=await client.from('orders').select('id,order_number,total_amount,order_status').eq('id',orderId).eq('customer_id',uid).single();if(oe)throw oe;
  const {data:p,error:pe}=await client.from('payments').select('status,method,provider,amount,provider_reference,paid_at,expired_at,created_at').eq('order_id',orderId).single();if(pe)throw pe;
- document.getElementById('orderNumber').textContent=o.order_number;document.getElementById('summary').innerHTML='<div class="totals"><div class="grand"><span>Total</span><b>'+rupiah(o.total_amount)+'</b></div></div>';
+ document.getElementById('orderNumber').textContent=o.order_number;document.getElementById('summary').innerHTML='<div class="payment-total"><span>Total pembayaran</span><strong>'+rupiah(o.total_amount)+'</strong></div>';
  const box=document.getElementById('paymentBox');
  if(p.status==='pending'){
-  box.innerHTML='<h2>QRIS</h2><p>Nominal: <b>'+rupiah(p.amount)+'</b></p><p>Status: <b>Menunggu pembayaran</b></p><button id="createPaymentBtn" class="primary">Siapkan Pembayaran</button><div id="paymentResult"></div><div class="card"><p>Payment provider akan mengembalikan instruksi pembayaran. Status PAID tetap hanya ditentukan oleh server.</p><a href="/v1/customer/order?id='+encodeURIComponent(orderId)+'">Lihat tracking</a></div>';
+  box.innerHTML='<div class="payment-status"><span class="payment-dot"></span><div><b>Menunggu pembayaran</b><small style="display:block;color:#8a7a6d;margin-top:3px">Order '+esc(o.order_number)+'</small></div></div><div class="payment-method"><b>Metode pembayaran</b><p style="margin:7px 0 0;color:#7a6c61">QRIS / Bank BTN</p><small>Nominal '+rupiah(p.amount)+'</small></div><button id="createPaymentBtn" class="payment-action">Siapkan Pembayaran</button><div id="paymentResult" class="payment-result"></div><div class="payment-help">Pembayaran akan diverifikasi oleh server. Jangan menandai pesanan sebagai lunas secara manual.</div><a class="back-link" href="/v1/customer/order?id='+encodeURIComponent(orderId)+'">Lihat tracking →</a>';
   document.getElementById('createPaymentBtn').onclick=createPayment;
  }else{
   const labels={paid:'Pembayaran terverifikasi',failed:'Pembayaran gagal',expired:'Pembayaran kedaluwarsa'};
-  box.innerHTML='<h2>'+esc(labels[p.status]||p.status)+'</h2><p>Status pembayaran: <b>'+esc(p.status)+'</b></p><a href="/v1/customer/order?id='+encodeURIComponent(orderId)+'">Lihat tracking order</a>';
+  const ok=p.status==='paid';const alert=!ok&&(p.status==='failed'||p.status==='expired');box.innerHTML='<div class="payment-status"><span class="payment-dot"></span><div><b>'+esc(labels[p.status]||p.status)+'</b><small style="display:block;color:#8a7a6d;margin-top:3px">Order '+esc(o.order_number)+'</small></div></div><div class="payment-total"><span>Total pembayaran</span><strong>'+rupiah(p.amount)+'</strong></div><div class="payment-help">'+(ok?'Pembayaran sudah terverifikasi. Pesanan akan masuk ke proses operasional.':alert?'Pembayaran tidak berhasil. Silakan cek kembali metode pembayaran atau buat pesanan baru.':'Status pembayaran sedang diproses.')+'</div><a class="back-link" href="/v1/customer/order?id='+encodeURIComponent(orderId)+'">Lihat tracking →</a>';
  }}
 async function createPayment(){
  const btn=document.getElementById('createPaymentBtn'),result=document.getElementById('paymentResult');btn.disabled=true;btn.textContent='Menyiapkan...';
