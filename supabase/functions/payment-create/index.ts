@@ -31,12 +31,13 @@ Deno.serve(async (req) => {
   if (order.payment_status !== "pending") return json({ ok: false, error: "Order payment is not pending" }, 409);
 
   const { data: existing } = await db.from("payments")
-    .select("provider,provider_reference,transaction_reference,status,amount,currency,expired_at")
+    .select("provider,provider_reference,transaction_reference,status,amount,currency,expired_at,customer_action,instruction_payload,creation_idempotency_key")
     .eq("order_id", order.id).maybeSingle();
   if (existing?.provider_reference) {
     return json({ ok: true, instruction: {
       provider: existing.provider, reference: existing.provider_reference, status: existing.status,
       amount: Number(existing.amount), currency: existing.currency, expiresAt: existing.expired_at,
+      customerAction: existing.customer_action ?? undefined, payload: existing.instruction_payload ?? undefined,
     }, reused: true });
   }
 
@@ -49,6 +50,7 @@ Deno.serve(async (req) => {
       amount: Number(order.total_amount),
       currency: "IDR",
       expiresAt: existing?.expired_at ?? new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      idempotencyKey: existing?.creation_idempotency_key ?? "order:" + order.id,
     });
     const { error: updateError } = await db.from("payments").update({
       provider: instruction.provider,
@@ -57,6 +59,9 @@ Deno.serve(async (req) => {
       amount: instruction.amount,
       currency: instruction.currency,
       expired_at: instruction.expiresAt,
+      customer_action: instruction.customerAction ?? null,
+      instruction_payload: instruction.payload ?? null,
+      creation_idempotency_key: "order:" + order.id,
     }).eq("order_id", order.id);
     if (updateError) return json({ ok: false, error: "Payment instruction could not be persisted" }, 500);
     return json({ ok: true, instruction, reused: false });
