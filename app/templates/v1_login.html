@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Warkost Bahagia — V1 Login</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<main class="auth">
+  <div class="card">
+    <h1>Warkost Bahagia</h1>
+    <p>V1 — Login dengan Supabase Auth</p>
+    <form id="v1LoginForm">
+      <input id="email" type="email" autocomplete="email" placeholder="Email" required>
+      <input id="password" type="password" autocomplete="current-password" placeholder="Password" required>
+      <button class="primary" type="submit">Login V1</button>
+    </form>
+    <div id="authMsg" aria-live="polite"></div>
+    <p class="role-note">Akun V1 menggunakan Authentication Supabase. Role dibaca dari profile server, bukan dari input pengguna.</p>
+    <hr>
+    <p><a href="/login">← Login offline lama</a></p>
+  </div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/static/v1-auth.js"></script>
+</body>
+</html>
