@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Warkost Bahagia — Admin</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="admin-body">
+<header><b>☕ Warkost Bahagia • Admin</b><nav><span id="userEmail"></span><button id="logoutBtn">Logout</button></nav></header>
+<main>
+<section class="hero admin-hero">
+  <small>V1.3 • OPERATIONAL CONTROL</small>
+  <h1>Menu & Stock</h1>
+  <p>Kelola kategori, harga, produk, dan stock. Perubahan operasional hanya tersedia untuk Admin.</p>
+</section>
+
+<div id="adminMsg"></div>
+
+<section class="admin-section">
+  <div class="section-title"><div><h2>Kategori</h2><p class="role-note">Station menentukan routing: Kitchen untuk makanan, Bar untuk minuman.</p></div></div>
+  <div class="admin-category-form">
+    <input id="categoryName" placeholder="Nama kategori" maxlength="80">
+    <select id="categoryStation"><option value="kitchen">Kitchen / Food</option><option value="bar">Bar / Drink</option></select>
+    <input id="categoryDescription" placeholder="Deskripsi (opsional)" maxlength="200">
+    <button id="addCategoryBtn" class="primary">Tambah Kategori</button>
+  </div>
+  <div id="categoryList" class="admin-list"></div>
+</section>
+
+<section class="admin-section">
+  <div class="section-title"><div><h2>Produk</h2><p class="role-note">Harga jual dan stock yang aktif akan dipakai customer saat checkout.</p></div><button id="cancelEditBtn" hidden>Batal Edit</button></div>
+  <form id="productForm" class="admin-product-form">
+    <input type="hidden" id="productId">
+    <label>Nama<input id="productName" required maxlength="120"></label>
+    <label>Kategori<select id="productCategory" required></select></label>
+    <label>Harga Normal<input id="normalPrice" type="number" min="0" step="100" required></label>
+    <label>Harga Jual<input id="sellingPrice" type="number" min="0" step="100" required></label>
+    <label>Stock<input id="productStock" type="number" min="0" step="1" required></label>
+    <label>Image URL<input id="imageUrl" type="url" maxlength="500" placeholder="Opsional"></label>
+    <label class="wide">Deskripsi<textarea id="productDescription" rows="2" maxlength="500" placeholder="Opsional"></textarea></label>
+    <label class="check"><input id="productActive" type="checkbox" checked> Aktif dijual</label>
+    <div class="form-actions wide"><button type="submit" class="primary" id="saveProductBtn">Simpan Produk</button></div>
+  </form>
+  <div class="table-wrap">
+    <table class="data-table admin-products-table">
+      <thead><tr><th>Produk</th><th>Station</th><th>Harga</th><th>Stock</th><th>Status</th><th>Aksi</th></tr></thead>
+      <tbody id="productRows"><tr><td colspan="6">Memuat...</td></tr></tbody>
+    </table>
+  </div>
+</section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/static/v1-admin.js"></script>
+</body>
+</html>
