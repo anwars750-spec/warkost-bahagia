@@ -21,6 +21,47 @@ $$;
 revoke all on function private.current_user_role() from public;
 grant execute on function private.current_user_role() to authenticated;
 
+alter policy "profiles_select_admin_owner" on public.profiles
+  using ((select private.current_user_role()) in ('admin','owner'));
+
+alter policy "profiles_update_own_nonrole" on public.profiles
+  using ((select auth.uid()) = id and is_active = true)
+  with check (
+    (select auth.uid()) = id
+    and is_active = true
+    and role = (select private.current_user_role())
+  );
+
+alter policy "profiles_admin_update" on public.profiles
+  using ((select private.current_user_role()) = 'admin')
+  with check ((select private.current_user_role()) = 'admin');
+
+alter policy "categories_staff_read_all" on public.categories
+  using ((select private.current_user_role()) in ('admin','owner','kasir','kitchen'));
+
+alter policy "categories_admin_insert" on public.categories
+  with check ((select private.current_user_role()) = 'admin');
+
+alter policy "categories_admin_update" on public.categories
+  using ((select private.current_user_role()) = 'admin')
+  with check ((select private.current_user_role()) = 'admin');
+
+alter policy "categories_admin_delete" on public.categories
+  using ((select private.current_user_role()) = 'admin');
+
+alter policy "products_staff_read_all" on public.products
+  using ((select private.current_user_role()) in ('admin','owner','kasir','kitchen'));
+
+alter policy "products_admin_insert" on public.products
+  with check ((select private.current_user_role()) = 'admin');
+
+alter policy "products_admin_update" on public.products
+  using ((select private.current_user_role()) = 'admin')
+  with check ((select private.current_user_role()) = 'admin');
+
+alter policy "products_admin_delete" on public.products
+  using ((select private.current_user_role()) = 'admin');
+
 drop function if exists public.current_user_role();
 
 create or replace function public.handle_new_user()
@@ -42,38 +83,6 @@ end;
 $$;
 
 revoke all on function public.handle_new_user() from public;
-
-drop policy if exists "profiles_select_admin_owner" on public.profiles;
-create policy "profiles_select_admin_owner"
-on public.profiles
-for select
-to authenticated
-using ((select private.current_user_role()) in ('admin','owner'));
-
-drop policy if exists "profiles_update_own_nonrole" on public.profiles;
-create policy "profiles_update_own_nonrole"
-on public.profiles
-for update
-to authenticated
-using (
-  (select auth.uid()) = id
-  and is_active = true
-)
-with check (
-  (select auth.uid()) = id
-  and is_active = true
-  and role = (select private.current_user_role())
-);
-
-drop policy if exists "profiles_admin_update" on public.profiles;
-create policy "profiles_admin_update"
-on public.profiles
-for update
-to authenticated
-using ((select private.current_user_role()) = 'admin')
-with check ((select private.current_user_role()) = 'admin');
-
--- Remove direct API execution of the trigger helper.
 revoke execute on function public.handle_new_user() from anon, authenticated;
 
 comment on schema private is 'Non-API application helper functions and internal objects.';
