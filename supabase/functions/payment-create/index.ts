@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
   if (order.payment_status !== "pending") return json({ ok: false, error: "Order payment is not pending" }, 409);
 
   const { data: existing } = await db.from("payments")
-    .select("provider,provider_reference,transaction_reference,status,amount,currency,expired_at,customer_action,instruction_payload,creation_idempotency_key")
+    .select("provider,provider_reference,transaction_reference,status,amount,currency,expired_at,customer_action,instruction_payload,creation_idempotency_key,creation_started_at")
     .eq("order_id", order.id).maybeSingle();
   if (existing?.provider_reference) {
     return json({ ok: true, instruction: {
@@ -39,6 +39,33 @@ Deno.serve(async (req) => {
       amount: Number(existing.amount), currency: existing.currency, expiresAt: existing.expired_at,
       customerAction: existing.customer_action ?? undefined, payload: existing.instruction_payload ?? undefined,
     }, reused: true });
+  }
+
+  // Claim a short server-side creation lease before calling an external provider.
+  // This prevents two concurrent browser requests from creating two provider transactions.
+  const now = new Date();
+  const staleBefore = new Date(now.getTime() - 2 * 60 * 1000).toISOString();
+  const { data: lease, error: leaseError } = await db.from("payments")
+    .update({ creation_started_at: now.toISOString() })
+    .eq("order_id", order.id)
+    .is("provider_reference", null)
+    .or(`creation_started_at.is.null,creation_started_at.lt.${staleBefore}`)
+    .select("order_id")
+    .maybeSingle();
+
+  if (leaseError) return json({ ok: false, error: "Payment creation is temporarily unavailable" }, 503);
+  if (!lease) {
+    const { data: concurrent } = await db.from("payments")
+      .select("provider,provider_reference,transaction_reference,status,amount,currency,expired_at,customer_action,instruction_payload")
+      .eq("order_id", order.id).maybeSingle();
+    if (concurrent?.provider_reference) {
+      return json({ ok: true, instruction: {
+        provider: concurrent.provider, reference: concurrent.provider_reference, status: concurrent.status,
+        amount: Number(concurrent.amount), currency: concurrent.currency, expiresAt: concurrent.expired_at,
+        customerAction: concurrent.customer_action ?? undefined, payload: concurrent.instruction_payload ?? undefined,
+      }, reused: true });
+    }
+    return json({ ok: false, error: "Payment creation is already in progress. Please try again shortly." }, 409);
   }
 
   const adapters: PaymentProviderAdapter[] = [];
@@ -62,6 +89,7 @@ Deno.serve(async (req) => {
       customer_action: instruction.customerAction ?? null,
       instruction_payload: instruction.payload ?? null,
       creation_idempotency_key: "order:" + order.id,
+      creation_started_at: null,
     }).eq("order_id", order.id);
     if (updateError) return json({ ok: false, error: "Payment instruction could not be persisted" }, 500);
     return json({ ok: true, instruction, reused: false });
