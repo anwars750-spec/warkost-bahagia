@@ -104,7 +104,7 @@ async function createOrder(){
   const {data:order,error:oe}=await client.from('orders').select('order_number,subtotal,delivery_fee,total_amount,order_status').eq('id',data).single();
   if(oe)throw oe;
   cart.clear();renderCart();
-  message('Pesanan '+order.order_number+' berhasil dibuat. Status pembayaran: PENDING. Total '+rupiah(order.total_amount)+'.','success');\n  setTimeout(()=>{location='/v1/customer/order?id='+encodeURIComponent(data);},900);
+  message('Pesanan '+order.order_number+' berhasil dibuat. Status pembayaran: PENDING. Total '+rupiah(order.total_amount)+'.','success');\n  setTimeout(()=>{location='/v1/payment?id='+encodeURIComponent(data);},900);
  }catch(e){message(e.message||'Pesanan gagal dibuat.');}
  finally{btn.disabled=false;btn.textContent='Buat Pesanan';}
 }
