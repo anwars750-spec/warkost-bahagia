@@ -16,7 +16,7 @@ Deno.serve(async (req)=>{
     if(!Array.isArray(b?.items)||b.items.length===0) throw new Error("Order must contain at least one item");
     const address=String(b?.address||"").trim(),lat=Number(b?.latitude),lon=Number(b?.longitude);
     if(!address||!Number.isFinite(lat)||!Number.isFinite(lon)) throw new Error("Alamat dan lokasi delivery wajib valid");
-    const {data,error}=await db.schema("private").rpc("create_customer_delivery_order",{p_customer:u.user.id,p_items:b.items,p_address:address,p_latitude:lat,p_longitude:lon,p_notes:b?.notes?String(b.notes).trim():null});
+    const {data,error}=await db.rpc("server_customer_delivery_order",{p_customer:u.user.id,p_items:b.items,p_address:address,p_latitude:lat,p_longitude:lon,p_notes:b?.notes?String(b.notes).trim():null});
     if(error) throw error;
     return new Response(JSON.stringify({order_id:data}),{status:200,headers:{"Content-Type":"application/json",...cors}});
   }catch(e){return new Response(JSON.stringify({error:e?.message||"Order creation failed"}),{status:400,headers:{"Content-Type":"application/json",...cors}});}
