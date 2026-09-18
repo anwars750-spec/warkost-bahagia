@@ -116,8 +116,14 @@ async function createOrder(){
  if(!address||!Number.isFinite(lat)||!Number.isFinite(lon)){message('Pilih alamat dari rekomendasi peta terlebih dahulu.');return;}
  const items=getItems();
  const t=totals();
- try{const q=await quoteDelivery(lat,lon);if(!q?.available)throw new Error(q?.message||'Lokasi di luar radius delivery.');}catch(e){message(e.message||'Alamat tidak tersedia untuk delivery.');return;}
- const btn=document.getElementById('placeOrderBtn');btn.disabled=true;btn.textContent='Membuat pesanan...';
+ let q;
+ try{q=await quoteDelivery(lat,lon);if(!q?.available)throw new Error(q?.message||'Lokasi di luar radius delivery.');}
+ catch(e){message(e.message||'Alamat tidak tersedia untuk delivery.');return;}
+ const deliveryFee=Number(q.delivery_fee||0);
+ const btn=document.getElementById('placeOrderBtn');
+ const confirmed=window.confirm('Buat pesanan sekarang?\\n\\nSubtotal: '+rupiah(t.subtotal)+'\\nDelivery: '+rupiah(deliveryFee)+'\\nTotal: '+rupiah(t.subtotal+deliveryFee));
+ if(!confirmed)return;
+ btn.disabled=true;btn.textContent='Membuat pesanan...';
  try{
   const {data,error}=await client.rpc('create_customer_delivery_order',{p_items:items,p_address:address,p_latitude:lat,p_longitude:lon,p_notes:document.getElementById('notes').value.trim()||null});
   if(error)throw error;
