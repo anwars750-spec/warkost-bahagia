@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Warkost Bahagia — Driver</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="driver-body">
+<header>
+  <b>☕ Warkost Bahagia</b>
+  <nav><span id="userEmail"></span><button id="logoutBtn">Logout</button></nav>
+</header>
+<main>
+  <section class="driver-head">
+    <div><small>DRIVER V1.2</small><h1>Delivery</h1><p id="driverSubtitle">Memuat status driver...</p></div>
+    <div class="driver-status-wrap">
+      <span id="driverStatus" class="driver-status">...</span>
+      <button id="statusBtn">...</button>
+    </div>
+  </section>
+  <div id="message" class="ops-message" hidden></div>
+
+  <section class="driver-summary">
+    <div class="driver-stat"><small>Order aktif</small><strong id="activeCount">0</strong></div>
+    <div class="driver-stat"><small>Trip</small><strong id="tripStatus">—</strong></div>
+    <div class="driver-stat"><small>Kapasitas</small><strong id="capacity">0 / 5</strong></div>
+  </section>
+
+  <section id="deliveryList" class="driver-list">
+    <div class="ops-empty">Memuat delivery...</div>
+  </section>
+</main>
+
+<div id="proofModal" class="modal-backdrop" hidden>
+  <div class="confirm-modal">
+    <button class="modal-close" id="closeProof">×</button>
+    <h2>Selesaikan Delivery</h2>
+    <p>Upload foto bukti setelah pesanan diterima customer.</p>
+    <form id="proofForm">
+      <input type="hidden" id="proofDeliveryId">
+      <label>Foto bukti
+        <input id="proofFile" type="file" accept="image/*" capture="environment" required>
+      </label>
+      <label>Catatan (opsional)
+        <textarea id="proofNotes" rows="3" maxlength="500" placeholder="Contoh: diterima customer"></textarea>
+      </label>
+      <div class="modal-actions">
+        <button type="button" id="cancelProof">Batal</button>
+        <button class="primary" type="submit">Selesaikan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/static/v1-driver.js"></script>
+</body>
+</html>
