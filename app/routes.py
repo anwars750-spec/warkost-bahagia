@@ -139,6 +139,36 @@ def v1_config():
         anon_key=os.environ.get('SUPABASE_ANON_KEY','').strip()
     )
 
+@bp.route('/api/v1/edge/<function_name>', methods=['POST'])
+def v1_edge_proxy(function_name):
+    """Allowlist-only proxy for customer V1 Edge Functions."""
+    if function_name not in ('delivery-quote','order-create'):
+        return jsonify(error='Edge function tidak diizinkan'),404
+    token = request.headers.get('Authorization','').strip()
+    if not token.startswith('Bearer '):
+        return jsonify(error='Authentication required'),401
+    supabase_url = os.environ.get('SUPABASE_URL','').strip()
+    if not supabase_url:
+        return jsonify(error='Supabase V1 belum dikonfigurasi.'),503
+    import urllib.request, urllib.error, json as _json
+    try:
+        body=request.get_data(cache=True)
+        req=urllib.request.Request(
+            supabase_url.rstrip('/') + '/functions/v1/customer-' + function_name,
+            data=body,
+            headers={'Authorization':token,'Content-Type':'application/json'},
+            method='POST'
+        )
+        with urllib.request.urlopen(req,timeout=15) as resp:
+            raw=resp.read().decode('utf-8')
+            return jsonify(_json.loads(raw)),resp.status
+    except urllib.error.HTTPError as exc:
+        try: payload=_json.loads(exc.read().decode('utf-8'))
+        except Exception: payload={'error':'Customer service error'}
+        return jsonify(payload),exc.code
+    except Exception:
+        return jsonify(error='Customer service tidak dapat dihubungi.'),502
+
 @bp.route('/api/payment/create', methods=['POST'])
 def payment_create():
     token = request.headers.get('Authorization','').strip()
