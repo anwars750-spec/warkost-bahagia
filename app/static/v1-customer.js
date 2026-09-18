@@ -6,10 +6,20 @@ const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 function message(t,type='error'){document.getElementById('pageMsg').innerHTML=t?'<div class="'+type+'">'+esc(t)+'</div>':'';}
 function getItems(){return [...cart.values()].map(x=>({product_id:x.product.id,quantity:x.quantity}));}
 function totals(){let subtotal=0;cart.forEach(x=>subtotal+=Number(x.product.selling_price)*x.quantity);return {subtotal};}
+async function edgeInvoke(path,payload){
+ const {data:{session}}=await client.auth.getSession();
+ if(!session?.access_token) throw new Error('Sesi login sudah berakhir. Silakan login kembali.');
+ const res=await fetch('/api/v1/edge/'+path,{
+  method:'POST',
+  headers:{'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'},
+  body:JSON.stringify(payload||{})
+ });
+ let body={}; try{body=await res.json();}catch(_){}
+ if(!res.ok) throw new Error(body.error||'Layanan server gagal.');
+ return body;
+}
 async function quoteDelivery(lat,lon){
- const {data,error}=await client.rpc('get_customer_delivery_quote',{p_latitude:lat,p_longitude:lon});
- if(error) throw error;
- return data;
+ return await edgeInvoke('delivery-quote',{latitude:lat,longitude:lon});
 }
 async function refreshQuote(){
  const feeEl=document.getElementById('deliveryFee');
@@ -125,8 +135,8 @@ async function createOrder(){
  if(!confirmed)return;
  btn.disabled=true;btn.textContent='Membuat pesanan...';
  try{
-  const {data,error}=await client.rpc('create_customer_delivery_order',{p_items:items,p_address:address,p_latitude:lat,p_longitude:lon,p_notes:document.getElementById('notes').value.trim()||null});
-  if(error)throw error;
+  const created=await edgeInvoke('order-create',{items,address,latitude:lat,longitude:lon,notes:document.getElementById('notes').value.trim()||null});
+  const data=created.order_id;
   const {data:order,error:oe}=await client.from('orders').select('order_number,subtotal,delivery_fee,total_amount,order_status').eq('id',data).single();
   if(oe)throw oe;
   cart.clear();renderCart();
