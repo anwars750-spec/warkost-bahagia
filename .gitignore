@@ -5,3 +5,10 @@ instance/
 .venv/
 venv/
 .vscode/
+
+# Additional repository exclusions
+*.sqlite
+*.db
+.env.*
+!.env.example.idea/
+.DS_Store

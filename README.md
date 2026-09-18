@@ -48,3 +48,18 @@ Buka `http://127.0.0.1:5000`
 
 ## Catatan
 QRIS, GPS browser, Dine-In QR, promo engine lengkap, POS walk-in penuh, sales integration lintas channel, dan production security adalah milestone berikutnya. Jangan dikerjakan sebelum foundation lolos test.
+
+
+## Repository Baseline
+
+- Baseline version: V0.8.6.2
+- Baseline source: Warkost_Bahagia_V08.6.2_Order_Confirmation
+- Current architecture: Flask + SQLite (offline/local baseline)
+- Target architecture: Supabase Auth + PostgreSQL + RLS + server-side business rules
+- This repository is the source of truth for the Warkost Bahagia application.
+- V0.8.6.2 is preserved as the known-working starting point.
+- Future development must use branches and be validated before merging.
+
+## Next Milestone
+
+Migrate the application foundation from SQLite/local authentication to Supabase while preserving the working customer checkout and role-based operational flows.
