@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Warkost Bahagia — Tracking</title><link rel="stylesheet" href="/static/app.css"></head>
+<body>
+<header><b>☕ Warkost Bahagia</b><nav><a href="/v1/customer/orders">Pesanan</a><button id="logoutBtn">Logout</button></nav></header>
+<main><section class="hero"><h1 id="orderNumber">Tracking Pesanan</h1><p id="orderMeta">Memuat...</p></section>
+<div id="msg"></div><section class="card"><h2>Status Pesanan</h2><div id="statusTimeline"></div></section>
+<section class="card" style="margin-top:20px"><h2>Ringkasan</h2><div id="summary"></div></section>
+<section class="card" style="margin-top:20px"><h2>Pengantaran</h2><div id="delivery"></div></section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="/static/v1-customer-order-detail.js"></script>
+</body></html>
