@@ -15,7 +15,7 @@ Deno.serve(async (req)=>{
     if(pe||!p||p.role!=="customer"||!p.is_active) throw new Error("Active customer profile required");
     const b=await req.json(),lat=Number(b?.latitude),lon=Number(b?.longitude);
     if(!Number.isFinite(lat)||!Number.isFinite(lon)) throw new Error("Valid delivery coordinates are required");
-    const {data,error}=await db.schema("private").rpc("get_customer_delivery_quote",{p_customer:u.user.id,p_latitude:lat,p_longitude:lon});
+    const {data,error}=await db.rpc("server_customer_delivery_quote",{p_customer:u.user.id,p_latitude:lat,p_longitude:lon});
     if(error) throw error;
     return new Response(JSON.stringify(data),{status:200,headers:{"Content-Type":"application/json",...cors}});
   }catch(e){return new Response(JSON.stringify({error:e?.message||"Delivery quote failed"}),{status:400,headers:{"Content-Type":"application/json",...cors}});}
