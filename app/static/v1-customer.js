@@ -5,7 +5,25 @@ const rupiah=n=>'Rp'+Number(n||0).toLocaleString('id-ID');
 const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 function message(t,type='error'){document.getElementById('pageMsg').innerHTML=t?'<div class="'+type+'">'+esc(t)+'</div>':'';}
 function getItems(){return [...cart.values()].map(x=>({product_id:x.product.id,quantity:x.quantity}));}
-function totals(){let subtotal=0;cart.forEach(x=>subtotal+=Number(x.product.selling_price)*x.quantity);return {subtotal,total:subtotal};}
+function totals(){let subtotal=0;cart.forEach(x=>subtotal+=Number(x.product.selling_price)*x.quantity);return {subtotal};}
+async function quoteDelivery(lat,lon){
+ const {data,error}=await client.rpc('get_customer_delivery_quote',{p_latitude:lat,p_longitude:lon});
+ if(error) throw error;
+ return data;
+}
+async function refreshQuote(){
+ const feeEl=document.getElementById('deliveryFee');
+ const t=totals(); feeEl.textContent='Menghitung...';
+ const lat=Number(document.getElementById('lat').value),lon=Number(document.getElementById('lon').value);
+ if(!Number.isFinite(lat)||!Number.isFinite(lon)){feeEl.textContent='Pilih alamat';document.getElementById('total').textContent=rupiah(t.subtotal);return;}
+ try{
+  const q=await quoteDelivery(lat,lon);
+  if(!q?.available) throw new Error(q?.message||'Lokasi di luar radius delivery.');
+  feeEl.textContent=rupiah(q.delivery_fee);
+  document.getElementById('total').textContent=rupiah(t.subtotal+Number(q.delivery_fee||0));
+  document.getElementById('locationStatus').textContent='✓ Alamat valid • '+Number(q.distance_km||0).toFixed(2)+' km • '+(Number(q.delivery_fee||0)===0?'Gratis ongkir':rupiah(q.delivery_fee));
+ }catch(e){feeEl.textContent='Tidak tersedia';document.getElementById('total').textContent=rupiah(t.subtotal);message(e.message||'Gagal menghitung ongkir.');}
+}
 
 async function init(){
  try{
@@ -87,7 +105,7 @@ async function setupMaps(cfg){
   if(mapState.marker)mapState.marker.map=null;
   mapState.marker=new AdvancedMarkerElement({map:mapState.map,position:{lat,lng:lon},title:place.displayName||'Tujuan'});
   if(place.viewport)mapState.map.fitBounds(place.viewport);else{mapState.map.setCenter({lat,lng:lon});mapState.map.setZoom(17);}
-  document.getElementById('locationStatus').textContent='✓ Alamat dipilih. Sistem akan memvalidasi radius dan ongkir saat order.';
+  document.getElementById('locationStatus').textContent='Memvalidasi alamat...'; await refreshQuote();
  });
  mapState.ready=true;document.getElementById('locationStatus').textContent='Ketik alamat lalu pilih rekomendasi peta.';
 }
@@ -97,6 +115,8 @@ async function createOrder(){
  const address=document.getElementById('address').value.trim(),lat=Number(document.getElementById('lat').value),lon=Number(document.getElementById('lon').value);
  if(!address||!Number.isFinite(lat)||!Number.isFinite(lon)){message('Pilih alamat dari rekomendasi peta terlebih dahulu.');return;}
  const items=getItems();
+ const t=totals();
+ try{const q=await quoteDelivery(lat,lon);if(!q?.available)throw new Error(q?.message||'Lokasi di luar radius delivery.');}catch(e){message(e.message||'Alamat tidak tersedia untuk delivery.');return;}
  const btn=document.getElementById('placeOrderBtn');btn.disabled=true;btn.textContent='Membuat pesanan...';
  try{
   const {data,error}=await client.rpc('create_customer_delivery_order',{p_items:items,p_address:address,p_latitude:lat,p_longitude:lon,p_notes:document.getElementById('notes').value.trim()||null});
