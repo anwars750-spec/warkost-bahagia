@@ -156,20 +156,27 @@ def v1_config():
 
 @bp.route('/api/v1/edge/<function_name>', methods=['POST'])
 def v1_edge_proxy(function_name):
-    """Allowlist-only proxy for customer V1 Edge Functions."""
-    if function_name not in ('delivery-quote','order-create','driver-operations','fulfillment-transition'):
+    """Allowlist-only proxy for V1 Edge Functions."""
+    allowed={
+        'delivery-quote':'customer-delivery-quote',
+        'order-create':'customer-order-create',
+        'driver-operations':'driver-operations',
+        'fulfillment-transition':'fulfillment-transition',
+    }
+    target=allowed.get(function_name)
+    if not target:
         return jsonify(error='Edge function tidak diizinkan'),404
-    token = request.headers.get('Authorization','').strip()
+    token=request.headers.get('Authorization','').strip()
     if not token.startswith('Bearer '):
         return jsonify(error='Authentication required'),401
-    supabase_url = os.environ.get('SUPABASE_URL','').strip()
+    supabase_url=os.environ.get('SUPABASE_URL','').strip()
     if not supabase_url:
         return jsonify(error='Supabase V1 belum dikonfigurasi.'),503
     import urllib.request, urllib.error, json as _json
     try:
         body=request.get_data(cache=True)
         req=urllib.request.Request(
-            supabase_url.rstrip('/') + ('/functions/v1/driver-operations' if function_name=='driver-operations' else '/functions/v1/customer-' + function_name),
+            supabase_url.rstrip('/')+'/functions/v1/'+target,
             data=body,
             headers={'Authorization':token,'Content-Type':'application/json'},
             method='POST'
@@ -179,10 +186,10 @@ def v1_edge_proxy(function_name):
             return jsonify(_json.loads(raw)),resp.status
     except urllib.error.HTTPError as exc:
         try: payload=_json.loads(exc.read().decode('utf-8'))
-        except Exception: payload={'error':'Customer service error'}
+        except Exception: payload={'error':'V1 service error'}
         return jsonify(payload),exc.code
     except Exception:
-        return jsonify(error='Customer service tidak dapat dihubungi.'),502
+        return jsonify(error='V1 service tidak dapat dihubungi.'),502
 
 @bp.route('/api/payment/create', methods=['POST'])
 def payment_create():
