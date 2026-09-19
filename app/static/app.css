@@ -194,3 +194,50 @@
 /* V1.6 HERO PHOTO */
 .promo-photo{display:block;width:150px;height:150px;border-radius:28px;background-image:url('https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&fm=jpg&q=82&w=800');background-size:cover;background-position:center;box-shadow:0 18px 32px rgba(0,0,0,.24);transform:rotate(3deg)}
 @media(max-width:700px){.promo-photo{width:112px;height:112px;border-radius:22px}.promo-cup{font-size:0;margin-right:4px}}
+
+/* V1.6 VALIDATION FIXES */
+body,.customer-page{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.customer-header .icon-button svg,.cart-shortcut svg,.customer-bottom-nav svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.customer-header .icon-button{display:grid;place-items:center;border:0;cursor:pointer}
+.customer-header .icon-button b,.cart-shortcut b{font-family:inherit}
+.customer-bottom-nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.customer-bottom-nav button svg{width:20px;height:20px}
+.customer-bottom-nav small{font-size:10px;font-weight:700}
+.customer-name{font-size:13px}
+.logout-link,.login-link{font-size:13px}
+.brand-logo{width:86px;height:46px}
+.brand-copy strong{font-size:15px;font-weight:700}
+.brand-copy small{font-size:11px;letter-spacing:0}
+.promo-card{min-height:220px}
+.promo-copy{position:relative;z-index:2;max-width:58%}
+.promo-media{width:170px;height:170px;border-radius:24px;background-size:cover;background-position:center;box-shadow:0 18px 32px rgba(0,0,0,.22);flex:0 0 auto}
+.promo-dots{position:absolute;left:38px;bottom:18px;display:flex;gap:6px;z-index:4}
+.promo-dots button{width:7px;height:7px;padding:0;border-radius:999px;background:rgba(255,255,255,.45);border:0;cursor:pointer}
+.promo-dots button.active{width:22px;background:#fff}
+.product:before{display:none!important}
+.product-art{position:relative!important;height:190px!important;margin:0 -14px 14px!important;background:#ead9c5!important;border-radius:18px 18px 14px 14px!important}
+.product-art:after{display:none!important}
+.product-art img{position:relative;z-index:1}
+.product span{font-family:inherit;font-size:10px;font-weight:800;letter-spacing:1.1px}
+.product h3{font-family:inherit;font-size:16px;font-weight:700;line-height:1.25;letter-spacing:-.2px}
+.product p{font-family:inherit;font-size:12px;line-height:1.5}
+.product-bottom b{font-family:inherit;font-size:16px;font-weight:750}
+.product button{font-family:inherit;font-size:11px;font-weight:750;letter-spacing:0}
+.section-heading h2{font-family:inherit;font-size:28px;font-weight:750;letter-spacing:-.7px}
+.section-kicker{font-family:inherit;font-weight:800;letter-spacing:1.6px}
+.category-filters button{font-family:inherit;font-size:12px;font-weight:700}
+.menu-search input{font-family:inherit}
+.customer-location,.customer-location strong{font-family:inherit}
+@media(max-width:700px){
+ .promo-card{min-height:178px;padding:22px 20px}
+ .promo-copy{max-width:65%}
+ .promo-card h1{font-size:23px}
+ .promo-media{width:105px;height:105px;border-radius:18px}
+ .promo-dots{left:20px;bottom:12px}
+ .product-art{height:116px!important;margin:0 -12px 12px!important}
+ .product:before{display:none!important}
+}
+@media(min-width:701px){
+ .customer-main{width:min(1180px,calc(100% - 64px))}
+ .product-art{height:190px!important;margin:0 -14px 14px!important}
+}
