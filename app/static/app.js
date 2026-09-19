@@ -2,7 +2,13 @@ let products=[],cart=[],msgTimer=null,deliveryQuote=null,mapState={map:null,mark
 const rupiah=n=>'Rp '+Number(n||0).toLocaleString('id-ID');
 let activeCategory='Semua',menuQuery='';
 async function load(){const r=await fetch('/api/products');products=await r.json();buildCategoryFilters();renderProducts();}
-function productIcon(category){const c=String(category||'').toLowerCase();if(c.includes('minum'))return '🥤';if(c.includes('makanan'))return '🍛';return '☕';}
+const PRODUCT_IMAGES={
+  "Nasi Goreng Warkost":"https://images.unsplash.com/photo-1707269714960-320c5d6f47b7?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=82&w=1200",
+  "Ayam Geprek":"https://images.unsplash.com/photo-1696340034876-6245523babfa?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=82&w=1200",
+  "Es Teh":"https://images.unsplash.com/photo-1741241858511-13978ec7a067?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=82&w=1200",
+  "Kopi Susu":"https://images.unsplash.com/photo-1658042968025-a52811c3c606?auto=format&fit=crop&fm=jpg&ixlib=rb-4.0.3&q=82&w=1200"
+};
+function productImage(p){return PRODUCT_IMAGES[String(p?.name||'').trim()]||'';}
 function buildCategoryFilters(){
   const el=document.getElementById('categoryFilters');if(!el)return;
   const cats=['Semua',...new Set(products.map(p=>p.category).filter(Boolean))];
@@ -12,14 +18,19 @@ function setCategory(category){activeCategory=category;buildCategoryFilters();re
 function filterProducts(){const q=menuQuery.trim().toLowerCase();return products.filter(p=>(activeCategory==='Semua'||p.category===activeCategory)&&(!q||[p.name,p.description,p.category].some(v=>String(v||'').toLowerCase().includes(q))));}
 function renderProducts(){
   const box=document.getElementById('products'),empty=document.getElementById('emptyMenu'),items=filterProducts();
-  box.innerHTML=items.map(p=>`<article class="product">
-    <div class="product-art" aria-hidden="true"><span>${productIcon(p.category)}</span></div>
-    <span>${escapeHtml(p.category||'Menu')}</span>
-    <h3>${escapeHtml(p.name)}</h3>
-    <p>${escapeHtml(p.description||'Pilihan menu Warkost Bahagia')}</p>
-    <div class="product-bottom"><b>${rupiah(p.price)}</b><small>${p.stock<1?'Stok habis':'Tersedia'}</small></div>
-    <button ${p.stock<1?'disabled':''} onclick="add(${p.id})">${p.stock<1?'Habis':'Tambah ke keranjang'}</button>
-  </article>`).join('');
+  box.innerHTML=items.map(p=>{
+    const image=productImage(p);
+    const imageMarkup=image
+      ? '<div class="product-art"><img src="'+image+'" alt="'+escapeHtml(p.name)+'" loading="lazy" decoding="async" onerror="this.closest(\'.product-art\').classList.add(\'image-fallback\');this.remove()"></div>'
+      : '<div class="product-art image-fallback" aria-hidden="true"></div>';
+    return '<article class="product">'+imageMarkup+
+      '<span>'+escapeHtml(p.category||'Menu')+'</span>'+ 
+      '<h3>'+escapeHtml(p.name)+'</h3>'+ 
+      '<p>'+escapeHtml(p.description||'Pilihan menu Warkost Bahagia')+'</p>'+ 
+      '<div class="product-bottom"><b>'+rupiah(p.price)+'</b><small>'+(p.stock<1?'Stok habis':'Tersedia')+'</small></div>'+ 
+      '<button '+(p.stock<1?'disabled':'')+' onclick="add('+p.id+')">'+(p.stock<1?'Habis':'Tambah ke keranjang')+'</button>'+ 
+      '</article>';
+  }).join('');
   empty.hidden=items.length>0;const mc=document.getElementById('menuCount');if(mc)mc.textContent=items.length+' menu';
 }
 document.addEventListener('DOMContentLoaded',()=>{const s=document.getElementById('menuSearch');if(s)s.addEventListener('input',e=>{menuQuery=e.target.value;renderProducts();});});
