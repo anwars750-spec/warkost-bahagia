@@ -10,7 +10,7 @@
 <body class="customer-page">
   <header class="customer-header">
     <div class="brand">
-      <img src="/static/assets/warkost-logo.webp" alt="Warkost Bahagia" class="brand-logo">
+      <img src="/static/assets/warkost-logo.svg" alt="Warkost Bahagia" class="brand-logo">
       <div class="brand-copy">
         <strong>Warkost Bahagia</strong>
         <small>Good Food · Good Coffee · Happier Together</small>
@@ -68,6 +68,12 @@
       <div id="emptyMenu" class="empty-menu" hidden><span>🔎</span><strong>Menu tidak ditemukan</strong><small>Coba kata kunci atau kategori lain.</small></div>
     </section>
   </main>
+  <nav class="customer-bottom-nav" aria-label="Navigasi utama">
+    <button class="active" type="button" onclick="window.scrollTo({top:0,behavior:'smooth'})"><span>⌂</span><small>Beranda</small></button>
+    <button type="button" onclick="document.getElementById('menu').scrollIntoView({behavior:'smooth'})"><span>▤</span><small>Pesanan</small></button>
+    <button type="button" onclick="cartOpen()"><span>🛒</span><small>Keranjang</small></button>
+    <button type="button" onclick="window.location='/profile'"><span>♙</span><small>Akun</small></button>
+  </nav>
   <aside id="cart" class="drawer customer-drawer">
     <div class="drawer-head">
       <div>
