@@ -323,3 +323,32 @@ body,.customer-page{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Seg
   border-color:#3b1f0c;
 }
 .cart-shortcut:hover,.customer-header .icon-button:hover{background:#eee7df;color:#3b1f0c}
+
+/* V1.6 CART DRAWER BACKGROUND — FINAL OVERRIDE */
+html body aside#cart.customer-drawer,
+html body aside#cart.customer-drawer.drawer{
+  background-color:#f7efe3!important;
+  background-image:none!important;
+  color:#25170f;
+  opacity:1!important;
+}
+html body aside#cart.customer-drawer .checkout-panel{
+  background:transparent!important;
+}
+html body aside#cart.customer-drawer .customer-cart-items{
+  background:transparent!important;
+}
+html body aside#cart.customer-drawer .totals,
+html body aside#cart.customer-drawer .checkout-form{
+  background:#fff!important;
+}
+html body aside#cart.customer-drawer .local-test-box{
+  background:#fff8ed!important;
+}
+html body aside#cart.customer-drawer .order-map{
+  background:#f2eee8!important;
+}
+html body aside#cart.customer-drawer input,
+html body aside#cart.customer-drawer textarea{
+  background:#fff!important;
+}
