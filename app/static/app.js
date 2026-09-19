@@ -66,6 +66,23 @@ function render(){
   if(sub)sub.textContent=rupiah(t.subtotal); if(disc)disc.textContent='− '+rupiah(t.discount); if(del)del.textContent=rupiah(t.delivery); if(total)total.textContent=rupiah(t.total); if(mt)mt.textContent=rupiah(t.total);
 }
 function cartOpen(){document.getElementById('cart').classList.toggle('show');render()}
+
+function openAccountPanel(){const p=document.getElementById('accountPanel');if(!p)return;p.classList.add('show');p.setAttribute('aria-hidden','false');}
+function closeAccountPanel(){const p=document.getElementById('accountPanel');if(!p)return;p.classList.remove('show');p.setAttribute('aria-hidden','true');}
+async function loadAccountSection(section){
+ const box=document.getElementById('accountContent');if(!box)return;
+ box.innerHTML='<p class="account-loading">Memuat...</p>';
+ if(section==='orders'){
+  const r=await fetch('/api/customer/orders');const data=await r.json();if(!r.ok){box.innerHTML='<div class="error">'+escapeHtml(data.error||'Gagal memuat riwayat.')+'</div>';return;}
+  box.innerHTML='<span class="section-kicker">RIWAYAT TRANSAKSI</span><h3>Pesanan Kamu</h3>'+(data.length?data.map(o=>'<div class="account-order"><div><strong>'+escapeHtml(o.order_no)+'</strong><small>'+escapeHtml(o.created_at||'')+'</small></div><b>'+rupiah(o.total)+'</b><span>'+escapeHtml(o.status||'')+'</span></div>').join(''):'<p>Belum ada transaksi.</p>');
+ }else if(section==='addresses'){
+  const r=await fetch('/api/customer/addresses');const data=await r.json();if(!r.ok){box.innerHTML='<div class="error">'+escapeHtml(data.error||'Gagal memuat alamat.')+'</div>';return;}
+  box.innerHTML='<span class="section-kicker">ALAMAT</span><h3>Alamat Pengantaran</h3>'+(data.length?data.map(a=>'<div class="account-address"><strong>'+escapeHtml(a.label||'Alamat')+'</strong><p>'+escapeHtml(a.address)+'</p></div>').join(''):'<p>Belum ada alamat tersimpan. Tambahkan alamat saat checkout.</p>');
+ }else if(section==='password'){
+  box.innerHTML='<span class="section-kicker">KEAMANAN</span><h3>Ubah Password</h3><form class="account-password" onsubmit="changeAccountPassword(event)"><input id="currentPassword" type="password" placeholder="Password saat ini" required><input id="newPassword" type="password" placeholder="Password baru (min. 6 karakter)" minlength="6" required><input id="confirmPassword" type="password" placeholder="Ulangi password baru" minlength="6" required><button class="primary" type="submit">Simpan Password</button><div id="passwordMsg"></div></form>';
+ }
+}
+async function changeAccountPassword(e){e.preventDefault();const msg=document.getElementById('passwordMsg'),current=document.getElementById('currentPassword').value,newPass=document.getElementById('newPassword').value,confirm=document.getElementById('confirmPassword').value;if(newPass!==confirm){msg.innerHTML='<div class="error">Konfirmasi password tidak sama.</div>';return;}const r=await fetch('/api/customer/password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({current_password:current,new_password:newPass})});const data=await r.json();msg.innerHTML='<div class="'+(r.ok?'success':'error')+'">'+escapeHtml(data.message||data.error||'Selesai.')+'</div>';if(r.ok)e.target.reset();}
 function showMsg(html,ms=3000){const el=document.getElementById('msg');if(msgTimer)clearTimeout(msgTimer);el.innerHTML=html;if(ms>0)msgTimer=setTimeout(()=>{el.innerHTML=''},ms)}
 function clearSelectedAddress(){document.getElementById('address').value='';document.getElementById('lat').value='';document.getElementById('lon').value='';deliveryQuote=null;document.getElementById('locationStatus').textContent='Alamat pengantaran belum dipilih.';render()}
 async function initMaps(){
