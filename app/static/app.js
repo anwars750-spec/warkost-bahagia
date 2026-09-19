@@ -1,7 +1,22 @@
+const PROMOS=[
+ {kicker:'PROMO COFFEE',title:'Diskon 10% untuk semua coffee.',text:'Nikmati kopi favoritmu lebih hemat hari ini.',image:'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&fm=jpg&q=82&w=1200'},
+ {kicker:'COMBO HARI INI',title:'Kopi + makanan, lebih hemat.',text:'Pasangkan kopi favorit dengan menu pilihan Warkost.',image:'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&fm=jpg&q=82&w=1200'},
+ {kicker:'HAPPY HOUR',title:'Teman ngopi, teman bahagia.',text:'Cek pilihan minuman dan menu favorit hari ini.',image:'https://images.unsplash.com/photo-1512568400610-62da28bc8a13?auto=format&fit=crop&fm=jpg&q=82&w=1200'}
+];
+let promoIndex=0,promoTimer=null;
+function renderPromo(){
+ const title=document.getElementById('promoTitle'),textEl=document.getElementById('promoText'),k=document.getElementById('promoKicker'),media=document.getElementById('promoMedia'),dots=document.getElementById('promoDots');
+ if(!title||!textEl||!k||!media||!dots)return;
+ const p=PROMOS[promoIndex]; k.textContent=p.kicker;title.textContent=p.title;textEl.textContent=p.text;media.style.backgroundImage="url('"+p.image+"')";
+ dots.innerHTML=PROMOS.map((_,i)=>'<button type="button" class="'+(i===promoIndex?'active':'')+'" aria-label="Promo '+(i+1)+'" onclick="setPromo('+i+')"></button>').join('');
+}
+function setPromo(index){promoIndex=(index+PROMOS.length)%PROMOS.length;renderPromo();startPromoTimer();}
+function startPromoTimer(){if(promoTimer)clearInterval(promoTimer);promoTimer=setInterval(()=>setPromo(promoIndex+1),6000);}
+
 let products=[],cart=[],msgTimer=null,deliveryQuote=null,mapState={map:null,marker:null,autocomplete:null,ready:false};
 const rupiah=n=>'Rp '+Number(n||0).toLocaleString('id-ID');
 let activeCategory='Semua',menuQuery='';
-async function load(){const r=await fetch('/api/products');products=await r.json();buildCategoryFilters();renderProducts();}
+async function load(){const r=await fetch('/api/products');products=await r.json();buildCategoryFilters();renderProducts();renderPromo();startPromoTimer();}
 const PRODUCT_IMAGES={
   "Nasi Goreng Warkost":"https://images.unsplash.com/photo-1707269714960-320c5d6f47b7?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=82&w=1200",
   "Ayam Geprek":"https://images.unsplash.com/photo-1696340034876-6245523babfa?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=82&w=1200",
@@ -14,7 +29,7 @@ function buildCategoryFilters(){
   const cats=['Semua',...new Set(products.map(p=>p.category).filter(Boolean))];
   el.innerHTML=cats.map(c=>`<button type="button" class="${c===activeCategory?'active':''}" onclick="setCategory(${JSON.stringify(c)})" role="tab" aria-selected="${c===activeCategory}">${escapeHtml(c)}</button>`).join('');
 }
-function setCategory(category){activeCategory=category;buildCategoryFilters();renderProducts();}
+function setCategory(category){activeCategory=category;buildCategoryFilters();renderProducts();document.getElementById('menu')?.scrollIntoView({behavior:'smooth',block:'start'});}
 function filterProducts(){const q=menuQuery.trim().toLowerCase();return products.filter(p=>(activeCategory==='Semua'||p.category===activeCategory)&&(!q||[p.name,p.description,p.category].some(v=>String(v||'').toLowerCase().includes(q))));}
 function renderProducts(){
   const box=document.getElementById('products'),empty=document.getElementById('emptyMenu'),items=filterProducts();
