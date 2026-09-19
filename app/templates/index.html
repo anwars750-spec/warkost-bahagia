@@ -20,7 +20,7 @@
       </div>
     </div>
     <nav class="customer-nav">
-      <button class="icon-button" type="button" aria-label="Notifikasi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></button>
+      <button id="notificationButton" class="icon-button" type="button" onclick="toggleNotifications()" aria-label="Notifikasi" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></button>
       <button class="icon-button" type="button" onclick="cartOpen()" aria-label="Keranjang"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L20 8H6M10 20a1 1 0 1 1-2 0m10 0a1 1 0 1 1-2 0"/></svg><b id="headerCartCount">0</b></button>
       {% if u %}
         <span class="customer-name">Hai, {{u['name']}}</span>
@@ -88,6 +88,16 @@
     <button type="button" onclick="cartOpen()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L20 8H6M10 20a1 1 0 1 1-2 0m10 0a1 1 0 1 1-2 0"/></svg><small>Keranjang</small></button>
     <button type="button" onclick="openAccountPanel()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg><small>Akun</small></button>
   </nav>
+
+  <aside id="notificationPanel" class="notification-panel" aria-hidden="true">
+    <div class="notification-head">
+      <div><span class="section-kicker">UPDATE PESANAN</span><h2>Notifikasi</h2></div>
+      <button type="button" class="drawer-close" onclick="closeNotifications()" aria-label="Tutup notifikasi">✕</button>
+    </div>
+    <div id="notificationContent" class="notification-content">
+      <div class="notification-loading"><span>⏳</span><strong>Memuat notifikasi...</strong><small>Menyiapkan update pesanan kamu.</small></div>
+    </div>
+  </aside>
 
   <aside id="accountPanel" class="account-panel" aria-hidden="true">
     <div class="account-panel-inner">
