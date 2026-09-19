@@ -54,7 +54,17 @@ function add(id){let x=cart.find(i=>i.product_id===id);let p=products.find(x=>x.
 function minus(id){let x=cart.find(i=>i.product_id===id);if(!x)return;x.qty--;if(x.qty<=0)cart=cart.filter(i=>i.product_id!==id);render()}
 function plus(id){add(id)}
 function totals(){let subtotal=cart.reduce((s,i)=>{let p=products.find(x=>x.id===i.product_id);return s+(p?p.price*i.qty:0)},0);let delivery=(deliveryQuote&&deliveryQuote.available)?Number(deliveryQuote.delivery_fee||0):0;return {subtotal,discount:0,delivery,total:subtotal+delivery}}
-function render(){const cartCount=cart.reduce((a,b)=>a+b.qty,0);document.getElementById('count').textContent=cartCount;const hc=document.getElementById('headerCartCount'),sc=document.getElementById('shortcutCartCount');if(hc)hc.textContent=cartCount;if(sc)sc.textContent=cartCount;const box=document.getElementById('cartItems');box.innerHTML=cart.length?cart.map(i=>{let p=products.find(x=>x.id===i.product_id);let sub=p.price*i.qty;return `<div class="cartrow"><div><b>${p.name}</b><br><small>${rupiah(p.price)} × ${i.qty} = ${rupiah(sub)}</small></div><div class="qty"><button onclick="minus(${i.product_id})">−</button><b>${i.qty}</b><button onclick="plus(${i.product_id})">+</button></div></div>`}).join(''):'<p>Keranjang kosong.</p>';const t=totals();document.getElementById('subtotal').textContent=rupiah(t.subtotal);document.getElementById('discount').textContent='− '+rupiah(t.discount);document.getElementById('delivery').textContent=rupiah(t.delivery);document.getElementById('total').textContent=rupiah(t.total)}
+function render(){
+  const cartCount=cart.reduce((a,b)=>a+b.qty,0);
+  const legacyCount=document.getElementById('count'); if(legacyCount) legacyCount.textContent=cartCount;
+  const hc=document.getElementById('headerCartCount'),sc=document.getElementById('shortcutCartCount'),mc=document.getElementById('mobileCartCount'),mt=document.getElementById('mobileCartTotal');
+  if(hc) hc.textContent=cartCount; if(sc) sc.textContent=cartCount; if(mc) mc.textContent=cartCount;
+  const box=document.getElementById('cartItems');
+  if(box) box.innerHTML=cart.length ? cart.map(i=>{ const p=products.find(x=>x.id===i.product_id); if(!p)return ''; const sub=p.price*i.qty; return '<div class="cartrow"><div><b>'+escapeHtml(p.name)+'</b><br><small>'+rupiah(p.price)+' × '+i.qty+' = '+rupiah(sub)+'</small></div><div class="qty"><button type="button" onclick="minus('+i.product_id+')">−</button><b>'+i.qty+'</b><button type="button" onclick="plus('+i.product_id+')">+</button></div></div>'; }).join('') : '<p>Keranjang kosong.</p>';
+  const t=totals();
+  const sub=document.getElementById('subtotal'),disc=document.getElementById('discount'),del=document.getElementById('delivery'),total=document.getElementById('total');
+  if(sub)sub.textContent=rupiah(t.subtotal); if(disc)disc.textContent='− '+rupiah(t.discount); if(del)del.textContent=rupiah(t.delivery); if(total)total.textContent=rupiah(t.total); if(mt)mt.textContent=rupiah(t.total);
+}
 function cartOpen(){document.getElementById('cart').classList.toggle('show');render()}
 function showMsg(html,ms=3000){const el=document.getElementById('msg');if(msgTimer)clearTimeout(msgTimer);el.innerHTML=html;if(ms>0)msgTimer=setTimeout(()=>{el.innerHTML=''},ms)}
 function clearSelectedAddress(){document.getElementById('address').value='';document.getElementById('lat').value='';document.getElementById('lon').value='';deliveryQuote=null;document.getElementById('locationStatus').textContent='Alamat pengantaran belum dipilih.';render()}
