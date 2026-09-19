@@ -441,7 +441,12 @@ def complete(stop_id):
     f=request.files.get('photo')
     if not f:return jsonify(error='Foto pesanan wajib diupload'),400
     folder=os.path.join(current_app.instance_path,'proofs'); os.makedirs(folder,exist_ok=True); fn=secure_filename(f'{s["oid"]}_{uuid.uuid4().hex}.jpg'); f.save(os.path.join(folder,fn))
-    db.execute("UPDATE delivery_stops SET status='completed',completed_at=CURRENT_TIMESTAMP,proof_photo=? WHERE id=?",(fn,stop_id)); db.execute("UPDATE orders SET status='completed' WHERE id=?",(s['oid'],)); db.execute("INSERT OR IGNORE INTO sales(order_id,revenue,channel,completed_at) VALUES(?,?,?,CURRENT_TIMESTAMP)",(s['oid'],s['total'],'delivery')); db.commit(); return jsonify(ok=True)
+    db.execute("UPDATE delivery_stops SET status='completed',completed_at=CURRENT_TIMESTAMP,proof_photo=? WHERE id=?",(fn,stop_id)); db.execute("UPDATE orders SET status='completed' WHERE id=?",(s['oid'],)); db.execute("INSERT OR IGNORE INTO sales(order_id,revenue,channel,completed_at) VALUES(?,?,?,CURRENT_TIMESTAMP)",(s['oid'],s['total'],'delivery'))
+    remaining=db.execute("SELECT COUNT(*) c FROM delivery_stops WHERE trip_id=? AND status NOT IN ('completed','cancelled')",(s['trip_id'],)).fetchone()['c']
+    if remaining==0:
+        db.execute("UPDATE delivery_trips SET status='completed' WHERE id=?",(s['trip_id'],))
+        db.execute("UPDATE drivers SET active_trip_id=NULL WHERE user_id=? AND active_trip_id=?",(user()['id'],s['trip_id']))
+    db.commit(); return jsonify(ok=True,delivery_capacity=delivery_capacity_status(db))
 
 @bp.route('/api/notifications')
 def notifications():
