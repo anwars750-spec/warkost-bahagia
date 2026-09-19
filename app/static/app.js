@@ -14,6 +14,11 @@ function setPromo(index){promoIndex=(index+PROMOS.length)%PROMOS.length;renderPr
 function startPromoTimer(){if(promoTimer)clearInterval(promoTimer);promoTimer=setInterval(()=>setPromo(promoIndex+1),6000);}
 
 let products=[],cart=[],msgTimer=null,deliveryQuote=null,mapState={map:null,marker:null,autocomplete:null,ready:false};
+const WHATSAPP_NUMBER='6281310358558';
+function contactWhatsApp(){
+ const message=encodeURIComponent('Halo Warkost Bahagia, saya ingin bertanya mengenai menu, pesanan, pembayaran, atau pengantaran.');
+ window.open('https://wa.me/'+WHATSAPP_NUMBER+'?text='+message,'_blank','noopener,noreferrer');
+}
 const rupiah=n=>'Rp '+Number(n||0).toLocaleString('id-ID');
 let activeCategory='Semua',menuQuery='';
 async function loadCustomerLocation(){
@@ -114,7 +119,7 @@ async function editCustomerAddress(id){
 async function loadOrderTracking(id){
  const box=document.getElementById('accountContent');if(!box)return;
  const r=await fetch('/api/customer/orders/'+id+'/tracking');const data=await r.json();if(!r.ok){box.innerHTML='<div class="error">'+escapeHtml(data.error||'Tracking gagal dimuat.')+'</div>';return;}
- const t=data.tracking;box.innerHTML='<span class="section-kicker">STATUS PESANAN</span><h3>'+escapeHtml(t.label)+'</h3><div class="tracking-timeline">'+t.stages.map((s,i)=>'<div class="tracking-step '+(i<=t.stage_index?'done':'')+'"><span>'+(i<=t.stage_index?'✓':(i+1))+'</span><div><strong>'+escapeHtml(s.label)+'</strong><small>'+(i<t.stage_index?'Selesai':i===t.stage_index?'Status saat ini':'Menunggu')+'</small></div></div>').join('')+'</div><div class="tracking-address"><strong>'+escapeHtml(data.order.order_no)+'</strong><p>'+escapeHtml(data.order.address||'')+'</p><b>'+rupiah(data.order.total)+'</b></div><button type="button" class="track-button" onclick="loadAccountSection('orders')">← Kembali ke Riwayat</button>';
+ const t=data.tracking;box.innerHTML='<span class="section-kicker">STATUS PESANAN</span><h3>'+escapeHtml(t.label)+'</h3><div class="tracking-timeline">'+t.stages.map((s,i)=>'<div class="tracking-step '+(i<=t.stage_index?'done':'')+'"><span>'+(i<=t.stage_index?'✓':(i+1))+'</span><div><strong>'+escapeHtml(s.label)+'</strong><small>'+(i<t.stage_index?'Selesai':i===t.stage_index?'Status saat ini':'Menunggu')+'</small></div></div>').join('')+'</div><div class="tracking-address"><strong>'+escapeHtml(data.order.order_no)+'</strong><p>'+escapeHtml(data.order.address||'')+'</p><b>'+rupiah(data.order.total)+'</b></div><button type="button" class="track-button" onclick="loadAccountSection(&quot;orders&quot;)">← Kembali ke Riwayat</button>';
 }
 async function changeAccountPassword(e){e.preventDefault();const msg=document.getElementById('passwordMsg'),current=document.getElementById('currentPassword').value,newPass=document.getElementById('newPassword').value,confirm=document.getElementById('confirmPassword').value;if(newPass!==confirm){msg.innerHTML='<div class="error">Konfirmasi password tidak sama.</div>';return;}const r=await fetch('/api/customer/password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({current_password:current,new_password:newPass})});const data=await r.json();msg.innerHTML='<div class="'+(r.ok?'success':'error')+'">'+escapeHtml(data.message||data.error||'Selesai.')+'</div>';if(r.ok)e.target.reset();}
 function showMsg(html,ms=3000){const el=document.getElementById('msg');if(msgTimer)clearTimeout(msgTimer);el.innerHTML=html;if(ms>0)msgTimer=setTimeout(()=>{el.innerHTML=''},ms)}
