@@ -64,7 +64,19 @@
         </button>
       </div>
 
-      <div id="products" class="grid customer-product-grid" aria-live="polite"></div>
+      <div class="menu-tools">
+  <label class="menu-search" aria-label="Cari menu">
+    <span>⌕</span>
+    <input id="menuSearch" type="search" placeholder="Cari makanan atau minuman..." autocomplete="off">
+  </label>
+  <div id="categoryFilters" class="category-filters" role="tablist" aria-label="Filter kategori"></div>
+</div>
+<div id="products" class="grid customer-product-grid" aria-live="polite"></div>
+<div id="emptyMenu" class="empty-menu" hidden>
+  <span>🔎</span>
+  <strong>Menu tidak ditemukan</strong>
+  <small>Coba kata kunci atau kategori lain.</small>
+</div>
     </section>
   </main>
 
