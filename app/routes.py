@@ -242,7 +242,12 @@ def customer_order_tracking(oid):
     ]
     stage_index=next((idx for idx,item in enumerate(stages) if item[0]==status),0)
     if status=='cancelled': stage_index=-1
-    return jsonify(order=dict(order),tracking={'status':status,'label':next((x[1] for x in stages if x[0]==status),'Pesanan dibatalkan' if status=='cancelled' else status),'stage_index':stage_index,'stages':[{'key':x[0],'label':x[1]} for x in stages],'delivery_stop':dict(stop) if stop else None})
+    contact={'admin_whatsapp':'6281310358558','driver_name':None,'driver_phone':None}
+    driver=db.execute("SELECT u.name,u.phone FROM delivery_stops ds JOIN delivery_trips dt ON dt.id=ds.trip_id JOIN users u ON u.id=dt.driver_id WHERE ds.order_id=? ORDER BY ds.id DESC LIMIT 1",(oid,)).fetchone()
+    if driver:
+        contact['driver_name']=driver['name']
+        contact['driver_phone']=driver['phone']
+    return jsonify(order=dict(order),tracking={'status':status,'label':next((x[1] for x in stages if x[0]==status),'Pesanan dibatalkan' if status=='cancelled' else status),'stage_index':stage_index,'stages':[{'key':x[0],'label':x[1]} for x in stages],'delivery_stop':dict(stop) if stop else None},contact=contact)
 
 @bp.route('/api/customer/password',methods=['POST'])
 def customer_password():
