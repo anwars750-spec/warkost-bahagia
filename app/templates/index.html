@@ -1,1 +1,220 @@
-<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Warkost Bahagia</title><link rel="stylesheet" href="/static/app.css"></head><body><header><b>☕ Warkost Bahagia</b><nav>{% if u %}<span>{{u['name']}}</span><a href="/logout">Logout</a>{% else %}<a href="/login">Login</a>{% endif %}</nav></header><main><section class="hero"><h1>Warkost Bahagia</h1><p>Pesan makanan dan minuman dengan mudah.</p></section><section><div class="toolbar"><h2>Menu</h2><button onclick="cartOpen()">🛒 Keranjang (<span id="count">0</span>)</button></div><div id="products" class="grid"></div></section></main><aside id="cart" class="drawer"><button onclick="cartOpen()">✕</button><h2>Checkout</h2><div id="cartItems"></div><div class="totals"><div><span>Subtotal</span><b id="subtotal">Rp 0</b></div><div><span>Diskon</span><b id="discount">− Rp 0</b></div><div><span>Delivery</span><b id="delivery">Rp 0</b></div><div class="grand"><span>Total</span><b id="total">Rp 0</b></div></div><input id="name" placeholder="Nama" value="{{u['name'] if u and u['role']=='customer' else ''}}"><input id="phone" placeholder="No HP aktif"><div class="address-picker"><label for="addressSearch"><b>Alamat pengantaran</b></label><div id="addressSearch" class="maps-autocomplete"></div><small class="location-note">Ketik alamat lalu <b>pilih salah satu rekomendasi peta</b>. Alamat ini adalah tujuan pesanan dan tidak menjadi lokasi utama akun.</small><div id="map" class="order-map"></div><div id="locationStatus" class="location-status">Alamat pengantaran belum dipilih.</div></div><input type="hidden" id="address"><input type="hidden" id="lat"><input type="hidden" id="lon"><button class="primary" onclick="checkout()">Checkout &amp; Buat Order</button><div id="msg" aria-live="polite"></div><div id="confirmModal" class="modal-backdrop" hidden><div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle"><button class="modal-close" type="button" onclick="closeConfirm()">✕</button><h2 id="confirmTitle">Konfirmasi Pesanan</h2><p>Periksa kembali pesanan dan alamat pengantaran sebelum transaksi dibuat.</p><div id="confirmSummary" class="confirm-summary"></div><div class="modal-actions"><button type="button" onclick="closeConfirm()">Batal</button><button type="button" class="primary" onclick="confirmCheckout()">Ya, Lanjutkan Order</button></div></div></div><div id="orderProcessModal" class="modal-backdrop" hidden><div class="confirm-modal order-process" role="dialog" aria-modal="true" aria-labelledby="processTitle"><h2 id="processTitle">Order Sedang Diproses</h2><div id="orderProcessContent"></div><button type="button" class="primary" onclick="closeOrderProcess()">Kembali ke Menu</button></div></div></aside><script src="/static/app.js"></script></body></html>
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#3b1f0c">
+  <title>Warkost Bahagia — Pesan Makanan</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="customer-page">
+  <header class="customer-header">
+    <div class="brand">
+      <img src="/static/assets/warkost-logo.svg" alt="Warkost Bahagia" class="brand-logo">
+      <div class="brand-copy">
+        <strong>Warkost Bahagia</strong>
+        <small>Good Food · Good Coffee · Happier Together</small>
+      </div>
+    </div>
+    <nav class="customer-nav">
+      <button id="notificationButton" class="icon-button" type="button" onclick="toggleNotifications()" aria-label="Notifikasi" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></button>
+      <button class="icon-button" type="button" onclick="cartOpen()" aria-label="Keranjang"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L20 8H6M10 20a1 1 0 1 1-2 0m10 0a1 1 0 1 1-2 0"/></svg><b id="headerCartCount">0</b></button>
+      {% if u %}
+        <div class="customer-account-wrap">
+          <button id="customerAccountTrigger" class="customer-account-trigger" type="button" onclick="toggleCustomerAccountMenu()" aria-expanded="false">
+            <span class="customer-avatar-mini">👤</span>
+            <span class="customer-name">Hai, {{u['name']}}</span>
+            <span class="customer-account-chevron">⌄</span>
+          </button>
+          <div id="customerAccountMenu" class="customer-account-menu" aria-hidden="true">
+            <button type="button" onclick="openCustomerAccountSection('orders')">Riwayat Transaksi <span>→</span></button>
+            <button type="button" onclick="openCustomerAccountSection('addresses')">Alamat Pengantaran <span>→</span></button>
+            <button type="button" onclick="openCustomerAccountSection('password')">Ubah Password <span>→</span></button>
+            <a href="/logout">Keluar <span>→</span></a>
+          </div>
+        </div>
+      {% else %}
+        <a href="/login" class="login-link">Masuk</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <main class="customer-main">
+    <section class="customer-location" id="customerLocation" aria-label="Lokasi pengantaran">
+      <div class="location-copy">
+        <span class="location-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12A7 7 0 0 0 5 9c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2.2"/></svg> Kirim ke</span>
+        <strong id="customerLocationText">Memuat alamat pengantaran...</strong>
+        <small id="customerLocationMeta">Alamat customer</small>
+      </div>
+    </section>
+
+    <section class="customer-search-row">
+      <label class="menu-search"><span>⌕</span><input id="menuSearch" type="search" placeholder="Cari menu favorit kamu..." autocomplete="off"></label>
+      <button class="cart-shortcut" type="button" onclick="cartOpen()" aria-label="Buka keranjang"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L20 8H6M10 20a1 1 0 1 1-2 0m10 0a1 1 0 1 1-2 0"/></svg><b id="shortcutCartCount">0</b></button>
+    </section>
+
+    <section class="promo-card" id="promoSlider" aria-label="Promo Warkost Bahagia">
+      <div class="promo-copy">
+        <span class="section-kicker" id="promoKicker">PROMO HARI INI</span>
+        <h1 id="promoTitle">Diskon 10% untuk semua coffee.</h1>
+        <p id="promoText">Nikmati kopi favoritmu lebih hemat hari ini.</p>
+        <button type="button" onclick="document.getElementById('menu').scrollIntoView({behavior:'smooth'})">Lihat Menu <span>→</span></button>
+      </div>
+      <div class="promo-media" id="promoMedia" aria-hidden="true"></div>
+      <div class="promo-dots" id="promoDots" aria-label="Pilihan promo"></div>
+    </section>
+
+    <section class="category-section">
+      <div id="categoryFilters" class="category-filters" role="tablist" aria-label="Kategori menu"></div>
+    </section>
+
+    <section class="menu-section" id="menu">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">PILIHAN HARI INI</span>
+          <h2>Menu Favorit</h2>
+        </div>
+        <span class="menu-count" id="menuCount"></span>
+      </div>
+      <div id="products" class="grid customer-product-grid" aria-live="polite"></div>
+      <div id="emptyMenu" class="empty-menu" hidden><span>🔎</span><strong>Menu tidak ditemukan</strong><small>Coba kata kunci atau kategori lain.</small></div>
+    </section>
+
+    <section class="contact-section" aria-labelledby="contactTitle">
+      <div class="contact-copy">
+        <span class="section-kicker">BUTUH BANTUAN?</span>
+        <h2 id="contactTitle">Hubungi Kami</h2>
+        <p>Butuh bantuan soal menu, pesanan, pembayaran, atau pengantaran? Tim Warkost Bahagia siap membantu.</p>
+      </div>
+      <button type="button" class="contact-button" onclick="contactWhatsApp()">Hubungi Kami <span>→</span></button>
+    </section>
+  </main>
+  <nav class="customer-bottom-nav" aria-label="Navigasi utama">
+    <button class="active" type="button" onclick="window.scrollTo({top:0,behavior:'smooth'})"><span>⌂</span><small>Beranda</small></button>
+    <button type="button" onclick="openCustomerAccountSection('orders')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18H6zM9 7h6M9 11h6M9 15h4"/></svg><small>Pesanan</small></button>
+    <button type="button" onclick="cartOpen()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L20 8H6M10 20a1 1 0 1 1-2 0m10 0a1 1 0 1 1-2 0"/></svg><small>Keranjang</small></button>
+    <button type="button" onclick="toggleCustomerAccountMenu()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg><small>Akun</small></button>
+  </nav>
+
+  <aside id="notificationPanel" class="notification-panel" aria-hidden="true">
+    <div class="notification-head">
+      <div><span class="section-kicker">UPDATE PESANAN</span><h2>Notifikasi</h2></div>
+      <button type="button" class="drawer-close" onclick="closeNotifications()" aria-label="Tutup notifikasi">✕</button>
+    </div>
+    <div id="notificationContent" class="notification-content">
+      <div class="notification-loading"><span>⏳</span><strong>Memuat notifikasi...</strong><small>Menyiapkan update pesanan kamu.</small></div>
+    </div>
+  </aside>
+
+  <aside id="accountPanel" class="account-panel" aria-hidden="true">
+    <div class="account-panel-inner">
+      <div class="account-head">
+        <div><span class="section-kicker">PENGATURAN AKUN</span><h2>Akun Saya</h2></div>
+        <button type="button" class="drawer-close" onclick="closeAccountPanel()" aria-label="Tutup pengaturan akun">✕</button>
+      </div>
+      <div class="account-profile"><div class="account-avatar">👤</div><div><strong>{{u['name'] if u and u['role']=='customer' else 'Customer'}}</strong><small>{{u['phone'] if u and u['role']=='customer' and u['phone'] else 'Nomor HP belum diatur'}}</small></div></div>
+      <div id="accountMenuView">
+        <div class="account-menu">
+          <button type="button" onclick="loadAccountSection('orders')"><span>Riwayat Transaksi</span><small>Lihat pesanan sebelumnya →</small></button>
+          <button type="button" onclick="loadAccountSection('addresses')"><span>Alamat</span><small>Kelola alamat pengantaran →</small></button>
+          <button type="button" onclick="loadAccountSection('password')"><span>Ubah Password</span><small>Perbarui keamanan akun →</small></button>
+          <a class="account-logout" href="/logout"><span>Keluar</span><small>Logout dari akun</small></a>
+        </div>
+      </div>
+      <div id="accountContent" class="account-content" hidden></div>
+    </div>
+  </aside>
+
+  <aside id="cart" class="drawer customer-drawer">
+    <div class="drawer-head">
+      <div>
+        <span class="section-kicker">PESANAN KAMU</span>
+        <h2>Keranjang</h2>
+      </div>
+      <button class="drawer-close" type="button" onclick="cartOpen()" aria-label="Tutup keranjang">✕</button>
+    </div>
+
+    <div id="cartItems" class="customer-cart-items"></div>
+
+    <div class="checkout-panel">
+      <div class="totals">
+        <div><span>Subtotal</span><b id="subtotal">Rp 0</b></div>
+        <div><span>Diskon</span><b id="discount">− Rp 0</b></div>
+        <div><span>Delivery</span><b id="delivery">Rp 0</b></div>
+        <div class="grand"><span>Total</span><b id="total">Rp 0</b></div>
+      </div>
+
+      <div class="checkout-form">
+        <div class="form-heading">
+          <span>01</span>
+          <div><strong>Data penerima</strong><small>Pastikan nomor HP aktif.</small></div>
+        </div>
+        <input id="name" placeholder="Nama penerima" value="{{u['name'] if u and u['role']=='customer' else ''}}">
+        <input id="phone" placeholder="No. HP aktif" inputmode="tel">
+
+        <div class="form-heading">
+          <span>02</span>
+          <div><strong>Alamat pengantaran</strong><small>Pilih titik dari peta agar ongkir akurat.</small></div>
+        </div>
+        <div class="address-picker">
+          <div id="addressSearch" class="maps-autocomplete"></div>
+          <small class="location-note">Ketik alamat lalu <b>pilih salah satu rekomendasi peta</b>.</small>
+          <div id="map" class="order-map"></div>
+          <div id="locationStatus" class="location-status">Alamat pengantaran belum dipilih.</div>
+        </div>
+        <input type="hidden" id="address">
+        <input type="hidden" id="lat">
+        <input type="hidden" id="lon">
+        <button class="primary checkout-button" type="button" onclick="checkout()">Lanjutkan Checkout <span>→</span></button>
+        <div id="msg" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div id="confirmModal" class="modal-backdrop" hidden>
+      <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+        <button class="modal-close" type="button" onclick="closeConfirm()">✕</button>
+        <span class="section-kicker">LANGKAH TERAKHIR</span>
+        <h2 id="confirmTitle">Konfirmasi Pesanan</h2>
+        <p>Periksa pesanan dan alamat sebelum transaksi dibuat.</p>
+        <div id="confirmSummary" class="confirm-summary"></div>
+        <div class="modal-actions">
+          <button type="button" onclick="closeConfirm()">Periksa Lagi</button>
+          <button type="button" class="primary" onclick="confirmCheckout()">Ya, Buat Order</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="orderProcessModal" class="modal-backdrop" hidden>
+      <div class="confirm-modal order-process" role="dialog" aria-modal="true" aria-labelledby="processTitle">
+        <span class="process-check">✓</span>
+        <span class="section-kicker">ORDER DITERIMA</span>
+        <h2 id="processTitle">Pesanan sedang diproses</h2>
+        <div id="orderProcessContent"></div>
+        <button type="button" class="primary checkout-button" onclick="closeOrderProcess()">Kembali ke Menu</button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="mobile-cart-bar" onclick="cartOpen()">
+    <div><span>🛒</span><strong>Keranjang</strong><small><span id="mobileCartCount">0</span> item</small></div>
+    <strong id="mobileCartTotal">Rp 0</strong>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const originalRender = window.render;
+    window.render = function(){
+      originalRender();
+      const count = document.getElementById('count')?.textContent || '0';
+      const total = document.getElementById('total')?.textContent || 'Rp 0';
+      const mc = document.getElementById('mobileCartCount');
+      const mt = document.getElementById('mobileCartTotal');
+      if(mc) mc.textContent = count;
+      if(mt) mt.textContent = total;
+    };
+  </script>
+</body>
+</html>

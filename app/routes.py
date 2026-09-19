@@ -191,6 +191,79 @@ def delivery_quote():
         return jsonify(ok=False,available=False,distance_km=round(distance,2),free_radius_km=free_radius,max_radius_km=max_radius,extra_fee=extra_fee,error=f'Lokasi di luar radius delivery maksimal ({max_radius:g} km)'),400
     return jsonify(ok=True,available=True,distance_km=round(distance,2),free_radius_km=free_radius,max_radius_km=max_radius,delivery_fee=fee,extra_fee=extra_fee,message=('Gratis ongkir' if fee==0 else f'Ongkir {money(fee):,}'))
 
+@bp.route('/api/customer/orders')
+def customer_orders():
+    u=user()
+    if not u or u['role']!='customer': return jsonify(error='Customer login required'),401
+    db=get_db()
+    rows=db.execute('SELECT id,order_no,created_at,status,payment_status,subtotal,discount,delivery_fee,total FROM orders WHERE customer_id=? ORDER BY id DESC',(u['id'],)).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+@bp.route('/api/customer/addresses',methods=['GET','POST'])
+def customer_addresses():
+    u=user()
+    if not u or u['role']!='customer': return jsonify(error='Customer login required'),401
+    db=get_db()
+    if request.method=='POST':
+        data=request.json or {}
+        address=str(data.get('address','')).strip()
+        label=str(data.get('label','Rumah')).strip() or 'Rumah'
+        lat=data.get('latitude'); lon=data.get('longitude')
+        if not address: return jsonify(error='Alamat wajib diisi.'),400
+        try:
+            lat=float(lat) if lat not in (None,'') else None
+            lon=float(lon) if lon not in (None,'') else None
+        except (TypeError,ValueError):
+            return jsonify(error='Koordinat alamat tidak valid.'),400
+        db.execute('UPDATE addresses SET label=? WHERE customer_id=?',(label,u['id']))
+        cur=db.execute('INSERT INTO addresses(customer_id,label,address,latitude,longitude) VALUES(?,?,?,?,?)',(u['id'],label,address,lat,lon))
+        db.commit()
+        row=db.execute('SELECT id,label,address,latitude,longitude FROM addresses WHERE id=?',(cur.lastrowid,)).fetchone()
+        return jsonify(ok=True,address=dict(row))
+    rows=db.execute('SELECT id,label,address,latitude,longitude FROM addresses WHERE customer_id=? ORDER BY id DESC',(u['id'],)).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+@bp.route('/api/customer/orders/<int:oid>/tracking')
+def customer_order_tracking(oid):
+    u=user()
+    if not u or u['role']!='customer': return jsonify(error='Customer login required'),401
+    db=get_db()
+    order=db.execute('SELECT id,order_no,status,payment_status,address,latitude,longitude,created_at,total FROM orders WHERE id=? AND customer_id=?',(oid,u['id'])).fetchone()
+    if not order:return jsonify(error='Pesanan tidak ditemukan.'),404
+    stop=db.execute('SELECT ds.status stop_status,dt.status trip_status FROM delivery_stops ds LEFT JOIN delivery_trips dt ON dt.id=ds.trip_id WHERE ds.order_id=?',(oid,)).fetchone()
+    status=str(order['status'] or 'pending_payment')
+    stages=[
+      ('pending_payment','Menunggu pembayaran'),
+      ('confirmed','Pesanan dikonfirmasi'),
+      ('processing','Sedang diproses'),
+      ('ready','Siap diantar'),
+      ('out_for_delivery','Dalam perjalanan'),
+      ('completed','Pesanan selesai')
+    ]
+    stage_index=next((idx for idx,item in enumerate(stages) if item[0]==status),0)
+    if status=='cancelled': stage_index=-1
+    contact={'admin_whatsapp':'6281310358558','driver_name':None,'driver_phone':None}
+    driver=db.execute("SELECT u.name,u.phone FROM delivery_stops ds JOIN delivery_trips dt ON dt.id=ds.trip_id JOIN users u ON u.id=dt.driver_id WHERE ds.order_id=? ORDER BY ds.id DESC LIMIT 1",(oid,)).fetchone()
+    if driver:
+        contact['driver_name']=driver['name']
+        contact['driver_phone']=driver['phone']
+    return jsonify(order=dict(order),tracking={'status':status,'label':next((x[1] for x in stages if x[0]==status),'Pesanan dibatalkan' if status=='cancelled' else status),'stage_index':stage_index,'stages':[{'key':x[0],'label':x[1]} for x in stages],'delivery_stop':dict(stop) if stop else None},contact=contact)
+
+@bp.route('/api/customer/password',methods=['POST'])
+def customer_password():
+    u=user()
+    if not u or u['role']!='customer': return jsonify(error='Customer login required'),401
+    data=request.json or {}
+    current=str(data.get('current_password',''))
+    new=str(data.get('new_password',''))
+    if not current or not new: return jsonify(error='Password lama dan password baru wajib diisi.'),400
+    if len(new)<6: return jsonify(error='Password baru minimal 6 karakter.'),400
+    if not check_password_hash(u['password_hash'],current): return jsonify(error='Password lama tidak sesuai.'),400
+    from werkzeug.security import generate_password_hash
+    get_db().execute('UPDATE users SET password_hash=? WHERE id=?',(generate_password_hash(new),u['id']))
+    get_db().commit()
+    return jsonify(ok=True,message='Password berhasil diubah.')
+
 @bp.route('/api/order/<int:oid>')
 def order_detail(oid):
     if not user(): return jsonify(error='Login required'),401

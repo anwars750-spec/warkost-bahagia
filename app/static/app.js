@@ -1,12 +1,289 @@
+const PROMOS=[
+ {kicker:'PROMO COFFEE',title:'Diskon 10% untuk semua coffee.',text:'Nikmati kopi favoritmu lebih hemat hari ini.',image:'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&fm=jpg&q=82&w=1200'},
+ {kicker:'COMBO HARI INI',title:'Kopi + makanan, lebih hemat.',text:'Pasangkan kopi favorit dengan menu pilihan Warkost.',image:'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&fm=jpg&q=82&w=1200'},
+ {kicker:'HAPPY HOUR',title:'Teman ngopi, teman bahagia.',text:'Cek pilihan minuman dan menu favorit hari ini.',image:'https://images.unsplash.com/photo-1512568400610-62da28bc8a13?auto=format&fit=crop&fm=jpg&q=82&w=1200'}
+];
+let promoIndex=0,promoTimer=null;
+function renderPromo(){
+ const title=document.getElementById('promoTitle'),textEl=document.getElementById('promoText'),k=document.getElementById('promoKicker'),media=document.getElementById('promoMedia'),dots=document.getElementById('promoDots');
+ if(!title||!textEl||!k||!media||!dots)return;
+ const p=PROMOS[promoIndex]; k.textContent=p.kicker;title.textContent=p.title;textEl.textContent=p.text;media.style.backgroundImage="url('"+p.image+"')";
+ dots.innerHTML=PROMOS.map((_,i)=>'<button type="button" class="'+(i===promoIndex?'active':'')+'" aria-label="Promo '+(i+1)+'" onclick="setPromo('+i+')"></button>').join('');
+}
+function setPromo(index){promoIndex=(index+PROMOS.length)%PROMOS.length;renderPromo();startPromoTimer();}
+function startPromoTimer(){if(promoTimer)clearInterval(promoTimer);promoTimer=setInterval(()=>setPromo(promoIndex+1),6000);}
+
 let products=[],cart=[],msgTimer=null,deliveryQuote=null,mapState={map:null,marker:null,autocomplete:null,ready:false};
+const WHATSAPP_NUMBER='6281310358558';
+function contactWhatsApp(){
+ const message=encodeURIComponent('Halo Warkost Bahagia, saya ingin bertanya mengenai menu, pesanan, pembayaran, atau pengantaran.');
+ window.open('https://wa.me/'+WHATSAPP_NUMBER+'?text='+message,'_blank','noopener,noreferrer');
+}
 const rupiah=n=>'Rp '+Number(n||0).toLocaleString('id-ID');
-async function load(){const r=await fetch('/api/products');products=await r.json();document.getElementById('products').innerHTML=products.map(p=>`<article class="product"><span>${p.category||''}</span><h3>${p.name}</h3><p>${p.description||''}</p><b>${rupiah(p.price)}</b><small>Stock: ${p.stock}</small><button ${p.stock<1?'disabled':''} onclick="add(${p.id})">${p.stock<1?'Habis':'Tambah'}</button></article>`).join('');}
+let activeCategory='Semua',menuQuery='';
+async function loadCustomerLocation(){
+ const textEl=document.getElementById('customerLocationText'),metaEl=document.getElementById('customerLocationMeta');
+ if(!textEl)return;
+ try{
+  const r=await fetch('/api/customer/addresses'); const data=await r.json();
+  if(!r.ok||!Array.isArray(data))throw new Error(data.error||'Gagal memuat alamat');
+  if(data.length){
+   const a=data[0];
+   textEl.textContent=a.address||'Alamat pengantaran tersimpan';
+   metaEl.textContent=(a.label||'Alamat customer')+' · tujuan pengantaran';
+  }else{
+   textEl.textContent='Belum ada alamat tersimpan';
+   metaEl.textContent='Tambahkan alamat untuk pengantaran';
+  }
+ }catch(e){
+  textEl.textContent='Belum ada alamat pengantaran';
+  metaEl.textContent='Atur alamat di menu Akun';
+ }
+}
+async function load(){
+ try{
+  const r=await fetch('/api/products');
+  if(!r.ok)throw new Error('Menu API gagal dimuat');
+  const data=await r.json();
+  if(!Array.isArray(data))throw new Error('Format menu tidak valid');
+  products=data;
+  buildCategoryFilters();
+  renderProducts();
+  renderPromo();
+  startPromoTimer();
+  loadCustomerLocation();
+ }catch(err){
+  products=[];
+  buildCategoryFilters();
+  renderProducts();
+  const empty=document.getElementById('emptyMenu');
+  if(empty){empty.hidden=false;empty.innerHTML='<span>!</span><strong>Menu belum dapat dimuat</strong><small>Segarkan halaman dan coba lagi.</small>';}
+  const mc=document.getElementById('menuCount');if(mc)mc.textContent='0 menu';
+  console.error(err);
+ }
+}
+const PRODUCT_IMAGES={
+  "Nasi Goreng Warkost":"https://images.unsplash.com/photo-1707269714960-320c5d6f47b7?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=82&w=1200",
+  "Ayam Geprek":"https://images.unsplash.com/photo-1696340034876-6245523babfa?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=82&w=1200",
+  "Es Teh":"https://images.unsplash.com/photo-1741241858511-13978ec7a067?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=82&w=1200",
+  "Kopi Susu":"https://images.unsplash.com/photo-1658042968025-a52811c3c606?auto=format&fit=crop&fm=jpg&ixlib=rb-4.0.3&q=82&w=1200"
+};
+function productImage(p){return PRODUCT_IMAGES[String(p?.name||'').trim()]||'';}
+function buildCategoryFilters(){
+  const el=document.getElementById('categoryFilters');if(!el)return;
+  const cats=['Semua',...new Set(products.map(p=>String(p.category||'').trim()).filter(Boolean))];
+  el.innerHTML=cats.map(c=>'<button type="button" class="'+(c===activeCategory?'active':'')+'" data-category="'+escapeHtml(c)+'" role="tab" aria-selected="'+(c===activeCategory)+'">'+escapeHtml(c)+'</button>').join('');
+  el.querySelectorAll('[data-category]').forEach(btn=>btn.addEventListener('click',()=>setCategory(btn.dataset.category)));
+}
+function setCategory(category){activeCategory=String(category||'Semua').trim();buildCategoryFilters();renderProducts();}
+function filterProducts(){const q=menuQuery.trim().toLowerCase(),active=activeCategory.toLowerCase();return products.filter(p=>(active==='semua'||String(p.category||'').trim().toLowerCase()===active)&&(!q||[p.name,p.description,p.category].some(v=>String(v||'').toLowerCase().includes(q))));}
+function renderProducts(){
+  const box=document.getElementById('products'),empty=document.getElementById('emptyMenu'),items=filterProducts();
+  box.innerHTML=items.map(p=>{
+    const image=productImage(p);
+    const imageMarkup=image
+      ? '<div class="product-art"><img src="'+image+'" alt="'+escapeHtml(p.name)+'" loading="lazy" decoding="async" onerror="this.closest(\'.product-art\').classList.add(\'image-fallback\');this.remove()"></div>'
+      : '<div class="product-art image-fallback" aria-hidden="true"></div>';
+    return '<article class="product">'+imageMarkup+
+      '<span>'+escapeHtml(p.category||'Menu')+'</span>'+ 
+      '<h3>'+escapeHtml(p.name)+'</h3>'+ 
+      '<p>'+escapeHtml(p.description||'Pilihan menu Warkost Bahagia')+'</p>'+ 
+      '<div class="product-bottom"><b>'+rupiah(p.price)+'</b><small>'+(p.stock<1?'Stok habis':'Tersedia')+'</small></div>'+ 
+      '<button '+(p.stock<1?'disabled':'')+' onclick="add('+p.id+')">'+(p.stock<1?'Habis':'Tambah ke keranjang')+'</button>'+ 
+      '</article>';
+  }).join('');
+  empty.hidden=items.length>0;const mc=document.getElementById('menuCount');if(mc)mc.textContent=items.length+' menu';
+}
+document.addEventListener('DOMContentLoaded',()=>{const s=document.getElementById('menuSearch');if(s)s.addEventListener('input',e=>{menuQuery=e.target.value;renderProducts();});});
 function add(id){let x=cart.find(i=>i.product_id===id);let p=products.find(x=>x.id===id);if(!p)return;if(x){if(x.qty>=p.stock)return;x.qty++;}else cart.push({product_id:id,qty:1});render()}
 function minus(id){let x=cart.find(i=>i.product_id===id);if(!x)return;x.qty--;if(x.qty<=0)cart=cart.filter(i=>i.product_id!==id);render()}
 function plus(id){add(id)}
 function totals(){let subtotal=cart.reduce((s,i)=>{let p=products.find(x=>x.id===i.product_id);return s+(p?p.price*i.qty:0)},0);let delivery=(deliveryQuote&&deliveryQuote.available)?Number(deliveryQuote.delivery_fee||0):0;return {subtotal,discount:0,delivery,total:subtotal+delivery}}
-function render(){document.getElementById('count').textContent=cart.reduce((a,b)=>a+b.qty,0);const box=document.getElementById('cartItems');box.innerHTML=cart.length?cart.map(i=>{let p=products.find(x=>x.id===i.product_id);let sub=p.price*i.qty;return `<div class="cartrow"><div><b>${p.name}</b><br><small>${rupiah(p.price)} × ${i.qty} = ${rupiah(sub)}</small></div><div class="qty"><button onclick="minus(${i.product_id})">−</button><b>${i.qty}</b><button onclick="plus(${i.product_id})">+</button></div></div>`}).join(''):'<p>Keranjang kosong.</p>';const t=totals();document.getElementById('subtotal').textContent=rupiah(t.subtotal);document.getElementById('discount').textContent='− '+rupiah(t.discount);document.getElementById('delivery').textContent=rupiah(t.delivery);document.getElementById('total').textContent=rupiah(t.total)}
+function render(){
+  const cartCount=cart.reduce((a,b)=>a+b.qty,0);
+  const legacyCount=document.getElementById('count'); if(legacyCount) legacyCount.textContent=cartCount;
+  const hc=document.getElementById('headerCartCount'),sc=document.getElementById('shortcutCartCount'),mc=document.getElementById('mobileCartCount'),mt=document.getElementById('mobileCartTotal');
+  if(hc) hc.textContent=cartCount; if(sc) sc.textContent=cartCount; if(mc) mc.textContent=cartCount;
+  const box=document.getElementById('cartItems');
+  if(box) box.innerHTML=cart.length ? cart.map(i=>{ const p=products.find(x=>x.id===i.product_id); if(!p)return ''; const sub=p.price*i.qty; return '<div class="cartrow"><div><b>'+escapeHtml(p.name)+'</b><br><small>'+rupiah(p.price)+' × '+i.qty+' = '+rupiah(sub)+'</small></div><div class="qty"><button type="button" onclick="minus('+i.product_id+')">−</button><b>'+i.qty+'</b><button type="button" onclick="plus('+i.product_id+')">+</button></div></div>'; }).join('') : '<p>Keranjang kosong.</p>';
+  const t=totals();
+  const sub=document.getElementById('subtotal'),disc=document.getElementById('discount'),del=document.getElementById('delivery'),total=document.getElementById('total');
+  if(sub)sub.textContent=rupiah(t.subtotal); if(disc)disc.textContent='− '+rupiah(t.discount); if(del)del.textContent=rupiah(t.delivery); if(total)total.textContent=rupiah(t.total); if(mt)mt.textContent=rupiah(t.total);
+}
 function cartOpen(){document.getElementById('cart').classList.toggle('show');render()}
+
+function notificationStatusLabel(status){
+  const map={
+    pending_payment:'Menunggu pembayaran',
+    paid:'Pembayaran diterima',
+    confirmed:'Pesanan dikonfirmasi',
+    processing:'Pesanan sedang diproses',
+    ready:'Pesanan siap diantar',
+    ready_for_pickup:'Pesanan siap diambil',
+    out_for_delivery:'Pesanan sedang diantar',
+    completed:'Pesanan selesai',
+    cancelled:'Pesanan dibatalkan',
+    expired:'Pesanan kedaluwarsa',
+    in_fulfillment:'Pesanan sedang diproses'
+  };
+  return map[String(status||'').toLowerCase()]||'Status pesanan diperbarui';
+}
+function notificationStatusIcon(status){
+  const s=String(status||'').toLowerCase();
+  if(s==='completed')return '✓';
+  if(s==='cancelled'||s==='expired')return '!';
+  if(s==='out_for_delivery')return '🛵';
+  if(s==='ready'||s==='ready_for_pickup')return '📦';
+  if(s==='processing'||s==='in_fulfillment')return '🍳';
+  if(s==='paid'||s==='confirmed')return '✓';
+  return '🔔';
+}
+function formatNotificationTime(value){
+  if(!value)return '';
+  const d=new Date(String(value).replace(' ','T'));
+  if(Number.isNaN(d.getTime()))return '';
+  return d.toLocaleString('id-ID',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+}
+async function loadNotifications(){
+  const el=document.getElementById('notificationContent');
+  if(!el)return;
+  el.innerHTML='<div class="notification-loading"><span>⏳</span><strong>Memuat notifikasi...</strong><small>Mengecek status pesanan terbaru.</small></div>';
+  try{
+    const r=await fetch('/api/customer/orders');
+    const data=await r.json();
+    if(!r.ok)throw new Error(data.error||'Gagal memuat notifikasi');
+    const orders=Array.isArray(data)?data:[];
+    if(!orders.length){
+      el.innerHTML='<div class="notification-empty"><span>🔔</span><strong>Belum ada notifikasi</strong><small>Update pesanan akan muncul di sini.</small></div>';
+      return;
+    }
+    el.innerHTML=orders.slice(0,6).map(o=>{
+      const status=o.status||o.order_status||o.payment_status||'';
+      const number=o.order_no||o.order_number||('#'+o.id);
+      const total=o.total!=null?new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(o.total)||0):'';
+      return '<button type="button" class="notification-item" onclick="closeNotifications();loadAccountSection(\'orders\')">'+
+        '<span class="notification-icon">'+notificationStatusIcon(status)+'</span>'+
+        '<span class="notification-copy"><strong>Pesanan '+number+'</strong><small>'+notificationStatusLabel(status)+(total?' · '+total:'')+'</small><em>'+formatNotificationTime(o.created_at)+'</em></span>'+
+        '<span class="notification-arrow">→</span>'+
+      '</button>';
+    }).join('');
+  }catch(err){
+    console.error(err);
+    el.innerHTML='<div class="notification-empty"><span>⚠</span><strong>Notifikasi belum dapat dimuat</strong><small>Segarkan halaman lalu coba lagi.</small></div>';
+  }
+}
+function toggleNotifications(){
+  const p=document.getElementById('notificationPanel');
+  const b=document.getElementById('notificationButton');
+  if(!p)return;
+  const open=!p.classList.contains('show');
+  if(open){
+    p.classList.add('show');
+    p.setAttribute('aria-hidden','false');
+    if(b)b.setAttribute('aria-expanded','true');
+    loadNotifications();
+  }else{
+    closeNotifications();
+  }
+}
+function closeNotifications(){
+  const p=document.getElementById('notificationPanel');
+  const b=document.getElementById('notificationButton');
+  if(!p)return;
+  p.classList.remove('show');
+  p.setAttribute('aria-hidden','true');
+  if(b)b.setAttribute('aria-expanded','false');
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeNotifications();});
+function toggleCustomerAccountMenu(){
+  const menu=document.getElementById('customerAccountMenu'),trigger=document.getElementById('customerAccountTrigger');
+  if(!menu)return;
+  const open=!menu.classList.contains('show');
+  menu.classList.toggle('show',open);
+  menu.setAttribute('aria-hidden',String(!open));
+  if(trigger)trigger.setAttribute('aria-expanded',String(open));
+}
+function closeCustomerAccountMenu(){
+  const menu=document.getElementById('customerAccountMenu'),trigger=document.getElementById('customerAccountTrigger');
+  if(!menu)return;
+  menu.classList.remove('show');menu.setAttribute('aria-hidden','true');
+  if(trigger)trigger.setAttribute('aria-expanded','false');
+}
+function openCustomerAccountSection(section){
+  closeCustomerAccountMenu();
+  openAccountPanel();
+  loadAccountSection(section);
+}
+document.addEventListener('click',e=>{
+  const wrap=document.querySelector('.customer-account-wrap');
+  if(wrap&&!wrap.contains(e.target))closeCustomerAccountMenu();
+});
+function openAccountPanel(){const p=document.getElementById('accountPanel');if(!p)return;p.classList.add('show');p.setAttribute('aria-hidden','false');}
+function closeAccountPanel(){const p=document.getElementById('accountPanel');if(!p)return;p.classList.remove('show');p.setAttribute('aria-hidden','true');showAccountMenuView();}
+function showAccountMenuView(){
+  const menu=document.getElementById('accountMenuView'),box=document.getElementById('accountContent');
+  if(menu)menu.hidden=false;
+  if(box){box.hidden=true;box.innerHTML='';}
+}
+function accountSectionHeader(kicker,title){
+  return '<div class="account-section-head"><button type="button" class="account-back" onclick="showAccountMenuView()">← Pengaturan Akun</button><div><span class="section-kicker">'+kicker+'</span><h3>'+title+'</h3></div></div>';
+}
+async function loadAccountSection(section){
+  const menu=document.getElementById('accountMenuView'),box=document.getElementById('accountContent');
+  if(!box)return;
+  if(menu)menu.hidden=true;
+  box.hidden=false;
+  box.innerHTML='<p class="account-loading">Memuat...</p>';
+  if(section==='orders'){
+    const r=await fetch('/api/customer/orders');const data=await r.json();
+    if(!r.ok){box.innerHTML=accountSectionHeader('RIWAYAT TRANSAKSI','Riwayat Transaksi')+'<div class="error">'+escapeHtml(data.error||'Gagal memuat riwayat.')+'</div>';return;}
+    box.innerHTML=accountSectionHeader('RIWAYAT TRANSAKSI','Pesanan Kamu')+
+      '<div class="account-order-list">'+(data.length?data.map(o=>'<div class="account-order"><div><strong>'+escapeHtml(o.order_no)+'</strong><small>'+escapeHtml(o.created_at||'')+'</small></div><b>'+rupiah(o.total)+'</b><span class="order-status">'+escapeHtml(o.status||'')+'</span><button type="button" class="track-button" onclick="loadOrderTracking('+o.id+')">Lihat Status & Tracking →</button></div>').join(''):'<p>Belum ada transaksi.</p>')+'</div>';
+  }else if(section==='addresses'){
+    const r=await fetch('/api/customer/addresses');const data=await r.json();
+    if(!r.ok){box.innerHTML=accountSectionHeader('ALAMAT','Alamat Pengantaran')+'<div class="error">'+escapeHtml(data.error||'Gagal memuat alamat.')+'</div>';return;}
+    box.innerHTML=accountSectionHeader('ALAMAT','Alamat Pengantaran')+
+      (data.length?data.map(a=>'<div class="account-address"><strong>'+escapeHtml(a.label||'Alamat')+'</strong><p>'+escapeHtml(a.address)+'</p><button type="button" class="track-button" onclick="editCustomerAddress('+a.id+')">Gunakan alamat ini</button></div>').join(''):'<p>Belum ada alamat tersimpan.</p>')+
+      '<form class="account-address-form" onsubmit="saveCustomerAddress(event)"><strong>Tambah alamat</strong><input id="addressLabel" placeholder="Label, contoh: Rumah" value="Rumah"><textarea id="addressValue" placeholder="Alamat lengkap" required></textarea><button class="primary" type="submit">Simpan Alamat</button><div id="addressMsg"></div></form>';
+  }else if(section==='password'){
+    box.innerHTML=accountSectionHeader('KEAMANAN','Ubah Password')+
+      '<form class="account-password" onsubmit="changeAccountPassword(event)"><input id="currentPassword" type="password" placeholder="Password saat ini" required><input id="newPassword" type="password" placeholder="Password baru (min. 6 karakter)" minlength="6" required><input id="confirmPassword" type="password" placeholder="Ulangi password baru" minlength="6" required><button class="primary" type="submit">Simpan Password</button><div id="passwordMsg"></div></form>';
+  }
+}
+async function saveCustomerAddress(e){
+ e.preventDefault();const msg=document.getElementById('addressMsg'),address=document.getElementById('addressValue').value.trim(),label=document.getElementById('addressLabel').value.trim()||'Rumah';
+ const r=await fetch('/api/customer/addresses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label,address})});const data=await r.json();
+ msg.innerHTML='<div class="'+(r.ok?'success':'error')+'">'+escapeHtml(data.ok?'Alamat berhasil disimpan.':(data.error||'Gagal menyimpan alamat.'))+'</div>';
+ if(r.ok){await loadCustomerLocation();await loadAccountSection('addresses');}
+}
+async function editCustomerAddress(id){
+ const r=await fetch('/api/customer/addresses');const data=await r.json();const a=data.find(x=>x.id===id);if(!a)return;
+ const v=document.getElementById('addressValue'),l=document.getElementById('addressLabel');if(v)v.value=a.address;if(l)l.value=a.label||'Rumah';v?.focus();
+}
+async function loadOrderTracking(id){
+  const box=document.getElementById('accountContent');if(!box)return;
+  box.innerHTML='<p class="account-loading">Memuat tracking...</p>';
+  try{
+    const r=await fetch('/api/customer/orders/'+id+'/tracking');const data=await r.json();
+    if(!r.ok){box.innerHTML='<div class="error">'+escapeHtml(data.error||'Tracking gagal dimuat.')+'</div>';return;}
+    const t=data.tracking||{},o=data.order||{};
+    const contact=data.contact||{};
+    const stages=Array.isArray(t.stages)?t.stages:[];
+    const stageIndex=Number.isFinite(Number(t.stage_index))?Number(t.stage_index):0;
+    const adminPhone=contact.admin_whatsapp||WHATSAPP_NUMBER;
+    const adminMsg=encodeURIComponent('Halo Warkost Bahagia, saya ingin menanyakan pesanan '+(o.order_no||'')+'.');
+    const adminLink='https://wa.me/'+adminPhone+'?text='+adminMsg;
+    const driverHtml=contact.driver_phone&&t.status==='out_for_delivery'
+      ? '<a class="tracking-contact tracking-driver" href="https://wa.me/'+escapeHtml(contact.driver_phone)+'?text='+encodeURIComponent('Halo, saya customer untuk pesanan '+(o.order_no||'')+'.')+'" target="_blank" rel="noopener">🛵 Chat Driver WhatsApp <span>→</span></a>'
+      : '';
+    box.innerHTML='<span class="section-kicker">STATUS PESANAN</span><h3>'+escapeHtml(t.label||'Status pesanan')+'</h3>'+
+      '<div class="tracking-timeline">'+stages.map((s,i)=>'<div class="tracking-step '+(i<=stageIndex?'done':'')+'"><span>'+(i<=stageIndex?'✓':(i+1))+'</span><div><strong>'+escapeHtml(s.label)+'</strong><small>'+(i<stageIndex?'Selesai':i===stageIndex?'Status saat ini':'Menunggu')+'</small></div></div>').join('')+'</div>'+
+      '<div class="tracking-address"><strong>'+escapeHtml(o.order_no||'')+'</strong><p>'+escapeHtml(o.address||'')+'</p><b>'+rupiah(o.total)+'</b></div>'+
+      '<div class="tracking-contacts"><a class="tracking-contact tracking-admin" href="'+adminLink+'" target="_blank" rel="noopener">💬 Chat Admin WhatsApp <span>→</span></a>'+driverHtml+'</div>'+
+      '<button type="button" class="track-button" onclick="loadAccountSection(&quot;orders&quot;)">← Kembali ke Riwayat</button>';
+  }catch(err){box.innerHTML='<div class="error">Tracking belum dapat dimuat. Coba lagi.</div>';console.error(err);}
+}
+async function changeAccountPassword(e){e.preventDefault();const msg=document.getElementById('passwordMsg'),current=document.getElementById('currentPassword').value,newPass=document.getElementById('newPassword').value,confirm=document.getElementById('confirmPassword').value;if(newPass!==confirm){msg.innerHTML='<div class="error">Konfirmasi password tidak sama.</div>';return;}const r=await fetch('/api/customer/password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({current_password:current,new_password:newPass})});const data=await r.json();msg.innerHTML='<div class="'+(r.ok?'success':'error')+'">'+escapeHtml(data.message||data.error||'Selesai.')+'</div>';if(r.ok)e.target.reset();}
 function showMsg(html,ms=3000){const el=document.getElementById('msg');if(msgTimer)clearTimeout(msgTimer);el.innerHTML=html;if(ms>0)msgTimer=setTimeout(()=>{el.innerHTML=''},ms)}
 function clearSelectedAddress(){document.getElementById('address').value='';document.getElementById('lat').value='';document.getElementById('lon').value='';deliveryQuote=null;document.getElementById('locationStatus').textContent='Alamat pengantaran belum dipilih.';render()}
 async function initMaps(){
@@ -79,7 +356,7 @@ function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;',
 function openConfirm(){document.getElementById('confirmSummary').innerHTML=buildConfirmSummary();document.getElementById('confirmModal').hidden=false;}
 function closeConfirm(){document.getElementById('confirmModal').hidden=true;}
 function openOrderProcess(orderNo,total,status='confirmed'){document.getElementById('orderProcessContent').innerHTML=`<div class="process-order-no">${escapeHtml(orderNo)}</div><div class="process-total">Total ${rupiah(total)}</div><div class="process-steps"><div class="active"><strong>✓ Order dibuat</strong><span>Pesanan diterima sistem</span></div><div class="active"><strong>✓ Pembayaran</strong><span>PAID (demo)</span></div><div><strong>Kitchen</strong><span>Menunggu diproses</span></div><div><strong>Delivery</strong><span>Menunggu penugasan driver</span></div></div>`;document.getElementById('orderProcessModal').hidden=false;}
-function closeOrderProcess(){document.getElementById('orderProcessModal').hidden=true;}
+function closeOrderProcess(){document.getElementById('orderProcessModal').hidden=true;const cartEl=document.getElementById('cart');if(cartEl)cartEl.classList.remove('show');render();window.scrollTo({top:0,behavior:'smooth'});}
 async function checkout(){
   const nameEl=document.getElementById('name'),phoneEl=document.getElementById('phone'),addressEl=document.getElementById('address'),latEl=document.getElementById('lat'),lonEl=document.getElementById('lon');
   showMsg('',0);
