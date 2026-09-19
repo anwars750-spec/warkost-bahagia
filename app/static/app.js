@@ -112,6 +112,89 @@ function render(){
 }
 function cartOpen(){document.getElementById('cart').classList.toggle('show');render()}
 
+function notificationStatusLabel(status){
+  const map={
+    pending_payment:'Menunggu pembayaran',
+    paid:'Pembayaran diterima',
+    confirmed:'Pesanan dikonfirmasi',
+    processing:'Pesanan sedang diproses',
+    ready:'Pesanan siap diantar',
+    ready_for_pickup:'Pesanan siap diambil',
+    out_for_delivery:'Pesanan sedang diantar',
+    completed:'Pesanan selesai',
+    cancelled:'Pesanan dibatalkan',
+    expired:'Pesanan kedaluwarsa',
+    in_fulfillment:'Pesanan sedang diproses'
+  };
+  return map[String(status||'').toLowerCase()]||'Status pesanan diperbarui';
+}
+function notificationStatusIcon(status){
+  const s=String(status||'').toLowerCase();
+  if(s==='completed')return '✓';
+  if(s==='cancelled'||s==='expired')return '!';
+  if(s==='out_for_delivery')return '🛵';
+  if(s==='ready'||s==='ready_for_pickup')return '📦';
+  if(s==='processing'||s==='in_fulfillment')return '🍳';
+  if(s==='paid'||s==='confirmed')return '✓';
+  return '🔔';
+}
+function formatNotificationTime(value){
+  if(!value)return '';
+  const d=new Date(String(value).replace(' ','T'));
+  if(Number.isNaN(d.getTime()))return '';
+  return d.toLocaleString('id-ID',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+}
+async function loadNotifications(){
+  const el=document.getElementById('notificationContent');
+  if(!el)return;
+  el.innerHTML='<div class="notification-loading"><span>⏳</span><strong>Memuat notifikasi...</strong><small>Mengecek status pesanan terbaru.</small></div>';
+  try{
+    const r=await fetch('/api/customer/orders');
+    const data=await r.json();
+    if(!r.ok)throw new Error(data.error||'Gagal memuat notifikasi');
+    const orders=Array.isArray(data)?data:[];
+    if(!orders.length){
+      el.innerHTML='<div class="notification-empty"><span>🔔</span><strong>Belum ada notifikasi</strong><small>Update pesanan akan muncul di sini.</small></div>';
+      return;
+    }
+    el.innerHTML=orders.slice(0,6).map(o=>{
+      const status=o.status||o.order_status||o.payment_status||'';
+      const number=o.order_no||o.order_number||('#'+o.id);
+      const total=o.total!=null?new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(o.total)||0):'';
+      return '<button type="button" class="notification-item" onclick="closeNotifications();loadAccountSection(\'orders\')">'+
+        '<span class="notification-icon">'+notificationStatusIcon(status)+'</span>'+
+        '<span class="notification-copy"><strong>Pesanan '+number+'</strong><small>'+notificationStatusLabel(status)+(total?' · '+total:'')+'</small><em>'+formatNotificationTime(o.created_at)+'</em></span>'+
+        '<span class="notification-arrow">→</span>'+
+      '</button>';
+    }).join('');
+  }catch(err){
+    console.error(err);
+    el.innerHTML='<div class="notification-empty"><span>⚠</span><strong>Notifikasi belum dapat dimuat</strong><small>Segarkan halaman lalu coba lagi.</small></div>';
+  }
+}
+function toggleNotifications(){
+  const p=document.getElementById('notificationPanel');
+  const b=document.getElementById('notificationButton');
+  if(!p)return;
+  const open=!p.classList.contains('show');
+  if(open){
+    p.classList.add('show');
+    p.setAttribute('aria-hidden','false');
+    if(b)b.setAttribute('aria-expanded','true');
+    loadNotifications();
+  }else{
+    closeNotifications();
+  }
+}
+function closeNotifications(){
+  const p=document.getElementById('notificationPanel');
+  const b=document.getElementById('notificationButton');
+  if(!p)return;
+  p.classList.remove('show');
+  p.setAttribute('aria-hidden','true');
+  if(b)b.setAttribute('aria-expanded','false');
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeNotifications();});
 function openAccountPanel(){const p=document.getElementById('accountPanel');if(!p)return;p.classList.add('show');p.setAttribute('aria-hidden','false');}
 function closeAccountPanel(){const p=document.getElementById('accountPanel');if(!p)return;p.classList.remove('show');p.setAttribute('aria-hidden','true');}
 async function loadAccountSection(section){
