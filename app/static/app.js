@@ -195,6 +195,29 @@ function closeNotifications(){
   if(b)b.setAttribute('aria-expanded','false');
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeNotifications();});
+function toggleCustomerAccountMenu(){
+  const menu=document.getElementById('customerAccountMenu'),trigger=document.getElementById('customerAccountTrigger');
+  if(!menu)return;
+  const open=!menu.classList.contains('show');
+  menu.classList.toggle('show',open);
+  menu.setAttribute('aria-hidden',String(!open));
+  if(trigger)trigger.setAttribute('aria-expanded',String(open));
+}
+function closeCustomerAccountMenu(){
+  const menu=document.getElementById('customerAccountMenu'),trigger=document.getElementById('customerAccountTrigger');
+  if(!menu)return;
+  menu.classList.remove('show');menu.setAttribute('aria-hidden','true');
+  if(trigger)trigger.setAttribute('aria-expanded','false');
+}
+function openCustomerAccountSection(section){
+  closeCustomerAccountMenu();
+  openAccountPanel();
+  loadAccountSection(section);
+}
+document.addEventListener('click',e=>{
+  const wrap=document.querySelector('.customer-account-wrap');
+  if(wrap&&!wrap.contains(e.target))closeCustomerAccountMenu();
+});
 function openAccountPanel(){const p=document.getElementById('accountPanel');if(!p)return;p.classList.add('show');p.setAttribute('aria-hidden','false');}
 function closeAccountPanel(){const p=document.getElementById('accountPanel');if(!p)return;p.classList.remove('show');p.setAttribute('aria-hidden','true');}
 async function loadAccountSection(section){
@@ -221,6 +244,28 @@ async function editCustomerAddress(id){
  const v=document.getElementById('addressValue'),l=document.getElementById('addressLabel');if(v)v.value=a.address;if(l)l.value=a.label||'Rumah';v?.focus();
 }
 async function loadOrderTracking(id){
+  const box=document.getElementById('accountContent');if(!box)return;
+  box.innerHTML='<p class="account-loading">Memuat tracking...</p>';
+  try{
+    const r=await fetch('/api/customer/orders/'+id+'/tracking');const data=await r.json();
+    if(!r.ok){box.innerHTML='<div class="error">'+escapeHtml(data.error||'Tracking gagal dimuat.')+'</div>';return;}
+    const t=data.tracking||{},o=data.order||{};
+    const contact=data.contact||{};
+    const stages=Array.isArray(t.stages)?t.stages:[];
+    const stageIndex=Number.isFinite(Number(t.stage_index))?Number(t.stage_index):0;
+    const adminPhone=contact.admin_whatsapp||WHATSAPP_NUMBER;
+    const adminMsg=encodeURIComponent('Halo Warkost Bahagia, saya ingin menanyakan pesanan '+(o.order_no||'')+'.');
+    const adminLink='https://wa.me/'+adminPhone+'?text='+adminMsg;
+    const driverHtml=contact.driver_phone&&t.status==='out_for_delivery'
+      ? '<a class="tracking-contact tracking-driver" href="https://wa.me/'+escapeHtml(contact.driver_phone)+'?text='+encodeURIComponent('Halo, saya customer untuk pesanan '+(o.order_no||'')+'.')+'" target="_blank" rel="noopener">🛵 Chat Driver WhatsApp <span>→</span></a>'
+      : '';
+    box.innerHTML='<span class="section-kicker">STATUS PESANAN</span><h3>'+escapeHtml(t.label||'Status pesanan')+'</h3>'+
+      '<div class="tracking-timeline">'+stages.map((s,i)=>'<div class="tracking-step '+(i<=stageIndex?'done':'')+'"><span>'+(i<=stageIndex?'✓':(i+1))+'</span><div><strong>'+escapeHtml(s.label)+'</strong><small>'+(i<stageIndex?'Selesai':i===stageIndex?'Status saat ini':'Menunggu')+'</small></div></div>').join('')+'</div>'+
+      '<div class="tracking-address"><strong>'+escapeHtml(o.order_no||'')+'</strong><p>'+escapeHtml(o.address||'')+'</p><b>'+rupiah(o.total)+'</b></div>'+
+      '<div class="tracking-contacts"><a class="tracking-contact tracking-admin" href="'+adminLink+'" target="_blank" rel="noopener">💬 Chat Admin WhatsApp <span>→</span></a>'+driverHtml+'</div>'+
+      '<button type="button" class="track-button" onclick="loadAccountSection(&quot;orders&quot;)">← Kembali ke Riwayat</button>';
+  }catch(err){box.innerHTML='<div class="error">Tracking belum dapat dimuat. Coba lagi.</div>';console.error(err);}
+}
  const box=document.getElementById('accountContent');if(!box)return;
  const r=await fetch('/api/customer/orders/'+id+'/tracking');const data=await r.json();if(!r.ok){box.innerHTML='<div class="error">'+escapeHtml(data.error||'Tracking gagal dimuat.')+'</div>';return;}
  const t=data.tracking;box.innerHTML='<span class="section-kicker">STATUS PESANAN</span><h3>'+escapeHtml(t.label)+'</h3><div class="tracking-timeline">'+t.stages.map((s,i)=>'<div class="tracking-step '+(i<=t.stage_index?'done':'')+'"><span>'+(i<=t.stage_index?'✓':(i+1))+'</span><div><strong>'+escapeHtml(s.label)+'</strong><small>'+(i<t.stage_index?'Selesai':i===t.stage_index?'Status saat ini':'Menunggu')+'</small></div></div>').join('')+'</div><div class="tracking-address"><strong>'+escapeHtml(data.order.order_no)+'</strong><p>'+escapeHtml(data.order.address||'')+'</p><b>'+rupiah(data.order.total)+'</b></div><button type="button" class="track-button" onclick="loadAccountSection(&quot;orders&quot;)">← Kembali ke Riwayat</button>';
@@ -298,7 +343,7 @@ function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;',
 function openConfirm(){document.getElementById('confirmSummary').innerHTML=buildConfirmSummary();document.getElementById('confirmModal').hidden=false;}
 function closeConfirm(){document.getElementById('confirmModal').hidden=true;}
 function openOrderProcess(orderNo,total,status='confirmed'){document.getElementById('orderProcessContent').innerHTML=`<div class="process-order-no">${escapeHtml(orderNo)}</div><div class="process-total">Total ${rupiah(total)}</div><div class="process-steps"><div class="active"><strong>✓ Order dibuat</strong><span>Pesanan diterima sistem</span></div><div class="active"><strong>✓ Pembayaran</strong><span>PAID (demo)</span></div><div><strong>Kitchen</strong><span>Menunggu diproses</span></div><div><strong>Delivery</strong><span>Menunggu penugasan driver</span></div></div>`;document.getElementById('orderProcessModal').hidden=false;}
-function closeOrderProcess(){document.getElementById('orderProcessModal').hidden=true;}
+function closeOrderProcess(){document.getElementById('orderProcessModal').hidden=true;const cartEl=document.getElementById('cart');if(cartEl)cartEl.classList.remove('show');render();window.scrollTo({top:0,behavior:'smooth'});}
 async function checkout(){
   const nameEl=document.getElementById('name'),phoneEl=document.getElementById('phone'),addressEl=document.getElementById('address'),latEl=document.getElementById('lat'),lonEl=document.getElementById('lon');
   showMsg('',0);
