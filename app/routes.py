@@ -244,13 +244,6 @@ def customer_order_tracking(oid):
     if status=='cancelled': stage_index=-1
     return jsonify(order=dict(order),tracking={'status':status,'label':next((x[1] for x in stages if x[0]==status),'Pesanan dibatalkan' if status=='cancelled' else status),'stage_index':stage_index,'stages':[{'key':x[0],'label':x[1]} for x in stages],'delivery_stop':dict(stop) if stop else None})
 
-@bp.route('/api/customer/addresses')
-def customer_addresses():
-    u=user()
-    if not u or u['role']!='customer': return jsonify(error='Customer login required'),401
-    rows=get_db().execute('SELECT id,label,address,latitude,longitude FROM addresses WHERE customer_id=? ORDER BY id DESC',(u['id'],)).fetchall()
-    return jsonify([dict(r) for r in rows])
-
 @bp.route('/api/customer/password',methods=['POST'])
 def customer_password():
     u=user()
