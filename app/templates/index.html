@@ -17,8 +17,8 @@
       </div>
     </div>
     <nav class="customer-nav">
-      <button class="icon-button" type="button" aria-label="Notifikasi">♧</button>
-      <button class="icon-button" type="button" onclick="cartOpen()" aria-label="Keranjang">🛒<b id="headerCartCount">0</b></button>
+      <button class="icon-button" type="button" aria-label="Notifikasi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></button>
+      <button class="icon-button" type="button" onclick="cartOpen()" aria-label="Keranjang"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L20 8H6M10 20a1 1 0 1 1-2 0m10 0a1 1 0 1 1-2 0"/></svg><b id="headerCartCount">0</b></button>
       {% if u %}
         <span class="customer-name">Hai, {{u['name']}}</span>
         <a href="/logout" class="logout-link">Keluar</a>
@@ -39,17 +39,18 @@
 
     <section class="customer-search-row">
       <label class="menu-search"><span>⌕</span><input id="menuSearch" type="search" placeholder="Cari menu favorit kamu..." autocomplete="off"></label>
-      <button class="cart-shortcut" type="button" onclick="cartOpen()">🛒<b id="shortcutCartCount">0</b></button>
+      <button class="cart-shortcut" type="button" onclick="cartOpen()" aria-label="Buka keranjang"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L20 8H6M10 20a1 1 0 1 1-2 0m10 0a1 1 0 1 1-2 0"/></svg><b id="shortcutCartCount">0</b></button>
     </section>
 
-    <section class="promo-card" aria-label="Promo Warkost Bahagia">
-      <div>
-        <span class="section-kicker">WARKOST BAHAGIA</span>
-        <h1>Ngopi lebih bahagia<br>setiap hari.</h1>
-        <p>Good Food · Good Coffee · Happier Together</p>
+    <section class="promo-card" id="promoSlider" aria-label="Promo Warkost Bahagia">
+      <div class="promo-copy">
+        <span class="section-kicker" id="promoKicker">PROMO HARI INI</span>
+        <h1 id="promoTitle">Diskon 10% untuk semua coffee.</h1>
+        <p id="promoText">Nikmati kopi favoritmu lebih hemat hari ini.</p>
         <button type="button" onclick="document.getElementById('menu').scrollIntoView({behavior:'smooth'})">Lihat Menu <span>→</span></button>
       </div>
-      <div class="promo-cup" aria-hidden="true"><span class="promo-photo"></span></div>
+      <div class="promo-media" id="promoMedia" aria-hidden="true"></div>
+      <div class="promo-dots" id="promoDots" aria-label="Pilihan promo"></div>
     </section>
 
     <section class="category-section">
@@ -70,9 +71,9 @@
   </main>
   <nav class="customer-bottom-nav" aria-label="Navigasi utama">
     <button class="active" type="button" onclick="window.scrollTo({top:0,behavior:'smooth'})"><span>⌂</span><small>Beranda</small></button>
-    <button type="button" onclick="document.getElementById('menu').scrollIntoView({behavior:'smooth'})"><span>▤</span><small>Pesanan</small></button>
-    <button type="button" onclick="cartOpen()"><span>🛒</span><small>Keranjang</small></button>
-    <button type="button" onclick="showMsg('<div class=\'success\'>Menu Akun segera tersedia.</div>')"><span>♙</span><small>Akun</small></button>
+    <button type="button" onclick="document.getElementById('menu').scrollIntoView({behavior:'smooth'})"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18H6zM9 7h6M9 11h6M9 15h4"/></svg><small>Pesanan</small></button>
+    <button type="button" onclick="cartOpen()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L20 8H6M10 20a1 1 0 1 1-2 0m10 0a1 1 0 1 1-2 0"/></svg><small>Keranjang</small></button>
+    <button type="button" onclick="showMsg('<div class=\'success\'>Menu Akun segera tersedia.</div>')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg><small>Akun</small></button>
   </nav>
   <aside id="cart" class="drawer customer-drawer">
     <div class="drawer-head">
