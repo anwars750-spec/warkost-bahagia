@@ -40,7 +40,28 @@ async function loadCustomerLocation(){
   metaEl.textContent='Atur alamat di menu Akun';
  }
 }
-async function load(){const r=await fetch('/api/products');products=await r.json();buildCategoryFilters();renderProducts();renderPromo();startPromoTimer();loadCustomerLocation();}
+async function load(){
+ try{
+  const r=await fetch('/api/products');
+  if(!r.ok)throw new Error('Menu API gagal dimuat');
+  const data=await r.json();
+  if(!Array.isArray(data))throw new Error('Format menu tidak valid');
+  products=data;
+  buildCategoryFilters();
+  renderProducts();
+  renderPromo();
+  startPromoTimer();
+  loadCustomerLocation();
+ }catch(err){
+  products=[];
+  buildCategoryFilters();
+  renderProducts();
+  const empty=document.getElementById('emptyMenu');
+  if(empty){empty.hidden=false;empty.innerHTML='<span>!</span><strong>Menu belum dapat dimuat</strong><small>Segarkan halaman dan coba lagi.</small>';}
+  const mc=document.getElementById('menuCount');if(mc)mc.textContent='0 menu';
+  console.error(err);
+ }
+}
 const PRODUCT_IMAGES={
   "Nasi Goreng Warkost":"https://images.unsplash.com/photo-1707269714960-320c5d6f47b7?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=82&w=1200",
   "Ayam Geprek":"https://images.unsplash.com/photo-1696340034876-6245523babfa?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=82&w=1200",
