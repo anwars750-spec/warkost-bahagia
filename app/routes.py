@@ -191,6 +191,36 @@ def delivery_quote():
         return jsonify(ok=False,available=False,distance_km=round(distance,2),free_radius_km=free_radius,max_radius_km=max_radius,extra_fee=extra_fee,error=f'Lokasi di luar radius delivery maksimal ({max_radius:g} km)'),400
     return jsonify(ok=True,available=True,distance_km=round(distance,2),free_radius_km=free_radius,max_radius_km=max_radius,delivery_fee=fee,extra_fee=extra_fee,message=('Gratis ongkir' if fee==0 else f'Ongkir {money(fee):,}'))
 
+@bp.route('/api/customer/orders')
+def customer_orders():
+    u=user()
+    if not u or u['role']!='customer': return jsonify(error='Customer login required'),401
+    db=get_db()
+    rows=db.execute('SELECT id,order_no,created_at,status,payment_status,subtotal,discount,delivery_fee,total FROM orders WHERE customer_id=? ORDER BY id DESC',(u['id'],)).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+@bp.route('/api/customer/addresses')
+def customer_addresses():
+    u=user()
+    if not u or u['role']!='customer': return jsonify(error='Customer login required'),401
+    rows=get_db().execute('SELECT id,label,address,latitude,longitude FROM addresses WHERE customer_id=? ORDER BY id DESC',(u['id'],)).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+@bp.route('/api/customer/password',methods=['POST'])
+def customer_password():
+    u=user()
+    if not u or u['role']!='customer': return jsonify(error='Customer login required'),401
+    data=request.json or {}
+    current=str(data.get('current_password',''))
+    new=str(data.get('new_password',''))
+    if not current or not new: return jsonify(error='Password lama dan password baru wajib diisi.'),400
+    if len(new)<6: return jsonify(error='Password baru minimal 6 karakter.'),400
+    if not check_password_hash(u['password_hash'],current): return jsonify(error='Password lama tidak sesuai.'),400
+    from werkzeug.security import generate_password_hash
+    get_db().execute('UPDATE users SET password_hash=? WHERE id=?',(generate_password_hash(new),u['id']))
+    get_db().commit()
+    return jsonify(ok=True,message='Password berhasil diubah.')
+
 @bp.route('/api/order/<int:oid>')
 def order_detail(oid):
     if not user(): return jsonify(error='Login required'),401
