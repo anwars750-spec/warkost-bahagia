@@ -23,8 +23,19 @@
       <button id="notificationButton" class="icon-button" type="button" onclick="toggleNotifications()" aria-label="Notifikasi" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></button>
       <button class="icon-button" type="button" onclick="cartOpen()" aria-label="Keranjang"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L20 8H6M10 20a1 1 0 1 1-2 0m10 0a1 1 0 1 1-2 0"/></svg><b id="headerCartCount">0</b></button>
       {% if u %}
-        <span class="customer-name">Hai, {{u['name']}}</span>
-        <a href="/logout" class="logout-link">Keluar</a>
+        <div class="customer-account-wrap">
+          <button id="customerAccountTrigger" class="customer-account-trigger" type="button" onclick="toggleCustomerAccountMenu()" aria-expanded="false">
+            <span class="customer-avatar-mini">👤</span>
+            <span class="customer-name">Hai, {{u['name']}}</span>
+            <span class="customer-account-chevron">⌄</span>
+          </button>
+          <div id="customerAccountMenu" class="customer-account-menu" aria-hidden="true">
+            <button type="button" onclick="openCustomerAccountSection('orders')">Riwayat Transaksi <span>→</span></button>
+            <button type="button" onclick="openCustomerAccountSection('addresses')">Alamat Pengantaran <span>→</span></button>
+            <button type="button" onclick="openCustomerAccountSection('password')">Ubah Password <span>→</span></button>
+            <a href="/logout">Keluar <span>→</span></a>
+          </div>
+        </div>
       {% else %}
         <a href="/login" class="login-link">Masuk</a>
       {% endif %}
@@ -86,7 +97,7 @@
     <button class="active" type="button" onclick="window.scrollTo({top:0,behavior:'smooth'})"><span>⌂</span><small>Beranda</small></button>
     <button type="button" onclick="document.getElementById('menu').scrollIntoView({behavior:'smooth'})"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18H6zM9 7h6M9 11h6M9 15h4"/></svg><small>Pesanan</small></button>
     <button type="button" onclick="cartOpen()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L20 8H6M10 20a1 1 0 1 1-2 0m10 0a1 1 0 1 1-2 0"/></svg><small>Keranjang</small></button>
-    <button type="button" onclick="openAccountPanel()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg><small>Akun</small></button>
+    <button type="button" onclick="toggleCustomerAccountMenu()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg><small>Akun</small></button>
   </nav>
 
   <aside id="notificationPanel" class="notification-panel" aria-hidden="true">
