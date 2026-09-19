@@ -502,3 +502,10 @@ html,body{font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif;color:var(--wb-te
   background:#b95221!important;
   color:#fff!important;
 }
+
+.delivery-capacity{display:grid;gap:4px;border-radius:14px;padding:12px 14px;margin:10px 0 14px;border:1px solid #ead9c8;font-size:12px}
+.delivery-capacity strong{font-size:12px}
+.delivery-capacity span{line-height:1.45}
+.delivery-capacity small{color:#8b7769}
+.delivery-capacity.waiting{background:#fff2e6;color:#5a2d12;border-color:#e7b58f}
+.delivery-capacity.available{background:#edf7ee;color:#315b3a;border-color:#cde3d0}
