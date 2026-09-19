@@ -174,3 +174,19 @@
 .product-art.image-fallback{background:linear-gradient(145deg,#ead9c5,#f7eee3)!important}
 .product-art.image-fallback:after{content:"";position:absolute;inset:18px;border:1px dashed rgba(90,45,19,.18);border-radius:14px}
 .product-art span{display:none!important}
+
+
+/* V1.6 DESKTOP MASTER OVERRIDE */
+@media(min-width:701px){
+.customer-page{background:#f5eee5}
+.customer-header{height:78px;padding:0 32px;position:sticky;top:0;z-index:30}
+.customer-header .brand{gap:14px}.customer-header .brand-logo{width:128px;height:54px}.customer-header .brand-copy{display:flex;flex-direction:column}
+.customer-nav{gap:12px}
+.customer-main{width:min(1180px,calc(100% - 64px));max-width:none;margin:0 auto;padding:28px 0 60px}
+.customer-location{padding:0 0 14px}.customer-search-row{margin-bottom:18px}.customer-search-row .menu-search{height:50px}.cart-shortcut{height:50px;width:50px}
+.promo-card{min-height:220px;border-radius:24px;padding:34px 38px}.promo-card h1{font-size:34px;line-height:1.08}.promo-card p{font-size:13px}.promo-cup{font-size:120px;margin-right:50px}
+.category-section{margin:22px 0 30px}.category-filters{gap:10px}.category-filters button{padding:11px 18px;font-size:12px}
+.menu-section .section-heading{margin-bottom:18px}.section-heading h2{font-size:28px}.customer-product-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+.product{padding:0 14px 14px;border-radius:18px}.product-art{height:190px;margin:0 -14px 14px;border-radius:18px 18px 14px 14px}.product h3{font-size:16px}.product p{font-size:12px;min-height:34px}.product-bottom b{font-size:16px}.product button{font-size:11px;padding:11px 10px}
+.customer-bottom-nav{display:none}
+}
