@@ -16,7 +16,26 @@ function startPromoTimer(){if(promoTimer)clearInterval(promoTimer);promoTimer=se
 let products=[],cart=[],msgTimer=null,deliveryQuote=null,mapState={map:null,marker:null,autocomplete:null,ready:false};
 const rupiah=n=>'Rp '+Number(n||0).toLocaleString('id-ID');
 let activeCategory='Semua',menuQuery='';
-async function load(){const r=await fetch('/api/products');products=await r.json();buildCategoryFilters();renderProducts();renderPromo();startPromoTimer();}
+async function loadCustomerLocation(){
+ const textEl=document.getElementById('customerLocationText'),metaEl=document.getElementById('customerLocationMeta');
+ if(!textEl)return;
+ try{
+  const r=await fetch('/api/customer/addresses'); const data=await r.json();
+  if(!r.ok||!Array.isArray(data))throw new Error(data.error||'Gagal memuat alamat');
+  if(data.length){
+   const a=data[0];
+   textEl.textContent=a.address||'Alamat pengantaran tersimpan';
+   metaEl.textContent=(a.label||'Alamat customer')+' · tujuan pengantaran';
+  }else{
+   textEl.textContent='Belum ada alamat tersimpan';
+   metaEl.textContent='Tambahkan alamat untuk pengantaran';
+  }
+ }catch(e){
+  textEl.textContent='Belum ada alamat pengantaran';
+  metaEl.textContent='Atur alamat di menu Akun';
+ }
+}
+async function load(){const r=await fetch('/api/products');products=await r.json();buildCategoryFilters();renderProducts();renderPromo();startPromoTimer();loadCustomerLocation();}
 const PRODUCT_IMAGES={
   "Nasi Goreng Warkost":"https://images.unsplash.com/photo-1707269714960-320c5d6f47b7?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=82&w=1200",
   "Ayam Geprek":"https://images.unsplash.com/photo-1696340034876-6245523babfa?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=82&w=1200",
