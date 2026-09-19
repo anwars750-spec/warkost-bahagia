@@ -1,1 +1,160 @@
-<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Warkost Bahagia</title><link rel="stylesheet" href="/static/app.css"></head><body><header><b>☕ Warkost Bahagia</b><nav>{% if u %}<span>{{u['name']}}</span><a href="/logout">Logout</a>{% else %}<a href="/login">Login</a>{% endif %}</nav></header><main><section class="hero"><h1>Warkost Bahagia</h1><p>Pesan makanan dan minuman dengan mudah.</p></section><section><div class="toolbar"><h2>Menu</h2><button onclick="cartOpen()">🛒 Keranjang (<span id="count">0</span>)</button></div><div id="products" class="grid"></div></section></main><aside id="cart" class="drawer"><button onclick="cartOpen()">✕</button><h2>Checkout</h2><div id="cartItems"></div><div class="totals"><div><span>Subtotal</span><b id="subtotal">Rp 0</b></div><div><span>Diskon</span><b id="discount">− Rp 0</b></div><div><span>Delivery</span><b id="delivery">Rp 0</b></div><div class="grand"><span>Total</span><b id="total">Rp 0</b></div></div><input id="name" placeholder="Nama" value="{{u['name'] if u and u['role']=='customer' else ''}}"><input id="phone" placeholder="No HP aktif"><div class="address-picker"><label for="addressSearch"><b>Alamat pengantaran</b></label><div id="addressSearch" class="maps-autocomplete"></div><small class="location-note">Ketik alamat lalu <b>pilih salah satu rekomendasi peta</b>. Alamat ini adalah tujuan pesanan dan tidak menjadi lokasi utama akun.</small><div id="map" class="order-map"></div><div id="locationStatus" class="location-status">Alamat pengantaran belum dipilih.</div></div><input type="hidden" id="address"><input type="hidden" id="lat"><input type="hidden" id="lon"><button class="primary" onclick="checkout()">Checkout &amp; Buat Order</button><div id="msg" aria-live="polite"></div><div id="confirmModal" class="modal-backdrop" hidden><div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle"><button class="modal-close" type="button" onclick="closeConfirm()">✕</button><h2 id="confirmTitle">Konfirmasi Pesanan</h2><p>Periksa kembali pesanan dan alamat pengantaran sebelum transaksi dibuat.</p><div id="confirmSummary" class="confirm-summary"></div><div class="modal-actions"><button type="button" onclick="closeConfirm()">Batal</button><button type="button" class="primary" onclick="confirmCheckout()">Ya, Lanjutkan Order</button></div></div></div><div id="orderProcessModal" class="modal-backdrop" hidden><div class="confirm-modal order-process" role="dialog" aria-modal="true" aria-labelledby="processTitle"><h2 id="processTitle">Order Sedang Diproses</h2><div id="orderProcessContent"></div><button type="button" class="primary" onclick="closeOrderProcess()">Kembali ke Menu</button></div></div></aside><script src="/static/app.js"></script></body></html>
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#3b1f0c">
+  <title>Warkost Bahagia — Pesan Makanan</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="customer-page">
+  <header class="customer-header">
+    <div class="brand">
+      <div class="brand-mark">☕</div>
+      <div>
+        <strong>Warkost Bahagia</strong>
+        <small>Teman makan & ngopi kamu</small>
+      </div>
+    </div>
+    <nav class="customer-nav">
+      {% if u %}
+        <span class="customer-name">Hai, {{u['name']}}</span>
+        <a href="/logout" class="logout-link">Keluar</a>
+      {% else %}
+        <a href="/login" class="login-link">Masuk</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <main class="customer-main">
+    <section class="customer-hero">
+      <div class="hero-copy">
+        <span class="eyebrow">WARKOST BAHAGIA</span>
+        <h1>Makan enak,<br><em>nggak perlu ribet.</em></h1>
+        <p>Pilih menu favoritmu, tentukan alamat, lalu biarkan kami siapkan pesananmu.</p>
+        <button class="hero-cta" type="button" onclick="document.getElementById('products').scrollIntoView({behavior:'smooth'})">
+          Lihat Menu <span>↓</span>
+        </button>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <div class="hero-circle circle-one"></div>
+        <div class="hero-circle circle-two"></div>
+        <div class="coffee-illustration">☕</div>
+        <span class="floating-chip chip-one">Fresh</span>
+        <span class="floating-chip chip-two">Siap antar</span>
+      </div>
+    </section>
+
+    <section class="quick-info" aria-label="Informasi layanan">
+      <div><span class="info-icon">⚡</span><div><strong>Pesan cepat</strong><small>Checkout sederhana</small></div></div>
+      <div><span class="info-icon">📍</span><div><strong>Antar ke lokasi</strong><small>Hitung ongkir otomatis</small></div></div>
+      <div><span class="info-icon">🛡️</span><div><strong>Order terkontrol</strong><small>Status pesanan jelas</small></div></div>
+    </section>
+
+    <section class="menu-section" id="menu">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">PILIH FAVORITMU</span>
+          <h2>Menu Warkost</h2>
+        </div>
+        <button class="cart-pill" type="button" onclick="cartOpen()">
+          <span>🛒</span>
+          <span>Keranjang</span>
+          <b id="count">0</b>
+        </button>
+      </div>
+
+      <div id="products" class="grid customer-product-grid" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <aside id="cart" class="drawer customer-drawer">
+    <div class="drawer-head">
+      <div>
+        <span class="section-kicker">PESANAN KAMU</span>
+        <h2>Keranjang</h2>
+      </div>
+      <button class="drawer-close" type="button" onclick="cartOpen()" aria-label="Tutup keranjang">✕</button>
+    </div>
+
+    <div id="cartItems" class="customer-cart-items"></div>
+
+    <div class="checkout-panel">
+      <div class="totals">
+        <div><span>Subtotal</span><b id="subtotal">Rp 0</b></div>
+        <div><span>Diskon</span><b id="discount">− Rp 0</b></div>
+        <div><span>Delivery</span><b id="delivery">Rp 0</b></div>
+        <div class="grand"><span>Total</span><b id="total">Rp 0</b></div>
+      </div>
+
+      <div class="checkout-form">
+        <div class="form-heading">
+          <span>01</span>
+          <div><strong>Data penerima</strong><small>Pastikan nomor HP aktif.</small></div>
+        </div>
+        <input id="name" placeholder="Nama penerima" value="{{u['name'] if u and u['role']=='customer' else ''}}">
+        <input id="phone" placeholder="No. HP aktif" inputmode="tel">
+
+        <div class="form-heading">
+          <span>02</span>
+          <div><strong>Alamat pengantaran</strong><small>Pilih titik dari peta agar ongkir akurat.</small></div>
+        </div>
+        <div class="address-picker">
+          <div id="addressSearch" class="maps-autocomplete"></div>
+          <small class="location-note">Ketik alamat lalu <b>pilih salah satu rekomendasi peta</b>.</small>
+          <div id="map" class="order-map"></div>
+          <div id="locationStatus" class="location-status">Alamat pengantaran belum dipilih.</div>
+        </div>
+        <input type="hidden" id="address">
+        <input type="hidden" id="lat">
+        <input type="hidden" id="lon">
+        <button class="primary checkout-button" type="button" onclick="checkout()">Lanjutkan Checkout <span>→</span></button>
+        <div id="msg" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div id="confirmModal" class="modal-backdrop" hidden>
+      <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+        <button class="modal-close" type="button" onclick="closeConfirm()">✕</button>
+        <span class="section-kicker">LANGKAH TERAKHIR</span>
+        <h2 id="confirmTitle">Konfirmasi Pesanan</h2>
+        <p>Periksa pesanan dan alamat sebelum transaksi dibuat.</p>
+        <div id="confirmSummary" class="confirm-summary"></div>
+        <div class="modal-actions">
+          <button type="button" onclick="closeConfirm()">Periksa Lagi</button>
+          <button type="button" class="primary" onclick="confirmCheckout()">Ya, Buat Order</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="orderProcessModal" class="modal-backdrop" hidden>
+      <div class="confirm-modal order-process" role="dialog" aria-modal="true" aria-labelledby="processTitle">
+        <span class="process-check">✓</span>
+        <span class="section-kicker">ORDER DITERIMA</span>
+        <h2 id="processTitle">Pesanan sedang diproses</h2>
+        <div id="orderProcessContent"></div>
+        <button type="button" class="primary checkout-button" onclick="closeOrderProcess()">Kembali ke Menu</button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="mobile-cart-bar" onclick="cartOpen()">
+    <div><span>🛒</span><strong>Keranjang</strong><small><span id="mobileCartCount">0</span> item</small></div>
+    <strong id="mobileCartTotal">Rp 0</strong>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const originalRender = window.render;
+    window.render = function(){
+      originalRender();
+      const count = document.getElementById('count')?.textContent || '0';
+      const total = document.getElementById('total')?.textContent || 'Rp 0';
+      const mc = document.getElementById('mobileCartCount');
+      const mt = document.getElementById('mobileCartTotal');
+      if(mc) mc.textContent = count;
+      if(mt) mt.textContent = total;
+    };
+  </script>
+</body>
+</html>
