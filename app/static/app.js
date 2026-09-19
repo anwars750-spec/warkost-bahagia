@@ -1,6 +1,28 @@
 let products=[],cart=[],msgTimer=null,deliveryQuote=null,mapState={map:null,marker:null,autocomplete:null,ready:false};
 const rupiah=n=>'Rp '+Number(n||0).toLocaleString('id-ID');
-async function load(){const r=await fetch('/api/products');products=await r.json();document.getElementById('products').innerHTML=products.map(p=>`<article class="product"><span>${p.category||''}</span><h3>${p.name}</h3><p>${p.description||''}</p><b>${rupiah(p.price)}</b><small>Stock: ${p.stock}</small><button ${p.stock<1?'disabled':''} onclick="add(${p.id})">${p.stock<1?'Habis':'Tambah'}</button></article>`).join('');}
+let activeCategory='Semua',menuQuery='';
+async function load(){const r=await fetch('/api/products');products=await r.json();buildCategoryFilters();renderProducts();}
+function productIcon(category){const c=String(category||'').toLowerCase();if(c.includes('minum'))return '🥤';if(c.includes('makanan'))return '🍛';return '☕';}
+function buildCategoryFilters(){
+  const el=document.getElementById('categoryFilters');if(!el)return;
+  const cats=['Semua',...new Set(products.map(p=>p.category).filter(Boolean))];
+  el.innerHTML=cats.map(c=>`<button type="button" class="${c===activeCategory?'active':''}" onclick="setCategory(${JSON.stringify(c)})" role="tab" aria-selected="${c===activeCategory}">${escapeHtml(c)}</button>`).join('');
+}
+function setCategory(category){activeCategory=category;buildCategoryFilters();renderProducts();}
+function filterProducts(){const q=menuQuery.trim().toLowerCase();return products.filter(p=>(activeCategory==='Semua'||p.category===activeCategory)&&(!q||[p.name,p.description,p.category].some(v=>String(v||'').toLowerCase().includes(q))));}
+function renderProducts(){
+  const box=document.getElementById('products'),empty=document.getElementById('emptyMenu'),items=filterProducts();
+  box.innerHTML=items.map(p=>`<article class="product">
+    <div class="product-art" aria-hidden="true"><span>${productIcon(p.category)}</span></div>
+    <span>${escapeHtml(p.category||'Menu')}</span>
+    <h3>${escapeHtml(p.name)}</h3>
+    <p>${escapeHtml(p.description||'Pilihan menu Warkost Bahagia')}</p>
+    <div class="product-bottom"><b>${rupiah(p.price)}</b><small>${p.stock<1?'Stok habis':'Tersedia'}</small></div>
+    <button ${p.stock<1?'disabled':''} onclick="add(${p.id})">${p.stock<1?'Habis':'Tambah ke keranjang'}</button>
+  </article>`).join('');
+  empty.hidden=items.length>0;
+}
+document.addEventListener('DOMContentLoaded',()=>{const s=document.getElementById('menuSearch');if(s)s.addEventListener('input',e=>{menuQuery=e.target.value;renderProducts();});});
 function add(id){let x=cart.find(i=>i.product_id===id);let p=products.find(x=>x.id===id);if(!p)return;if(x){if(x.qty>=p.stock)return;x.qty++;}else cart.push({product_id:id,qty:1});render()}
 function minus(id){let x=cart.find(i=>i.product_id===id);if(!x)return;x.qty--;if(x.qty<=0)cart=cart.filter(i=>i.product_id!==id);render()}
 function plus(id){add(id)}
