@@ -199,6 +199,51 @@ def customer_orders():
     rows=db.execute('SELECT id,order_no,created_at,status,payment_status,subtotal,discount,delivery_fee,total FROM orders WHERE customer_id=? ORDER BY id DESC',(u['id'],)).fetchall()
     return jsonify([dict(r) for r in rows])
 
+@bp.route('/api/customer/addresses',methods=['GET','POST'])
+def customer_addresses():
+    u=user()
+    if not u or u['role']!='customer': return jsonify(error='Customer login required'),401
+    db=get_db()
+    if request.method=='POST':
+        data=request.json or {}
+        address=str(data.get('address','')).strip()
+        label=str(data.get('label','Rumah')).strip() or 'Rumah'
+        lat=data.get('latitude'); lon=data.get('longitude')
+        if not address: return jsonify(error='Alamat wajib diisi.'),400
+        try:
+            lat=float(lat) if lat not in (None,'') else None
+            lon=float(lon) if lon not in (None,'') else None
+        except (TypeError,ValueError):
+            return jsonify(error='Koordinat alamat tidak valid.'),400
+        db.execute('UPDATE addresses SET label=? WHERE customer_id=?',(label,u['id']))
+        cur=db.execute('INSERT INTO addresses(customer_id,label,address,latitude,longitude) VALUES(?,?,?,?,?)',(u['id'],label,address,lat,lon))
+        db.commit()
+        row=db.execute('SELECT id,label,address,latitude,longitude FROM addresses WHERE id=?',(cur.lastrowid,)).fetchone()
+        return jsonify(ok=True,address=dict(row))
+    rows=db.execute('SELECT id,label,address,latitude,longitude FROM addresses WHERE customer_id=? ORDER BY id DESC',(u['id'],)).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+@bp.route('/api/customer/orders/<int:oid>/tracking')
+def customer_order_tracking(oid):
+    u=user()
+    if not u or u['role']!='customer': return jsonify(error='Customer login required'),401
+    db=get_db()
+    order=db.execute('SELECT id,order_no,status,payment_status,address,latitude,longitude,created_at,total FROM orders WHERE id=? AND customer_id=?',(oid,u['id'])).fetchone()
+    if not order:return jsonify(error='Pesanan tidak ditemukan.'),404
+    stop=db.execute('SELECT ds.status stop_status,dt.status trip_status FROM delivery_stops ds LEFT JOIN delivery_trips dt ON dt.id=ds.trip_id WHERE ds.order_id=?',(oid,)).fetchone()
+    status=str(order['status'] or 'pending_payment')
+    stages=[
+      ('pending_payment','Menunggu pembayaran'),
+      ('confirmed','Pesanan dikonfirmasi'),
+      ('processing','Sedang diproses'),
+      ('ready','Siap diantar'),
+      ('out_for_delivery','Dalam perjalanan'),
+      ('completed','Pesanan selesai')
+    ]
+    stage_index=next((idx for idx,item in enumerate(stages) if item[0]==status),0)
+    if status=='cancelled': stage_index=-1
+    return jsonify(order=dict(order),tracking={'status':status,'label':next((x[1] for x in stages if x[0]==status),'Pesanan dibatalkan' if status=='cancelled' else status),'stage_index':stage_index,'stages':[{'key':x[0],'label':x[1]} for x in stages],'delivery_stop':dict(stop) if stop else None})
+
 @bp.route('/api/customer/addresses')
 def customer_addresses():
     u=user()
