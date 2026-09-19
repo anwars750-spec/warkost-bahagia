@@ -453,3 +453,26 @@ html,body{font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif;color:var(--wb-te
   .notification-panel{top:72px;right:12px;width:calc(100vw - 24px);max-height:calc(100vh - 90px);border-radius:20px}
   .notification-content{max-height:calc(100vh - 170px)}
 }
+
+/* V1.6 header account menu + tracking contacts */
+.customer-account-wrap{position:relative}
+.customer-account-trigger{display:flex;align-items:center;gap:7px;border:0;background:transparent;color:#5b4638;cursor:pointer;padding:7px 8px;border-radius:12px;font:inherit}
+.customer-account-trigger:hover,.customer-account-trigger:focus-visible{background:#eee1d4;outline:none}
+.customer-avatar-mini{width:28px;height:28px;border-radius:9px;background:#f1dfcf;display:grid;place-items:center;font-size:14px}
+.customer-account-chevron{font-size:16px;line-height:1;transform:translateY(-1px)}
+.customer-account-menu{position:absolute;right:0;top:calc(100% + 8px);width:220px;background:#fffaf2;border:1px solid #e6ddd3;border-radius:16px;padding:7px;box-shadow:0 18px 45px rgba(59,31,12,.16);z-index:1250;opacity:0;visibility:hidden;transform:translateY(-5px);pointer-events:none;transition:.16s ease}
+.customer-account-menu.show{opacity:1;visibility:visible;transform:translateY(0);pointer-events:auto}
+.customer-account-menu button,.customer-account-menu a{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;border:0;background:transparent;color:#3b1f0c;text-decoration:none;padding:11px 12px;border-radius:11px;font:inherit;font-size:12px;font-weight:650;cursor:pointer;text-align:left}
+.customer-account-menu button:hover,.customer-account-menu a:hover{background:#f1e5d7}
+.customer-account-menu span{color:#8a5c37}
+.tracking-contacts{display:grid;gap:8px;margin:12px 0}
+.tracking-contact{display:flex;align-items:center;justify-content:space-between;gap:10px;text-decoration:none;border-radius:12px;padding:12px 14px;font-size:12px;font-weight:750;border:1px solid #e5d7c8}
+.tracking-admin{background:#3b1f0c;color:#fff}
+.tracking-driver{background:#f3e4d2;color:#3b1f0c}
+.tracking-contact:hover{transform:translateY(-1px)}
+@media(max-width:700px){
+ .customer-account-wrap{display:block}
+ .customer-account-trigger{padding:5px}
+ .customer-account-trigger .customer-name{display:none}
+ .customer-account-menu{right:-4px;width:210px}
+}
