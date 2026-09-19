@@ -191,6 +191,42 @@ def delivery_quote():
         return jsonify(ok=False,available=False,distance_km=round(distance,2),free_radius_km=free_radius,max_radius_km=max_radius,extra_fee=extra_fee,error=f'Lokasi di luar radius delivery maksimal ({max_radius:g} km)'),400
     return jsonify(ok=True,available=True,distance_km=round(distance,2),free_radius_km=free_radius,max_radius_km=max_radius,delivery_fee=fee,extra_fee=extra_fee,message=('Gratis ongkir' if fee==0 else f'Ongkir {money(fee):,}'))
 
+def delivery_capacity_status(db):
+    max_per_driver=5
+    rows=db.execute("""
+        SELECT d.user_id,d.online,COUNT(ds.id) AS active_stops
+        FROM drivers d
+        LEFT JOIN delivery_trips dt ON dt.driver_id=d.user_id AND dt.status='active'
+        LEFT JOIN delivery_stops ds ON ds.trip_id=dt.id AND ds.status NOT IN ('completed','cancelled')
+        GROUP BY d.user_id,d.online
+    """).fetchall()
+    online_drivers=sum(1 for r in rows if int(r['online'] or 0)==1)
+    active_deliveries=sum(int(r['active_stops'] or 0) for r in rows)
+    available_slots=sum(max(0,max_per_driver-int(r['active_stops'] or 0)) for r in rows if int(r['online'] or 0)==1)
+    if available_slots<=0:
+        if online_drivers:
+            message='Driver kami sedang mengantarkan pesanan lain. Pesananmu akan masuk antrean pengantaran. Harap menunggu waktu lebih lama.'
+        else:
+            message='Driver sedang tidak tersedia. Pesananmu akan masuk antrean pengantaran. Harap menunggu waktu lebih lama.'
+        waiting=True
+    else:
+        message='Driver masih memiliki slot pengantaran. Pesanan akan diproses sesuai antrean driver.'
+        waiting=False
+    return {
+        'max_per_driver':max_per_driver,
+        'online_drivers':online_drivers,
+        'active_deliveries':active_deliveries,
+        'available_slots':available_slots,
+        'waiting':waiting,
+        'message':message
+    }
+
+@bp.route('/api/customer/delivery-status')
+def customer_delivery_status():
+    u=user()
+    if not u or u['role']!='customer': return jsonify(error='Customer login required'),401
+    return jsonify(delivery_capacity_status(get_db()))
+
 @bp.route('/api/customer/orders')
 def customer_orders():
     u=user()
@@ -247,7 +283,7 @@ def customer_order_tracking(oid):
     if driver:
         contact['driver_name']=driver['name']
         contact['driver_phone']=driver['phone']
-    return jsonify(order=dict(order),tracking={'status':status,'label':next((x[1] for x in stages if x[0]==status),'Pesanan dibatalkan' if status=='cancelled' else status),'stage_index':stage_index,'stages':[{'key':x[0],'label':x[1]} for x in stages],'delivery_stop':dict(stop) if stop else None},contact=contact)
+    return jsonify(order=dict(order),tracking={'status':status,'label':next((x[1] for x in stages if x[0]==status),'Pesanan dibatalkan' if status=='cancelled' else status),'stage_index':stage_index,'stages':[{'key':x[0],'label':x[1]} for x in stages],'delivery_stop':dict(stop) if stop else None},contact=contact,delivery_capacity=delivery_capacity_status(db))
 
 @bp.route('/api/customer/password',methods=['POST'])
 def customer_password():
@@ -387,7 +423,9 @@ def claim(oid):
     if not trip:
         trip=db.execute('INSERT INTO delivery_trips(driver_id) VALUES(?)',(user()['id'],)); trip_id=trip.lastrowid; db.execute('UPDATE drivers SET active_trip_id=? WHERE user_id=?',(trip_id,user()['id']))
     else: trip_id=trip['id']
-    count=db.execute('SELECT COUNT(*) c FROM delivery_stops WHERE trip_id=?',(trip_id,)).fetchone()['c']
+    count=db.execute("SELECT COUNT(*) c FROM delivery_stops WHERE trip_id=? AND status NOT IN ('completed','cancelled')",(trip_id,)).fetchone()['c']
+    if count>=5:
+        return jsonify(error='Driver sudah membawa maksimal 5 pesanan aktif. Selesaikan salah satu pengantaran terlebih dahulu.'),409
     db.execute('INSERT INTO delivery_stops(trip_id,order_id,sequence_no) VALUES(?,?,?)',(trip_id,oid,count+1)); db.execute("UPDATE orders SET status='assigned' WHERE id=?",(oid,)); db.commit(); return jsonify(ok=True)
 
 @bp.route('/api/driver/stops')
