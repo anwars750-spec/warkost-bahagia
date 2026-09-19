@@ -49,7 +49,6 @@
         <strong id="customerLocationText">Memuat alamat pengantaran...</strong>
         <small id="customerLocationMeta">Alamat customer</small>
       </div>
-      <button class="location-change" type="button" onclick="openAccountPanel();loadAccountSection('addresses')" aria-label="Ubah alamat pengantaran"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
     </section>
 
     <section class="customer-search-row">
@@ -117,13 +116,15 @@
         <button type="button" class="drawer-close" onclick="closeAccountPanel()" aria-label="Tutup pengaturan akun">✕</button>
       </div>
       <div class="account-profile"><div class="account-avatar">👤</div><div><strong>{{u['name'] if u and u['role']=='customer' else 'Customer'}}</strong><small>{{u['phone'] if u and u['role']=='customer' and u['phone'] else 'Nomor HP belum diatur'}}</small></div></div>
-      <div class="account-menu">
-        <button type="button" onclick="loadAccountSection('orders')"><span>Riwayat Transaksi</span><small>Lihat pesanan sebelumnya →</small></button>
-        <button type="button" onclick="loadAccountSection('addresses')"><span>Alamat</span><small>Kelola alamat pengantaran →</small></button>
-        <button type="button" onclick="loadAccountSection('password')"><span>Ubah Password</span><small>Perbarui keamanan akun →</small></button>
-        <a class="account-logout" href="/logout"><span>Keluar</span><small>Logout dari akun</small></a>
+      <div id="accountMenuView">
+        <div class="account-menu">
+          <button type="button" onclick="loadAccountSection('orders')"><span>Riwayat Transaksi</span><small>Lihat pesanan sebelumnya →</small></button>
+          <button type="button" onclick="loadAccountSection('addresses')"><span>Alamat</span><small>Kelola alamat pengantaran →</small></button>
+          <button type="button" onclick="loadAccountSection('password')"><span>Ubah Password</span><small>Perbarui keamanan akun →</small></button>
+          <a class="account-logout" href="/logout"><span>Keluar</span><small>Logout dari akun</small></a>
+        </div>
       </div>
-      <div id="accountContent" class="account-content"><span class="section-kicker">RINGKASAN</span><h3>Kelola akun dengan mudah.</h3><p>Pilih pengaturan di atas untuk melihat riwayat transaksi, alamat, atau mengubah password.</p></div>
+      <div id="accountContent" class="account-content" hidden></div>
     </div>
   </aside>
 
