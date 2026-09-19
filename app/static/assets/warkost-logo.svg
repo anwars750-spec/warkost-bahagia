@@ -1,8 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" role="img" aria-labelledby="title desc">
+<title id="title">Warkost Bahagia</title><desc id="desc">Logo Warkost Bahagia</desc>
 <rect width="900" height="430" fill="none"/>
-<g font-family="Georgia, 'Times New Roman', serif" font-weight="900" text-anchor="middle">
-<text x="450" y="180" font-size="150" fill="#5a382c" stroke="#5a382c" stroke-width="14" paint-order="stroke">WARKOST</text>
-<text x="450" y="350" font-size="142" fill="#5a382c" stroke="#5a382c" stroke-width="14" paint-order="stroke">BAHAGIA</text>
-<text x="435" y="164" font-size="150" fill="#fffaf4">WARKOST</text>
-<text x="435" y="334" font-size="142" fill="#fffaf4">BAHAGIA</text>
+<g font-family="Georgia, 'Times New Roman', serif" font-weight="700" text-anchor="middle">
+<text x="450" y="178" font-size="142" fill="#5a382c" stroke="#5a382c" stroke-width="10" paint-order="stroke">Warkost</text>
+<text x="450" y="342" font-size="134" fill="#5a382c" stroke="#5a382c" stroke-width="10" paint-order="stroke">Bahagia</text>
+<text x="435" y="162" font-size="142" fill="#fffaf4">Warkost</text>
+<text x="435" y="326" font-size="134" fill="#fffaf4">Bahagia</text>
 </g></svg>
