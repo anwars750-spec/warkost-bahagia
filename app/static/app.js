@@ -221,6 +221,7 @@ document.addEventListener('click',e=>{
 function openAccountPanel(){const p=document.getElementById('accountPanel');if(!p)return;p.classList.add('show');p.setAttribute('aria-hidden','false');}
 function closeAccountPanel(){const p=document.getElementById('accountPanel');if(!p)return;p.classList.remove('show');p.setAttribute('aria-hidden','true');showAccountMenuView();}
 function showAccountMenuView(){
+  stopTrackingCapacityRefresh();
   const menu=document.getElementById('accountMenuView'),box=document.getElementById('accountContent');
   if(menu)menu.hidden=false;
   if(box){box.hidden=true;box.innerHTML='';}
@@ -229,6 +230,7 @@ function accountSectionHeader(kicker,title){
   return '<div class="account-section-head"><button type="button" class="account-back" onclick="showAccountMenuView()">← Pengaturan Akun</button><div><span class="section-kicker">'+kicker+'</span><h3>'+title+'</h3></div></div>';
 }
 async function loadAccountSection(section){
+  stopTrackingCapacityRefresh();
   const menu=document.getElementById('accountMenuView'),box=document.getElementById('accountContent');
   if(!box)return;
   if(menu)menu.hidden=true;
@@ -260,31 +262,39 @@ async function editCustomerAddress(id){
  const r=await fetch('/api/customer/addresses');const data=await r.json();const a=data.find(x=>x.id===id);if(!a)return;
  const v=document.getElementById('addressValue'),l=document.getElementById('addressLabel');if(v)v.value=a.address;if(l)l.value=a.label||'Rumah';v?.focus();
 }
+let trackingCapacityTimer=null;
+function stopTrackingCapacityRefresh(){if(trackingCapacityTimer){clearInterval(trackingCapacityTimer);trackingCapacityTimer=null;}}
 async function loadOrderTracking(id){
+  stopTrackingCapacityRefresh();
   const box=document.getElementById('accountContent');if(!box)return;
   box.innerHTML='<p class="account-loading">Memuat tracking...</p>';
-  try{
-    const r=await fetch('/api/customer/orders/'+id+'/tracking');const data=await r.json();
-    if(!r.ok){box.innerHTML='<div class="error">'+escapeHtml(data.error||'Tracking gagal dimuat.')+'</div>';return;}
-    const t=data.tracking||{},o=data.order||{};
-    const contact=data.contact||{};
-    const stages=Array.isArray(t.stages)?t.stages:[];
-    const stageIndex=Number.isFinite(Number(t.stage_index))?Number(t.stage_index):0;
-    const adminPhone=contact.admin_whatsapp||WHATSAPP_NUMBER;
-    const adminMsg=encodeURIComponent('Halo Warkost Bahagia, saya ingin menanyakan pesanan '+(o.order_no||'')+'.');
-    const adminLink='https://wa.me/'+adminPhone+'?text='+adminMsg;
-    const driverHtml=contact.driver_phone&&t.status==='out_for_delivery'
-      ? '<a class="tracking-contact tracking-driver" href="https://wa.me/'+escapeHtml(contact.driver_phone)+'?text='+encodeURIComponent('Halo, saya customer untuk pesanan '+(o.order_no||'')+'.')+'" target="_blank" rel="noopener">🛵 Chat Driver WhatsApp <span>→</span></a>'
-      : '';
-    box.innerHTML='<span class="section-kicker">STATUS PESANAN</span><h3>'+escapeHtml(t.label||'Status pesanan')+'</h3>'+
-      '<div class="tracking-timeline">'+stages.map((s,i)=>'<div class="tracking-step '+(i<=stageIndex?'done':'')+'"><span>'+(i<=stageIndex?'✓':(i+1))+'</span><div><strong>'+escapeHtml(s.label)+'</strong><small>'+(i<stageIndex?'Selesai':i===stageIndex?'Status saat ini':'Menunggu')+'</small></div></div>').join('')+'</div>'+
-      '<div class="tracking-address"><strong>'+escapeHtml(o.order_no||'')+'</strong><p>'+escapeHtml(o.address||'')+'</p><b>'+rupiah(o.total)+'</b></div>'+
-      '<div class="tracking-contacts"><a class="tracking-contact tracking-admin" href="'+adminLink+'" target="_blank" rel="noopener">💬 Chat Admin WhatsApp <span>→</span></a>'+driverHtml+'</div>'+
-      '<button type="button" class="track-button" onclick="loadAccountSection(&quot;orders&quot;)">← Kembali ke Riwayat</button>';
-  }catch(err){box.innerHTML='<div class="error">Tracking belum dapat dimuat. Coba lagi.</div>';console.error(err);}
+  async function renderTracking(){
+    try{
+      const r=await fetch('/api/customer/orders/'+id+'/tracking');const data=await r.json();
+      if(!r.ok){box.innerHTML='<div class="error">'+escapeHtml(data.error||'Tracking gagal dimuat.')+'</div>';return false;}
+      const t=data.tracking||{},o=data.order||{},contact=data.contact||{},cap=data.delivery_capacity||{};
+      const stages=Array.isArray(t.stages)?t.stages:[],stageIndex=Number.isFinite(Number(t.stage_index))?Number(t.stage_index):0;
+      const adminPhone=contact.admin_whatsapp||WHATSAPP_NUMBER;
+      const adminMsg=encodeURIComponent('Halo Warkost Bahagia, saya ingin menanyakan pesanan '+(o.order_no||'')+'.');
+      const adminLink='https://wa.me/'+adminPhone+'?text='+adminMsg;
+      const driverHtml=contact.driver_phone&&t.status==='out_for_delivery'
+        ? '<a class="tracking-contact tracking-driver" href="https://wa.me/'+escapeHtml(contact.driver_phone)+'?text='+encodeURIComponent('Halo, saya customer untuk pesanan '+(o.order_no||'')+'.')+'" target="_blank" rel="noopener">🛵 Chat Driver WhatsApp <span>→</span></a>':'';
+      const waitingNotice=!t.delivery_stop && ['confirmed','processing','ready'].includes(t.status) && cap.waiting
+        ? '<div class="delivery-capacity waiting"><strong>⏳ Antrean pengantaran</strong><span>'+escapeHtml(cap.message)+'</span><small>'+cap.active_deliveries+' pengantaran aktif · '+cap.available_slots+' slot tersedia</small></div>':'';
+      const availableNotice=!t.delivery_stop && ['confirmed','processing','ready'].includes(t.status) && !cap.waiting
+        ? '<div class="delivery-capacity available"><strong>✓ Slot pengantaran tersedia</strong><span>'+escapeHtml(cap.message)+'</span></div>':'';
+      box.innerHTML='<div class="account-section-head"><button type="button" class="account-back" onclick="stopTrackingCapacityRefresh();loadAccountSection(&quot;orders&quot;)">← Pengaturan Akun</button><div><span class="section-kicker">STATUS PESANAN</span><h3>'+escapeHtml(t.label||'Status pesanan')+'</h3></div></div>'+
+        waitingNotice+availableNotice+
+        '<div class="tracking-timeline">'+stages.map((s,i)=>'<div class="tracking-step '+(i<=stageIndex?'done':'')+'"><span>'+(i<=stageIndex?'✓':(i+1))+'</span><div><strong>'+escapeHtml(s.label)+'</strong><small>'+(i<stageIndex?'Selesai':i===stageIndex?'Status saat ini':'Menunggu')+'</small></div></div>').join('')+'</div>'+
+        '<div class="tracking-address"><strong>'+escapeHtml(o.order_no||'')+'</strong><p>'+escapeHtml(o.address||'')+'</p><b>'+rupiah(o.total)+'</b></div>'+
+        '<div class="tracking-contacts"><a class="tracking-contact tracking-admin" href="'+adminLink+'" target="_blank" rel="noopener">💬 Chat Admin WhatsApp <span>→</span></a>'+driverHtml+'</div>'+
+        '<button type="button" class="track-button" onclick="stopTrackingCapacityRefresh();loadAccountSection(&quot;orders&quot;)">← Kembali ke Riwayat</button>';
+      return true;
+    }catch(err){console.error(err);return false;}
+  }
+  if(await renderTracking()) trackingCapacityTimer=setInterval(renderTracking,3000);
 }
-async function changeAccountPassword(e){e.preventDefault();const msg=document.getElementById('passwordMsg'),current=document.getElementById('currentPassword').value,newPass=document.getElementById('newPassword').value,confirm=document.getElementById('confirmPassword').value;if(newPass!==confirm){msg.innerHTML='<div class="error">Konfirmasi password tidak sama.</div>';return;}const r=await fetch('/api/customer/password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({current_password:current,new_password:newPass})});const data=await r.json();msg.innerHTML='<div class="'+(r.ok?'success':'error')+'">'+escapeHtml(data.message||data.error||'Selesai.')+'</div>';if(r.ok)e.target.reset();}
-function showMsg(html,ms=3000){const el=document.getElementById('msg');if(msgTimer)clearTimeout(msgTimer);el.innerHTML=html;if(ms>0)msgTimer=setTimeout(()=>{el.innerHTML=''},ms)}
+
 function clearSelectedAddress(){document.getElementById('address').value='';document.getElementById('lat').value='';document.getElementById('lon').value='';deliveryQuote=null;document.getElementById('locationStatus').textContent='Alamat pengantaran belum dipilih.';render()}
 async function initMaps(){
   const status=document.getElementById('locationStatus');
@@ -355,7 +365,17 @@ function buildConfirmSummary(){
 function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
 function openConfirm(){document.getElementById('confirmSummary').innerHTML=buildConfirmSummary();document.getElementById('confirmModal').hidden=false;}
 function closeConfirm(){document.getElementById('confirmModal').hidden=true;}
-function openOrderProcess(orderNo,total,status='confirmed'){document.getElementById('orderProcessContent').innerHTML=`<div class="process-order-no">${escapeHtml(orderNo)}</div><div class="process-total">Total ${rupiah(total)}</div><div class="process-steps"><div class="active"><strong>✓ Order dibuat</strong><span>Pesanan diterima sistem</span></div><div class="active"><strong>✓ Pembayaran</strong><span>PAID (demo)</span></div><div><strong>Kitchen</strong><span>Menunggu diproses</span></div><div><strong>Delivery</strong><span>Menunggu penugasan driver</span></div></div>`;document.getElementById('orderProcessModal').hidden=false;}
+async function getDeliveryCapacity(){
+  try{const r=await fetch('/api/customer/delivery-status');const d=await r.json();return r.ok?d:null}catch(e){return null}
+}
+async function applyDeliveryCapacityNotice(target){
+  const d=await getDeliveryCapacity();
+  if(!d||!target)return d;
+  const cls=d.waiting?'delivery-capacity waiting':'delivery-capacity available';
+  target.insertAdjacentHTML('beforeend','<div class="'+cls+'"><strong>'+ (d.waiting?'⏳ Harap menunggu':'✓ Driver tersedia') +'</strong><span>'+escapeHtml(d.message)+'</span></div>');
+  return d;
+}
+async function openOrderProcess(orderNo,total,status='confirmed'){document.getElementById('orderProcessContent').innerHTML=`<div class="process-order-no">${escapeHtml(orderNo)}</div><div class="process-total">Total ${rupiah(total)}</div><div class="process-steps"><div class="active"><strong>✓ Order dibuat</strong><span>Pesanan diterima sistem</span></div><div class="active"><strong>✓ Pembayaran</strong><span>PAID (demo)</span></div><div><strong>Kitchen</strong><span>Menunggu diproses</span></div><div><strong>Delivery</strong><span>Menunggu penugasan driver</span></div></div>`;document.getElementById('orderProcessModal').hidden=false;await applyDeliveryCapacityNotice(document.getElementById('orderProcessContent'));}
 function closeOrderProcess(){document.getElementById('orderProcessModal').hidden=true;const cartEl=document.getElementById('cart');if(cartEl)cartEl.classList.remove('show');render();window.scrollTo({top:0,behavior:'smooth'});}
 async function checkout(){
   const nameEl=document.getElementById('name'),phoneEl=document.getElementById('phone'),addressEl=document.getElementById('address'),latEl=document.getElementById('lat'),lonEl=document.getElementById('lon');
@@ -378,7 +398,7 @@ async function confirmCheckout(){
     if(!r.ok){showMsg('<div class="error">'+escapeHtml(d.error||'Order gagal dibuat.')+'</div>');return}
     const pay=await fetch('/api/simulate-payment/'+d.order_id,{method:'POST'});
     if(!pay.ok){showMsg('<div class="error">Order dibuat, tetapi pembayaran demo gagal.</div>');return}
-    openOrderProcess(d.order_no,d.total,'confirmed');
+    await openOrderProcess(d.order_no,d.total,'confirmed');
     cart=[];deliveryQuote=null;clearSelectedAddress();render();load();
   }catch(err){showMsg('<div class="error">Tidak dapat terhubung ke server. Coba lagi.</div>')}
 }
