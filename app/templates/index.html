@@ -29,12 +29,13 @@
   </header>
 
   <main class="customer-main">
-    <section class="customer-location">
-      <div>
-        <span>📍 Kirim ke</span>
-        <strong>Warkost Bahagia · Sukabumi</strong>
+    <section class="customer-location" id="customerLocation" aria-label="Lokasi pengantaran">
+      <div class="location-copy">
+        <span class="location-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12A7 7 0 0 0 5 9c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2.2"/></svg> Kirim ke</span>
+        <strong id="customerLocationText">Memuat alamat pengantaran...</strong>
+        <small id="customerLocationMeta">Alamat customer</small>
       </div>
-      <span class="chevron">›</span>
+      <button class="location-change" type="button" onclick="openAccountPanel();loadAccountSection('addresses')" aria-label="Ubah alamat pengantaran"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
     </section>
 
     <section class="customer-search-row">
