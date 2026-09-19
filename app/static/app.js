@@ -93,13 +93,28 @@ async function loadAccountSection(section){
  box.innerHTML='<p class="account-loading">Memuat...</p>';
  if(section==='orders'){
   const r=await fetch('/api/customer/orders');const data=await r.json();if(!r.ok){box.innerHTML='<div class="error">'+escapeHtml(data.error||'Gagal memuat riwayat.')+'</div>';return;}
-  box.innerHTML='<span class="section-kicker">RIWAYAT TRANSAKSI</span><h3>Pesanan Kamu</h3>'+(data.length?data.map(o=>'<div class="account-order"><div><strong>'+escapeHtml(o.order_no)+'</strong><small>'+escapeHtml(o.created_at||'')+'</small></div><b>'+rupiah(o.total)+'</b><span>'+escapeHtml(o.status||'')+'</span></div>').join(''):'<p>Belum ada transaksi.</p>');
+  box.innerHTML='<span class="section-kicker">RIWAYAT TRANSAKSI</span><h3>Pesanan Kamu</h3>'+(data.length?data.map(o=>'<div class="account-order"><div><strong>'+escapeHtml(o.order_no)+'</strong><small>'+escapeHtml(o.created_at||'')+'</small></div><b>'+rupiah(o.total)+'</b><span class="order-status">'+escapeHtml(o.status||'')+'</span><button type="button" class="track-button" onclick="loadOrderTracking('+o.id+')">Lihat Status & Tracking →</button></div>').join(''):'<p>Belum ada transaksi.</p>');
  }else if(section==='addresses'){
   const r=await fetch('/api/customer/addresses');const data=await r.json();if(!r.ok){box.innerHTML='<div class="error">'+escapeHtml(data.error||'Gagal memuat alamat.')+'</div>';return;}
-  box.innerHTML='<span class="section-kicker">ALAMAT</span><h3>Alamat Pengantaran</h3>'+(data.length?data.map(a=>'<div class="account-address"><strong>'+escapeHtml(a.label||'Alamat')+'</strong><p>'+escapeHtml(a.address)+'</p></div>').join(''):'<p>Belum ada alamat tersimpan. Tambahkan alamat saat checkout.</p>');
+  box.innerHTML='<span class="section-kicker">ALAMAT</span><h3>Alamat Pengantaran</h3>'+(data.length?data.map(a=>'<div class="account-address"><strong>'+escapeHtml(a.label||'Alamat')+'</strong><p>'+escapeHtml(a.address)+'</p><button type="button" class="track-button" onclick="editCustomerAddress('+a.id+')">Gunakan alamat ini</button></div>').join(''):'<p>Belum ada alamat tersimpan.</p>')+'<form class="account-address-form" onsubmit="saveCustomerAddress(event)"><strong>Tambah alamat</strong><input id="addressLabel" placeholder="Label, contoh: Rumah" value="Rumah"><textarea id="addressValue" placeholder="Alamat lengkap" required></textarea><button class="primary" type="submit">Simpan Alamat</button><div id="addressMsg"></div></form>';
  }else if(section==='password'){
   box.innerHTML='<span class="section-kicker">KEAMANAN</span><h3>Ubah Password</h3><form class="account-password" onsubmit="changeAccountPassword(event)"><input id="currentPassword" type="password" placeholder="Password saat ini" required><input id="newPassword" type="password" placeholder="Password baru (min. 6 karakter)" minlength="6" required><input id="confirmPassword" type="password" placeholder="Ulangi password baru" minlength="6" required><button class="primary" type="submit">Simpan Password</button><div id="passwordMsg"></div></form>';
  }
+}
+async function saveCustomerAddress(e){
+ e.preventDefault();const msg=document.getElementById('addressMsg'),address=document.getElementById('addressValue').value.trim(),label=document.getElementById('addressLabel').value.trim()||'Rumah';
+ const r=await fetch('/api/customer/addresses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label,address})});const data=await r.json();
+ msg.innerHTML='<div class="'+(r.ok?'success':'error')+'">'+escapeHtml(data.ok?'Alamat berhasil disimpan.':(data.error||'Gagal menyimpan alamat.'))+'</div>';
+ if(r.ok){await loadCustomerLocation();await loadAccountSection('addresses');}
+}
+async function editCustomerAddress(id){
+ const r=await fetch('/api/customer/addresses');const data=await r.json();const a=data.find(x=>x.id===id);if(!a)return;
+ const v=document.getElementById('addressValue'),l=document.getElementById('addressLabel');if(v)v.value=a.address;if(l)l.value=a.label||'Rumah';v?.focus();
+}
+async function loadOrderTracking(id){
+ const box=document.getElementById('accountContent');if(!box)return;
+ const r=await fetch('/api/customer/orders/'+id+'/tracking');const data=await r.json();if(!r.ok){box.innerHTML='<div class="error">'+escapeHtml(data.error||'Tracking gagal dimuat.')+'</div>';return;}
+ const t=data.tracking;box.innerHTML='<span class="section-kicker">STATUS PESANAN</span><h3>'+escapeHtml(t.label)+'</h3><div class="tracking-timeline">'+t.stages.map((s,i)=>'<div class="tracking-step '+(i<=t.stage_index?'done':'')+'"><span>'+(i<=t.stage_index?'✓':(i+1))+'</span><div><strong>'+escapeHtml(s.label)+'</strong><small>'+(i<t.stage_index?'Selesai':i===t.stage_index?'Status saat ini':'Menunggu')+'</small></div></div>').join('')+'</div><div class="tracking-address"><strong>'+escapeHtml(data.order.order_no)+'</strong><p>'+escapeHtml(data.order.address||'')+'</p><b>'+rupiah(data.order.total)+'</b></div><button type="button" class="track-button" onclick="loadAccountSection('orders')">← Kembali ke Riwayat</button>';
 }
 async function changeAccountPassword(e){e.preventDefault();const msg=document.getElementById('passwordMsg'),current=document.getElementById('currentPassword').value,newPass=document.getElementById('newPassword').value,confirm=document.getElementById('confirmPassword').value;if(newPass!==confirm){msg.innerHTML='<div class="error">Konfirmasi password tidak sama.</div>';return;}const r=await fetch('/api/customer/password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({current_password:current,new_password:newPass})});const data=await r.json();msg.innerHTML='<div class="'+(r.ok?'success':'error')+'">'+escapeHtml(data.message||data.error||'Selesai.')+'</div>';if(r.ok)e.target.reset();}
 function showMsg(html,ms=3000){const el=document.getElementById('msg');if(msgTimer)clearTimeout(msgTimer);el.innerHTML=html;if(ms>0)msgTimer=setTimeout(()=>{el.innerHTML=''},ms)}
