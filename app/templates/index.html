@@ -68,13 +68,40 @@
       <div id="products" class="grid customer-product-grid" aria-live="polite"></div>
       <div id="emptyMenu" class="empty-menu" hidden><span>🔎</span><strong>Menu tidak ditemukan</strong><small>Coba kata kunci atau kategori lain.</small></div>
     </section>
+
+    <section class="contact-section" aria-labelledby="contactTitle">
+      <div class="contact-copy">
+        <span class="section-kicker">BUTUH BANTUAN?</span>
+        <h2 id="contactTitle">Hubungi Kami</h2>
+        <p>Butuh bantuan soal menu, pesanan, pembayaran, atau pengantaran? Tim Warkost Bahagia siap membantu.</p>
+      </div>
+      <button type="button" class="contact-button" onclick="showMsg('<div class=&quot;success&quot;>Hubungi Warkost Bahagia melalui kanal layanan yang tersedia.</div>')">Hubungi Kami <span>→</span></button>
+    </section>
   </main>
   <nav class="customer-bottom-nav" aria-label="Navigasi utama">
     <button class="active" type="button" onclick="window.scrollTo({top:0,behavior:'smooth'})"><span>⌂</span><small>Beranda</small></button>
     <button type="button" onclick="document.getElementById('menu').scrollIntoView({behavior:'smooth'})"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18H6zM9 7h6M9 11h6M9 15h4"/></svg><small>Pesanan</small></button>
     <button type="button" onclick="cartOpen()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L20 8H6M10 20a1 1 0 1 1-2 0m10 0a1 1 0 1 1-2 0"/></svg><small>Keranjang</small></button>
-    <button type="button" onclick="showMsg('<div class=\'success\'>Menu Akun segera tersedia.</div>')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg><small>Akun</small></button>
+    <button type="button" onclick="openAccountPanel()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg><small>Akun</small></button>
   </nav>
+
+  <aside id="accountPanel" class="account-panel" aria-hidden="true">
+    <div class="account-panel-inner">
+      <div class="account-head">
+        <div><span class="section-kicker">PENGATURAN AKUN</span><h2>Akun Saya</h2></div>
+        <button type="button" class="drawer-close" onclick="closeAccountPanel()" aria-label="Tutup pengaturan akun">✕</button>
+      </div>
+      <div class="account-profile"><div class="account-avatar">👤</div><div><strong>{{u['name'] if u and u['role']=='customer' else 'Customer'}}</strong><small>{{u['phone'] if u and u['role']=='customer' and u['phone'] else 'Nomor HP belum diatur'}}</small></div></div>
+      <div class="account-menu">
+        <button type="button" onclick="loadAccountSection('orders')"><span>Riwayat Transaksi</span><small>Lihat pesanan sebelumnya →</small></button>
+        <button type="button" onclick="loadAccountSection('addresses')"><span>Alamat</span><small>Kelola alamat pengantaran →</small></button>
+        <button type="button" onclick="loadAccountSection('password')"><span>Ubah Password</span><small>Perbarui keamanan akun →</small></button>
+        <a class="account-logout" href="/logout"><span>Keluar</span><small>Logout dari akun</small></a>
+      </div>
+      <div id="accountContent" class="account-content"><span class="section-kicker">RINGKASAN</span><h3>Kelola akun dengan mudah.</h3><p>Pilih pengaturan di atas untuk melihat riwayat transaksi, alamat, atau mengubah password.</p></div>
+    </div>
+  </aside>
+
   <aside id="cart" class="drawer customer-drawer">
     <div class="drawer-head">
       <div>
