@@ -219,19 +219,36 @@ document.addEventListener('click',e=>{
   if(wrap&&!wrap.contains(e.target))closeCustomerAccountMenu();
 });
 function openAccountPanel(){const p=document.getElementById('accountPanel');if(!p)return;p.classList.add('show');p.setAttribute('aria-hidden','false');}
-function closeAccountPanel(){const p=document.getElementById('accountPanel');if(!p)return;p.classList.remove('show');p.setAttribute('aria-hidden','true');}
+function closeAccountPanel(){const p=document.getElementById('accountPanel');if(!p)return;p.classList.remove('show');p.setAttribute('aria-hidden','true');showAccountMenuView();}
+function showAccountMenuView(){
+  const menu=document.getElementById('accountMenuView'),box=document.getElementById('accountContent');
+  if(menu)menu.hidden=false;
+  if(box){box.hidden=true;box.innerHTML='';}
+}
+function accountSectionHeader(kicker,title){
+  return '<div class="account-section-head"><button type="button" class="account-back" onclick="showAccountMenuView()">← Pengaturan Akun</button><div><span class="section-kicker">'+kicker+'</span><h3>'+title+'</h3></div></div>';
+}
 async function loadAccountSection(section){
- const box=document.getElementById('accountContent');if(!box)return;
- box.innerHTML='<p class="account-loading">Memuat...</p>';
- if(section==='orders'){
-  const r=await fetch('/api/customer/orders');const data=await r.json();if(!r.ok){box.innerHTML='<div class="error">'+escapeHtml(data.error||'Gagal memuat riwayat.')+'</div>';return;}
-  box.innerHTML='<span class="section-kicker">RIWAYAT TRANSAKSI</span><h3>Pesanan Kamu</h3>'+(data.length?data.map(o=>'<div class="account-order"><div><strong>'+escapeHtml(o.order_no)+'</strong><small>'+escapeHtml(o.created_at||'')+'</small></div><b>'+rupiah(o.total)+'</b><span class="order-status">'+escapeHtml(o.status||'')+'</span><button type="button" class="track-button" onclick="loadOrderTracking('+o.id+')">Lihat Status & Tracking →</button></div>').join(''):'<p>Belum ada transaksi.</p>');
- }else if(section==='addresses'){
-  const r=await fetch('/api/customer/addresses');const data=await r.json();if(!r.ok){box.innerHTML='<div class="error">'+escapeHtml(data.error||'Gagal memuat alamat.')+'</div>';return;}
-  box.innerHTML='<span class="section-kicker">ALAMAT</span><h3>Alamat Pengantaran</h3>'+(data.length?data.map(a=>'<div class="account-address"><strong>'+escapeHtml(a.label||'Alamat')+'</strong><p>'+escapeHtml(a.address)+'</p><button type="button" class="track-button" onclick="editCustomerAddress('+a.id+')">Gunakan alamat ini</button></div>').join(''):'<p>Belum ada alamat tersimpan.</p>')+'<form class="account-address-form" onsubmit="saveCustomerAddress(event)"><strong>Tambah alamat</strong><input id="addressLabel" placeholder="Label, contoh: Rumah" value="Rumah"><textarea id="addressValue" placeholder="Alamat lengkap" required></textarea><button class="primary" type="submit">Simpan Alamat</button><div id="addressMsg"></div></form>';
- }else if(section==='password'){
-  box.innerHTML='<span class="section-kicker">KEAMANAN</span><h3>Ubah Password</h3><form class="account-password" onsubmit="changeAccountPassword(event)"><input id="currentPassword" type="password" placeholder="Password saat ini" required><input id="newPassword" type="password" placeholder="Password baru (min. 6 karakter)" minlength="6" required><input id="confirmPassword" type="password" placeholder="Ulangi password baru" minlength="6" required><button class="primary" type="submit">Simpan Password</button><div id="passwordMsg"></div></form>';
- }
+  const menu=document.getElementById('accountMenuView'),box=document.getElementById('accountContent');
+  if(!box)return;
+  if(menu)menu.hidden=true;
+  box.hidden=false;
+  box.innerHTML='<p class="account-loading">Memuat...</p>';
+  if(section==='orders'){
+    const r=await fetch('/api/customer/orders');const data=await r.json();
+    if(!r.ok){box.innerHTML=accountSectionHeader('RIWAYAT TRANSAKSI','Riwayat Transaksi')+'<div class="error">'+escapeHtml(data.error||'Gagal memuat riwayat.')+'</div>';return;}
+    box.innerHTML=accountSectionHeader('RIWAYAT TRANSAKSI','Pesanan Kamu')+
+      '<div class="account-order-list">'+(data.length?data.map(o=>'<div class="account-order"><div><strong>'+escapeHtml(o.order_no)+'</strong><small>'+escapeHtml(o.created_at||'')+'</small></div><b>'+rupiah(o.total)+'</b><span class="order-status">'+escapeHtml(o.status||'')+'</span><button type="button" class="track-button" onclick="loadOrderTracking('+o.id+')">Lihat Status & Tracking →</button></div>').join(''):'<p>Belum ada transaksi.</p>')+'</div>';
+  }else if(section==='addresses'){
+    const r=await fetch('/api/customer/addresses');const data=await r.json();
+    if(!r.ok){box.innerHTML=accountSectionHeader('ALAMAT','Alamat Pengantaran')+'<div class="error">'+escapeHtml(data.error||'Gagal memuat alamat.')+'</div>';return;}
+    box.innerHTML=accountSectionHeader('ALAMAT','Alamat Pengantaran')+
+      (data.length?data.map(a=>'<div class="account-address"><strong>'+escapeHtml(a.label||'Alamat')+'</strong><p>'+escapeHtml(a.address)+'</p><button type="button" class="track-button" onclick="editCustomerAddress('+a.id+')">Gunakan alamat ini</button></div>').join(''):'<p>Belum ada alamat tersimpan.</p>')+
+      '<form class="account-address-form" onsubmit="saveCustomerAddress(event)"><strong>Tambah alamat</strong><input id="addressLabel" placeholder="Label, contoh: Rumah" value="Rumah"><textarea id="addressValue" placeholder="Alamat lengkap" required></textarea><button class="primary" type="submit">Simpan Alamat</button><div id="addressMsg"></div></form>';
+  }else if(section==='password'){
+    box.innerHTML=accountSectionHeader('KEAMANAN','Ubah Password')+
+      '<form class="account-password" onsubmit="changeAccountPassword(event)"><input id="currentPassword" type="password" placeholder="Password saat ini" required><input id="newPassword" type="password" placeholder="Password baru (min. 6 karakter)" minlength="6" required><input id="confirmPassword" type="password" placeholder="Ulangi password baru" minlength="6" required><button class="primary" type="submit">Simpan Password</button><div id="passwordMsg"></div></form>';
+  }
 }
 async function saveCustomerAddress(e){
  e.preventDefault();const msg=document.getElementById('addressMsg'),address=document.getElementById('addressValue').value.trim(),label=document.getElementById('addressLabel').value.trim()||'Rumah';
