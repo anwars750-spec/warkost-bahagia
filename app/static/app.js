@@ -26,11 +26,12 @@ const PRODUCT_IMAGES={
 function productImage(p){return PRODUCT_IMAGES[String(p?.name||'').trim()]||'';}
 function buildCategoryFilters(){
   const el=document.getElementById('categoryFilters');if(!el)return;
-  const cats=['Semua',...new Set(products.map(p=>p.category).filter(Boolean))];
-  el.innerHTML=cats.map(c=>`<button type="button" class="${c===activeCategory?'active':''}" onclick="setCategory(${JSON.stringify(c)})" role="tab" aria-selected="${c===activeCategory}">${escapeHtml(c)}</button>`).join('');
+  const cats=['Semua',...new Set(products.map(p=>String(p.category||'').trim()).filter(Boolean))];
+  el.innerHTML=cats.map(c=>'<button type="button" class="'+(c===activeCategory?'active':'')+'" data-category="'+escapeHtml(c)+'" role="tab" aria-selected="'+(c===activeCategory)+'">'+escapeHtml(c)+'</button>').join('');
+  el.querySelectorAll('[data-category]').forEach(btn=>btn.addEventListener('click',()=>setCategory(btn.dataset.category)));
 }
-function setCategory(category){activeCategory=category;buildCategoryFilters();renderProducts();document.getElementById('menu')?.scrollIntoView({behavior:'smooth',block:'start'});}
-function filterProducts(){const q=menuQuery.trim().toLowerCase();return products.filter(p=>(activeCategory==='Semua'||p.category===activeCategory)&&(!q||[p.name,p.description,p.category].some(v=>String(v||'').toLowerCase().includes(q))));}
+function setCategory(category){activeCategory=String(category||'Semua').trim();buildCategoryFilters();renderProducts();}
+function filterProducts(){const q=menuQuery.trim().toLowerCase(),active=activeCategory.toLowerCase();return products.filter(p=>(active==='semua'||String(p.category||'').trim().toLowerCase()===active)&&(!q||[p.name,p.description,p.category].some(v=>String(v||'').toLowerCase().includes(q))));}
 function renderProducts(){
   const box=document.getElementById('products'),empty=document.getElementById('emptyMenu'),items=filterProducts();
   box.innerHTML=items.map(p=>{
