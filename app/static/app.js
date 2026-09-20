@@ -81,17 +81,18 @@ function filterProducts(){const q=menuQuery.trim().toLowerCase(),active=activeCa
 function renderProducts(){
   const box=document.getElementById('products'),empty=document.getElementById('emptyMenu'),items=filterProducts();
   box.innerHTML=items.map(p=>{
-    const image=productImage(p);
+    const image=productImage(p),pricing=productPricing(p);
     const imageMarkup=image
-      ? '<div class="product-art"><img src="'+image+'" alt="'+escapeHtml(p.name)+'" loading="lazy" decoding="async" onerror="this.closest(\'.product-art\').classList.add(\'image-fallback\');this.remove()"></div>'
+      ? '<div class="product-art"><img src="'+image+'" alt="'+escapeHtml(p.name)+'" loading="lazy" decoding="async" onerror="this.closest(\\'.product-art\\').classList.add(\\'image-fallback\\');this.remove()"></div>'
       : '<div class="product-art image-fallback" aria-hidden="true"></div>';
+    const priceMarkup=pricing.discounted
+      ? '<div class="product-price"><span class="price-old">'+rupiah(pricing.normal)+'</span><b>'+rupiah(pricing.sale)+'</b><span class="discount-badge">'+pricing.pct+'% OFF</span></div>'
+      : '<div class="product-price"><b>'+rupiah(pricing.sale)+'</b></div>';
     return '<article class="product">'+imageMarkup+
-      '<span class="product-category">'+escapeHtml(p.category||'Menu')+(p.is_favorite?' <b class="favorite-star" title="Menu favorit" aria-label="Menu favorit">★</b>':'')+'</span>'+ 
-      '<h3>'+escapeHtml(p.name)+'</h3>'+ 
-      '<p>'+escapeHtml(p.description||'Pilihan menu Warkost Bahagia')+'</p>'+ 
-      '<div class="product-bottom"><b>'+rupiah(p.price)+'</b><small>'+(p.stock<1?'Stok habis':'Tersedia')+'</small></div>'+ 
-      '<button '+(p.stock<1?'disabled':'')+' onclick="add('+p.id+')">'+(p.stock<1?'Habis':'Tambah ke keranjang')+'</button>'+ 
-      '</article>';
+      '<span class="product-category">'+escapeHtml(p.category||'Menu')+(p.is_favorite?' <b class="favorite-star" title="Menu favorit" aria-label="Menu favorit">★</b>':'')+'</span>'+
+      '<h3>'+escapeHtml(p.name)+'</h3><p>'+escapeHtml(p.description||'Pilihan menu Warkost Bahagia')+'</p>'+
+      '<div class="product-bottom">'+priceMarkup+'<small>'+(p.stock<1?'Stok habis':'Tersedia')+'</small></div>'+
+      '<button '+(p.stock<1?'disabled':'')+' onclick="add('+p.id+')">'+(p.stock<1?'Habis':'Tambah ke keranjang')+'</button></article>';
   }).join('');
   empty.hidden=items.length>0;const mc=document.getElementById('menuCount');if(mc)mc.textContent=items.length+' menu';
 }
@@ -100,14 +101,14 @@ function add(id){let x=cart.find(i=>i.product_id===id);let p=products.find(x=>x.
 function minus(id){let x=cart.find(i=>i.product_id===id);if(!x)return;x.qty--;if(x.qty<=0)cart=cart.filter(i=>i.product_id!==id);render()}
 function plus(id){add(id)}
 let appliedPromo=null;
-function totals(){let subtotal=cart.reduce((s,i)=>{let p=products.find(x=>x.id===i.product_id);return s+(p?p.price*i.qty:0)},0);let delivery=(deliveryQuote&&deliveryQuote.available)?Number(deliveryQuote.delivery_fee||0):0;let discount=Number(appliedPromo?.discount||0);return {subtotal,discount,delivery,total:Math.max(0,subtotal+delivery-discount)}}
+function totals(){let subtotal=cart.reduce((s,i)=>{let p=products.find(x=>x.id===i.product_id);return s+(p?productPricing(p).sale*i.qty:0)},0);let delivery=(deliveryQuote&&deliveryQuote.available)?Number(deliveryQuote.delivery_fee||0):0;let discount=Number(appliedPromo?.discount||0);return {subtotal,discount,delivery,total:Math.max(0,subtotal+delivery-discount)}}
 function render(){
   const cartCount=cart.reduce((a,b)=>a+b.qty,0);
   const legacyCount=document.getElementById('count'); if(legacyCount) legacyCount.textContent=cartCount;
   const hc=document.getElementById('headerCartCount'),sc=document.getElementById('shortcutCartCount'),mc=document.getElementById('mobileCartCount'),mt=document.getElementById('mobileCartTotal');
   if(hc) hc.textContent=cartCount; if(sc) sc.textContent=cartCount; if(mc) mc.textContent=cartCount;
   const box=document.getElementById('cartItems');
-  if(box) box.innerHTML=cart.length ? cart.map(i=>{ const p=products.find(x=>x.id===i.product_id); if(!p)return ''; const sub=p.price*i.qty; return '<div class="cartrow"><div><b>'+escapeHtml(p.name)+'</b><br><small>'+rupiah(p.price)+' × '+i.qty+' = '+rupiah(sub)+'</small></div><div class="qty"><button type="button" onclick="minus('+i.product_id+')">−</button><b>'+i.qty+'</b><button type="button" onclick="plus('+i.product_id+')">+</button></div></div>'; }).join('') : '<p>Keranjang kosong.</p>';
+  if(box) box.innerHTML=cart.length ? cart.map(i=>{ const p=products.find(x=>x.id===i.product_id); if(!p)return ''; const pricing=productPricing(p); const sub=pricing.sale*i.qty; return '<div class="cartrow"><div><b>'+escapeHtml(p.name)+'</b><br><small>'+(pricing.discounted?'<s>'+rupiah(pricing.normal)+'</s> → ':'')+rupiah(pricing.sale)+' × '+i.qty+' = '+rupiah(sub)+'</small></div><div class="qty"><button type="button" onclick="minus('+i.product_id+')">−</button><b>'+i.qty+'</b><button type="button" onclick="plus('+i.product_id+')">+</button></div></div>'; }).join('') : '<p>Keranjang kosong.</p>';
   const t=totals();
   const sub=document.getElementById('subtotal'),disc=document.getElementById('discount'),del=document.getElementById('delivery'),total=document.getElementById('total');
   if(sub)sub.textContent=rupiah(t.subtotal); if(disc)disc.textContent='− '+rupiah(t.discount); if(del)del.textContent=rupiah(t.delivery); if(total)total.textContent=rupiah(t.total); if(mt)mt.textContent=rupiah(t.total);
