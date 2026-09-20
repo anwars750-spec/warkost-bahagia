@@ -361,6 +361,7 @@ def customer_order_tracking(oid):
       ('confirmed','Pesanan dikonfirmasi'),
       ('processing','Sedang diproses'),
       ('ready','Siap diantar'),
+      ('assigned','Driver ditugaskan'),
       ('out_for_delivery','Dalam perjalanan'),
       ('completed','Pesanan selesai')
     ]
@@ -555,7 +556,7 @@ def claim(oid):
     count=db.execute("SELECT COUNT(*) c FROM delivery_stops WHERE trip_id=? AND status NOT IN ('completed','cancelled')",(trip_id,)).fetchone()['c']
     if count>=5:
         return jsonify(error='Driver sudah membawa maksimal 5 pesanan aktif. Selesaikan salah satu pengantaran terlebih dahulu.'),409
-    db.execute('INSERT INTO delivery_stops(trip_id,order_id,sequence_no) VALUES(?,?,?)',(trip_id,oid,count+1)); db.execute("UPDATE orders SET status='assigned' WHERE id=?",(oid,)); db.commit(); return jsonify(ok=True)
+    db.execute('INSERT INTO delivery_stops(trip_id,order_id,sequence_no) VALUES(?,?,?)',(trip_id,oid,count+1)); db.execute("UPDATE orders SET status='assigned' WHERE id=?",(oid,)); db.execute('INSERT INTO notifications(user_id,order_id,title,message) VALUES(?,?,?,?)',(o['customer_id'],oid,'Driver ditugaskan','Driver sudah menerima pesananmu dan akan segera mengantarkannya.')); db.commit(); return jsonify(ok=True)
 
 @bp.route('/api/driver/stops')
 def driver_stops():
