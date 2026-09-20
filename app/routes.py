@@ -97,7 +97,7 @@ def login():
     if request.method=='POST':
         ident=request.form.get('identity','').strip(); pw=request.form.get('password','')
         u=get_db().execute('SELECT * FROM users WHERE email=? OR phone=?',(ident,ident)).fetchone()
-        if u and check_password_hash(u['password_hash'],pw) and u['status']=='active':
+        if u and u['password_hash'] and check_password_hash(u['password_hash'],pw) and u['status']=='active':
             session.clear(); session['user_id']=u['id']
             return redirect(url_for(ROLE_HOME.get(u['role'],'main.index')))
         return render_template('login.html',error='Email/nomor HP atau password tidak sesuai.')
@@ -136,6 +136,22 @@ def register():
         return redirect(url_for('main.index'))
     return render_template('register.html')
 
+@bp.route('/register/google-complete',methods=['GET','POST'])
+def google_complete():
+    pending=session.get('google_pending')
+    if not pending: return redirect(url_for('main.login'))
+    if request.method=='POST':
+        phone=request.form.get('phone','').strip(); birth=request.form.get('birth_date','').strip()
+        try: datetime.strptime(birth,'%Y-%m-%d'); valid_birth=True
+        except ValueError: valid_birth=False
+        db=get_db()
+        if not phone or len(phone)<8 or not valid_birth: return render_template('google_complete.html',error='Tanggal lahir dan nomor HP wajib valid.',google=pending)
+        if db.execute('SELECT 1 FROM users WHERE phone=?',(phone,)).fetchone(): return render_template('google_complete.html',error='Nomor HP sudah digunakan.',google=pending)
+        db.execute("INSERT INTO users(name,phone,email,birth_date,password_hash,role,status,google_sub) VALUES(?,?,?,?,?,'customer','active',?)",(pending['name'],phone,pending['email'],birth,'',pending['sub']))
+        db.commit(); u=db.execute('SELECT id FROM users WHERE LOWER(email)=?',(pending['email'],)).fetchone()
+        session.clear(); session['user_id']=u['id']; return redirect(url_for('main.index'))
+    return render_template('google_complete.html',google=pending)
+
 @bp.route('/forgot-password')
 def forgot_password():
     return render_template('forgot_password.html')
@@ -154,8 +170,8 @@ def auth_google():
         if not email: raise ValueError('missing email')
         db=get_db(); u=db.execute('SELECT * FROM users WHERE LOWER(email)=?',(email,)).fetchone()
         if not u:
-            db.execute("INSERT INTO users(name,email,password_hash,role,status) VALUES(?,?,'','customer','active')",(name or email.split('@')[0],email)); db.commit()
-            u=db.execute('SELECT * FROM users WHERE LOWER(email)=?',(email,)).fetchone()
+            session['google_pending']={'sub':str(claims.get('sub','')),'email':email,'name':name or email.split('@')[0]}
+            return jsonify(ok=True,redirect=url_for('main.google_complete'))
         session.clear(); session['user_id']=u['id']
         return jsonify(ok=True,redirect=url_for('main.index'))
     except Exception:
