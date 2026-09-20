@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS products (
  price INTEGER NOT NULL,
  stock INTEGER NOT NULL DEFAULT 0,
  stock_minimum INTEGER NOT NULL DEFAULT 0,
+ is_favorite INTEGER NOT NULL DEFAULT 0,
  active INTEGER NOT NULL DEFAULT 1,
  FOREIGN KEY(category_id) REFERENCES categories(id)
 );
@@ -193,6 +194,9 @@ def migrate_existing(db):
         db.execute('ALTER TABLE products ADD COLUMN stock INTEGER NOT NULL DEFAULT 0')
     if cols and 'stock_minimum' not in cols:
         db.execute('ALTER TABLE products ADD COLUMN stock_minimum INTEGER NOT NULL DEFAULT 0')
+    cols = {r['name'] for r in db.execute('PRAGMA table_info(products)').fetchall()}
+    if cols and 'is_favorite' not in cols:
+        db.execute('ALTER TABLE products ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0')
 
     _rebuild_users_with_kasir(db)
     _ensure_demo_users(db)
