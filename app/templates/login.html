@@ -1,40 +1,27 @@
 <!doctype html>
-<html lang="id">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#3b1f0c">
-  <title>Masuk — Warkost Bahagia</title>
-  <link rel="stylesheet" href="/static/app.css">
-</head>
-<body class="auth customer-auth">
-  <div class="auth-shell">
-    <div class="auth-brand">
-      <img src="/static/assets/warkost-logo.svg" alt="Warkost Bahagia" class="auth-logo-image">
-      <span>Warkost Bahagia</span>
-    </div>
-    <div class="card auth-card">
-      <span class="section-kicker">SELAMAT DATANG KEMBALI</span>
-      <h1>Siap pesan<br><em>yang enak?</em></h1>
-      <p class="auth-lead">Masuk untuk mulai memilih menu dan membuat pesanan.</p>
-      {% if error %}<div class="error">{{error}}</div>{% endif %}
-      <form method="post">
-        <label> Email atau No. HP
-          <input name="identity" placeholder="contoh: customer@local" autocomplete="username" required>
-        </label>
-        <label> Password
-          <input name="password" type="password" placeholder="Masukkan password" autocomplete="current-password" required>
-        </label>
-        <button class="primary auth-submit" type="submit">Masuk ke Warkost <span>→</span></button>
-      </form>
-      <div class="demo-box">
-        <strong>Akun demo Customer</strong>
-        <span>customer@local</span>
-        <small>Password: <b>123456</b></small>
-      </div>
-      <a class="back-link" href="/">← Kembali ke menu</a>
-    </div>
-    <small class="auth-footer">Warkost Bahagia · Customer App</small>
-  </div>
-</body>
-</html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#3b1f0c"><title>Masuk — Warkost Bahagia</title><link rel="stylesheet" href="/static/app.css"></head>
+<body class="auth customer-auth"><main class="auth-shell auth-modern">
+  <a class="auth-brand-mark" href="/" aria-label="Kembali ke Warkost Bahagia"><img src="/static/assets/warkost-logo.svg" alt="Warkost Bahagia"></a>
+  <section class="card auth-card">
+    <span class="section-kicker">SELAMAT DATANG KEMBALI</span>
+    <h1>Siap pesan <em>yang enak?</em></h1>
+    <p class="auth-lead">Masuk untuk memilih menu, menyimpan alamat, dan mengikuti pesananmu.</p>
+    {% if error %}<div class="error">{{error}}</div>{% endif %}
+    <form method="post" autocomplete="on">
+      <label>Email atau No. HP<input name="identity" type="text" inputmode="email" placeholder="Email atau nomor HP" autocomplete="username" required></label>
+      <label>Password<input name="password" type="password" placeholder="Masukkan password" autocomplete="current-password" required></label>
+      <button class="primary auth-submit" type="submit">Masuk ke Warkost <span>→</span></button>
+    </form>
+    <a class="auth-forgot" href="/forgot-password">Lupa password?</a>
+    <div class="auth-divider"><span>atau</span></div>
+    <div id="googleSignIn" class="google-signin"></div>
+    <p class="auth-note">Login dengan Google menggunakan akun Google milikmu.</p>
+    <div class="auth-register">Belum punya akun? <a href="/register">Daftar sekarang</a></div>
+    <a class="back-link" href="/">← Kembali ke menu</a>
+  </section>
+  <small class="auth-footer">Warkost Bahagia · Customer App</small>
+</main>
+{% if google_client_id %}<script src="https://accounts.google.com/gsi/client" async defer></script><script>
+window.onload=function(){google.accounts.id.initialize({client_id:{{google_client_id|tojson}},callback:function(r){fetch('/auth/google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:r.credential})}).then(x=>x.json()).then(d=>{if(d.ok)location.href=d.redirect||'/';else alert(d.error||'Login Google gagal.')})}});google.accounts.id.renderButton(document.getElementById('googleSignIn'),{theme:'outline',size:'large',width:360,text:'signin_with',shape:'rectangular'});}
+</script>{% endif %}
+</body></html>
