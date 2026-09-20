@@ -187,8 +187,14 @@ def simulate_payment(oid):
     if not o:return jsonify(error='Order tidak ditemukan'),404
     db.execute("UPDATE payments SET status='paid',paid_at=CURRENT_TIMESTAMP,reference=? WHERE order_id=?",('SIM-'+uuid.uuid4().hex[:8],oid))
     db.execute("UPDATE orders SET payment_status='paid',status='confirmed' WHERE id=?",(oid,))
+    if o['promo_id']:
+        promo=db.execute('SELECT id,quota,used_count FROM promotions WHERE id=?',(o['promo_id'],)).fetchone()
+        if promo and (promo['quota'] is None or int(promo['quota'])<=0 or int(promo['used_count'])<int(promo['quota'])):
+            db.execute('UPDATE promotions SET used_count=used_count+1 WHERE id=?',(o['promo_id'],))
+    db.execute('INSERT INTO notifications(user_id,order_id,title,message) VALUES(?,?,?,?,?)' if False else 'SELECT 1') if False else None
     recipients=db.execute("SELECT id FROM users WHERE role IN ('admin','kasir','kitchen')").fetchall()
     for r in recipients: db.execute('INSERT INTO notifications(user_id,order_id,title,message) VALUES(?,?,?,?)',(r['id'],oid,'Order baru',f'Order {o["order_no"]} sudah dibayar.'))
+    db.execute('INSERT INTO notifications(user_id,order_id,title,message) VALUES(?,?,?,?)',(user()['id'],oid,'Pembayaran berhasil',f'Pembayaran untuk {o["order_no"]} berhasil. Pesanan masuk ke proses Warkost Bahagia.'))
     db.commit(); return jsonify(ok=True)
 
 @bp.route('/api/delivery/quote',methods=['POST'])
@@ -257,6 +263,53 @@ def validate_customer_promo():
     if promo['max_discount'] is not None: discount=min(discount,int(promo['max_discount']))
     discount=max(0,min(discount,subtotal))
     return jsonify(ok=True,code=promo['code'],discount=discount,label=promo['code'])
+
+@bp.route('/api/customer/promotions')
+def customer_promotions():
+    u=user()
+    if not u or u['role']!='customer': return jsonify(error='Customer login required'),401
+    rows=get_db().execute("""SELECT id,code,type,value,min_order,max_discount,quota,used_count,starts_at,ends_at
+                             FROM promotions
+                             WHERE active=1
+                               AND (starts_at IS NULL OR starts_at='' OR starts_at<=CURRENT_TIMESTAMP)
+                               AND (ends_at IS NULL OR ends_at='' OR ends_at>=CURRENT_TIMESTAMP)
+                               AND (quota IS NULL OR quota<=0 OR used_count<quota)
+                             ORDER BY id DESC""").fetchall()
+    return jsonify([dict(r) for r in rows])
+
+@bp.route('/api/customer/notifications')
+def customer_notifications():
+    u=user()
+    if not u or u['role']!='customer': return jsonify(error='Customer login required'),401
+    db=get_db()
+    explicit=db.execute('SELECT * FROM notifications WHERE user_id=? ORDER BY id DESC LIMIT 20',(u['id'],)).fetchall()
+    recent=db.execute("""SELECT id,order_no,status,payment_status,total,created_at
+                         FROM orders WHERE customer_id=? ORDER BY id DESC LIMIT 12""",(u['id'],)).fetchall()
+    items=[dict(x) for x in explicit]
+    existing_order_ids={x.get('order_id') for x in items if x.get('order_id')}
+    labels={
+        'pending_payment':'Menunggu pembayaran',
+        'confirmed':'Pesanan dikonfirmasi',
+        'processing':'Pesanan sedang diproses',
+        'ready':'Pesanan siap diantar',
+        'out_for_delivery':'Pesanan sedang diantar',
+        'completed':'Pesanan selesai',
+        'cancelled':'Pesanan dibatalkan',
+        'expired':'Pesanan kedaluwarsa'
+    }
+    for o in recent:
+        if o['id'] in existing_order_ids: continue
+        status=o['status'] or o['payment_status'] or 'pending_payment'
+        items.append({
+            'id':'order-'+str(o['id']),
+            'order_id':o['id'],
+            'title':'Pesanan '+o['order_no'],
+            'message':labels.get(status,'Status pesanan diperbarui'),
+            'read':0,
+            'created_at':o['created_at']
+        })
+    items.sort(key=lambda x:str(x.get('created_at') or ''),reverse=True)
+    return jsonify(items[:30])
 
 @bp.route('/api/customer/delivery-status')
 def customer_delivery_status():
@@ -344,7 +397,7 @@ def order_detail(oid):
     if not o:return jsonify(error='Not found'),404
     if user()['role']=='customer' and o['customer_id']!=user()['id']:return jsonify(error='Forbidden'),403
     items=db.execute('SELECT * FROM order_items WHERE order_id=?',(oid,)).fetchall()
-    return jsonify(order=dict(o),items=[dict(x) for x in items])
+    return jsonify(order=dict(o),items=[dict(x) for x in items],contact={'admin_whatsapp':os.environ.get('WARKOST_ADMIN_WHATSAPP','6281310358558')})
 
 @bp.route('/api/admin/orders')
 def admin_orders():
@@ -364,6 +417,9 @@ def update_status(oid):
     if not status_transition_allowed(role, o['status'], st, o['payment_status']):
         return jsonify(error=f'Role {role} tidak berhak mengubah {o["status"]} menjadi {st}'),403
     db.execute('UPDATE orders SET status=? WHERE id=?',(st,oid))
+    status_messages={'confirmed':'Pesanan dikonfirmasi.','processing':'Pesanan sedang diproses.','ready':'Pesanan siap diantar.','cancelled':'Pesanan dibatalkan.','completed':'Pesanan selesai.','out_for_delivery':'Pesanan sedang diantar.'}
+    if o['customer_id']:
+        db.execute('INSERT INTO notifications(user_id,order_id,title,message) VALUES(?,?,?,?)',(o['customer_id'],oid,'Update pesanan',status_messages.get(st,'Status pesanan diperbarui')))
     db.execute('INSERT INTO audit_logs(user_id,action,entity,entity_id,details) VALUES(?,?,?,?,?)',(user()['id'],'UPDATE','order',oid,f'{o["status"]}->{st}'))
     db.commit(); return jsonify(ok=True,status=st)
 
