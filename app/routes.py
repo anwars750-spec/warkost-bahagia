@@ -180,7 +180,10 @@ def auth_google():
         if claims.get('iss') not in ('accounts.google.com','https://accounts.google.com') or not claims.get('email_verified'): raise ValueError('invalid google identity')
         email=str(claims.get('email','')).lower().strip(); name=str(claims.get('name','')).strip()
         if not email: raise ValueError('missing email')
-        db=get_db(); u=db.execute('SELECT * FROM users WHERE google_sub=? OR LOWER(email)=?',(str(claims.get('sub','')),email)).fetchone()
+        db=get_db(); u=db.execute("SELECT * FROM users WHERE (google_sub=? OR LOWER(email)=?) AND role='customer'",(str(claims.get('sub','')),email)).fetchone()
+        staff=db.execute("SELECT id FROM users WHERE (google_sub=? OR LOWER(email)=?) AND role!='customer' LIMIT 1",(str(claims.get('sub','')),email)).fetchone()
+        if staff:
+            return jsonify(ok=False,error='Akun staff harus masuk melalui Portal Staff.'),403
         if not u:
             session['google_pending']={'sub':str(claims.get('sub','')),'email':email,'name':name or email.split('@')[0]}
             return jsonify(ok=True,redirect=url_for('main.google_complete'))
@@ -523,8 +526,8 @@ def admin_user_manage(uid):
     db=get_db()
     target=db.execute("SELECT * FROM users WHERE id=? AND role!='customer'",(uid,)).fetchone()
     if not target: return jsonify(error='Staff tidak ditemukan.'),404
-    if target['role']=='owner':
-        return jsonify(error='Akun Owner tidak dapat dihapus atau dinonaktifkan dari menu ini.'),403
+    if target['role']=='owner' or target['id']==u['id']:
+        return jsonify(error='Akun Owner atau akun yang sedang digunakan tidak dapat dihapus/dinonaktifkan dari menu ini.'),403
     if request.method=='POST':
         status='active' if bool((request.json or {}).get('active')) else 'inactive'
         db.execute('UPDATE users SET status=? WHERE id=?',(status,uid))
