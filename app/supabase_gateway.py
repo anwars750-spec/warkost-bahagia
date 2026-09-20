@@ -212,3 +212,57 @@ def verify_payment(
     if verified_at:
         payload["p_verified_at"] = verified_at
     return rpc("server_verify_payment", payload)
+
+
+def list_supabase_products_by_legacy_ids(legacy_ids):
+    ids = [str(int(x)) for x in legacy_ids]
+    if not ids:
+        return []
+    return rest_json(
+        "GET",
+        "/rest/v1/products",
+        query={
+            "legacy_product_id": "in.(" + ",".join(ids) + ")",
+            "select": "id,legacy_product_id,name,selling_price,active",
+        },
+    ) or []
+
+
+def upsert_supabase_product(
+    legacy_product_id,
+    category_id,
+    name,
+    description,
+    normal_price,
+    selling_price,
+    stock,
+    image_url=None,
+):
+    payload = {
+        "legacy_product_id": int(legacy_product_id),
+        "category_id": category_id,
+        "name": name,
+        "description": description,
+        "normal_price": normal_price,
+        "selling_price": selling_price,
+        "stock": int(stock),
+        "active": bool(True),
+    }
+    if image_url:
+        payload["image_url"] = image_url
+
+    existing = list_supabase_products_by_legacy_ids([legacy_product_id])
+    if existing:
+        product_id = existing[0]["id"]
+        return rest_json(
+            "PATCH",
+            "/rest/v1/products",
+            payload=payload,
+            query={"id": f"eq.{product_id}", "select": "id,legacy_product_id,name,selling_price,active"},
+        )
+    return rest_json(
+        "POST",
+        "/rest/v1/products",
+        payload=payload,
+        query={"select": "id,legacy_product_id,name,selling_price,active"},
+    )
