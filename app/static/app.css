@@ -509,3 +509,5 @@ html,body{font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif;color:var(--wb-te
 .delivery-capacity small{color:#8b7769}
 .delivery-capacity.waiting{background:#fff2e6;color:#5a2d12;border-color:#e7b58f}
 .delivery-capacity.available{background:#edf7ee;color:#315b3a;border-color:#cde3d0}
+
+.menu-helper{margin:-8px 0 14px;color:#756b63;font-size:13px}.favorite-star{color:#d4622a;font-size:14px}.product-category{display:flex;align-items:center;gap:5px}.voucher-box{margin:16px 0;padding:14px;border:1px solid var(--border);border-radius:14px;background:#fbf7f1}.voucher-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px}.voucher-row input{margin:0!important}.voucher-row button{background:#3b1f0c;color:#fff;padding:12px 18px}.promo-msg{margin-top:8px;font-size:12px}.promo-msg .error,.promo-msg .success{margin:0;padding:9px 10px}@media(max-width:600px){.voucher-row{grid-template-columns:1fr}.voucher-row button{width:100%}}
