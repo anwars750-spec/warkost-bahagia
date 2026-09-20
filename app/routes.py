@@ -6,6 +6,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from .db import get_db
+from .supabase_gateway import backend_status, configured as supabase_configured, enabled as supabase_enabled
 
 bp=Blueprint('main',__name__)
 ROLE_HOME={'customer':'main.index','admin':'main.dashboard','kasir':'main.dashboard','kitchen':'main.dashboard','driver':'main.dashboard','owner':'main.dashboard'}
@@ -721,6 +722,16 @@ def toggle_promotion(pid):
     if not row:return jsonify(error='Voucher tidak ditemukan.'),404
     new=0 if row['active'] else 1; db.execute('UPDATE promotions SET active=? WHERE id=?',(new,pid)); db.commit()
     return jsonify(ok=True,active=bool(new))
+
+@bp.route('/api/system/backend')
+def backend():
+    if not require_role('admin','owner'):
+        return jsonify(error='Forbidden'),403
+    status = backend_status()
+    status['configured'] = supabase_configured()
+    status['enabled'] = supabase_enabled()
+    return jsonify(status)
+
 
 # ---------- DRIVER ----------
 @bp.route('/api/driver/online',methods=['POST'])
