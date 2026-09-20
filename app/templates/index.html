@@ -10,7 +10,7 @@
   <title>Warkost Bahagia — Pesan Makanan</title>
   <link rel="stylesheet" href="/static/app.css">
 </head>
-<body class="customer-page">
+<body class="customer-page" data-authenticated="{{ 'true' if u and u['role']=='customer' else 'false' }}">
   <header class="customer-header">
     <div class="brand">
       <img src="/static/assets/warkost-logo.svg" alt="Warkost Bahagia" class="brand-logo">
@@ -31,6 +31,7 @@
           </button>
           <div id="customerAccountMenu" class="customer-account-menu" aria-hidden="true">
             <button type="button" onclick="openCustomerAccountSection('orders')">Riwayat Transaksi <span>→</span></button>
+          <button type="button" onclick="openVoucherCenter()">Voucher & Promo <span>→</span></button>
             <button type="button" onclick="openCustomerAccountSection('addresses')">Alamat Pengantaran <span>→</span></button>
             <button type="button" onclick="openCustomerAccountSection('password')">Ubah Password <span>→</span></button>
             <a href="/logout">Keluar <span>→</span></a>
@@ -53,7 +54,6 @@
 
     <section class="customer-search-row">
       <label class="menu-search"><span>⌕</span><input id="menuSearch" type="search" placeholder="Cari menu..." autocomplete="off"></label>
-      <button class="cart-shortcut" type="button" onclick="cartOpen()" aria-label="Buka keranjang"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L20 8H6M10 20a1 1 0 1 1-2 0m10 0a1 1 0 1 1-2 0"/></svg><b id="shortcutCartCount">0</b></button>
     </section>
 
     <section class="promo-card" id="promoSlider" aria-label="Promo Warkost Bahagia">
@@ -62,7 +62,6 @@
         <h1 id="promoTitle">Diskon 10% untuk semua coffee.</h1>
         <p id="promoText">Nikmati kopi favoritmu lebih hemat hari ini.</p>
         <button type="button" onclick="document.getElementById('menu').scrollIntoView({behavior:'smooth'})">Lihat Menu <span>→</span></button>
-        <button type="button" class="promo-secondary" onclick="openVoucherCenter()">Lihat Voucher <span>→</span></button>
       </div>
       <div class="promo-media" id="promoMedia" aria-hidden="true"></div>
       <div class="promo-dots" id="promoDots" aria-label="Pilihan promo"></div>
@@ -120,6 +119,7 @@
       <div id="accountMenuView">
         <div class="account-menu">
           <button type="button" onclick="loadAccountSection('orders')"><span>Riwayat Transaksi</span><small>Lihat pesanan sebelumnya →</small></button>
+          <button type="button" onclick="openVoucherCenter()"><span>Voucher & Promo</span><small>Lihat voucher yang tersedia →</small></button>
           <button type="button" onclick="loadAccountSection('addresses')"><span>Alamat</span><small>Kelola alamat pengantaran →</small></button>
           <button type="button" onclick="loadAccountSection('password')"><span>Ubah Password</span><small>Perbarui keamanan akun →</small></button>
           <a class="account-logout" href="/logout"><span>Keluar</span><small>Logout dari akun</small></a>
