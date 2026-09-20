@@ -1,8 +1,8 @@
-import math, os, uuid
-from datetime import datetime
+import math, os, uuid, json, urllib.parse, urllib.request
+from datetime import datetime, date
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, current_app
 from werkzeug.utils import secure_filename
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from .db import get_db
 
 bp=Blueprint('main',__name__)
@@ -99,10 +99,67 @@ def login():
         u=get_db().execute('SELECT * FROM users WHERE email=? OR phone=?',(ident,ident)).fetchone()
         if u and check_password_hash(u['password_hash'],pw) and u['status']=='active':
             session.clear(); session['user_id']=u['id']
-            # On fresh V0.8, role is already correct. Existing V0.7 databases can be migrated later.
             return redirect(url_for(ROLE_HOME.get(u['role'],'main.index')))
-        return render_template('login.html',error='Login gagal. Gunakan akun demo atau akun yang sudah terdaftar.')
-    return render_template('login.html')
+        return render_template('login.html',error='Email/nomor HP atau password tidak sesuai.')
+    return render_template('login.html',google_client_id=os.environ.get('GOOGLE_CLIENT_ID','').strip())
+
+@bp.route('/register',methods=['GET','POST'])
+def register():
+    if user(): return redirect(url_for('main.index'))
+    if request.method=='POST':
+        name=request.form.get('name','').strip()
+        birth=request.form.get('birth_date','').strip()
+        phone=request.form.get('phone','').strip()
+        email=request.form.get('email','').strip().lower()
+        password=request.form.get('password','')
+        confirm=request.form.get('password_confirm','')
+        consent=request.form.get('consent')
+        try: birth_dt=datetime.strptime(birth,'%Y-%m-%d').date()
+        except ValueError: birth_dt=None
+        errors=[]
+        if not name or len(name)<2: errors.append('Nama lengkap wajib diisi.')
+        if not birth_dt or birth_dt>date.today(): errors.append('Tanggal lahir tidak valid.')
+        if not phone or len(phone)<8: errors.append('Nomor HP tidak valid.')
+        if '@' not in email or len(email)>160: errors.append('Email tidak valid.')
+        if len(password)<12: errors.append('Password minimal 12 karakter.')
+        if password!=confirm: errors.append('Konfirmasi password tidak sama.')
+        if not consent: errors.append('Persetujuan wajib dicentang.')
+        db=get_db()
+        if not errors:
+            if db.execute('SELECT 1 FROM users WHERE LOWER(email)=?',(email,)).fetchone(): errors.append('Email atau nomor HP sudah digunakan.')
+            elif db.execute('SELECT 1 FROM users WHERE phone=?',(phone,)).fetchone(): errors.append('Email atau nomor HP sudah digunakan.')
+        if errors: return render_template('register.html',error=errors[0])
+        db.execute("INSERT INTO users(name,phone,email,birth_date,password_hash,role,status) VALUES(?,?,?,?,?,'customer','active')",(name,phone,email,birth,generate_password_hash(password)))
+        db.commit()
+        u=db.execute('SELECT id,role FROM users WHERE email=?',(email,)).fetchone()
+        session.clear(); session['user_id']=u['id']
+        return redirect(url_for('main.index'))
+    return render_template('register.html')
+
+@bp.route('/forgot-password')
+def forgot_password():
+    return render_template('forgot_password.html')
+
+@bp.route('/auth/google',methods=['POST'])
+def auth_google():
+    credential=str((request.json or {}).get('credential','')).strip()
+    client_id=os.environ.get('GOOGLE_CLIENT_ID','').strip()
+    if not credential or not client_id: return jsonify(ok=False,error='Login Google belum dikonfigurasi di server.'),400
+    try:
+        q=urllib.parse.urlencode({'id_token':credential})
+        with urllib.request.urlopen('https://oauth2.googleapis.com/tokeninfo?'+q,timeout=5) as resp:
+            claims=json.loads(resp.read().decode('utf-8'))
+        if claims.get('aud')!=client_id or claims.get('email_verified')!='true': raise ValueError('invalid google identity')
+        email=str(claims.get('email','')).lower().strip(); name=str(claims.get('name','')).strip()
+        if not email: raise ValueError('missing email')
+        db=get_db(); u=db.execute('SELECT * FROM users WHERE LOWER(email)=?',(email,)).fetchone()
+        if not u:
+            db.execute("INSERT INTO users(name,email,password_hash,role,status) VALUES(?,?,'','customer','active')",(name or email.split('@')[0],email)); db.commit()
+            u=db.execute('SELECT * FROM users WHERE LOWER(email)=?',(email,)).fetchone()
+        session.clear(); session['user_id']=u['id']
+        return jsonify(ok=True,redirect=url_for('main.index'))
+    except Exception:
+        return jsonify(ok=False,error='Login Google gagal. Silakan coba lagi.'),400
 
 @bp.route('/logout')
 def logout(): session.clear(); return redirect(url_for('main.index'))
