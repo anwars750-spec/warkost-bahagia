@@ -223,7 +223,7 @@ async function loadNotifications(){
   if(!el)return;
   el.innerHTML='<div class="notification-loading"><span>⏳</span><strong>Memuat notifikasi...</strong><small>Mengecek status pesanan terbaru.</small></div>';
   try{
-    const r=await fetch('/api/customer/orders');
+    const r=await fetch('/api/customer/notifications');
     const data=await r.json();
     if(!r.ok)throw new Error(data.error||'Gagal memuat notifikasi');
     const orders=Array.isArray(data)?data:[];
@@ -233,11 +233,11 @@ async function loadNotifications(){
     }
     el.innerHTML=orders.slice(0,6).map(o=>{
       const status=o.status||o.order_status||o.payment_status||'';
-      const number=o.order_no||o.order_number||('#'+o.id);
+      const number=o.order_no||o.order_number||(o.order_id?'#'+o.order_id:'#');
       const total=o.total!=null?new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(o.total)||0):'';
       return '<button type="button" class="notification-item" onclick="closeNotifications();loadAccountSection(\'orders\')">'+
         '<span class="notification-icon">'+notificationStatusIcon(status)+'</span>'+
-        '<span class="notification-copy"><strong>Pesanan '+number+'</strong><small>'+notificationStatusLabel(status)+(total?' · '+total:'')+'</small><em>'+formatNotificationTime(o.created_at)+'</em></span>'+
+        '<span class="notification-copy"><strong>Pesanan '+number+'</strong><small>'+(o.message||notificationStatusLabel(status))+(total?' · '+total:'')+'</small><em>'+formatNotificationTime(o.created_at)+'</em></span>'+
         '<span class="notification-arrow">→</span>'+
       '</button>';
     }).join('');
@@ -268,7 +268,7 @@ function closeNotifications(){
   p.setAttribute('aria-hidden','true');
   if(b)b.setAttribute('aria-expanded','false');
 }
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeNotifications();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeNotifications();closeProductDetail();closeVoucherCenter();closeConfirm();}});
 function toggleCustomerAccountMenu(){
   const menu=document.getElementById('customerAccountMenu'),trigger=document.getElementById('customerAccountTrigger');
   if(!menu)return;
@@ -495,4 +495,6 @@ async function confirmCheckout(){
     cart=[];deliveryQuote=null;appliedPromo=null;const pc=document.getElementById('promoCode');if(pc)pc.value='';const pm=document.getElementById('promoMsg');if(pm)pm.innerHTML='';clearSelectedAddress();render();load();
   }catch(err){showMsg('<div class="error">Tidak dapat terhubung ke server. Coba lagi.</div>')}
 }
+function hideSplash(){const s=document.getElementById('splashScreen');if(s){s.classList.add('hide');setTimeout(()=>s.remove(),450);}}
+document.addEventListener('DOMContentLoaded',()=>setTimeout(hideSplash,700));
 load();initMaps();
