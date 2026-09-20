@@ -1,0 +1,15 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#3b1f0c"><title>Daftar — Warkost Bahagia</title><link rel="stylesheet" href="/static/app.css"></head>
+<body class="auth customer-auth"><main class="auth-shell auth-modern"><a class="auth-brand-mark" href="/"><img src="/static/assets/warkost-logo.svg" alt="Warkost Bahagia"></a><section class="card auth-card register-card">
+<span class="section-kicker">BUAT AKUN WARKOST</span><h1>Kenalan dulu,<br><em>biar makin mudah.</em></h1><p class="auth-lead">Data ini digunakan untuk akun, pesanan, dan program promosi Warkost Bahagia.</p>
+{% if error %}<div class="error">{{error}}</div>{% endif %}
+<form method="post" autocomplete="on">
+<label>Nama lengkap<input name="name" type="text" placeholder="Nama lengkap" autocomplete="name" maxlength="100" required></label>
+<div class="auth-two-col"><label>Tanggal lahir<input name="birth_date" type="date" autocomplete="bday" required></label><label>No. HP<input name="phone" type="tel" inputmode="tel" placeholder="08xxxxxxxxxx" autocomplete="tel" maxlength="20" required></label></div>
+<label>Email<input name="email" type="email" placeholder="nama@email.com" autocomplete="email" maxlength="160" required></label>
+<label>Password<input name="password" type="password" placeholder="Minimal 12 karakter" autocomplete="new-password" minlength="12" maxlength="128" required></label>
+<label>Konfirmasi password<input name="password_confirm" type="password" placeholder="Ulangi password" autocomplete="new-password" minlength="12" maxlength="128" required></label>
+<label class="consent-row"><input type="checkbox" name="consent" required><span>Saya setuju data akun digunakan untuk layanan pesanan dan komunikasi promosi Warkost Bahagia.</span></label>
+<button class="primary auth-submit" type="submit">Buat akun <span>→</span></button>
+</form>
+<div class="auth-divider"><span>atau</span></div><div class="google-signin-placeholder">Login Google tersedia setelah koneksi Google Business dikonfigurasi.</div>
+<div class="auth-register">Sudah punya akun? <a href="/login">Masuk</a></div><a class="back-link" href="/">← Kembali ke menu</a></section><small class="auth-footer">Warkost Bahagia · Customer App</small></main></body></html>
