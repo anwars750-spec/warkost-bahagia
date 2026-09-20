@@ -62,6 +62,7 @@
         <h1 id="promoTitle">Diskon 10% untuk semua coffee.</h1>
         <p id="promoText">Nikmati kopi favoritmu lebih hemat hari ini.</p>
         <button type="button" onclick="document.getElementById('menu').scrollIntoView({behavior:'smooth'})">Lihat Menu <span>→</span></button>
+        <button type="button" class="promo-secondary" onclick="openVoucherCenter()">Lihat Voucher <span>→</span></button>
       </div>
       <div class="promo-media" id="promoMedia" aria-hidden="true"></div>
       <div class="promo-dots" id="promoDots" aria-label="Pilihan promo"></div>
@@ -169,6 +170,7 @@
         <input type="hidden" id="lat">
         <input type="hidden" id="lon">
         <div class="voucher-box">
+          <button type="button" class="voucher-center-trigger" onclick="openVoucherCenter()">🎟️ Lihat voucher yang tersedia <span>→</span></button>
           <div class="form-heading">
             <span>03</span>
             <div><strong>Voucher promosi</strong><small>Punya kode voucher? Klaim sebelum membuat order.</small></div>
@@ -208,6 +210,28 @@
       </div>
     </div>
   </aside>
+
+  <div id="productDetailModal" class="modal-backdrop" hidden>
+    <div class="product-detail-modal" role="dialog" aria-modal="true" aria-labelledby="productDetailTitle">
+      <button class="modal-close" type="button" onclick="closeProductDetail()">✕</button>
+      <div id="productDetailContent"></div>
+    </div>
+  </div>
+
+  <div id="voucherCenterModal" class="modal-backdrop" hidden>
+    <div class="voucher-center-modal" role="dialog" aria-modal="true" aria-labelledby="voucherCenterTitle">
+      <button class="modal-close" type="button" onclick="closeVoucherCenter()">✕</button>
+      <span class="section-kicker">PROMO & VOUCHER</span>
+      <h2 id="voucherCenterTitle">Voucher untuk Kamu</h2>
+      <p class="modal-intro">Pilih voucher yang sedang aktif, lalu gunakan kodenya saat checkout.</p>
+      <div id="voucherCenterContent"></div>
+    </div>
+  </div>
+
+  <div class="splash-screen" id="splashScreen" aria-hidden="true">
+    <img src="/static/assets/warkost-logo.svg" alt="Warkost Bahagia">
+    <span>Good Food · Good Coffee · Happier Together</span>
+  </div>
 
   <div class="mobile-cart-bar" onclick="cartOpen()">
     <div><span>🛒</span><strong>Keranjang</strong><small><span id="mobileCartCount">0</span> item</small></div>
