@@ -6,7 +6,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from .db import get_db
-from .order_contract import order_contract_status, resolve_order_bridge, normalize_supabase_order
+from .order_contract import order_contract_status, resolve_order_bridge, normalize_supabase_order, create_order_bridge
 from .supabase_gateway import backend_status, configured as supabase_configured, enabled as supabase_enabled, get_profile, link_legacy_user, get_customer_order, get_customer_order_items, SupabaseGatewayError
 
 bp=Blueprint('main',__name__)
@@ -223,9 +223,88 @@ def maps_config():
         cafe_lat, cafe_lon, verified = -6.9218, 106.9270, False
     return jsonify(api_key=key, cafe_latitude=cafe_lat, cafe_longitude=cafe_lon, cafe_location_verified=verified)
 
+def create_supabase_customer_order(data, u):
+    """Create one order through the feature-flagged Supabase V2 path.
+
+    Fail closed: a Supabase error never falls back to SQLite because doing so
+    could create a duplicate customer order after an unknown remote outcome.
+    """
+    if not u['supabase_user_id']:
+        raise SupabaseGatewayError('Akun customer belum terhubung ke Supabase.')
+    items = data.get('items', [])
+    address = str(data.get('address', '')).strip()
+    lat = data.get('latitude')
+    lon = data.get('longitude')
+    promo_code = str(data.get('promo_code', '')).strip().upper() or None
+    if not address or lat is None or lon is None:
+        raise ValueError('Alamat dan titik lokasi wajib diisi.')
+    try:
+        lat = float(lat); lon = float(lon)
+    except (TypeError, ValueError):
+        raise ValueError('Lokasi pengantaran tidak valid.')
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        raise ValueError('Lokasi pengantaran tidak valid.')
+
+    normalized_items = []
+    for item in items:
+        try:
+            product_id = int(item.get('product_id'))
+            qty = max(1, int(item.get('qty', 1)))
+        except (TypeError, ValueError):
+            continue
+        normalized_items.append({
+            'product_id': product_id,
+            'quantity': qty,
+            'notes': str(item.get('notes') or '').strip() or None,
+        })
+    if not normalized_items:
+        raise ValueError('Produk tidak valid.')
+
+    row = customer_delivery_order_v2(
+        u['supabase_user_id'],
+        normalized_items,
+        address,
+        lat,
+        lon,
+        None,
+        promo_code,
+    )
+    supabase_order_id = str(row or '').strip()
+    if not supabase_order_id:
+        raise SupabaseGatewayError('Supabase tidak mengembalikan order id.')
+
+    remote = get_customer_order(u['supabase_user_id'], supabase_order_id)
+    if not remote:
+        raise SupabaseGatewayError('Order berhasil dibuat tetapi belum dapat dibaca kembali.')
+    contract = normalize_supabase_order(remote)
+    bridge_id = create_order_bridge(get_db(), u['id'], supabase_order_id, contract['order_no'])
+    get_db().commit()
+    contract['app_order_id'] = bridge_id
+    contract['supabase_order_id'] = supabase_order_id
+    return contract
+
+
 @bp.route('/api/order',methods=['POST'])
 def create_order():
     if not require_role('customer'): return jsonify(error='Customer login required'),401
+    if supabase_enabled():
+        try:
+            result = create_supabase_customer_order(request.json or {}, user())
+            return jsonify(
+                order_id=result['app_order_id'],
+                order_no=result['order_no'],
+                subtotal=result['subtotal'],
+                delivery_fee=result['delivery_fee'],
+                discount=result['discount'],
+                total=result['total'],
+                status=result['status'],
+                backend='supabase',
+                supabase_order_id=result['supabase_order_id'],
+            )
+        except ValueError as exc:
+            return jsonify(error=str(exc)),400
+        except SupabaseGatewayError as exc:
+            return jsonify(error=str(exc)),502
     data=request.json or {}; items=data.get('items',[])
     if not items: return jsonify(error='Keranjang kosong'),400
     promo_code=str(data.get('promo_code','')).strip().upper() or None
