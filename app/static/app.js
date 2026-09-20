@@ -140,7 +140,15 @@ function render(){
   const sub=document.getElementById('subtotal'),disc=document.getElementById('discount'),del=document.getElementById('delivery'),total=document.getElementById('total');
   if(sub)sub.textContent=rupiah(t.subtotal); if(disc)disc.textContent='− '+rupiah(t.discount); if(del)del.textContent=rupiah(t.delivery); if(total)total.textContent=rupiah(t.total); if(mt)mt.textContent=rupiah(t.total);
 }
-function cartOpen(){if(document.body?.dataset.authenticated!=='true'){window.location.href='/login?next=/';return;}document.getElementById('cart').classList.toggle('show');render()}
+function cartOpen(){
+  if(document.body?.dataset.authenticated!=='true'){window.location.href='/login?next=/';return;}
+  const cartEl=document.getElementById('cart');
+  if(!cartEl)return;
+  const open=!cartEl.classList.contains('show');
+  cartEl.classList.toggle('show',open);
+  syncCustomerSurfaceBackdrop();
+  if(open)render();
+}
 
 function openProductDetail(id){
  const p=products.find(x=>x.id===id); const box=document.getElementById('productDetailContent'); const modal=document.getElementById('productDetailModal');
@@ -241,7 +249,7 @@ async function loadNotifications(){
       const status=o.status||o.order_status||o.payment_status||'';
       const number=o.order_no||o.order_number||(o.order_id?'#'+o.order_id:'#');
       const total=o.total!=null?new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(o.total)||0):'';
-      return '<button type="button" class="notification-item" onclick="closeNotifications();loadAccountSection(\'orders\')">'+
+      return '<button type="button" class="notification-item" onclick="closeNotifications();openCustomerAccountSection(\'orders\')">'+
         '<span class="notification-icon">'+notificationStatusIcon(status)+'</span>'+
         '<span class="notification-copy"><strong>Pesanan '+number+'</strong><small>'+(o.message||notificationStatusLabel(status))+(total?' · '+total:'')+'</small><em>'+formatNotificationTime(o.created_at)+'</em></span>'+
         '<span class="notification-arrow">→</span>'+
@@ -273,8 +281,34 @@ function closeNotifications(){
   p.classList.remove('show');
   p.setAttribute('aria-hidden','true');
   if(b)b.setAttribute('aria-expanded','false');
+  syncCustomerSurfaceBackdrop();
 }
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeNotifications();closeProductDetail();closeVoucherCenter();closeConfirm();}});
+function syncCustomerSurfaceBackdrop(){
+  const cart=document.getElementById('cart');
+  const notification=document.getElementById('notificationPanel');
+  let overlay=document.getElementById('customerSurfaceBackdrop');
+  const active=!!(cart?.classList.contains('show')||notification?.classList.contains('show'));
+  if(active){
+    if(!overlay){
+      overlay=document.createElement('div');
+      overlay.id='customerSurfaceBackdrop';
+      overlay.className='customer-surface-backdrop';
+      overlay.setAttribute('aria-hidden','true');
+      overlay.addEventListener('click',()=>{closeNotifications();closeCart();});
+      document.body.appendChild(overlay);
+    }
+    overlay.classList.add('show');
+  }else if(overlay){
+    overlay.classList.remove('show');
+  }
+}
+function closeCart(){
+  const cart=document.getElementById('cart');
+  if(!cart)return;
+  cart.classList.remove('show');
+  syncCustomerSurfaceBackdrop();
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeNotifications();closeCart();closeCustomerAccountMenu();closeAccountPanel();closeProductDetail();closeVoucherCenter();closeConfirm();}});
 function toggleCustomerAccountMenu(){
   const menu=document.getElementById('customerAccountMenu'),trigger=document.getElementById('customerAccountTrigger');
   if(!menu)return;
@@ -297,6 +331,31 @@ function openCustomerAccountSection(section){
 document.addEventListener('click',e=>{
   const wrap=document.querySelector('.customer-account-wrap');
   if(wrap&&!wrap.contains(e.target))closeCustomerAccountMenu();
+
+  const notification=document.getElementById('notificationPanel');
+  const notificationButton=document.getElementById('notificationButton');
+  if(notification?.classList.contains('show')&&!notification.contains(e.target)&&!notificationButton?.contains(e.target)){
+    closeNotifications();
+  }
+
+  const cart=document.getElementById('cart');
+  const cartButtons=[...document.querySelectorAll('[onclick="cartOpen()"]')];
+  if(cart?.classList.contains('show')&&!cart.contains(e.target)&&!cartButtons.some(btn=>btn.contains(e.target))){
+    closeCart();
+  }
+
+  const accountPanel=document.getElementById('accountPanel');
+  if(accountPanel?.classList.contains('show')&&e.target===accountPanel){
+    closeAccountPanel();
+  }
+
+  const backdrop=e.target;
+  if(backdrop?.classList?.contains('modal-backdrop')){
+    if(backdrop.id==='productDetailModal')closeProductDetail();
+    if(backdrop.id==='voucherCenterModal')closeVoucherCenter();
+    if(backdrop.id==='confirmModal')closeConfirm();
+    if(backdrop.id==='orderProcessModal')closeOrderProcess();
+  }
 });
 function openAccountPanel(){const p=document.getElementById('accountPanel');if(!p)return;p.classList.add('show');p.setAttribute('aria-hidden','false');}
 function closeAccountPanel(){const p=document.getElementById('accountPanel');if(!p)return;p.classList.remove('show');p.setAttribute('aria-hidden','true');showAccountMenuView();}
