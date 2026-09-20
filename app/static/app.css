@@ -2018,3 +2018,168 @@ html body aside#cart.customer-drawer{
     font-size:12px;
   }
 }
+
+
+/* V1.6 MOBILE SURFACE REDESIGN — compact floating panels */
+@media(max-width:700px){
+  /* Notification: floating card, never full-height */
+  .notification-panel{
+    top:78px!important;
+    right:12px!important;
+    left:auto!important;
+    width:min(350px,calc(100vw - 32px))!important;
+    max-height:min(62vh,520px)!important;
+    border-radius:22px!important;
+    box-shadow:0 20px 55px rgba(43,22,11,.22)!important;
+  }
+  .notification-head{
+    padding:15px 16px 13px!important;
+  }
+  .notification-head h2{
+    font-size:19px!important;
+  }
+  .notification-content{
+    max-height:calc(min(62vh,520px) - 66px)!important;
+    padding:8px!important;
+  }
+  .notification-item{
+    grid-template-columns:36px 1fr 16px!important;
+    gap:9px!important;
+    padding:11px 9px!important;
+    border-radius:13px!important;
+  }
+  .notification-icon{
+    width:36px!important;
+    height:36px!important;
+    border-radius:11px!important;
+    font-size:16px!important;
+  }
+  .notification-copy strong{font-size:12px!important}
+  .notification-copy small{font-size:10px!important}
+  .notification-copy em{font-size:9px!important}
+  .notification-arrow{font-size:15px!important}
+
+  /* Account: compact centered sheet, with internal scroll */
+  #accountPanel{
+    align-items:center!important;
+    justify-content:center!important;
+    padding:12px!important;
+  }
+  #accountPanel .account-panel-inner{
+    width:min(390px,calc(100vw - 24px))!important;
+    max-width:none!important;
+    height:auto!important;
+    max-height:82vh!important;
+    padding:18px 14px 20px!important;
+    border-radius:24px!important;
+    box-shadow:0 22px 60px rgba(37,23,15,.26)!important;
+    overflow-y:auto!important;
+    overscroll-behavior:contain;
+  }
+  #accountPanel .account-head{
+    margin-bottom:13px!important;
+    padding-bottom:13px!important;
+  }
+  #accountPanel .account-head h2{
+    font-size:23px!important;
+    line-height:1.08!important;
+  }
+  #accountPanel .account-head .drawer-close{
+    width:38px!important;
+    height:38px!important;
+    border-radius:12px!important;
+  }
+  #accountPanel .account-profile{
+    margin-bottom:13px!important;
+    padding:12px!important;
+    border-radius:15px!important;
+  }
+  #accountPanel .account-menu{
+    gap:6px!important;
+  }
+  #accountPanel .account-menu button,
+  #accountPanel .account-logout{
+    padding:12px 13px!important;
+    border-radius:13px!important;
+  }
+  #accountPanel .account-menu span{font-size:12px!important}
+  #accountPanel .account-menu small{font-size:9px!important}
+  #accountPanel .account-content{
+    margin-top:12px!important;
+  }
+  #accountPanel .account-section-head{
+    margin-bottom:12px!important;
+  }
+  #accountPanel .account-section-head h3{
+    font-size:21px!important;
+  }
+  #accountPanel .account-address-intro,
+  #accountPanel .account-security-intro{
+    padding:10px!important;
+    border-radius:13px!important;
+    margin-bottom:10px!important;
+  }
+  #accountPanel .account-address-top{
+    padding:10px!important;
+    border-radius:13px!important;
+  }
+  #accountPanel .account-address-list{
+    gap:7px!important;
+  }
+  #accountPanel .account-address-form,
+  #accountPanel .account-password{
+    padding:13px!important;
+    border-radius:15px!important;
+  }
+  #accountPanel .account-address-form input,
+  #accountPanel .account-address-form textarea,
+  #accountPanel .account-password input{
+    padding:11px 12px!important;
+    font-size:12px!important;
+  }
+  #accountPanel .account-address-form textarea{
+    min-height:70px!important;
+  }
+  #accountPanel .account-address-form .account-address-map{
+    height:125px!important;
+  }
+  #accountPanel .account-primary-button{
+    min-height:42px!important;
+  }
+  #accountPanel .account-order{
+    padding:11px 0!important;
+  }
+
+  /* Voucher: same floating-sheet language as the rest */
+  #voucherCenterModal.modal-backdrop{
+    padding:12px!important;
+    align-items:center!important;
+  }
+  #voucherCenterModal .voucher-center-modal{
+    width:min(350px,calc(100vw - 32px))!important;
+    max-width:none!important;
+    max-height:70vh!important;
+    padding:18px!important;
+    border-radius:22px!important;
+    overflow:auto!important;
+    box-shadow:0 22px 60px rgba(43,22,11,.24)!important;
+  }
+  #voucherCenterModal .voucher-center-modal h2{
+    font-size:22px!important;
+    line-height:1.15!important;
+  }
+  #voucherCenterModal .voucher-card{
+    padding:12px!important;
+    border-radius:14px!important;
+  }
+  #voucherCenterModal .voucher-main strong{
+    font-size:15px!important;
+  }
+  #voucherCenterModal .voucher-main small{
+    font-size:10px!important;
+  }
+  #voucherCenterModal .voucher-card button{
+    padding:9px 10px!important;
+    font-size:11px!important;
+  }
+}
