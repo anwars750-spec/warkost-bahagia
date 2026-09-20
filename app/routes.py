@@ -70,7 +70,13 @@ def calculate_delivery(lat, lon):
     simulator can exercise the order flow before Google Maps/production
     configuration is available. Production mode still requires verification.
     """
-    local_test = str(os.environ.get('WARKOST_LOCAL_TEST_MODE', '0')).lower() in ('1','true','yes')
+    env_local_test = str(os.environ.get('WARKOST_LOCAL_TEST_MODE', '0')).lower() in ('1','true','yes')
+    # The built-in simulator is intentionally available only on localhost when
+    # Google Maps is not configured. Production hosts still require an
+    # Admin/Owner-verified Warkost point.
+    host = str(request.host or '').split(':', 1)[0].lower()
+    local_host_test = host in ('127.0.0.1', 'localhost') and not os.environ.get('GOOGLE_MAPS_API_KEY', '').strip()
+    local_test = env_local_test or local_host_test
     if not local_test and str(setting('cafe_location_verified', '0')).lower() not in ('1','true','yes'):
         raise ValueError('Titik lokasi Warkost belum diverifikasi oleh Admin/Owner')
     try:
