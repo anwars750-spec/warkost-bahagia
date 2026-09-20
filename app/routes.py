@@ -449,6 +449,36 @@ def campaigns():
         cur=db.execute('INSERT INTO campaigns(name,starts_at,ends_at,active) VALUES(?,?,?,?)',(name,d.get('starts_at'),d.get('ends_at'),1)); db.commit(); return jsonify(id=cur.lastrowid)
     return jsonify([dict(x) for x in db.execute('SELECT * FROM campaigns ORDER BY id DESC').fetchall()])
 
+@bp.route('/api/promotions',methods=['GET','POST'])
+def promotions():
+    if not require_role('admin','owner'):return jsonify(error='Forbidden'),403
+    db=get_db()
+    if request.method=='POST':
+        d=request.json or {}; code=str(d.get('code','')).strip().upper(); ptype=str(d.get('type','percent')).strip().lower(); value=int(d.get('value') or 0); min_order=int(d.get('min_order') or 0)
+        max_discount=d.get('max_discount'); quota=d.get('quota'); campaign_id=d.get('campaign_id')
+        if not code or ptype not in ('percent','fixed') or value<=0 or min_order<0:return jsonify(error='Data voucher tidak valid.'),400
+        if ptype=='percent' and value>100:return jsonify(error='Diskon persentase maksimal 100%.'),400
+        try:
+            max_discount=int(max_discount) if max_discount not in (None,'') else None
+            quota=int(quota) if quota not in (None,'') else None
+        except (TypeError,ValueError):return jsonify(error='Batas diskon atau kuota tidak valid.'),400
+        try:
+            cur=db.execute('INSERT INTO promotions(campaign_id,code,type,value,min_order,max_discount,quota,starts_at,ends_at,active) VALUES(?,?,?,?,?,?,?,?,?,1)',(campaign_id,code,ptype,value,min_order,max_discount,quota,d.get('starts_at'),d.get('ends_at')))
+            db.commit()
+        except Exception:
+            db.rollback(); return jsonify(error='Kode voucher sudah digunakan atau data tidak valid.'),400
+        return jsonify(ok=True,id=cur.lastrowid)
+    rows=db.execute('SELECT p.*,c.name campaign_name FROM promotions p LEFT JOIN campaigns c ON c.id=p.campaign_id ORDER BY p.id DESC').fetchall()
+    return jsonify([dict(x) for x in rows])
+
+@bp.route('/api/promotions/<int:pid>/toggle',methods=['POST'])
+def toggle_promotion(pid):
+    if not require_role('admin','owner'):return jsonify(error='Forbidden'),403
+    db=get_db(); row=db.execute('SELECT active FROM promotions WHERE id=?',(pid,)).fetchone()
+    if not row:return jsonify(error='Voucher tidak ditemukan.'),404
+    new=0 if row['active'] else 1; db.execute('UPDATE promotions SET active=? WHERE id=?',(new,pid)); db.commit()
+    return jsonify(ok=True,active=bool(new))
+
 # ---------- DRIVER ----------
 @bp.route('/api/driver/online',methods=['POST'])
 def driver_online():
