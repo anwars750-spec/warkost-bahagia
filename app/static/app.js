@@ -212,14 +212,32 @@ async function openVoucherCenter(){
   if(!data.length){box.innerHTML='<div class="notification-empty"><span>🎟️</span><strong>Belum ada voucher aktif</strong><small>Voucher baru akan muncul di sini saat tersedia.</small></div>';return;}
   box.innerHTML='<div class="voucher-list">'+data.map(p=>{
     const value=p.type==='percent'?p.value+'% OFF':rupiah(p.value)+' OFF';
-    return '<article class="voucher-card"><div class="voucher-main"><span class="voucher-code">'+escapeHtml(p.code)+'</span><strong>'+value+'</strong><small>'+(p.min_order>0?'Min. transaksi '+rupiah(p.min_order):'Tanpa minimum transaksi')+(p.max_discount?' · Maks. '+rupiah(p.max_discount):'')+'</small></div><button type="button" onclick="useVoucherCode('+JSON.stringify(p.code)+')">Gunakan</button></article>';
+    const safeCode=escapeHtml(String(p.code||'')).replace(/'/g,'&#39;');
+    return '<article class="voucher-card"><div class="voucher-main"><span class="voucher-code">'+escapeHtml(p.code)+'</span><strong>'+value+'</strong><small>'+(p.min_order>0?'Min. transaksi '+rupiah(p.min_order):'Tanpa minimum transaksi')+(p.max_discount?' · Maks. '+rupiah(p.max_discount):'')+'</small></div><button type="button" class="voucher-use-button" data-voucher-code="'+safeCode+'">Gunakan</button></article>';
   }).join('')+'</div>';
  }catch(e){box.innerHTML='<div class="notification-empty"><span>⚠</span><strong>Voucher belum dapat dimuat</strong><small>Coba lagi beberapa saat.</small></div>';}
 }
-function useVoucherCode(code){
- closeVoucherCenter();cartOpen();const input=document.getElementById('promoCode');if(input){input.value=code;input.focus();claimVoucher();}
+async function useVoucherCode(code){
+ const normalized=String(code||'').trim().toUpperCase();
+ if(!normalized)return;
+ const input=document.getElementById('promoCode');
+ closeVoucherCenter();
+ if(input){
+   input.value=normalized;
+   input.focus();
+   await claimVoucher();
+ }
 }
 function closeVoucherCenter(){const m=document.getElementById('voucherCenterModal');if(m)m.hidden=true;}
+document.addEventListener('click',e=>{
+ const button=e.target.closest?.('.voucher-use-button');
+ if(button){
+   e.preventDefault();
+   e.stopPropagation();
+   useVoucherCode(button.dataset.voucherCode||'');
+ }
+});
+
 
 async function loadOrderDetail(id){
  stopTrackingCapacityRefresh();
