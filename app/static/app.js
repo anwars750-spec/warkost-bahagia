@@ -174,7 +174,7 @@ async function loadOrderDetail(id){
  const box=document.getElementById('accountContent');if(!box)return;
  box.hidden=false;box.innerHTML='<p class="account-loading">Memuat detail pesanan...</p>';
  try{
-  const r=await fetch('/api/customer/orders/'+id);const d=await r.json();
+  const r=await fetch('/api/order/'+id);const d=await r.json();
   if(!r.ok)throw new Error(d.error||'Detail pesanan gagal dimuat');
   const items=Array.isArray(d.items)?d.items:[];
   box.innerHTML=accountSectionHeader('DETAIL PESANAN','Order '+escapeHtml(d.order.order_no))+
