@@ -208,6 +208,8 @@ def migrate_existing(db):
     _ensure_demo_drivers(db)
     _ensure_categories_and_products(db)
     _ensure_operational_defaults(db)
+    # Demo menu promotion: Kopi Susu is 20% off (Rp15.000 -> Rp12.000).
+    db.execute("UPDATE products SET normal_price=15000, price=12000 WHERE name='Kopi Susu' AND active=1")
     db.commit()
 
 
