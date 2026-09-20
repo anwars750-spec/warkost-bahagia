@@ -6,7 +6,8 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from .db import get_db
-from .supabase_gateway import backend_status, configured as supabase_configured, enabled as supabase_enabled, get_profile, link_legacy_user, SupabaseGatewayError
+from .order_contract import order_contract_status, resolve_order_bridge, normalize_supabase_order
+from .supabase_gateway import backend_status, configured as supabase_configured, enabled as supabase_enabled, get_profile, link_legacy_user, get_customer_order, get_customer_order_items, SupabaseGatewayError
 
 bp=Blueprint('main',__name__)
 ROLE_HOME={'customer':'main.index','admin':'main.dashboard','kasir':'main.dashboard','kitchen':'main.dashboard','driver':'main.dashboard','owner':'main.dashboard'}
@@ -729,6 +730,40 @@ def system_identity():
         return jsonify(error='Login required'),401
     u=user()
     return jsonify(local_user_id=u['id'], supabase_user_id=u['supabase_user_id'], mapped=bool(u['supabase_user_id']), role=u['role'])
+
+@bp.route('/api/system/order-contract', methods=['GET'])
+def system_order_contract():
+    if not user():
+        return jsonify(error='Login required'),401
+    contract=order_contract_status()
+    contract["backend"]=backend_status()
+    return jsonify(contract)
+
+
+@bp.route('/api/customer/supabase-order/<int:bridge_id>')
+def customer_supabase_order(bridge_id):
+    u=user()
+    if not u or u['role']!='customer':
+        return jsonify(error='Customer login required'),401
+    if not supabase_configured():
+        return jsonify(error='Supabase belum dikonfigurasi di server.'),400
+    bridge=resolve_order_bridge(get_db(),bridge_id,u['id'])
+    if not bridge:
+        return jsonify(error='Order bridge tidak ditemukan.'),404
+    try:
+        row=get_customer_order(u['supabase_user_id'],bridge['supabase_order_id'])
+        if not row:
+            return jsonify(error='Order Supabase tidak ditemukan.'),404
+        items=get_customer_order_items(bridge['supabase_order_id'])
+    except SupabaseGatewayError:
+        return jsonify(error='Gagal membaca order dari Supabase.'),502
+    return jsonify(
+        order=normalize_supabase_order(row),
+        items=items,
+        bridge_id=bridge['id'],
+        order_no=bridge['order_no'],
+    )
+
 
 @bp.route('/api/admin/supabase/identity', methods=['POST'])
 def link_supabase_identity():
