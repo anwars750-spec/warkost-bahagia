@@ -168,7 +168,7 @@ def auth_google():
         if claims.get('aud')!=client_id or claims.get('email_verified')!='true': raise ValueError('invalid google identity')
         email=str(claims.get('email','')).lower().strip(); name=str(claims.get('name','')).strip()
         if not email: raise ValueError('missing email')
-        db=get_db(); u=db.execute('SELECT * FROM users WHERE LOWER(email)=?',(email,)).fetchone()
+        db=get_db(); u=db.execute('SELECT * FROM users WHERE google_sub=? OR LOWER(email)=?',(str(claims.get('sub','')),email)).fetchone()
         if not u:
             session['google_pending']={'sub':str(claims.get('sub','')),'email':email,'name':name or email.split('@')[0]}
             return jsonify(ok=True,redirect=url_for('main.google_complete'))
