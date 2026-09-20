@@ -97,6 +97,29 @@ def customer_delivery_order(
     )
 
 
+def customer_promo_claim(customer_id, code):
+    return rpc("server_customer_promo_claim", {"p_customer": customer_id, "p_code": code})
+
+
+def customer_promo_validate(customer_id, code, subtotal):
+    return rpc("server_customer_promo_validate", {"p_customer": customer_id, "p_code": code, "p_subtotal": subtotal})
+
+
+def customer_delivery_order_v2(customer_id, items, address, latitude, longitude, notes=None, promo_code=None):
+    return rpc(
+        "server_customer_delivery_order_v2",
+        {
+            "p_customer": customer_id,
+            "p_items": items,
+            "p_address": address,
+            "p_latitude": latitude,
+            "p_longitude": longitude,
+            "p_notes": notes,
+            "p_promo_code": promo_code,
+        },
+    )
+
+
 def backend_status():
     backend, url, key = _config()
     return {
