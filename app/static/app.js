@@ -118,7 +118,7 @@ function renderProducts(){
   empty.hidden=items.length>0;const mc=document.getElementById('menuCount');if(mc)mc.textContent=items.length+' menu';
 }
 document.addEventListener('DOMContentLoaded',()=>{const s=document.getElementById('menuSearch');if(s)s.addEventListener('input',e=>{menuQuery=e.target.value;renderProducts();});});
-function add(id){let x=cart.find(i=>i.product_id===id);let p=products.find(x=>x.id===id);if(!p)return;if(x){if(x.qty>=p.stock)return;x.qty++;}else cart.push({product_id:id,qty:1});render()}
+function add(id){if(document.body?.dataset.authenticated!=='true'){window.location.href='/login?next=/';return;}let x=cart.find(i=>i.product_id===id);let p=products.find(x=>x.id===id);if(!p)return;if(x){if(x.qty>=p.stock)return;x.qty++;}else cart.push({product_id:id,qty:1});render()}
 function minus(id){let x=cart.find(i=>i.product_id===id);if(!x)return;x.qty--;if(x.qty<=0)cart=cart.filter(i=>i.product_id!==id);render()}
 function plus(id){add(id)}
 let appliedPromo=null;
