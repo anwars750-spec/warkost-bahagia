@@ -541,3 +541,24 @@ html,body{font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif;color:var(--wb-te
 /* V1.6 menu grouping and admin description */
 .menu-group{margin-top:18px}.menu-group-heading{margin:4px 0 14px}.menu-group-heading h3{margin:2px 0 4px;font-size:20px}.menu-group-heading small{color:#8b7769}.menu-group-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}.admin-description-input{min-height:88px;resize:vertical;grid-column:1/-1}
 @media(max-width:900px){.menu-group-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.menu-group-grid{grid-template-columns:1fr}.admin-description-input{grid-column:auto}}
+
+/* V1.6 FINAL MENU LAYOUT FIX — categories stack vertically, cards stay horizontal */
+#products{display:block!important;width:100%}
+.menu-group{display:block!important;width:100%;margin:0 0 30px}
+.menu-group + .menu-group{padding-top:4px}
+.menu-group-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:0 0 14px;padding-bottom:8px;border-bottom:1px solid #eadfd3}
+.menu-group-heading h3{margin:0;font-size:22px;line-height:1.2;color:#2f1b0f}
+.menu-group-heading .section-kicker{margin:0}
+.menu-group-heading small{margin-left:auto;color:#9b887a;font-size:10px}
+.menu-group-grid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:18px!important;width:100%}
+.menu-group .product{min-width:0}
+@media(min-width:701px){
+  .customer-main{max-width:1180px!important;padding:22px 24px 100px}
+  .customer-header{padding-left:max(18px,calc((100vw - 1180px)/2))!important;padding-right:max(18px,calc((100vw - 1180px)/2))!important}
+}
+@media(max-width:900px){.menu-group-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:560px){
+  .menu-group-grid{grid-template-columns:1fr 1fr!important;gap:10px!important}
+  .menu-group-heading{align-items:flex-start;display:block}
+  .menu-group-heading small{display:block;margin:3px 0 0}
+}
