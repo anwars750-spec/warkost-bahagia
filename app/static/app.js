@@ -30,8 +30,6 @@ function renderPromo(){
 }
 function setPromo(index){const list=promoItems();promoIndex=(index+list.length)%list.length;renderPromo();startPromoTimer();}
 function startPromoTimer(){if(promoTimer)clearInterval(promoTimer);promoTimer=setInterval(()=>setPromo(promoIndex+1),6000);}
-function setPromo(index){promoIndex=(index+PROMOS.length)%PROMOS.length;renderPromo();startPromoTimer();}
-function startPromoTimer(){if(promoTimer)clearInterval(promoTimer);promoTimer=setInterval(()=>setPromo(promoIndex+1),6000);}
 
 let products=[],cart=[],msgTimer=null,deliveryQuote=null,mapState={map:null,marker:null,autocomplete:null,ready:false};
 let savedAddresses=[],selectedSavedAddressId=null,accountMapState={map:null,marker:null,autocomplete:null,ready:false};
