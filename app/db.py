@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
  status TEXT NOT NULL DEFAULT 'active',
  birth_date TEXT,
  google_sub TEXT UNIQUE,
+ supabase_user_id TEXT UNIQUE,
  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, active INTEGER NOT NULL DEFAULT 1);
@@ -208,6 +209,10 @@ def migrate_existing(db):
         db.execute('ALTER TABLE users ADD COLUMN google_sub TEXT')
     if user_cols and 'birth_date' not in user_cols:
         db.execute('ALTER TABLE users ADD COLUMN birth_date TEXT')
+    user_cols = {r['name'] for r in db.execute('PRAGMA table_info(users)').fetchall()}
+    if user_cols and 'supabase_user_id' not in user_cols:
+        db.execute('ALTER TABLE users ADD COLUMN supabase_user_id TEXT')
+    db.execute('CREATE UNIQUE INDEX IF NOT EXISTS users_supabase_user_id_uidx ON users(supabase_user_id) WHERE supabase_user_id IS NOT NULL')
     cols = {r['name'] for r in db.execute('PRAGMA table_info(products)').fetchall()}
     if cols and 'stock' not in cols:
         db.execute('ALTER TABLE products ADD COLUMN stock INTEGER NOT NULL DEFAULT 0')
