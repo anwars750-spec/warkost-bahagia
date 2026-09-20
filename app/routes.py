@@ -7,7 +7,7 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from .db import get_db
 from .order_contract import order_contract_status, resolve_order_bridge, normalize_supabase_order, create_order_bridge
-from .supabase_gateway import backend_status, configured as supabase_configured, enabled as supabase_enabled, get_profile, link_legacy_user, get_customer_order, get_customer_order_items, SupabaseGatewayError
+from .supabase_gateway import backend_status, configured as supabase_configured, enabled as supabase_enabled, get_profile, link_legacy_user, customer_delivery_order_v2, get_customer_order, get_customer_order_items, SupabaseGatewayError
 
 bp=Blueprint('main',__name__)
 ROLE_HOME={'customer':'main.index','admin':'main.dashboard','kasir':'main.dashboard','kitchen':'main.dashboard','driver':'main.dashboard','owner':'main.dashboard'}
