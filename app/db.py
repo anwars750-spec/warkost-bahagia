@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
  role TEXT NOT NULL CHECK(role IN ('customer','admin','kasir','kitchen','driver','owner')),
  status TEXT NOT NULL DEFAULT 'active',
  birth_date TEXT,
+ google_sub TEXT UNIQUE,
  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, active INTEGER NOT NULL DEFAULT 1);
@@ -192,6 +193,8 @@ def _ensure_operational_defaults(db):
 def migrate_existing(db):
     """Idempotent migration from V0.7/V0.8.x to V0.8.2."""
     user_cols = {r['name'] for r in db.execute('PRAGMA table_info(users)').fetchall()}
+    if user_cols and 'google_sub' not in user_cols:
+        db.execute('ALTER TABLE users ADD COLUMN google_sub TEXT')
     if user_cols and 'birth_date' not in user_cols:
         db.execute('ALTER TABLE users ADD COLUMN birth_date TEXT')
     cols = {r['name'] for r in db.execute('PRAGMA table_info(products)').fetchall()}
