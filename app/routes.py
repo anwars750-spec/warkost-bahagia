@@ -176,7 +176,6 @@ def create_order():
         db.execute('INSERT INTO order_items(order_id,product_id,name,qty,price,notes) VALUES(?,?,?,?,?,?)',(oid,p['id'],p['name'],q,sale_price,n))
         db.execute('UPDATE products SET stock=stock-? WHERE id=?',(q,p['id']))
     db.execute('INSERT INTO payments(order_id,provider,status) VALUES(?,?,?)',(oid,'qris_btn','pending'))
-    if promo_id: db.execute('UPDATE promotions SET used_count=used_count+1 WHERE id=?',(promo_id,))
     db.execute('INSERT INTO audit_logs(user_id,action,entity,entity_id,details) VALUES(?,?,?,?,?)',(user()['id'],'CREATE','order',oid,'Customer checkout'))
     db.commit(); return jsonify(order_id=oid,order_no=order_no,subtotal=subtotal,delivery_fee=fee,discount=discount,total=total,status='pending_payment')
 
