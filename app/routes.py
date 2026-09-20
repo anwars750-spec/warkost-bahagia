@@ -7,7 +7,7 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from .db import get_db
 from .order_contract import order_contract_status, resolve_order_bridge, normalize_supabase_order, create_order_bridge
-from .supabase_gateway import backend_status, configured as supabase_configured, enabled as supabase_enabled, get_profile, link_legacy_user, customer_delivery_order_v2, get_customer_order, get_customer_order_items, verify_payment, SupabaseGatewayError
+from .supabase_gateway import backend_status, configured as supabase_configured, enabled as supabase_enabled, get_profile, link_legacy_user, customer_delivery_order_v2, get_customer_order, get_customer_order_items, verify_payment, list_supabase_products_by_legacy_ids, upsert_supabase_product, get_or_create_supabase_category, SupabaseGatewayError
 
 bp=Blueprint('main',__name__)
 ROLE_HOME={'customer':'main.index','admin':'main.dashboard','kasir':'main.dashboard','kitchen':'main.dashboard','driver':'main.dashboard','owner':'main.dashboard'}
@@ -246,6 +246,7 @@ def create_supabase_customer_order(data, u):
         raise ValueError('Lokasi pengantaran tidak valid.')
 
     normalized_items = []
+    local_ids = []
     for item in items:
         try:
             product_id = int(item.get('product_id'))
@@ -253,12 +254,26 @@ def create_supabase_customer_order(data, u):
         except (TypeError, ValueError):
             continue
         normalized_items.append({
-            'product_id': product_id,
+            'legacy_product_id': product_id,
             'quantity': qty,
             'notes': str(item.get('notes') or '').strip() or None,
         })
+        local_ids.append(product_id)
     if not normalized_items:
         raise ValueError('Produk tidak valid.')
+
+    mapped = {
+        int(row['legacy_product_id']): row['id']
+        for row in list_supabase_products_by_legacy_ids(local_ids)
+        if row.get('legacy_product_id') is not None
+    }
+    missing = [pid for pid in local_ids if pid not in mapped]
+    if missing:
+        raise SupabaseGatewayError(
+            'Produk belum tersinkron ke Supabase: ' + ', '.join(str(x) for x in sorted(set(missing)))
+        )
+    for item in normalized_items:
+        item['product_id'] = mapped[int(item.pop('legacy_product_id'))]
 
     row = customer_delivery_order_v2(
         u['supabase_user_id'],
@@ -909,6 +924,36 @@ def admin_supabase_payment_verify():
     except SupabaseGatewayError:
         return jsonify(error='Gagal memverifikasi pembayaran di Supabase.'),502
     return jsonify(ok=bool(ok),supabase_order_id=order_id,status=status)
+
+@bp.route('/api/admin/supabase/catalog/sync', methods=['POST'])
+def admin_supabase_catalog_sync():
+    if not require_role('admin', 'owner'):
+        return jsonify(error='Forbidden'),403
+    if not supabase_enabled():
+        return jsonify(error='Supabase backend belum aktif.'),400
+    db=get_db()
+    rows=db.execute("""
+        SELECT p.id,p.name,p.description,p.price,p.normal_price,p.stock,p.active,
+               c.name AS category_name
+        FROM products p
+        LEFT JOIN categories c ON c.id=p.category_id
+        WHERE p.active=1
+        ORDER BY p.id
+    """).fetchall()
+    synced=[]
+    try:
+        for row in rows:
+            category_name=(row['category_name'] or 'Makanan').strip()
+            station='bar' if category_name.lower() in ('minuman','drink','drinks','beverage','beverages') else 'kitchen'
+            category_id=get_or_create_supabase_category(category_name,station)
+            result=upsert_supabase_product(
+                row['id'], category_id, row['name'], row['description'] or '',
+                row['normal_price'] or row['price'] or 0, row['price'] or 0, row['stock'] or 0
+            )
+            synced.append({'local_product_id':row['id'],'supabase_product_id':result[0]['id'] if result else None,'name':row['name']})
+    except SupabaseGatewayError:
+        return jsonify(error='Gagal sinkronisasi catalog ke Supabase.',synced=synced),502
+    return jsonify(ok=True,count=len(synced),products=synced)
 
 @bp.route('/api/system/backend')
 def backend():
