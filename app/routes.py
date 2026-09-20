@@ -237,7 +237,14 @@ def create_order():
         return jsonify(error='Lokasi pengantaran tidak valid'),400
     if not (-90 <= lat <= 90 and -180 <= lon <= 180):
         return jsonify(error='Lokasi pengantaran tidak valid'),400
-    db=get_db(); subtotal=0; valid=[]
+    db=get_db()
+    account=db.execute('SELECT name,phone FROM users WHERE id=? AND role=\'customer\'',(user()['id'],)).fetchone()
+    if not account or not str(account['name'] or '').strip() or not str(account['phone'] or '').strip():
+        return jsonify(error='Lengkapi nama dan nomor HP di Akun sebelum checkout.'),400
+    # Customer identity is always sourced from the authenticated account.
+    name=str(account['name']).strip()
+    phone=str(account['phone']).strip()
+    subtotal=0; valid=[]
     for it in items:
         p=db.execute('SELECT * FROM products WHERE id=? AND active=1',(it.get('product_id'),)).fetchone()
         if not p: continue
