@@ -320,3 +320,22 @@ def upsert_supabase_product(
         payload=payload,
         query={"select": "id,legacy_product_id,name,selling_price,active"},
     )
+
+
+def get_or_create_supabase_category(name, station):
+    rows = rest_json(
+        "GET",
+        "/rest/v1/categories",
+        query={"name": f"eq.{name}", "select": "id,name,station", "limit": "1"},
+    ) or []
+    if rows:
+        return rows[0]["id"]
+    created = rest_json(
+        "POST",
+        "/rest/v1/categories",
+        payload={"name": name, "station": station},
+        query={"select": "id,name,station"},
+    ) or []
+    if not created:
+        raise SupabaseGatewayError("Supabase category could not be created.")
+    return created[0]["id"]
