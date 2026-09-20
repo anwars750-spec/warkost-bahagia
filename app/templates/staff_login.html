@@ -5,14 +5,13 @@
   <section class="card auth-card staff-auth-card">
     <span class="section-kicker">PORTAL OPERASIONAL</span>
     <h1>Masuk <em>Staff.</em></h1>
-    <p class="auth-lead">Portal khusus Owner, Admin, Kasir, Kitchen, dan Driver. Akun staff tidak dibuat melalui halaman customer.</p>
+    
     {% if error %}<div class="error">{{error}}</div>{% endif %}
     <form method="post" autocomplete="on">
       <label>Email atau No. HP<input name="identity" type="text" placeholder="Email atau nomor HP" autocomplete="username" required></label>
       <label>Password<input name="password" type="password" placeholder="Masukkan password" autocomplete="current-password" required></label>
       <button class="primary auth-submit" type="submit">Masuk ke Portal Staff <span>→</span></button>
     </form>
-    <div class="staff-role-note"><strong>Hak akses</strong><span>Owner & Admin mengelola akun staff. Kasir, Kitchen, dan Driver hanya dapat menggunakan akun yang dibuat/diaktifkan oleh pihak berwenang.</span></div>
     <div class="auth-register">Customer? <a href="/login">Masuk ke Customer App</a></div>
     <a class="back-link" href="/">← Kembali ke menu</a>
   </section>
