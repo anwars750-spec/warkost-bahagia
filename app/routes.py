@@ -191,7 +191,6 @@ def simulate_payment(oid):
         promo=db.execute('SELECT id,quota,used_count FROM promotions WHERE id=?',(o['promo_id'],)).fetchone()
         if promo and (promo['quota'] is None or int(promo['quota'])<=0 or int(promo['used_count'])<int(promo['quota'])):
             db.execute('UPDATE promotions SET used_count=used_count+1 WHERE id=?',(o['promo_id'],))
-    db.execute('INSERT INTO notifications(user_id,order_id,title,message) VALUES(?,?,?,?,?)' if False else 'SELECT 1') if False else None
     recipients=db.execute("SELECT id FROM users WHERE role IN ('admin','kasir','kitchen')").fetchall()
     for r in recipients: db.execute('INSERT INTO notifications(user_id,order_id,title,message) VALUES(?,?,?,?)',(r['id'],oid,'Order baru',f'Order {o["order_no"]} sudah dibayar.'))
     db.execute('INSERT INTO notifications(user_id,order_id,title,message) VALUES(?,?,?,?)',(user()['id'],oid,'Pembayaran berhasil',f'Pembayaran untuk {o["order_no"]} berhasil. Pesanan masuk ke proses Warkost Bahagia.'))
