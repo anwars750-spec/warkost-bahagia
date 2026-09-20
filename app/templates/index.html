@@ -153,7 +153,7 @@
           <div><strong>Data penerima</strong><small>Pastikan nomor HP aktif.</small></div>
         </div>
         <input id="name" placeholder="Nama penerima" value="{{u['name'] if u and u['role']=='customer' else ''}}">
-        <input id="phone" placeholder="No. HP aktif" inputmode="tel">
+        <input id="phone" placeholder="No. HP aktif" inputmode="tel" value="{{u['phone'] if u and u['role']=='customer' else ''}}">
 
         <div class="form-heading">
           <span>02</span>
