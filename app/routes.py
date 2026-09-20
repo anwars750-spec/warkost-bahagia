@@ -105,6 +105,18 @@ def login():
         return render_template('login.html',error='Email/nomor HP atau password tidak sesuai.')
     return render_template('login.html',google_client_id=os.environ.get('GOOGLE_CLIENT_ID','').strip())
 
+@bp.route('/staff/login',methods=['GET','POST'])
+def staff_login():
+    if request.method=='POST':
+        ident=request.form.get('identity','').strip()
+        pw=request.form.get('password','')
+        u=get_db().execute("SELECT * FROM users WHERE (email=? OR phone=?) AND role!='customer'",(ident,ident)).fetchone()
+        if u and u['password_hash'] and check_password_hash(u['password_hash'],pw) and u['status']=='active':
+            session.clear(); session['user_id']=u['id']
+            return redirect(url_for('main.dashboard'))
+        return render_template('staff_login.html',error='Akun staff tidak dapat masuk. Periksa kredensial dan status akun.')
+    return render_template('staff_login.html')
+
 @bp.route('/register',methods=['GET','POST'])
 def register():
     if user(): return redirect(url_for('main.index'))
@@ -472,6 +484,63 @@ def order_detail(oid):
     if user()['role']=='customer' and o['customer_id']!=user()['id']:return jsonify(error='Forbidden'),403
     items=db.execute('SELECT * FROM order_items WHERE order_id=?',(oid,)).fetchall()
     return jsonify(order=dict(o),items=[dict(x) for x in items],contact={'admin_whatsapp':os.environ.get('WARKOST_ADMIN_WHATSAPP','6281310358558')})
+
+@bp.route('/api/admin/users',methods=['GET','POST'])
+def admin_users():
+    u=user()
+    if not u or u['role'] not in ('admin','owner'):
+        return jsonify(error='Forbidden'),403
+    db=get_db()
+    if request.method=='POST':
+        if u['role']!='owner':
+            return jsonify(error='Hanya Owner yang dapat membuat akun staff.'),403
+        data=request.json or {}
+        name=str(data.get('name','')).strip()
+        phone=str(data.get('phone','')).strip()
+        email=str(data.get('email','')).strip().lower()
+        role=str(data.get('role','')).strip()
+        password=str(data.get('password',''))
+        if role not in ('admin','kasir','kitchen','driver'):
+            return jsonify(error='Role staff tidak valid.'),400
+        if len(name)<2 or len(phone)<8 or '@' not in email or len(password)<12:
+            return jsonify(error='Nama, HP, email, dan password staff wajib valid. Password minimal 12 karakter.'),400
+        if db.execute('SELECT 1 FROM users WHERE LOWER(email)=? OR phone=?',(email,phone)).fetchone():
+            return jsonify(error='Email atau nomor HP sudah digunakan.'),409
+        cur=db.execute("INSERT INTO users(name,phone,email,password_hash,role,status) VALUES(?,?,?,?,?,'active')",(name,phone,email,generate_password_hash(password),role))
+        if role=='driver':
+            db.execute('INSERT OR IGNORE INTO drivers(user_id,online) VALUES(?,0)',(cur.lastrowid,))
+        db.execute('INSERT INTO audit_logs(user_id,action,entity,entity_id,details) VALUES(?,?,?,?,?)',(u['id'],'CREATE','user',cur.lastrowid,f'Create staff role={role}'))
+        db.commit()
+        return jsonify(ok=True,id=cur.lastrowid),201
+    rows=db.execute("SELECT id,name,phone,email,role,status,created_at FROM users WHERE role!='customer' ORDER BY CASE role WHEN 'owner' THEN 1 WHEN 'admin' THEN 2 WHEN 'kasir' THEN 3 WHEN 'kitchen' THEN 4 WHEN 'driver' THEN 5 ELSE 9 END,id").fetchall()
+    return jsonify([dict(r) for r in rows])
+
+@bp.route('/api/admin/users/<int:uid>',methods=['POST','DELETE'])
+def admin_user_manage(uid):
+    u=user()
+    if not u or u['role'] not in ('admin','owner'):
+        return jsonify(error='Forbidden'),403
+    db=get_db()
+    target=db.execute("SELECT * FROM users WHERE id=? AND role!='customer'",(uid,)).fetchone()
+    if not target: return jsonify(error='Staff tidak ditemukan.'),404
+    if target['role']=='owner':
+        return jsonify(error='Akun Owner tidak dapat dihapus atau dinonaktifkan dari menu ini.'),403
+    if request.method=='POST':
+        status='active' if bool((request.json or {}).get('active')) else 'inactive'
+        db.execute('UPDATE users SET status=? WHERE id=?',(status,uid))
+        db.execute('INSERT INTO audit_logs(user_id,action,entity,entity_id,details) VALUES(?,?,?,?,?)',(u['id'],'UPDATE','user',uid,f'Set staff status={status}'))
+        db.commit()
+        return jsonify(ok=True,status=status)
+    # Hard-delete only when the staff account has no operational references.
+    refs=[]
+    for table,col in [('orders','customer_id'),('notifications','user_id'),('audit_logs','user_id'),('drivers','user_id'),('delivery_trips','driver_id')]:
+        if db.execute(f'SELECT 1 FROM {table} WHERE {col}=? LIMIT 1',(uid,)).fetchone():
+            refs.append(table)
+    if refs:
+        return jsonify(error='Staff sudah memiliki data operasional dan tidak dapat dihapus permanen. Nonaktifkan akun sebagai gantinya.',references=refs),409
+    db.execute('DELETE FROM users WHERE id=?',(uid,))
+    db.commit()
+    return jsonify(ok=True,deleted=True)
 
 @bp.route('/api/admin/orders')
 def admin_orders():
