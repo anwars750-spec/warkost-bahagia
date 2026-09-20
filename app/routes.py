@@ -266,7 +266,11 @@ def create_order():
         if str(promo['type'] or 'percent')=='fixed': discount=int(promo['value'] or 0)
         else: discount=money(subtotal*int(promo['value'] or 0)/100)
         if promo['max_discount'] is not None: discount=min(discount,int(promo['max_discount']))
-        discount=max(0,min(discount,subtotal)); promo_id=promo['id']
+        discount=max(0,min(discount,subtotal))
+        claimed=db.execute('SELECT id FROM promo_claims WHERE promotion_id=? AND customer_id=?',(promo['id'],user()['id'])).fetchone()
+        if not claimed:
+            return jsonify(error='Voucher harus diklaim terlebih dahulu. Setiap voucher hanya bisa diklaim 1 kali per akun.'),400
+        promo_id=promo['id']
     total=max(0,subtotal+fee-discount)
     order_no='WB-'+datetime.now().strftime('%y%m%d')+'-'+uuid.uuid4().hex[:5].upper()
     cur=db.execute('INSERT INTO orders(order_no,customer_id,customer_name,customer_phone,address,latitude,longitude,distance_km,delivery_fee,subtotal,discount,total,payment_method,promo_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(order_no,user()['id'],name,phone,address,lat,lon,distance,fee,subtotal,discount,total,'qris_btn',promo_id))
