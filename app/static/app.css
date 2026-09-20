@@ -562,3 +562,23 @@ html,body{font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif;color:var(--wb-te
   .menu-group-heading{align-items:flex-start;display:block}
   .menu-group-heading small{display:block;margin:3px 0 0}
 }
+
+/* V1.6 POLISH — spacing, category headings, detail CTA */
+.customer-main>.promo-card{margin-bottom:14px}
+.customer-main>.customer-search-row{margin:0 0 12px}
+.customer-main>.category-section{margin:0 0 20px}
+.customer-main>.menu-section{margin-top:0}
+.menu-group-heading{display:block!important;margin:0 0 14px!important;padding:0 0 9px!important;border-bottom:1px solid #eadfd3}
+.menu-group-heading .section-kicker{display:block!important;margin:0 0 4px!important}
+.menu-group-heading h3{display:block!important;margin:0!important;font-size:22px!important;line-height:28px!important;color:#2f1b0f}
+.menu-group-heading small{display:block!important;margin:4px 0 0!important;color:#9b887a!important}
+.menu-group{margin:0 0 26px!important}
+.detail-add{display:flex!important;align-items:center;justify-content:center;width:100%!important;height:44px!important;border:0!important;border-radius:12px!important;background:#5a2d13!important;color:#fff!important;font:inherit!important;font-size:12px!important;font-weight:800!important;cursor:pointer!important;box-shadow:none!important}
+.detail-add:hover{background:#d4622a!important;color:#fff!important}
+.product-detail-button{background:#f7efe3!important;color:#5a2d13!important;border:1px solid #ead9c8!important}
+.product-detail-button:hover{background:#eadccb!important;color:#5a2d13!important}
+@media(max-width:700px){
+ .customer-main>.promo-card{margin-bottom:12px}
+ .customer-main>.customer-search-row{margin-bottom:10px}
+ .customer-main>.category-section{margin-bottom:18px}
+}
