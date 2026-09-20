@@ -66,10 +66,11 @@ function renderSavedAddressPicker(){
   return;
  }
  el.innerHTML='<div class="saved-address-title"><strong>Gunakan alamat tersimpan</strong><small>Pilih alamat akun atau masukkan alamat baru.</small></div>'+
- savedAddresses.map(a=>'<button type="button" class="saved-address-option '+(selectedSavedAddressId===a.id?'active':'')+'" onclick="selectSavedAddress('+a.id+')"><span class="saved-address-icon">⌖</span><span><strong>'+escapeHtml(a.label||'Alamat')+'</strong><small>'+escapeHtml(a.address)+'</small></span><b>→</b></button>').join('')+
- '<button type="button" class="saved-address-new" onclick="startNewCartAddress()">+ Gunakan alamat baru</button>';
+ savedAddresses.map(a=>'<button type="button" class="saved-address-option '+(selectedSavedAddressId===a.id?'active':'')+'" onclick="selectSavedAddress(event,'+a.id+')"><span class="saved-address-icon">⌖</span><span><strong>'+escapeHtml(a.label||'Alamat')+'</strong><small>'+escapeHtml(a.address)+'</small></span><b>→</b></button>').join('')+
+ '<button type="button" class="saved-address-new" onclick="startNewCartAddress(event)">+ Gunakan alamat baru</button>';
 }
-function selectSavedAddress(id){
+function selectSavedAddress(event,id){
+ if(event){event.preventDefault();event.stopPropagation();}
  const a=savedAddresses.find(x=>x.id===id);if(!a)return;
  selectedSavedAddressId=a.id;
  const address=document.getElementById('address'),lat=document.getElementById('lat'),lon=document.getElementById('lon');
@@ -79,7 +80,8 @@ function selectSavedAddress(id){
  renderSavedAddressPicker();
  if(a.latitude!=null&&a.longitude!=null)refreshDeliveryQuote();
 }
-function startNewCartAddress(){
+function startNewCartAddress(event){
+ if(event){event.preventDefault();event.stopPropagation();}
  selectedSavedAddressId=null;
  ['address','lat','lon'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
  const status=document.getElementById('locationStatus');if(status)status.textContent='Masukkan alamat baru dan pilih rekomendasi peta.';
