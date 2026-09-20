@@ -221,6 +221,8 @@ def migrate_existing(db):
         db.execute('ALTER TABLE products ADD COLUMN normal_price INTEGER NOT NULL DEFAULT 0')
     db.execute('UPDATE products SET normal_price=price WHERE normal_price<=0')
     db.execute('''CREATE TABLE IF NOT EXISTS promo_claims (id INTEGER PRIMARY KEY AUTOINCREMENT, promotion_id INTEGER NOT NULL, customer_id INTEGER NOT NULL, claimed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(promotion_id,customer_id), FOREIGN KEY(promotion_id) REFERENCES promotions(id), FOREIGN KEY(customer_id) REFERENCES users(id))''')
+    # Backfill voucher claims from historical orders so old redemptions remain one-time per account.
+    db.execute('''INSERT OR IGNORE INTO promo_claims(promotion_id,customer_id) SELECT promo_id,customer_id FROM orders WHERE promo_id IS NOT NULL''')
 
     _rebuild_users_with_kasir(db)
     _ensure_demo_users(db)
