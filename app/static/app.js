@@ -423,7 +423,7 @@ async function loadAccountSection(section){
     if(!r.ok){box.innerHTML=accountSectionHeader('ALAMAT','Alamat Pengantaran')+'<div class="error">'+escapeHtml(data.error||'Gagal memuat alamat.')+'</div>';return;}
     box.innerHTML=accountSectionHeader('ALAMAT','Alamat Pengantaran')+
       (data.length?data.map(a=>'<div class="account-address"><strong>'+escapeHtml(a.label||'Alamat')+'</strong><p>'+escapeHtml(a.address)+'</p><small class="saved-address-meta">'+(a.latitude!=null&&a.longitude!=null?'✓ Titik maps tersimpan':'⚠ Titik maps belum tersimpan')+'</small><button type="button" class="track-button" onclick="editCustomerAddress('+a.id+')">Gunakan alamat ini</button></div>').join(''):'<p>Belum ada alamat tersimpan.</p>')+
-      '<form class="account-address-form" onsubmit="saveCustomerAddress(event)"><strong>Tambah alamat</strong><input id="addressLabel" placeholder="Label, contoh: Rumah" value="Rumah"><div id="accountAddressSearch" class="maps-autocomplete account-address-search"></div><textarea id="addressValue" placeholder="Alamat lengkap" required></textarea><input type="hidden" id="accountAddressLat"><input type="hidden" id="accountAddressLon"><div id="accountAddressMap" class="order-map account-address-map"></div><small class="location-note">Pilih rekomendasi alamat agar titik maps ikut tersimpan.</small><div id="accountAddressStatus" class="location-status">Titik maps belum dipilih.</div><button class="primary" type="submit">Simpan Alamat</button><div id="addressMsg"></div></form>';\n    fetch('/api/maps/config').then(r=>r.json()).then(cfg=>{ if(cfg.api_key && typeof google!=='undefined') setupAccountMaps(cfg); }).catch(()=>{});
+      '<form class="account-address-form" onsubmit="saveCustomerAddress(event)"><strong>Tambah alamat</strong><input id="addressLabel" placeholder="Label, contoh: Rumah" value="Rumah"><div id="accountAddressSearch" class="maps-autocomplete account-address-search"></div><textarea id="addressValue" placeholder="Alamat lengkap" required></textarea><input type="hidden" id="accountAddressLat"><input type="hidden" id="accountAddressLon"><div id="accountAddressMap" class="order-map account-address-map"></div><small class="location-note">Pilih rekomendasi alamat agar titik maps ikut tersimpan.</small><div id="accountAddressStatus" class="location-status">Titik maps belum dipilih.</div><button class="primary" type="submit">Simpan Alamat</button><div id="addressMsg"></div></form>';\n    fetch('/api/maps/config').then(r=>r.json()).then(cfg=>{ if(cfg.api_key && typeof google!=='undefined') setupAccountMaps(cfg); else initAccountLocalTestMode(cfg); }).catch(()=>{});
   }else if(section==='password'){
     box.innerHTML=accountSectionHeader('KEAMANAN','Ubah Password')+
       '<form class="account-password" onsubmit="changeAccountPassword(event)"><input id="currentPassword" type="password" placeholder="Password saat ini" required><input id="newPassword" type="password" placeholder="Password baru (min. 6 karakter)" minlength="6" required><input id="confirmPassword" type="password" placeholder="Ulangi password baru" minlength="6" required><button class="primary" type="submit">Simpan Password</button><div id="passwordMsg"></div></form>';
@@ -538,6 +538,23 @@ async function setupGoogleMaps(cfg){
     status.textContent='Ketik alamat lalu pilih rekomendasi peta.';
     setupAccountMaps(cfg);
   }catch(e){status.textContent='Google Maps gagal diinisialisasi. Pastikan Maps JavaScript API dan Places API (New) aktif.'}
+}
+function initAccountLocalTestMode(cfg){
+ const picker=document.getElementById('accountAddressSearch'),mapEl=document.getElementById('accountAddressMap');
+ if(!picker||!mapEl)return;
+ if(picker.dataset.localReady==='1')return;
+ picker.dataset.localReady='1';
+ picker.innerHTML='<div class="local-test-box"><b>MODE TEST LOKAL</b><small>Google Maps belum dikonfigurasi. Pilih titik simulasi untuk menyimpan alamat beserta koordinat.</small><div class="test-distance-grid"><button type="button" onclick="setAccountTestLocation(2)">Titik 2 km</button><button type="button" onclick="setAccountTestLocation(5)">Titik 5 km</button><button type="button" onclick="setAccountTestLocation(6)">Titik 6 km</button><button type="button" onclick="setAccountTestLocation(8)">Titik 8 km</button><button type="button" onclick="setAccountTestLocation(9)">Titik 9 km</button></div></div>';
+ mapEl.innerHTML='<div class="local-map-placeholder">🗺️<br><b>Preview Map ditunda</b><br><small>Titik simulasi akan disimpan sebagai latitude & longitude.</small></div>';
+ window.testCafe=window.testCafe||{lat:Number(cfg?.cafe_latitude),lon:Number(cfg?.cafe_longitude)};
+}
+function setAccountTestLocation(distanceKm){
+ const address=(document.getElementById('addressValue')?.value||'').trim();
+ if(!address){const msg=document.getElementById('addressMsg');if(msg)msg.innerHTML='<div class="error">Isi alamat lengkap terlebih dahulu.</div>';return}
+ const p=destinationPoint(window.testCafe.lat,window.testCafe.lon,distanceKm,90);
+ document.getElementById('accountAddressLat').value=p.lat;
+ document.getElementById('accountAddressLon').value=p.lon;
+ const status=document.getElementById('accountAddressStatus');if(status)status.textContent='✓ Titik simulasi '+distanceKm.toFixed(1)+' km dipilih.';
 }
 async function setupAccountMaps(cfg){
  if(accountMapState.ready||typeof google==='undefined')return;
