@@ -1730,3 +1730,200 @@ html body aside#cart.customer-drawer{
     padding:7px 9px!important;
   }
 }
+
+
+/* V1.6 MOBILE CART — COMPACT FLOATING SHEET */
+@media(max-width:700px){
+  html body aside#cart.customer-drawer{
+    top:12px!important;
+    right:-560px;
+    bottom:12px!important;
+    width:min(420px,calc(100vw - 24px))!important;
+    max-width:420px!important;
+    height:auto!important;
+    max-height:calc(100vh - 24px);
+    padding:20px 18px 18px!important;
+    border:1px solid rgba(234,223,211,.95);
+    border-radius:26px!important;
+    background:#f7efe3!important;
+    box-shadow:0 22px 60px rgba(37,23,15,.28)!important;
+    overflow-y:auto;
+    overflow-x:hidden;
+    overscroll-behavior:contain;
+  }
+  html body aside#cart.customer-drawer.show{
+    right:12px!important;
+  }
+  #cart .drawer-head{
+    position:sticky;
+    top:-20px;
+    z-index:5;
+    margin:0 -18px 16px!important;
+    padding:18px 18px 14px!important;
+    background:rgba(247,239,227,.96);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid #eadfd3;
+  }
+  #cart .drawer-head h2{
+    font-size:25px!important;
+    letter-spacing:-.7px;
+  }
+  #cart .drawer-head .section-kicker{
+    font-size:9px!important;
+    letter-spacing:.15em;
+  }
+  #cart .drawer-close{
+    width:40px!important;
+    height:40px!important;
+    border-radius:13px!important;
+    background:#fffaf5!important;
+    border:1px solid #e4d6c8!important;
+  }
+
+  #cart .customer-cart-items{
+    margin:0 0 12px!important;
+  }
+  #cart .cartrow{
+    min-height:62px;
+    padding:11px 10px!important;
+    border-radius:14px!important;
+    background:#fffaf5!important;
+  }
+
+  #cart .checkout-panel{
+    margin-top:10px!important;
+  }
+  #cart .totals{
+    padding:14px!important;
+    margin-bottom:12px!important;
+    border-radius:16px!important;
+  }
+  #cart .totals div{
+    margin:7px 0!important;
+    font-size:11px!important;
+  }
+  #cart .totals .grand{
+    font-size:17px!important;
+    padding-top:11px!important;
+    margin-top:10px!important;
+  }
+  #cart .totals .grand b{
+    font-size:19px!important;
+  }
+
+  #cart .checkout-form{
+    padding:14px!important;
+    border-radius:18px!important;
+  }
+  #cart .form-heading{
+    margin:2px 0 9px!important;
+  }
+  #cart .form-heading strong{
+    font-size:12px!important;
+  }
+  #cart .form-heading small{
+    font-size:9px!important;
+  }
+  #cart input,
+  #cart textarea{
+    font-size:12px!important;
+    padding:11px 12px!important;
+    border-radius:11px!important;
+  }
+  #cart .order-map{
+    height:145px!important;
+  }
+
+  #cart .voucher-box{
+    margin:11px 0 12px!important;
+    padding:10px!important;
+    border-radius:14px!important;
+  }
+  #cart .voucher-center-trigger{
+    min-height:50px!important;
+    grid-template-columns:32px 1fr 18px!important;
+    gap:9px!important;
+    margin-bottom:9px!important;
+  }
+  #cart .voucher-trigger-icon{
+    width:32px!important;
+    height:32px!important;
+  }
+  #cart .voucher-trigger-copy strong{
+    font-size:11px!important;
+  }
+  #cart .voucher-trigger-copy small{
+    font-size:8px!important;
+  }
+
+  #cart .checkout-button{
+    position:sticky;
+    bottom:-1px;
+    z-index:4;
+    min-height:50px!important;
+    margin-top:10px!important;
+    border-radius:14px!important;
+    font-size:13px!important;
+    box-shadow:0 10px 25px rgba(212,98,42,.25)!important;
+  }
+
+  /* A deliberate empty state: don't show irrelevant checkout fields */
+  #cart .cart-empty-state{
+    min-height:230px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:28px 18px;
+    margin:10px 0 4px;
+    border:1px dashed #d7c1ae;
+    border-radius:20px;
+    background:#fffaf5;
+  }
+  #cart .cart-empty-icon{
+    width:50px;
+    height:50px;
+    display:grid;
+    place-items:center;
+    margin-bottom:12px;
+    border-radius:16px;
+    background:#f3dfce;
+    color:#c85c27;
+    font-size:25px;
+    font-weight:400;
+  }
+  #cart .cart-empty-state strong{
+    color:#3b1f0c;
+    font-size:15px;
+    font-weight:800;
+  }
+  #cart .cart-empty-state small{
+    max-width:270px;
+    margin-top:6px;
+    color:#806d60;
+    font-size:10px;
+    line-height:1.5;
+  }
+}
+
+/* Slightly smaller floating sheet on very narrow phones */
+@media(max-width:380px){
+  html body aside#cart.customer-drawer{
+    top:8px!important;
+    right:-520px;
+    bottom:8px!important;
+    width:calc(100vw - 16px)!important;
+    max-height:calc(100vh - 16px);
+    border-radius:23px!important;
+    padding-left:15px!important;
+    padding-right:15px!important;
+  }
+  html body aside#cart.customer-drawer.show{right:8px!important}
+  #cart .drawer-head{
+    margin-left:-15px!important;
+    margin-right:-15px!important;
+    padding-left:15px!important;
+    padding-right:15px!important;
+  }
+}
