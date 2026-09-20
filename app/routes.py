@@ -259,6 +259,9 @@ def create_order():
                             AND (quota IS NULL OR quota<=0 OR used_count<quota)
                             LIMIT 1""",(promo_code,)).fetchone()
         if not promo: return jsonify(error='Voucher tidak tersedia atau sudah tidak berlaku.'),400
+        claimed=db.execute('SELECT id FROM promo_claims WHERE promotion_id=? AND customer_id=?',(promo['id'],user()['id'])).fetchone()
+        if not claimed:
+            return jsonify(error='Voucher harus diklaim terlebih dahulu. Setiap voucher hanya bisa diklaim 1 kali per akun.'),400
         if subtotal < int(promo['min_order'] or 0): return jsonify(error=f'Minimum order voucher Rp {int(promo["min_order"] or 0):,}.'),400
         if str(promo['type'] or 'percent')=='fixed': discount=int(promo['value'] or 0)
         else: discount=money(subtotal*int(promo['value'] or 0)/100)
@@ -356,19 +359,31 @@ def validate_customer_promo():
     else: discount=money(subtotal*int(promo['value'] or 0)/100)
     if promo['max_discount'] is not None: discount=min(discount,int(promo['max_discount']))
     discount=max(0,min(discount,subtotal))
+    # Each customer can claim a given voucher only once.
+    try:
+        db.execute('INSERT INTO promo_claims(promotion_id,customer_id) VALUES(?,?)',(promo['id'],u['id']))
+        db.commit()
+    except Exception:
+        db.rollback()
+        existing=db.execute('SELECT id FROM promo_claims WHERE promotion_id=? AND customer_id=?',(promo['id'],u['id'])).fetchone()
+        if existing:
+            return jsonify(error='Voucher ini sudah pernah diklaim oleh akun kamu. Setiap voucher hanya bisa diklaim 1 kali per akun.'),409
+        return jsonify(error='Voucher belum dapat diklaim. Coba lagi.'),409
     return jsonify(ok=True,code=promo['code'],discount=discount,label=promo['code'])
 
 @bp.route('/api/customer/promotions')
 def customer_promotions():
     u=user()
     if not u or u['role']!='customer': return jsonify(error='Customer login required'),401
-    rows=get_db().execute("""SELECT id,code,type,value,min_order,max_discount,quota,used_count,starts_at,ends_at
-                             FROM promotions
-                             WHERE active=1
-                               AND (starts_at IS NULL OR starts_at='' OR starts_at<=CURRENT_TIMESTAMP)
-                               AND (ends_at IS NULL OR ends_at='' OR ends_at>=CURRENT_TIMESTAMP)
-                               AND (quota IS NULL OR quota<=0 OR used_count<quota)
-                             ORDER BY id DESC""").fetchall()
+    rows=get_db().execute("""SELECT p.id,p.code,p.type,p.value,p.min_order,p.max_discount,p.quota,p.used_count,p.starts_at,p.ends_at,
+                                    CASE WHEN pc.id IS NULL THEN 0 ELSE 1 END AS claimed
+                             FROM promotions p
+                             LEFT JOIN promo_claims pc ON pc.promotion_id=p.id AND pc.customer_id=?
+                             WHERE p.active=1
+                               AND (p.starts_at IS NULL OR p.starts_at='' OR p.starts_at<=CURRENT_TIMESTAMP)
+                               AND (p.ends_at IS NULL OR p.ends_at='' OR p.ends_at>=CURRENT_TIMESTAMP)
+                               AND (p.quota IS NULL OR p.quota<=0 OR p.used_count<p.quota)
+                             ORDER BY p.id DESC""",(u['id'],)).fetchall()
     return jsonify([dict(r) for r in rows])
 
 @bp.route('/api/customer/notifications')
