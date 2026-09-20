@@ -737,3 +737,80 @@ body.auth{
 .staff-login-link{text-align:center;margin-top:12px;color:#9b887a;font-size:11px}
 .staff-login-link a{color:#8a5c37;font-weight:800;text-decoration:none}
 .staff-login-link a:hover{color:#d4622a}
+
+
+/* V1.6 CUSTOMER UX — flexible overlays, avatar and tracking buttons */
+.customer-surface-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:110;
+  background:rgba(30,18,10,.34);
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transition:opacity .18s ease,visibility .18s ease;
+}
+.customer-surface-backdrop.show{
+  opacity:1;
+  visibility:visible;
+  pointer-events:auto;
+}
+.drawer.customer-drawer{z-index:120}
+.notification-panel{z-index:130}
+.customer-avatar-mini{
+  width:30px!important;
+  height:30px!important;
+  border-radius:10px!important;
+  background:#f1dfcf!important;
+  display:grid!important;
+  place-items:center!important;
+  color:#5a2d13!important;
+  font-size:0!important;
+}
+.customer-avatar-mini svg{
+  width:17px;
+  height:17px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.account-avatar{
+  width:48px!important;
+  height:48px!important;
+  border-radius:14px!important;
+  background:#f1dfcf!important;
+  color:#5a2d13;
+  display:grid!important;
+  place-items:center!important;
+}
+.account-avatar svg{
+  width:25px;
+  height:25px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.7;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.order-detail-actions .primary,
+.order-detail-actions .track-button,
+.account-order .track-button,
+.tracking-contacts .tracking-contact,
+.track-button{
+  background:#5a2d13!important;
+  color:#fff!important;
+  border:1px solid #5a2d13!important;
+  transition:background .16s ease,transform .16s ease,border-color .16s ease;
+}
+.order-detail-actions .primary:hover,
+.order-detail-actions .track-button:hover,
+.account-order .track-button:hover,
+.tracking-contacts .tracking-contact:hover,
+.track-button:hover{
+  background:#d4622a!important;
+  color:#fff!important;
+  border-color:#d4622a!important;
+  transform:translateY(-1px);
+}
