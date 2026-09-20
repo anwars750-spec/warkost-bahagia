@@ -710,9 +710,13 @@ async function confirmCheckout(){
     const r=await fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}),d=await r.json();
     if(r.status===401){window.location='/login';return}
     if(!r.ok){showMsg('<div class="error">'+escapeHtml(d.error||'Order gagal dibuat.')+'</div>');return}
-    const pay=await fetch('/api/simulate-payment/'+d.order_id,{method:'POST'});
-    if(!pay.ok){showMsg('<div class="error">Order dibuat, tetapi pembayaran demo gagal.</div>');return}
-    await openOrderProcess(d.order_no,d.total,'confirmed');
+    if(d.backend==='supabase'){
+      await openOrderProcess(d.order_no,d.total,d.status||'payment_pending');
+    }else{
+      const pay=await fetch('/api/simulate-payment/'+d.order_id,{method:'POST'});
+      if(!pay.ok){showMsg('<div class="error">Order dibuat, tetapi pembayaran demo gagal.</div>');return}
+      await openOrderProcess(d.order_no,d.total,'confirmed');
+    }
     cart=[];deliveryQuote=null;appliedPromo=null;const pc=document.getElementById('promoCode');if(pc)pc.value='';const pm=document.getElementById('promoMsg');if(pm)pm.innerHTML='';clearSelectedAddress();render();load();
   }catch(err){showMsg('<div class="error">Tidak dapat terhubung ke server. Coba lagi.</div>')}
 }
