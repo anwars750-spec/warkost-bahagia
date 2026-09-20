@@ -75,11 +75,11 @@
       <div class="section-heading">
         <div>
           <span class="section-kicker">PILIHAN HARI INI</span>
-          <h2>Menu Favorit</h2>
+          <h2>Menu</h2>
         </div>
         <span class="menu-count" id="menuCount"></span>
       </div>
-      <div id="products" class="grid customer-product-grid" aria-live="polite"></div>
+      <p class="menu-helper">Menu favorit ditandai dengan <b class="favorite-star" aria-label="Menu favorit">★</b>.</p><div id="products" class="grid customer-product-grid" aria-live="polite"></div>
       <div id="emptyMenu" class="empty-menu" hidden><span>🔎</span><strong>Menu tidak ditemukan</strong><small>Coba kata kunci atau kategori lain.</small></div>
     </section>
 
@@ -168,6 +168,17 @@
         <input type="hidden" id="address">
         <input type="hidden" id="lat">
         <input type="hidden" id="lon">
+        <div class="voucher-box">
+          <div class="form-heading">
+            <span>03</span>
+            <div><strong>Voucher promosi</strong><small>Punya kode voucher? Klaim sebelum membuat order.</small></div>
+          </div>
+          <div class="voucher-row">
+            <input id="promoCode" placeholder="Masukkan kode voucher" autocomplete="off" maxlength="40">
+            <button type="button" onclick="claimVoucher()">Klaim</button>
+          </div>
+          <div id="promoMsg" class="promo-msg" aria-live="polite"></div>
+        </div>
         <button class="primary checkout-button" type="button" onclick="checkout()">Lanjutkan Checkout <span>→</span></button>
         <div id="msg" aria-live="polite"></div>
       </div>
