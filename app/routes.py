@@ -435,11 +435,11 @@ def admin_products():
     if not require_role('admin','owner'):return jsonify(error='Forbidden'),403
     db=get_db()
     if request.method=='POST':
-        d=request.json or {}; pid=d.get('id'); name=(d.get('name') or '').strip(); price=int(d.get('price') or 0); normal_price=int(d.get('normal_price') or price); stock=int(d.get('stock') or 0); minimum=int(d.get('stock_minimum') or 0); favorite=1 if d.get('is_favorite') else 0
+        d=request.json or {}; pid=d.get('id'); name=(d.get('name') or '').strip(); description=str(d.get('description') or '').strip(); price=int(d.get('price') or 0); normal_price=int(d.get('normal_price') or price); stock=int(d.get('stock') or 0); minimum=int(d.get('stock_minimum') or 0); favorite=1 if d.get('is_favorite') else 0
         normal_price=max(price,normal_price)
         if not name or price<0 or stock<0:return jsonify(error='Nama, harga, dan stock harus valid'),400
         if pid:
-            db.execute('UPDATE products SET name=?,price=?,normal_price=?,stock=?,stock_minimum=?,is_favorite=?,active=? WHERE id=?',(name,price,normal_price,stock,minimum,favorite,1 if d.get('active',True) else 0,pid))
+            db.execute('UPDATE products SET name=?,description=?,price=?,normal_price=?,stock=?,stock_minimum=?,is_favorite=?,active=? WHERE id=?',(name,description,price,normal_price,stock,minimum,favorite,1 if d.get('active',True) else 0,pid))
             action='UPDATE'
         else:
             cat=db.execute('SELECT id FROM categories ORDER BY id LIMIT 1').fetchone(); db.execute('INSERT INTO products(category_id,name,description,price,stock,stock_minimum,is_favorite,normal_price) VALUES(?,?,?,?,?,?,?,?)',(cat['id'] if cat else None,name,d.get('description',''),price,stock,minimum,favorite,normal_price)); action='CREATE'
