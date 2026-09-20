@@ -21,6 +21,7 @@ function contactWhatsApp(){
 }
 const rupiah=n=>'Rp '+Number(n||0).toLocaleString('id-ID');
 let activeCategory='Semua',menuQuery='';
+function productPricing(p){const sale=Number(p?.price||0),normal=Math.max(sale,Number(p?.normal_price||sale));const pct=normal>sale?Math.round((1-sale/normal)*100):0;return {sale,normal,pct,discounted:pct>0};}
 async function loadCustomerLocation(){
  const textEl=document.getElementById('customerLocationText'),metaEl=document.getElementById('customerLocationMeta');
  if(!textEl)return;
