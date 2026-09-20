@@ -511,3 +511,6 @@ html,body{font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif;color:var(--wb-te
 .delivery-capacity.available{background:#edf7ee;color:#315b3a;border-color:#cde3d0}
 
 .menu-helper{margin:-8px 0 14px;color:#756b63;font-size:13px}.favorite-star{color:#d4622a;font-size:14px}.product-category{display:flex;align-items:center;gap:5px}.voucher-box{margin:16px 0;padding:14px;border:1px solid var(--border);border-radius:14px;background:#fbf7f1}.voucher-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px}.voucher-row input{margin:0!important}.voucher-row button{background:#3b1f0c;color:#fff;padding:12px 18px}.promo-msg{margin-top:8px;font-size:12px}.promo-msg .error,.promo-msg .success{margin:0;padding:9px 10px}@media(max-width:600px){.voucher-row{grid-template-columns:1fr}.voucher-row button{width:100%}}
+
+/* V1.6 FINAL MENU PRICING */
+.product-price{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-height:30px}.product-price b{font-size:14px!important;color:#3b1f0c}.price-old{font-size:10px;color:#9a887a;text-decoration:line-through}.discount-badge{display:inline-flex;align-items:center;padding:4px 6px;border-radius:7px;background:#f6e0d2;color:#a84a1d;font-size:9px;font-weight:900}.cartrow s{color:#9a887a}@media(max-width:600px){.discount-badge{font-size:8px}.price-old{font-size:9px}}
