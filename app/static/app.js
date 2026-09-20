@@ -101,21 +101,21 @@ function setCategory(category){activeCategory=String(category||'Semua').trim();b
 function filterProducts(){const q=menuQuery.trim().toLowerCase(),active=activeCategory.toLowerCase();return products.filter(p=>(active==='semua'||String(p.category||'').trim().toLowerCase()===active)&&(!q||[p.name,p.description,p.category].some(v=>String(v||'').toLowerCase().includes(q))));}
 function renderProducts(){
   const box=document.getElementById('products'),empty=document.getElementById('emptyMenu'),items=filterProducts();
-  box.innerHTML=items.map(p=>{
+  const favorites=items.filter(p=>p.is_favorite),regular=items.filter(p=>!p.is_favorite);
+  const card=p=>{
     const image=productImage(p),pricing=productPricing(p);
     const imageMarkup=image
-      ? '<div class="product-art"><img src="'+image+'" alt="'+escapeHtml(p.name)+'" loading="lazy" decoding="async" onerror="this.closest(\'.product-art\').classList.add(\'image-fallback\');this.remove()"></div>'
+      ? '<div class="product-art"><img src="'+image+'" alt="'+escapeHtml(p.name)+'" loading="lazy" decoding="async" onerror="this.closest(\\'.product-art\\').classList.add(\\'image-fallback\\');this.remove()"></div>'
       : '<div class="product-art image-fallback" aria-hidden="true"></div>';
     const priceMarkup=pricing.discounted
       ? '<div class="product-price"><span class="price-old">'+rupiah(pricing.normal)+'</span><b>'+rupiah(pricing.sale)+'</b><span class="discount-badge">'+pricing.pct+'% OFF</span></div>'
       : '<div class="product-price"><b>'+rupiah(pricing.sale)+'</b></div>';
-    return '<article class="product">'+imageMarkup+
-      '<span class="product-category">'+escapeHtml(p.category||'Menu')+(p.is_favorite?' <b class="favorite-star" title="Menu favorit" aria-label="Menu favorit">★</b>':'')+'</span>'+
-      '<h3>'+escapeHtml(p.name)+'</h3><p>'+escapeHtml(p.description||'Pilihan menu Warkost Bahagia')+'</p>'+
-      '<div class="product-bottom">'+priceMarkup+'<small>'+(p.stock<1?'Stok habis':'Tersedia')+'</small></div>'+
-      '<div class="product-actions"><button type="button" class="secondary product-detail-button" onclick="openProductDetail('+p.id+')">Detail</button><button '+(p.stock<1?'disabled':'')+' onclick="add('+p.id+')">'+(p.stock<1?'Habis':'Tambah ke keranjang')+'</button></div></article>';
-  }).join('');
-  empty.hidden=items.length>0;const mc=document.getElementById('menuCount');if(mc)mc.textContent=items.length+' menu';
+    return '<article class="product">'+imageMarkup+'<span class="product-category">'+escapeHtml(p.category||'Menu')+(p.is_favorite?' <b class="favorite-star" title="Menu favorit" aria-label="Menu favorit">★</b>':'')+'</span><h3>'+escapeHtml(p.name)+'</h3><p>'+escapeHtml(p.description||'Pilihan menu Warkost Bahagia')+'</p><div class="product-bottom">'+priceMarkup+'<small>'+(p.stock<1?'Stok habis':'Tersedia')+'</small></div><div class="product-actions"><button type="button" class="secondary product-detail-button" onclick="openProductDetail('+p.id+')">Detail</button><button '+(p.stock<1?'disabled':'')+' onclick="add('+p.id+')">'+(p.stock<1?'Habis':'Tambah ke keranjang')+'</button></div></article>';
+  };
+  let markup='';
+  if(favorites.length) markup+='<div class="menu-group menu-favorites-group"><div class="menu-group-heading"><span class="section-kicker">MENU FAVORIT</span><h3>Pilihan Favorit</h3><small>Menu yang ditandai ⭐ oleh admin.</small></div><div class="menu-group-grid">'+favorites.map(card).join('')+'</div></div>';
+  if(regular.length) markup+='<div class="menu-group menu-regular-group">'+(favorites.length?'<div class="menu-group-heading"><span class="section-kicker">MENU LAINNYA</span><h3>Semua Menu</h3></div>':'')+'<div class="menu-group-grid">'+regular.map(card).join('')+'</div></div>';
+  box.innerHTML=markup; empty.hidden=items.length>0; const mc=document.getElementById('menuCount'); if(mc)mc.textContent=items.length+' menu';
 }
 document.addEventListener('DOMContentLoaded',()=>{const s=document.getElementById('menuSearch');if(s)s.addEventListener('input',e=>{menuQuery=e.target.value;renderProducts();});});
 function add(id){if(document.body?.dataset.authenticated!=='true'){window.location.href='/login?next=/';return;}let x=cart.find(i=>i.product_id===id);let p=products.find(x=>x.id===id);if(!p)return;if(x){if(x.qty>=p.stock)return;x.qty++;}else cart.push({product_id:id,qty:1});render()}
@@ -134,7 +134,7 @@ function render(){
   const sub=document.getElementById('subtotal'),disc=document.getElementById('discount'),del=document.getElementById('delivery'),total=document.getElementById('total');
   if(sub)sub.textContent=rupiah(t.subtotal); if(disc)disc.textContent='− '+rupiah(t.discount); if(del)del.textContent=rupiah(t.delivery); if(total)total.textContent=rupiah(t.total); if(mt)mt.textContent=rupiah(t.total);
 }
-function cartOpen(){document.getElementById('cart').classList.toggle('show');render()}
+function cartOpen(){if(document.body?.dataset.authenticated!=='true'){window.location.href='/login?next=/';return;}document.getElementById('cart').classList.toggle('show');render()}
 
 function openProductDetail(id){
  const p=products.find(x=>x.id===id); const box=document.getElementById('productDetailContent'); const modal=document.getElementById('productDetailModal');
