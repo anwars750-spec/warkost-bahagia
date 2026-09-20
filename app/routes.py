@@ -481,7 +481,7 @@ def customer_password():
     current=str(data.get('current_password',''))
     new=str(data.get('new_password',''))
     if not current or not new: return jsonify(error='Password lama dan password baru wajib diisi.'),400
-    if len(new)<6: return jsonify(error='Password baru minimal 6 karakter.'),400
+    if len(new)<12: return jsonify(error='Password baru minimal 12 karakter.'),400
     if not check_password_hash(u['password_hash'],current): return jsonify(error='Password lama tidak sesuai.'),400
     from werkzeug.security import generate_password_hash
     get_db().execute('UPDATE users SET password_hash=? WHERE id=?',(generate_password_hash(new),u['id']))
