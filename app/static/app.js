@@ -422,8 +422,8 @@ async function loadAccountSection(section){
     const r=await fetch('/api/customer/addresses');const data=await r.json();
     if(!r.ok){box.innerHTML=accountSectionHeader('ALAMAT','Alamat Pengantaran')+'<div class="error">'+escapeHtml(data.error||'Gagal memuat alamat.')+'</div>';return;}
     box.innerHTML=accountSectionHeader('ALAMAT','Alamat Pengantaran')+
-      (data.length?data.map(a=>'<div class="account-address"><strong>'+escapeHtml(a.label||'Alamat')+'</strong><p>'+escapeHtml(a.address)+'</p><small class="saved-address-meta">'+(a.latitude!=null&&a.longitude!=null?'✓ Titik maps tersimpan':'⚠ Titik maps belum tersimpan')+'</small><button type="button" class="track-button" onclick="editCustomerAddress('+a.id+')">Gunakan alamat ini</button></div>').join(''):'<p>Belum ada alamat tersimpan.</p>')+
-      '<form class="account-address-form" onsubmit="saveCustomerAddress(event)"><strong>Tambah alamat</strong><input id="addressLabel" placeholder="Label, contoh: Rumah" value="Rumah"><div id="accountAddressSearch" class="maps-autocomplete account-address-search"></div><textarea id="addressValue" placeholder="Alamat lengkap" required></textarea><input type="hidden" id="accountAddressLat"><input type="hidden" id="accountAddressLon"><div id="accountAddressMap" class="order-map account-address-map"></div><small class="location-note">Pilih rekomendasi alamat agar titik maps ikut tersimpan.</small><div id="accountAddressStatus" class="location-status">Titik maps belum dipilih.</div><button class="primary" type="submit">Simpan Alamat</button><div id="addressMsg"></div></form>';
+      (data.length?data.map(a=>'<div class="account-address"><strong>'+escapeHtml(a.label||'Alamat')+'</strong><p>'+escapeHtml(a.address)+'</p><small class="saved-address-meta">'+(a.latitude!=null&&a.longitude!=null?'✓ Titik maps tersimpan':'⚠ Titik maps belum tersimpan')+'</small><button type="button" class="track-button" onclick="editCustomerAddress('+a.id+')">Edit alamat</button></div>').join(''):'<p>Belum ada alamat tersimpan.</p>')+
+      '<form class="account-address-form" onsubmit="saveCustomerAddress(event)"><strong>Tambah / edit alamat</strong><input type="hidden" id="accountAddressId"><input id="addressLabel" placeholder="Label, contoh: Rumah" value="Rumah"><div id="accountAddressSearch" class="maps-autocomplete account-address-search"></div><textarea id="addressValue" placeholder="Alamat lengkap" required></textarea><input type="hidden" id="accountAddressLat"><input type="hidden" id="accountAddressLon"><div id="accountAddressMap" class="order-map account-address-map"></div><small class="location-note">Pilih rekomendasi alamat agar titik maps ikut tersimpan.</small><div id="accountAddressStatus" class="location-status">Titik maps belum dipilih.</div><button class="primary" type="submit">Simpan Alamat</button><div id="addressMsg"></div></form>';
     fetch('/api/maps/config').then(r=>r.json()).then(cfg=>{ if(cfg.api_key && typeof google!=='undefined') setupAccountMaps(cfg); else initAccountLocalTestMode(cfg); }).catch(()=>{});
   }else if(section==='password'){
     box.innerHTML=accountSectionHeader('KEAMANAN','Ubah Password')+
@@ -436,15 +436,15 @@ async function saveCustomerAddress(e){
  const lat=document.getElementById('accountAddressLat')?.value||'',lon=document.getElementById('accountAddressLon')?.value||'';
  if(!address){if(msg)msg.innerHTML='<div class="error">Alamat wajib diisi.</div>';return}
  if(!lat||!lon){if(msg)msg.innerHTML='<div class="error">Pilih rekomendasi alamat agar titik maps ikut tersimpan.</div>';return}
- const r=await fetch('/api/customer/addresses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label,address,latitude:Number(lat),longitude:Number(lon)})});
+ const r=await fetch('/api/customer/addresses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:document.getElementById('accountAddressId')?.value||null,label,address,latitude:Number(lat),longitude:Number(lon)})});
  const data=await r.json();
  if(msg)msg.innerHTML='<div class="'+(r.ok?'success':'error')+'">'+escapeHtml(data.ok?'Alamat berhasil disimpan.':(data.error||'Gagal menyimpan alamat.'))+'</div>';
  if(r.ok){await loadCustomerLocation();await loadSavedAddresses();await loadAccountSection('addresses');}
 }
 async function editCustomerAddress(id){
  const r=await fetch('/api/customer/addresses');const data=await r.json();const a=data.find(x=>x.id===id);if(!a)return;
- const v=document.getElementById('addressValue'),l=document.getElementById('addressLabel'),lat=document.getElementById('accountAddressLat'),lon=document.getElementById('accountAddressLon');
- if(v)v.value=a.address;if(l)l.value=a.label||'Rumah';if(lat)lat.value=a.latitude??'';if(lon)lon.value=a.longitude??'';
+ const idEl=document.getElementById('accountAddressId'),v=document.getElementById('addressValue'),l=document.getElementById('addressLabel'),lat=document.getElementById('accountAddressLat'),lon=document.getElementById('accountAddressLon');
+ if(idEl)idEl.value=a.id||'';if(v)v.value=a.address;if(l)l.value=a.label||'Rumah';if(lat)lat.value=a.latitude??'';if(lon)lon.value=a.longitude??'';
  const status=document.getElementById('accountAddressStatus');if(status)status.textContent=a.latitude!=null&&a.longitude!=null?'✓ Titik maps tersimpan.':'Titik maps belum dipilih.';
  v?.focus();
 }
