@@ -41,6 +41,13 @@ function contactWhatsApp(){
  window.open('https://wa.me/'+WHATSAPP_NUMBER+'?text='+message,'_blank','noopener,noreferrer');
 }
 const rupiah=n=>'Rp '+Number(n||0).toLocaleString('id-ID');
+function showMsg(html='',duration=5000){
+ const el=document.getElementById('msg');
+ if(msgTimer){clearTimeout(msgTimer);msgTimer=null;}
+ if(!el)return;
+ el.innerHTML=html||'';
+ if(html&&duration>0)msgTimer=setTimeout(()=>{el.innerHTML='';msgTimer=null;},duration);
+}
 let activeCategory='Semua',menuQuery='';
 function productPricing(p){const sale=Number(p?.price||0),normal=Math.max(sale,Number(p?.normal_price||sale));const pct=normal>sale?Math.round((1-sale/normal)*100):0;return {sale,normal,pct,discounted:pct>0};}
 async function loadSavedAddresses(){
@@ -684,6 +691,8 @@ async function checkout(){
   if(!customerAddress||latitude===null||longitude===null||!Number.isFinite(latitude)||!Number.isFinite(longitude)){showMsg('<div class="error">Pilih alamat pengantaran terlebih dahulu.</div>');return}
   await refreshDeliveryQuote();
   if(!deliveryQuote||deliveryQuote.available!==true){showMsg('<div class="error">Alamat belum dapat digunakan untuk pengantaran.</div>');return}
+  // Force the visible totals to reflect the latest server-validated delivery quote.
+  render();
   if(savedAddresses.length===0){
     try{
       const save=await fetch('/api/customer/addresses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label:'Rumah',address:customerAddress,latitude,longitude})});
