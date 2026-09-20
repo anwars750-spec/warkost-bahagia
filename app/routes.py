@@ -172,6 +172,8 @@ def auth_google():
         if not u:
             session['google_pending']={'sub':str(claims.get('sub','')),'email':email,'name':name or email.split('@')[0]}
             return jsonify(ok=True,redirect=url_for('main.google_complete'))
+        if not u['google_sub']:
+            db.execute('UPDATE users SET google_sub=? WHERE id=?',(str(claims.get('sub','')),u['id'])); db.commit()
         session.clear(); session['user_id']=u['id']
         return jsonify(ok=True,redirect=url_for('main.index'))
     except Exception:
