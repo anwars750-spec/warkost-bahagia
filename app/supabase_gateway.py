@@ -189,3 +189,26 @@ def get_profile(profile_id):
 
 def link_legacy_user(profile_id, legacy_user_id):
     return rest_json("PATCH", "/rest/v1/profiles", payload={"legacy_user_id": int(legacy_user_id)}, query={"id":f"eq.{profile_id}"})
+
+
+def verify_payment(
+    order_id,
+    status,
+    provider_reference,
+    transaction_reference=None,
+    verified_at=None,
+):
+    """Verify a Supabase payment through the protected server-side wrapper.
+
+    This never simulates payment locally. The Supabase transaction updates the
+    payment/order state and triggers the existing stock/fulfillment flow.
+    """
+    payload = {
+        "p_order_id": order_id,
+        "p_status": status,
+        "p_provider_reference": provider_reference,
+        "p_transaction_reference": transaction_reference,
+    }
+    if verified_at:
+        payload["p_verified_at"] = verified_at
+    return rpc("server_verify_payment", payload)
