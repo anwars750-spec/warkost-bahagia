@@ -35,12 +35,40 @@ function actionButtons(o){
   }
   return '';
 }
+async function loadStaffUsers(){
+  if(!['admin','owner'].includes(role)) return;
+  const r=await fetch('/api/admin/users'); if(!r.ok) return;
+  const rows=await r.json();
+  staffRows.innerHTML=rows.map(u=>{
+    const locked=u.role==='owner';
+    const toggle=u.status==='active'?'Nonaktifkan':'Aktifkan';
+    const del=locked?'':('<button type="button" onclick="deleteStaff('+u.id+')">Hapus</button>');
+    return '<tr><td><b>'+esc(u.name)+'</b></td><td><span class="badge">'+esc(u.role.toUpperCase())+'</span></td><td>'+esc(u.email||'-')+'</td><td><span class="badge">'+esc(u.status)+'</span></td><td>'+(!locked?'<button type="button" onclick="toggleStaff('+u.id+','+(u.status!=='active')+')">'+toggle+'</button> '+del:'Akun Owner dilindungi')+'</td></tr>';
+  }).join('')||'<tr><td colspan="5">Belum ada staff.</td></tr>';
+}
+async function createStaff(e){
+  e.preventDefault();
+  const r=await fetch('/api/admin/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:staffName.value,phone:staffPhone.value,email:staffEmail.value,role:staffRole.value,password:staffPassword.value})});
+  const d=await r.json();
+  if(!r.ok){alert(d.error||'Gagal membuat akun staff.');return;}
+  e.target.reset(); alert('Akun staff berhasil dibuat.'); loadStaffUsers();
+}
+async function toggleStaff(id,active){
+  const r=await fetch('/api/admin/users/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({active})});
+  const d=await r.json(); if(!r.ok) alert(d.error||'Gagal mengubah status.'); loadStaffUsers();
+}
+async function deleteStaff(id){
+  if(!confirm('Hapus akun staff ini? Jika sudah memiliki data operasional, sistem akan meminta akun dinonaktifkan.')) return;
+  const r=await fetch('/api/admin/users/'+id,{method:'DELETE'});
+  const d=await r.json(); if(!r.ok) alert(d.error||'Akun tidak dapat dihapus.'); loadStaffUsers();
+}
+
 async function load(){
  const q=await fetch('/api/admin/orders');
  if(q.ok){let rows=await q.json();queue.innerHTML=rows.map(o=>`<div class="order card" style="margin:12px 0"><b>${esc(o.order_no)}</b> — ${esc(o.customer_name)} — <b>${rupiah(o.total)}</b><br><small>${esc(o.status)} • ${esc(o.payment_status)} • ${esc(o.address)}</small><div style="margin-top:10px">${actionButtons(o)}</div></div>`).join('')||'<p>Belum ada order.</p>';}
  if(['admin','owner'].includes(role)){
   const rep=await fetch('/api/report');if(rep.ok){let d=await rep.json();orders.textContent=d.summary.orders;revenue.textContent=rupiah(d.summary.revenue);completed.textContent=d.summary.completed;reportBox.innerHTML=d.products.map(p=>`<div>${esc(p.name)} — ${p.qty} qty — ${rupiah(p.revenue)}</div>`).join('')||'Belum ada penjualan selesai.'}
-  loadProducts();loadCampaigns();loadPromotions();loadSettings();loadPrinter();
+  loadProducts();loadCampaigns();loadPromotions();loadSettings();loadPrinter();loadStaffUsers();
  }
 }
 async function st(id,status){let r=await fetch('/api/order/'+id+'/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});let d=await r.json();if(!r.ok)alert(d.error||'Gagal');load()}
