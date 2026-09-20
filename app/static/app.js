@@ -114,7 +114,13 @@ function renderProducts(){
   };
   let markup='';
   if(favorites.length) markup+='<div class="menu-group menu-favorites-group"><div class="menu-group-heading"><span class="section-kicker">MENU FAVORIT</span><h3>Pilihan Favorit</h3><small>Menu yang ditandai ⭐ oleh admin.</small></div><div class="menu-group-grid">'+favorites.map(card).join('')+'</div></div>';
-  if(regular.length) markup+='<div class="menu-group menu-regular-group">'+(favorites.length?'<div class="menu-group-heading"><span class="section-kicker">MENU LAINNYA</span><h3>Semua Menu</h3></div>':'')+'<div class="menu-group-grid">'+regular.map(card).join('')+'</div></div>';
+  const groups={};
+  regular.forEach(p=>{const key=String(p.category||'Menu').trim()||'Menu';(groups[key] ||= []).push(p);});
+  const categories=Object.keys(groups);
+  categories.forEach(cat=>{
+    const heading=(favorites.length||categories.length>1)?'<div class="menu-group-heading"><span class="section-kicker">KATEGORI</span><h3>'+escapeHtml(cat)+'</h3></div>':'';
+    markup+='<div class="menu-group menu-regular-group">'+heading+'<div class="menu-group-grid">'+groups[cat].map(card).join('')+'</div></div>';
+  });
   box.innerHTML=markup; empty.hidden=items.length>0; const mc=document.getElementById('menuCount'); if(mc)mc.textContent=items.length+' menu';
 }
 document.addEventListener('DOMContentLoaded',()=>{const s=document.getElementById('menuSearch');if(s)s.addEventListener('input',e=>{menuQuery=e.target.value;renderProducts();});});
