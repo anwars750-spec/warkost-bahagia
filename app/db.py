@@ -37,6 +37,14 @@ CREATE TABLE IF NOT EXISTS addresses (id INTEGER PRIMARY KEY AUTOINCREMENT, cust
 CREATE TABLE IF NOT EXISTS campaigns (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, starts_at TEXT, ends_at TEXT, active INTEGER NOT NULL DEFAULT 1);
 CREATE TABLE IF NOT EXISTS promotions (id INTEGER PRIMARY KEY AUTOINCREMENT, campaign_id INTEGER, code TEXT UNIQUE, type TEXT NOT NULL DEFAULT 'percent', value INTEGER NOT NULL, min_order INTEGER NOT NULL DEFAULT 0, max_discount INTEGER, quota INTEGER, used_count INTEGER NOT NULL DEFAULT 0, starts_at TEXT, ends_at TEXT, active INTEGER NOT NULL DEFAULT 1, FOREIGN KEY(campaign_id) REFERENCES campaigns(id));
 CREATE TABLE IF NOT EXISTS promo_claims (id INTEGER PRIMARY KEY AUTOINCREMENT, promotion_id INTEGER NOT NULL, customer_id INTEGER NOT NULL, claimed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(promotion_id,customer_id), FOREIGN KEY(promotion_id) REFERENCES promotions(id), FOREIGN KEY(customer_id) REFERENCES users(id));
+CREATE TABLE IF NOT EXISTS supabase_order_links (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ customer_id INTEGER NOT NULL,
+ supabase_order_id TEXT NOT NULL UNIQUE,
+ order_no TEXT NOT NULL UNIQUE,
+ created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ FOREIGN KEY(customer_id) REFERENCES users(id)
+);
 CREATE TABLE IF NOT EXISTS orders (
  id INTEGER PRIMARY KEY AUTOINCREMENT,
  order_no TEXT UNIQUE NOT NULL,
@@ -203,7 +211,7 @@ def _ensure_operational_defaults(db):
 
 
 def migrate_existing(db):
-    """Idempotent migration from V0.7/V0.8.x to V0.8.2."""
+    """Idempotent migration from V0.7/V0.8.x through V1.7B integration milestones."""
     user_cols = {r['name'] for r in db.execute('PRAGMA table_info(users)').fetchall()}
     if user_cols and 'google_sub' not in user_cols:
         db.execute('ALTER TABLE users ADD COLUMN google_sub TEXT')
@@ -213,6 +221,7 @@ def migrate_existing(db):
     if user_cols and 'supabase_user_id' not in user_cols:
         db.execute('ALTER TABLE users ADD COLUMN supabase_user_id TEXT')
     db.execute('CREATE UNIQUE INDEX IF NOT EXISTS users_supabase_user_id_uidx ON users(supabase_user_id) WHERE supabase_user_id IS NOT NULL')
+    db.execute('CREATE UNIQUE INDEX IF NOT EXISTS supabase_order_links_customer_uidx ON supabase_order_links(id,customer_id)')
     cols = {r['name'] for r in db.execute('PRAGMA table_info(products)').fetchall()}
     if cols and 'stock' not in cols:
         db.execute('ALTER TABLE products ADD COLUMN stock INTEGER NOT NULL DEFAULT 0')
