@@ -83,7 +83,7 @@ function renderProducts(){
   box.innerHTML=items.map(p=>{
     const image=productImage(p),pricing=productPricing(p);
     const imageMarkup=image
-      ? '<div class="product-art"><img src="'+image+'" alt="'+escapeHtml(p.name)+'" loading="lazy" decoding="async" onerror="this.closest(\\'.product-art\\').classList.add(\\'image-fallback\\');this.remove()"></div>'
+      ? '<div class="product-art"><img src="'+image+'" alt="'+escapeHtml(p.name)+'" loading="lazy" decoding="async" onerror="this.closest(\'.product-art\').classList.add(\'image-fallback\');this.remove()"></div>'
       : '<div class="product-art image-fallback" aria-hidden="true"></div>';
     const priceMarkup=pricing.discounted
       ? '<div class="product-price"><span class="price-old">'+rupiah(pricing.normal)+'</span><b>'+rupiah(pricing.sale)+'</b><span class="discount-badge">'+pricing.pct+'% OFF</span></div>'
