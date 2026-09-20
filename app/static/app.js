@@ -4,12 +4,32 @@ const PROMOS=[
  {kicker:'HAPPY HOUR',title:'Teman ngopi, teman bahagia.',text:'Cek pilihan minuman dan menu favorit hari ini.',image:'https://images.unsplash.com/photo-1512568400610-62da28bc8a13?auto=format&fit=crop&fm=jpg&q=82&w=1200'}
 ];
 let promoIndex=0,promoTimer=null;
+let customerPromos=[];
+async function loadCustomerPromos(){
+ try{
+  const r=await fetch('/api/customer/promotions');
+  const d=await r.json();
+  if(r.ok&&Array.isArray(d)&&d.length){
+    customerPromos=d.map(p=>({
+      kicker:'VOUCHER '+(p.type==='percent'?p.value+'%':'HEMAT'),
+      title:p.type==='percent'?'Hemat '+p.value+'% dengan '+p.code:'Potongan '+rupiah(p.value)+' dengan '+p.code,
+      text:p.min_order>0?'Min. transaksi '+rupiah(p.min_order):'Bisa digunakan untuk menu pilihan Warkost.',
+      image:PROMOS[customerPromos.length%PROMOS.length].image,
+      code:p.code
+    }));
+  }
+ }catch(e){ customerPromos=[]; }
+}
+function promoItems(){return customerPromos.length?customerPromos:PROMOS;}
 function renderPromo(){
  const title=document.getElementById('promoTitle'),textEl=document.getElementById('promoText'),k=document.getElementById('promoKicker'),media=document.getElementById('promoMedia'),dots=document.getElementById('promoDots');
  if(!title||!textEl||!k||!media||!dots)return;
- const p=PROMOS[promoIndex]; k.textContent=p.kicker;title.textContent=p.title;textEl.textContent=p.text;media.style.backgroundImage="url('"+p.image+"')";
- dots.innerHTML=PROMOS.map((_,i)=>'<button type="button" class="'+(i===promoIndex?'active':'')+'" aria-label="Promo '+(i+1)+'" onclick="setPromo('+i+')"></button>').join('');
+ const list=promoItems(); if(promoIndex>=list.length)promoIndex=0;
+ const p=list[promoIndex]; k.textContent=p.kicker;title.textContent=p.title;textEl.textContent=p.text;media.style.backgroundImage="url('"+p.image+"')";
+ dots.innerHTML=list.map((_,i)=>'<button type="button" class="'+(i===promoIndex?'active':'')+'" aria-label="Promo '+(i+1)+'" onclick="setPromo('+i+')"></button>').join('');
 }
+function setPromo(index){const list=promoItems();promoIndex=(index+list.length)%list.length;renderPromo();startPromoTimer();}
+function startPromoTimer(){if(promoTimer)clearInterval(promoTimer);promoTimer=setInterval(()=>setPromo(promoIndex+1),6000);}
 function setPromo(index){promoIndex=(index+PROMOS.length)%PROMOS.length;renderPromo();startPromoTimer();}
 function startPromoTimer(){if(promoTimer)clearInterval(promoTimer);promoTimer=setInterval(()=>setPromo(promoIndex+1),6000);}
 
@@ -50,6 +70,7 @@ async function load(){
   products=data;
   buildCategoryFilters();
   renderProducts();
+  await loadCustomerPromos();
   renderPromo();
   startPromoTimer();
   loadCustomerLocation();
@@ -92,7 +113,7 @@ function renderProducts(){
       '<span class="product-category">'+escapeHtml(p.category||'Menu')+(p.is_favorite?' <b class="favorite-star" title="Menu favorit" aria-label="Menu favorit">★</b>':'')+'</span>'+
       '<h3>'+escapeHtml(p.name)+'</h3><p>'+escapeHtml(p.description||'Pilihan menu Warkost Bahagia')+'</p>'+
       '<div class="product-bottom">'+priceMarkup+'<small>'+(p.stock<1?'Stok habis':'Tersedia')+'</small></div>'+
-      '<button '+(p.stock<1?'disabled':'')+' onclick="add('+p.id+')">'+(p.stock<1?'Habis':'Tambah ke keranjang')+'</button></article>';
+      '<div class="product-actions"><button type="button" class="secondary product-detail-button" onclick="openProductDetail('+p.id+')">Detail</button><button '+(p.stock<1?'disabled':'')+' onclick="add('+p.id+')">'+(p.stock<1?'Habis':'Tambah ke keranjang')+'</button></div></article>';
   }).join('');
   empty.hidden=items.length>0;const mc=document.getElementById('menuCount');if(mc)mc.textContent=items.length+' menu';
 }
@@ -114,6 +135,56 @@ function render(){
   if(sub)sub.textContent=rupiah(t.subtotal); if(disc)disc.textContent='− '+rupiah(t.discount); if(del)del.textContent=rupiah(t.delivery); if(total)total.textContent=rupiah(t.total); if(mt)mt.textContent=rupiah(t.total);
 }
 function cartOpen(){document.getElementById('cart').classList.toggle('show');render()}
+
+function openProductDetail(id){
+ const p=products.find(x=>x.id===id); const box=document.getElementById('productDetailContent'); const modal=document.getElementById('productDetailModal');
+ if(!p||!box||!modal)return;
+ const pricing=productPricing(p),image=productImage(p);
+ const imageHtml=image?'<img class="product-detail-image" src="'+image+'" alt="'+escapeHtml(p.name)+'">':'<div class="product-detail-image image-fallback"></div>';
+ box.innerHTML=imageHtml+
+   '<div class="product-detail-copy"><span class="section-kicker">'+escapeHtml(p.category||'MENU')+(p.is_favorite?' · ★ FAVORIT':'')+'</span>'+
+   '<h2 id="productDetailTitle">'+escapeHtml(p.name)+'</h2><p>'+escapeHtml(p.description||'Pilihan menu Warkost Bahagia')+'</p>'+
+   (pricing.discounted?'<div class="detail-pricing"><s>'+rupiah(pricing.normal)+'</s><strong>'+rupiah(pricing.sale)+'</strong><span>'+pricing.pct+'% OFF</span></div>':'<div class="detail-pricing"><strong>'+rupiah(pricing.sale)+'</strong></div>')+
+   '<div class="detail-stock">'+(p.stock>0?'✓ Tersedia · Stok '+p.stock:'Habis')+'</div>'+
+   '<button type="button" class="primary detail-add" '+(p.stock<1?'disabled':'')+' onclick="add('+p.id+');closeProductDetail();cartOpen()">'+(p.stock<1?'Menu habis':'Tambah ke keranjang')+' <span>→</span></button></div>';
+ modal.hidden=false;
+}
+function closeProductDetail(){const m=document.getElementById('productDetailModal');if(m)m.hidden=true;}
+
+async function openVoucherCenter(){
+ const modal=document.getElementById('voucherCenterModal'),box=document.getElementById('voucherCenterContent');if(!modal||!box)return;
+ modal.hidden=false;box.innerHTML='<div class="notification-loading"><span>⏳</span><strong>Memuat voucher...</strong><small>Mengecek promo yang sedang aktif.</small></div>';
+ try{
+  const r=await fetch('/api/customer/promotions');const data=await r.json();
+  if(!r.ok)throw new Error(data.error||'Gagal memuat voucher');
+  if(!data.length){box.innerHTML='<div class="notification-empty"><span>🎟️</span><strong>Belum ada voucher aktif</strong><small>Voucher baru akan muncul di sini saat tersedia.</small></div>';return;}
+  box.innerHTML='<div class="voucher-list">'+data.map(p=>{
+    const value=p.type==='percent'?p.value+'% OFF':rupiah(p.value)+' OFF';
+    return '<article class="voucher-card"><div class="voucher-main"><span class="voucher-code">'+escapeHtml(p.code)+'</span><strong>'+value+'</strong><small>'+(p.min_order>0?'Min. transaksi '+rupiah(p.min_order):'Tanpa minimum transaksi')+(p.max_discount?' · Maks. '+rupiah(p.max_discount):'')+'</small></div><button type="button" onclick="useVoucherCode('+JSON.stringify(p.code)+')">Gunakan</button></article>';
+  }).join('')+'</div>';
+ }catch(e){box.innerHTML='<div class="notification-empty"><span>⚠</span><strong>Voucher belum dapat dimuat</strong><small>Coba lagi beberapa saat.</small></div>';}
+}
+function useVoucherCode(code){
+ closeVoucherCenter();cartOpen();const input=document.getElementById('promoCode');if(input){input.value=code;input.focus();claimVoucher();}
+}
+function closeVoucherCenter(){const m=document.getElementById('voucherCenterModal');if(m)m.hidden=true;}
+
+async function loadOrderDetail(id){
+ stopTrackingCapacityRefresh();
+ const box=document.getElementById('accountContent');if(!box)return;
+ box.hidden=false;box.innerHTML='<p class="account-loading">Memuat detail pesanan...</p>';
+ try{
+  const r=await fetch('/api/customer/orders/'+id);const d=await r.json();
+  if(!r.ok)throw new Error(d.error||'Detail pesanan gagal dimuat');
+  const items=Array.isArray(d.items)?d.items:[];
+  box.innerHTML=accountSectionHeader('DETAIL PESANAN','Order '+escapeHtml(d.order.order_no))+
+   '<div class="order-detail-card"><div class="order-detail-status"><span>'+notificationStatusIcon(d.order.status)+'</span><div><strong>'+escapeHtml(notificationStatusLabel(d.order.status))+'</strong><small>'+escapeHtml(d.order.created_at||'')+'</small></div></div>'+
+   '<div class="order-detail-items">'+items.map(i=>'<div><span>'+escapeHtml(i.name)+' × '+i.qty+'</span><b>'+rupiah(i.price*i.qty)+'</b></div>').join('')+'</div>'+
+   '<div class="order-detail-totals"><div><span>Subtotal</span><b>'+rupiah(d.order.subtotal)+'</b></div><div><span>Diskon</span><b>− '+rupiah(d.order.discount)+'</b></div><div><span>Delivery</span><b>'+rupiah(d.order.delivery_fee)+'</b></div><div class="grand"><span>Total</span><b>'+rupiah(d.order.total)+'</b></div></div>'+
+   '<div class="order-detail-address"><small>Alamat pengantaran</small><p>'+escapeHtml(d.order.address)+'</p></div>'+
+   '<div class="order-detail-actions"><button type="button" class="primary" onclick="loadOrderTracking('+d.order.id+')">Lihat Tracking →</button><a class="track-button" href="https://wa.me/'+escapeHtml(d.contact?.admin_whatsapp||WHATSAPP_NUMBER)+'?text='+encodeURIComponent('Halo Warkost Bahagia, saya ingin menanyakan pesanan '+d.order.order_no+'.')+'" target="_blank" rel="noopener">Chat Admin WhatsApp</a></div></div>';
+ }catch(e){box.innerHTML='<div class="error">'+escapeHtml(e.message||'Detail pesanan gagal dimuat.')+'</div>';}
+}
 
 function notificationStatusLabel(status){
   const map={
@@ -243,7 +314,7 @@ async function loadAccountSection(section){
     const r=await fetch('/api/customer/orders');const data=await r.json();
     if(!r.ok){box.innerHTML=accountSectionHeader('RIWAYAT TRANSAKSI','Riwayat Transaksi')+'<div class="error">'+escapeHtml(data.error||'Gagal memuat riwayat.')+'</div>';return;}
     box.innerHTML=accountSectionHeader('RIWAYAT TRANSAKSI','Pesanan Kamu')+
-      '<div class="account-order-list">'+(data.length?data.map(o=>'<div class="account-order"><div><strong>'+escapeHtml(o.order_no)+'</strong><small>'+escapeHtml(o.created_at||'')+'</small></div><b>'+rupiah(o.total)+'</b><span class="order-status">'+escapeHtml(o.status||'')+'</span><button type="button" class="track-button" onclick="loadOrderTracking('+o.id+')">Lihat Status & Tracking →</button></div>').join(''):'<p>Belum ada transaksi.</p>')+'</div>';
+      '<div class="account-order-list">'+(data.length?data.map(o=>'<div class="account-order"><div><strong>'+escapeHtml(o.order_no)+'</strong><small>'+escapeHtml(o.created_at||'')+'</small></div><b>'+rupiah(o.total)+'</b><span class="order-status">'+escapeHtml(o.status||'')+'</span><div class="order-card-actions"><button type="button" class="track-button" onclick="loadOrderDetail('+o.id+')">Detail Pesanan</button><button type="button" class="track-button" onclick="loadOrderTracking('+o.id+')">Tracking →</button></div></div>').join(''):'<p>Belum ada transaksi.</p>')+'</div>';
   }else if(section==='addresses'){
     const r=await fetch('/api/customer/addresses');const data=await r.json();
     if(!r.ok){box.innerHTML=accountSectionHeader('ALAMAT','Alamat Pengantaran')+'<div class="error">'+escapeHtml(data.error||'Gagal memuat alamat.')+'</div>';return;}
@@ -378,7 +449,11 @@ async function applyDeliveryCapacityNotice(target){
   target.insertAdjacentHTML('beforeend','<div class="'+cls+'"><strong>'+ (d.waiting?'⏳ Harap menunggu':'✓ Driver tersedia') +'</strong><span>'+escapeHtml(d.message)+'</span></div>');
   return d;
 }
-async function openOrderProcess(orderNo,total,status='confirmed'){document.getElementById('orderProcessContent').innerHTML=`<div class="process-order-no">${escapeHtml(orderNo)}</div><div class="process-total">Total ${rupiah(total)}</div><div class="process-steps"><div class="active"><strong>✓ Order dibuat</strong><span>Pesanan diterima sistem</span></div><div class="active"><strong>✓ Pembayaran</strong><span>PAID (demo)</span></div><div><strong>Kitchen</strong><span>Menunggu diproses</span></div><div><strong>Delivery</strong><span>Menunggu penugasan driver</span></div></div>`;document.getElementById('orderProcessModal').hidden=false;await applyDeliveryCapacityNotice(document.getElementById('orderProcessContent'));}
+async function openOrderProcess(orderNo,total,status='confirmed'){
+ const box=document.getElementById('orderProcessContent');if(!box)return;
+ box.innerHTML='<div class="payment-result-success"><span>✓</span><strong>Pembayaran berhasil</strong><small>Pesanan kamu sudah masuk ke sistem Warkost Bahagia.</small></div><div class="process-order-no">'+escapeHtml(orderNo)+'</div><div class="process-total">Total '+rupiah(total)+'</div><div class="process-steps"><div class="active"><strong>✓ Order dibuat</strong><span>Pesanan diterima sistem</span></div><div class="active"><strong>✓ Pembayaran</strong><span>PAID (demo)</span></div><div><strong>Kitchen</strong><span>Menunggu diproses</span></div><div><strong>Delivery</strong><span>Menunggu penugasan driver</span></div></div><div class="payment-result-actions"><button type="button" class="secondary" onclick="closeOrderProcess();openCustomerAccountSection('orders')">Lihat Pesanan</button><button type="button" class="primary" onclick="closeOrderProcess();openCustomerAccountSection('orders')">Tracking Pesanan →</button></div>';
+ document.getElementById('orderProcessModal').hidden=false;await applyDeliveryCapacityNotice(box);
+}
 function closeOrderProcess(){document.getElementById('orderProcessModal').hidden=true;const cartEl=document.getElementById('cart');if(cartEl)cartEl.classList.remove('show');render();window.scrollTo({top:0,behavior:'smooth'});}
 async function claimVoucher(){
   const input=document.getElementById('promoCode'),msg=document.getElementById('promoMsg');
