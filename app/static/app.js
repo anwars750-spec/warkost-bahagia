@@ -34,6 +34,7 @@ function setPromo(index){promoIndex=(index+PROMOS.length)%PROMOS.length;renderPr
 function startPromoTimer(){if(promoTimer)clearInterval(promoTimer);promoTimer=setInterval(()=>setPromo(promoIndex+1),6000);}
 
 let products=[],cart=[],msgTimer=null,deliveryQuote=null,mapState={map:null,marker:null,autocomplete:null,ready:false};
+let savedAddresses=[],selectedSavedAddressId=null,accountMapState={map:null,marker:null,autocomplete:null,ready:false};
 const WHATSAPP_NUMBER='6281310358558';
 function contactWhatsApp(){
  const message=encodeURIComponent('Halo Warkost Bahagia, saya ingin bertanya mengenai menu, pesanan, pembayaran, atau pengantaran.');
@@ -42,6 +43,42 @@ function contactWhatsApp(){
 const rupiah=n=>'Rp '+Number(n||0).toLocaleString('id-ID');
 let activeCategory='Semua',menuQuery='';
 function productPricing(p){const sale=Number(p?.price||0),normal=Math.max(sale,Number(p?.normal_price||sale));const pct=normal>sale?Math.round((1-sale/normal)*100):0;return {sale,normal,pct,discounted:pct>0};}
+async function loadSavedAddresses(){
+ try{
+  const r=await fetch('/api/customer/addresses');const data=await r.json();
+  if(!r.ok||!Array.isArray(data))throw new Error(data.error||'Gagal memuat alamat');
+  savedAddresses=data;
+  renderSavedAddressPicker();
+  return data;
+ }catch(e){savedAddresses=[];renderSavedAddressPicker();return [];}
+}
+function renderSavedAddressPicker(){
+ const el=document.getElementById('savedAddressPicker');if(!el)return;
+ if(!savedAddresses.length){
+  el.innerHTML='<div class="saved-address-empty"><strong>Belum ada alamat tersimpan</strong><small>Alamat pertama yang kamu pilih di checkout akan otomatis disimpan ke Akun.</small></div>';
+  return;
+ }
+ el.innerHTML='<div class="saved-address-title"><strong>Gunakan alamat tersimpan</strong><small>Pilih alamat akun atau masukkan alamat baru.</small></div>'+
+ savedAddresses.map(a=>'<button type="button" class="saved-address-option '+(selectedSavedAddressId===a.id?'active':'')+'" onclick="selectSavedAddress('+a.id+')"><span class="saved-address-icon">⌖</span><span><strong>'+escapeHtml(a.label||'Alamat')+'</strong><small>'+escapeHtml(a.address)+'</small></span><b>→</b></button>').join('')+
+ '<button type="button" class="saved-address-new" onclick="startNewCartAddress()">+ Gunakan alamat baru</button>';
+}
+function selectSavedAddress(id){
+ const a=savedAddresses.find(x=>x.id===id);if(!a)return;
+ selectedSavedAddressId=a.id;
+ const address=document.getElementById('address'),lat=document.getElementById('lat'),lon=document.getElementById('lon');
+ if(address)address.value=a.address||'';if(lat)lat.value=a.latitude??'';if(lon)lon.value=a.longitude??'';
+ const status=document.getElementById('locationStatus');
+ if(status)status.textContent=a.latitude!=null&&a.longitude!=null?'✓ '+(a.label||'Alamat tersimpan')+' dipilih.':'Alamat tersimpan belum memiliki titik maps.';
+ renderSavedAddressPicker();
+ if(a.latitude!=null&&a.longitude!=null)refreshDeliveryQuote();
+}
+function startNewCartAddress(){
+ selectedSavedAddressId=null;
+ ['address','lat','lon'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+ const status=document.getElementById('locationStatus');if(status)status.textContent='Masukkan alamat baru dan pilih rekomendasi peta.';
+ renderSavedAddressPicker();
+ const picker=document.querySelector('#addressSearch input');picker?.focus();
+}
 async function loadCustomerLocation(){
  const textEl=document.getElementById('customerLocationText'),metaEl=document.getElementById('customerLocationMeta');
  if(!textEl)return;
@@ -73,6 +110,7 @@ async function load(){
   await loadCustomerPromos();
   renderPromo();
   startPromoTimer();
+  await loadSavedAddresses();
   loadCustomerLocation();
  }catch(err){
   products=[];
@@ -384,22 +422,30 @@ async function loadAccountSection(section){
     const r=await fetch('/api/customer/addresses');const data=await r.json();
     if(!r.ok){box.innerHTML=accountSectionHeader('ALAMAT','Alamat Pengantaran')+'<div class="error">'+escapeHtml(data.error||'Gagal memuat alamat.')+'</div>';return;}
     box.innerHTML=accountSectionHeader('ALAMAT','Alamat Pengantaran')+
-      (data.length?data.map(a=>'<div class="account-address"><strong>'+escapeHtml(a.label||'Alamat')+'</strong><p>'+escapeHtml(a.address)+'</p><button type="button" class="track-button" onclick="editCustomerAddress('+a.id+')">Gunakan alamat ini</button></div>').join(''):'<p>Belum ada alamat tersimpan.</p>')+
-      '<form class="account-address-form" onsubmit="saveCustomerAddress(event)"><strong>Tambah alamat</strong><input id="addressLabel" placeholder="Label, contoh: Rumah" value="Rumah"><textarea id="addressValue" placeholder="Alamat lengkap" required></textarea><button class="primary" type="submit">Simpan Alamat</button><div id="addressMsg"></div></form>';
+      (data.length?data.map(a=>'<div class="account-address"><strong>'+escapeHtml(a.label||'Alamat')+'</strong><p>'+escapeHtml(a.address)+'</p><small class="saved-address-meta">'+(a.latitude!=null&&a.longitude!=null?'✓ Titik maps tersimpan':'⚠ Titik maps belum tersimpan')+'</small><button type="button" class="track-button" onclick="editCustomerAddress('+a.id+')">Gunakan alamat ini</button></div>').join(''):'<p>Belum ada alamat tersimpan.</p>')+
+      '<form class="account-address-form" onsubmit="saveCustomerAddress(event)"><strong>Tambah alamat</strong><input id="addressLabel" placeholder="Label, contoh: Rumah" value="Rumah"><div id="accountAddressSearch" class="maps-autocomplete account-address-search"></div><textarea id="addressValue" placeholder="Alamat lengkap" required></textarea><input type="hidden" id="accountAddressLat"><input type="hidden" id="accountAddressLon"><div id="accountAddressMap" class="order-map account-address-map"></div><small class="location-note">Pilih rekomendasi alamat agar titik maps ikut tersimpan.</small><div id="accountAddressStatus" class="location-status">Titik maps belum dipilih.</div><button class="primary" type="submit">Simpan Alamat</button><div id="addressMsg"></div></form>';
   }else if(section==='password'){
     box.innerHTML=accountSectionHeader('KEAMANAN','Ubah Password')+
       '<form class="account-password" onsubmit="changeAccountPassword(event)"><input id="currentPassword" type="password" placeholder="Password saat ini" required><input id="newPassword" type="password" placeholder="Password baru (min. 6 karakter)" minlength="6" required><input id="confirmPassword" type="password" placeholder="Ulangi password baru" minlength="6" required><button class="primary" type="submit">Simpan Password</button><div id="passwordMsg"></div></form>';
   }
 }
 async function saveCustomerAddress(e){
- e.preventDefault();const msg=document.getElementById('addressMsg'),address=document.getElementById('addressValue').value.trim(),label=document.getElementById('addressLabel').value.trim()||'Rumah';
- const r=await fetch('/api/customer/addresses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label,address})});const data=await r.json();
- msg.innerHTML='<div class="'+(r.ok?'success':'error')+'">'+escapeHtml(data.ok?'Alamat berhasil disimpan.':(data.error||'Gagal menyimpan alamat.'))+'</div>';
- if(r.ok){await loadCustomerLocation();await loadAccountSection('addresses');}
+ e.preventDefault();
+ const msg=document.getElementById('addressMsg'),address=document.getElementById('addressValue').value.trim(),label=document.getElementById('addressLabel').value.trim()||'Rumah';
+ const lat=document.getElementById('accountAddressLat')?.value||'',lon=document.getElementById('accountAddressLon')?.value||'';
+ if(!address){if(msg)msg.innerHTML='<div class="error">Alamat wajib diisi.</div>';return}
+ if(!lat||!lon){if(msg)msg.innerHTML='<div class="error">Pilih rekomendasi alamat agar titik maps ikut tersimpan.</div>';return}
+ const r=await fetch('/api/customer/addresses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label,address,latitude:Number(lat),longitude:Number(lon)})});
+ const data=await r.json();
+ if(msg)msg.innerHTML='<div class="'+(r.ok?'success':'error')+'">'+escapeHtml(data.ok?'Alamat berhasil disimpan.':(data.error||'Gagal menyimpan alamat.'))+'</div>';
+ if(r.ok){await loadCustomerLocation();await loadSavedAddresses();await loadAccountSection('addresses');}
 }
 async function editCustomerAddress(id){
  const r=await fetch('/api/customer/addresses');const data=await r.json();const a=data.find(x=>x.id===id);if(!a)return;
- const v=document.getElementById('addressValue'),l=document.getElementById('addressLabel');if(v)v.value=a.address;if(l)l.value=a.label||'Rumah';v?.focus();
+ const v=document.getElementById('addressValue'),l=document.getElementById('addressLabel'),lat=document.getElementById('accountAddressLat'),lon=document.getElementById('accountAddressLon');
+ if(v)v.value=a.address;if(l)l.value=a.label||'Rumah';if(lat)lat.value=a.latitude??'';if(lon)lon.value=a.longitude??'';
+ const status=document.getElementById('accountAddressStatus');if(status)status.textContent=a.latitude!=null&&a.longitude!=null?'✓ Titik maps tersimpan.':'Titik maps belum dipilih.';
+ v?.focus();
 }
 let trackingCapacityTimer=null;
 function stopTrackingCapacityRefresh(){if(trackingCapacityTimer){clearInterval(trackingCapacityTimer);trackingCapacityTimer=null;}}
@@ -490,7 +536,38 @@ async function setupGoogleMaps(cfg){
     });
     mapState.ready=true;
     status.textContent='Ketik alamat lalu pilih rekomendasi peta.';
+    setupAccountMaps(cfg);
   }catch(e){status.textContent='Google Maps gagal diinisialisasi. Pastikan Maps JavaScript API dan Places API (New) aktif.'}
+}
+async function setupAccountMaps(cfg){
+ if(accountMapState.ready||typeof google==='undefined')return;
+ const picker=document.getElementById('accountAddressSearch'),mapEl=document.getElementById('accountAddressMap');
+ if(!picker||!mapEl)return;
+ try{
+  const {Map}=await google.maps.importLibrary('maps');
+  const {PlaceAutocompleteElement}=await google.maps.importLibrary('places');
+  const {AdvancedMarkerElement}=await google.maps.importLibrary('marker');
+  const center={lat:Number(cfg.cafe_latitude)||-6.9218,lng:Number(cfg.cafe_longitude)||106.9270};
+  accountMapState.map=new Map(mapEl,{center,zoom:14,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,mapId:'DEMO_MAP_ID'});
+  accountMapState.autocomplete=new PlaceAutocompleteElement({includedRegionCodes:['id']});
+  accountMapState.autocomplete.placeholder='Cari alamat tersimpan...';
+  picker.innerHTML='';
+  picker.appendChild(accountMapState.autocomplete);
+  accountMapState.autocomplete.addEventListener('gmp-select',async({placePrediction})=>{
+    const place=placePrediction.toPlace();
+    await place.fetchFields({fields:['displayName','formattedAddress','location','viewport']});
+    if(!place.location)return;
+    const lat=Number(place.location.lat()),lon=Number(place.location.lng()),address=place.formattedAddress||place.displayName||'';
+    document.getElementById('addressValue').value=address;
+    document.getElementById('accountAddressLat').value=lat;
+    document.getElementById('accountAddressLon').value=lon;
+    if(accountMapState.marker)accountMapState.marker.map=null;
+    accountMapState.marker=new AdvancedMarkerElement({map:accountMapState.map,position:{lat,lng:lon},title:place.displayName||'Alamat'});
+    if(place.viewport)accountMapState.map.fitBounds(place.viewport);else{accountMapState.map.setCenter({lat,lng:lon});accountMapState.map.setZoom(17)}
+    document.getElementById('accountAddressStatus').textContent='✓ Titik maps dipilih.';
+  });
+  accountMapState.ready=true;
+ }catch(e){console.warn('Account maps init failed',e);}
 }
 async function refreshDeliveryQuote(){const lat=Number(document.getElementById('lat').value),lon=Number(document.getElementById('lon').value);if(!Number.isFinite(lat)||!Number.isFinite(lon)){deliveryQuote=null;render();return}try{const r=await fetch('/api/delivery/quote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({latitude:lat,longitude:lon})});const d=await r.json();if(!r.ok){deliveryQuote={available:false,error:d.error||'Lokasi di luar area layanan.'};showMsg('<div class="error">'+deliveryQuote.error+'</div>');render();return}deliveryQuote=d;const text=d.delivery_fee===0?`✓ ${d.distance_km} km • Gratis ongkir`:`✓ ${d.distance_km} km • Ongkir ${rupiah(d.delivery_fee)}`;document.getElementById('locationStatus').textContent=text;render();showMsg(`<div class="success">${text}</div>`,3500)}catch(err){deliveryQuote=null;render();showMsg('<div class="error">Tidak dapat menghitung ongkir. Coba lagi.</div>')}}
 function buildConfirmSummary(){
@@ -544,6 +621,12 @@ async function checkout(){
   if(!customerAddress||latitude===null||longitude===null||!Number.isFinite(latitude)||!Number.isFinite(longitude)){showMsg('<div class="error">Pilih alamat pengantaran terlebih dahulu.</div>');return}
   await refreshDeliveryQuote();
   if(!deliveryQuote||deliveryQuote.available!==true){showMsg('<div class="error">Alamat belum dapat digunakan untuk pengantaran.</div>');return}
+  if(savedAddresses.length===0){
+    try{
+      const save=await fetch('/api/customer/addresses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label:'Rumah',address:customerAddress,latitude,longitude})});
+      if(save.ok){await loadSavedAddresses();}
+    }catch(e){console.warn('Alamat pertama belum tersimpan otomatis',e);}
+  }
   openConfirm();
 }
 async function confirmCheckout(){
