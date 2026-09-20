@@ -655,3 +655,66 @@ body.auth{
     max-height:78px;
   }
 }
+
+
+/* V1.6 AUTH — custom consent checkbox */
+.register-card .consent-row{
+  display:grid!important;
+  grid-template-columns:20px 1fr;
+  align-items:start!important;
+  gap:10px!important;
+  margin-top:18px!important;
+  padding:11px 12px!important;
+  border:1px solid #eadfd3;
+  border-radius:12px;
+  background:#fffaf5;
+  cursor:pointer;
+  color:#806d60!important;
+}
+.register-card .consent-row input[type="checkbox"]{
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  width:20px!important;
+  height:20px!important;
+  min-width:20px!important;
+  margin:0!important;
+  padding:0!important;
+  border:1.5px solid #c9b6a5!important;
+  border-radius:6px!important;
+  background:#fff!important;
+  display:grid!important;
+  place-content:center!important;
+  cursor:pointer;
+  box-shadow:none!important;
+}
+.register-card .consent-row input[type="checkbox"]::before{
+  content:"";
+  width:10px;
+  height:10px;
+  transform:scale(0);
+  transition:transform .12s ease;
+  clip-path:polygon(14% 44%,0 59%,39% 100%,100% 28%,86% 14%,39% 72%);
+  background:#fff;
+}
+.register-card .consent-row input[type="checkbox"]:checked{
+  background:#d4622a!important;
+  border-color:#d4622a!important;
+}
+.register-card .consent-row input[type="checkbox"]:checked::before{
+  transform:scale(1);
+}
+.register-card .consent-row input[type="checkbox"]:focus-visible{
+  outline:3px solid rgba(212,98,42,.18)!important;
+  outline-offset:2px;
+}
+.register-card .consent-row:has(input[type="checkbox"]:checked){
+  border-color:#e2b99f;
+  background:#fff7f0;
+}
+.register-card .consent-row span{
+  display:block;
+  font-size:11px;
+  line-height:1.55;
+  font-weight:600!important;
+  color:#806d60!important;
+}
