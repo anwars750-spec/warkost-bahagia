@@ -3,6 +3,8 @@ from datetime import datetime, date
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, current_app
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash, generate_password_hash
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 from .db import get_db
 
 bp=Blueprint('main',__name__)
@@ -162,10 +164,8 @@ def auth_google():
     client_id=os.environ.get('GOOGLE_CLIENT_ID','').strip()
     if not credential or not client_id: return jsonify(ok=False,error='Login Google belum dikonfigurasi di server.'),400
     try:
-        q=urllib.parse.urlencode({'id_token':credential})
-        with urllib.request.urlopen('https://oauth2.googleapis.com/tokeninfo?'+q,timeout=5) as resp:
-            claims=json.loads(resp.read().decode('utf-8'))
-        if claims.get('aud')!=client_id or claims.get('email_verified')!='true': raise ValueError('invalid google identity')
+        claims=id_token.verify_oauth2_token(credential,google_requests.Request(),client_id)
+        if claims.get('iss') not in ('accounts.google.com','https://accounts.google.com') or not claims.get('email_verified'): raise ValueError('invalid google identity')
         email=str(claims.get('email','')).lower().strip(); name=str(claims.get('name','')).strip()
         if not email: raise ValueError('missing email')
         db=get_db(); u=db.execute('SELECT * FROM users WHERE google_sub=? OR LOWER(email)=?',(str(claims.get('sub','')),email)).fetchone()
