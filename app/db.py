@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE TABLE IF NOT EXISTS addresses (id INTEGER PRIMARY KEY AUTOINCREMENT, customer_id INTEGER NOT NULL, label TEXT, address TEXT NOT NULL, latitude REAL, longitude REAL, FOREIGN KEY(customer_id) REFERENCES users(id));
 CREATE TABLE IF NOT EXISTS campaigns (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, starts_at TEXT, ends_at TEXT, active INTEGER NOT NULL DEFAULT 1);
 CREATE TABLE IF NOT EXISTS promotions (id INTEGER PRIMARY KEY AUTOINCREMENT, campaign_id INTEGER, code TEXT UNIQUE, type TEXT NOT NULL DEFAULT 'percent', value INTEGER NOT NULL, min_order INTEGER NOT NULL DEFAULT 0, max_discount INTEGER, quota INTEGER, used_count INTEGER NOT NULL DEFAULT 0, starts_at TEXT, ends_at TEXT, active INTEGER NOT NULL DEFAULT 1, FOREIGN KEY(campaign_id) REFERENCES campaigns(id));
+CREATE TABLE IF NOT EXISTS promo_claims (id INTEGER PRIMARY KEY AUTOINCREMENT, promotion_id INTEGER NOT NULL, customer_id INTEGER NOT NULL, claimed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(promotion_id,customer_id), FOREIGN KEY(promotion_id) REFERENCES promotions(id), FOREIGN KEY(customer_id) REFERENCES users(id));
 CREATE TABLE IF NOT EXISTS orders (
  id INTEGER PRIMARY KEY AUTOINCREMENT,
  order_no TEXT UNIQUE NOT NULL,
@@ -219,6 +220,7 @@ def migrate_existing(db):
     if cols and 'normal_price' not in cols:
         db.execute('ALTER TABLE products ADD COLUMN normal_price INTEGER NOT NULL DEFAULT 0')
     db.execute('UPDATE products SET normal_price=price WHERE normal_price<=0')
+    db.execute('''CREATE TABLE IF NOT EXISTS promo_claims (id INTEGER PRIMARY KEY AUTOINCREMENT, promotion_id INTEGER NOT NULL, customer_id INTEGER NOT NULL, claimed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(promotion_id,customer_id), FOREIGN KEY(promotion_id) REFERENCES promotions(id), FOREIGN KEY(customer_id) REFERENCES users(id))''')
 
     _rebuild_users_with_kasir(db)
     _ensure_demo_users(db)
