@@ -1,7 +1,6 @@
 <!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#3b1f0c"><title>Daftar — Warkost Bahagia</title><link rel="stylesheet" href="/static/app.css"></head>
 <body class="auth customer-auth"><main class="auth-shell auth-modern"><a class="auth-brand-mark" href="/"><img src="/static/assets/warkost-logo.svg" alt="Warkost Bahagia"></a><section class="card auth-card register-card">
-<span class="section-kicker">BUAT AKUN WARKOST</span><h1>Kenalan dulu,<br><em>biar makin mudah.</em></h1><p class="auth-lead">Data ini digunakan untuk akun, pesanan, dan program promosi Warkost Bahagia.</p>
-{% if error %}<div class="error">{{error}}</div>{% endif %}
+<span class="section-kicker">BUAT AKUN WARKOST</span><h1>Kenalan dulu,<br><em>biar makin mudah.</em></h1>{% if error %}<div class="error">{{error}}</div>{% endif %}
 <form method="post" autocomplete="on">
 <label>Nama lengkap<input name="name" type="text" placeholder="Nama lengkap" autocomplete="name" maxlength="100" required></label>
 <div class="auth-two-col"><label>Tanggal lahir<input name="birth_date" type="date" autocomplete="bday" required></label><label>No. HP<input name="phone" type="tel" inputmode="tel" placeholder="08xxxxxxxxxx" autocomplete="tel" maxlength="20" required></label></div>
