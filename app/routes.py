@@ -6,7 +6,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from .db import get_db
-from .supabase_gateway import backend_status, configured as supabase_configured, enabled as supabase_enabled
+from .supabase_gateway import backend_status, configured as supabase_configured, enabled as supabase_enabled, get_profile, link_legacy_user, SupabaseGatewayError
 
 bp=Blueprint('main',__name__)
 ROLE_HOME={'customer':'main.index','admin':'main.dashboard','kasir':'main.dashboard','kitchen':'main.dashboard','driver':'main.dashboard','owner':'main.dashboard'}
@@ -722,6 +722,53 @@ def toggle_promotion(pid):
     if not row:return jsonify(error='Voucher tidak ditemukan.'),404
     new=0 if row['active'] else 1; db.execute('UPDATE promotions SET active=? WHERE id=?',(new,pid)); db.commit()
     return jsonify(ok=True,active=bool(new))
+
+@bp.route('/api/system/identity', methods=['GET'])
+def system_identity():
+    if not user():
+        return jsonify(error='Login required'),401
+    u=user()
+    return jsonify(local_user_id=u['id'], supabase_user_id=u['supabase_user_id'], mapped=bool(u['supabase_user_id']), role=u['role'])
+
+@bp.route('/api/admin/supabase/identity', methods=['POST'])
+def link_supabase_identity():
+    if not require_role('admin','owner'):
+        return jsonify(error='Forbidden'),403
+    if not supabase_configured():
+        return jsonify(error='Supabase belum dikonfigurasi di server.'),400
+    data=request.json or {}
+    try:
+        local_user_id=int(data.get('local_user_id'))
+    except (TypeError,ValueError):
+        return jsonify(error='local_user_id tidak valid.'),400
+    supabase_user_id=str(data.get('supabase_user_id') or '').strip()
+    if not supabase_user_id:
+        return jsonify(error='supabase_user_id wajib diisi.'),400
+    target=get_db().execute("SELECT id,name,email,role,supabase_user_id FROM users WHERE id=?",(local_user_id,)).fetchone()
+    if not target:
+        return jsonify(error='User lokal tidak ditemukan.'),404
+    try:
+        profile=get_profile(supabase_user_id)
+    except SupabaseGatewayError:
+        return jsonify(error='Gagal memeriksa profile Supabase.'),502
+    if not profile:
+        return jsonify(error='Profile Supabase tidak ditemukan.'),404
+    if profile.get('role') != target['role']:
+        return jsonify(error='Role lokal dan Supabase tidak cocok.'),409
+    if profile.get('legacy_user_id') not in (None, local_user_id):
+        return jsonify(error='Profile Supabase sudah terhubung ke user lokal lain.'),409
+    db=get_db()
+    conflict=db.execute("SELECT id FROM users WHERE supabase_user_id=? AND id!=?",(supabase_user_id,local_user_id)).fetchone()
+    if conflict:
+        return jsonify(error='User lokal sudah memiliki mapping ke profile Supabase lain.'),409
+    try:
+        link_legacy_user(supabase_user_id, local_user_id)
+    except SupabaseGatewayError:
+        return jsonify(error='Gagal menyimpan mapping ke Supabase.'),502
+    db.execute('UPDATE users SET supabase_user_id=? WHERE id=?',(supabase_user_id,local_user_id))
+    db.execute('INSERT INTO audit_logs(user_id,action,entity,entity_id,details) VALUES(?,?,?,?,?)',(user()['id'],'LINK','supabase_identity',local_user_id,f'Linked Supabase profile {supabase_user_id}'))
+    db.commit()
+    return jsonify(ok=True,local_user_id=local_user_id,supabase_user_id=supabase_user_id)
 
 @bp.route('/api/system/backend')
 def backend():
