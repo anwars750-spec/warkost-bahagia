@@ -224,7 +224,8 @@ async function openVoucherCenter(){
   box.innerHTML='<div class="voucher-list">'+data.map(p=>{
     const value=p.type==='percent'?p.value+'% OFF':rupiah(p.value)+' OFF';
     const safeCode=escapeHtml(String(p.code||'')).replace(/'/g,'&#39;');
-    return '<article class="voucher-card"><div class="voucher-main"><span class="voucher-code">'+escapeHtml(p.code)+'</span><strong>'+value+'</strong><small>'+(p.min_order>0?'Min. transaksi '+rupiah(p.min_order):'Tanpa minimum transaksi')+(p.max_discount?' · Maks. '+rupiah(p.max_discount):'')+'</small></div><button type="button" class="voucher-use-button" data-voucher-code="'+safeCode+'">Gunakan</button></article>';
+    const claimed=Number(p.claimed||0)===1;
+    return '<article class="voucher-card '+(claimed?'claimed':'')+'"><div class="voucher-main"><span class="voucher-code">'+escapeHtml(p.code)+'</span><strong>'+value+'</strong><small>'+(p.min_order>0?'Min. transaksi '+rupiah(p.min_order):'Tanpa minimum transaksi')+(p.max_discount?' · Maks. '+rupiah(p.max_discount):'')+'</small></div><button type="button" class="voucher-use-button" data-voucher-code="'+safeCode+'" '+(claimed?'disabled':'')+'>'+ (claimed?'Sudah diklaim':'Gunakan') +'</button></article>';
   }).join('')+'</div>';
  }catch(e){box.innerHTML='<div class="notification-empty"><span>⚠</span><strong>Voucher belum dapat dimuat</strong><small>Coba lagi beberapa saat.</small></div>';}
 }
