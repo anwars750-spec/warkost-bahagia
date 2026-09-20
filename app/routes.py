@@ -147,7 +147,7 @@ def create_order():
         if not p: continue
         qty=max(1,int(it.get('qty',1)))
         if qty>p['stock']: return jsonify(error=f'Stock {p["name"]} hanya {p["stock"]}'),400
-        subtotal += p['price']*qty; valid.append((p,qty,it.get('notes','')))
+        sale_price=int(p['price'] or 0); normal_price=max(sale_price,int(p['normal_price'] or sale_price)); subtotal += sale_price*qty; valid.append((p,qty,it.get('notes',''),sale_price,normal_price))
     if not valid:return jsonify(error='Produk tidak valid'),400
     try:
         distance, fee, free_radius, max_radius, extra_fee = calculate_delivery(lat, lon)
@@ -172,8 +172,8 @@ def create_order():
     order_no='WB-'+datetime.now().strftime('%y%m%d')+'-'+uuid.uuid4().hex[:5].upper()
     cur=db.execute('INSERT INTO orders(order_no,customer_id,customer_name,customer_phone,address,latitude,longitude,distance_km,delivery_fee,subtotal,discount,total,payment_method,promo_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(order_no,user()['id'],name,phone,address,lat,lon,distance,fee,subtotal,discount,total,'qris_btn',promo_id))
     oid=cur.lastrowid
-    for p,q,n in valid:
-        db.execute('INSERT INTO order_items(order_id,product_id,name,qty,price,notes) VALUES(?,?,?,?,?,?)',(oid,p['id'],p['name'],q,p['price'],n))
+    for p,q,n,sale_price,normal_price in valid:
+        db.execute('INSERT INTO order_items(order_id,product_id,name,qty,price,notes) VALUES(?,?,?,?,?,?)',(oid,p['id'],p['name'],q,sale_price,n))
         db.execute('UPDATE products SET stock=stock-? WHERE id=?',(q,p['id']))
     db.execute('INSERT INTO payments(order_id,provider,status) VALUES(?,?,?)',(oid,'qris_btn','pending'))
     if promo_id: db.execute('UPDATE promotions SET used_count=used_count+1 WHERE id=?',(promo_id,))
@@ -380,16 +380,24 @@ def admin_products():
     if not require_role('admin','owner'):return jsonify(error='Forbidden'),403
     db=get_db()
     if request.method=='POST':
-        d=request.json or {}; pid=d.get('id'); name=(d.get('name') or '').strip(); price=int(d.get('price') or 0); stock=int(d.get('stock') or 0); minimum=int(d.get('stock_minimum') or 0); favorite=1 if d.get('is_favorite') else 0
+        d=request.json or {}; pid=d.get('id'); name=(d.get('name') or '').strip(); price=int(d.get('price') or 0); normal_price=int(d.get('normal_price') or price); stock=int(d.get('stock') or 0); minimum=int(d.get('stock_minimum') or 0); favorite=1 if d.get('is_favorite') else 0
+        normal_price=max(price,normal_price)
         if not name or price<0 or stock<0:return jsonify(error='Nama, harga, dan stock harus valid'),400
         if pid:
-            db.execute('UPDATE products SET name=?,price=?,stock=?,stock_minimum=?,is_favorite=?,active=? WHERE id=?',(name,price,stock,minimum,favorite,1 if d.get('active',True) else 0,pid))
+            db.execute('UPDATE products SET name=?,price=?,normal_price=?,stock=?,stock_minimum=?,is_favorite=?,active=? WHERE id=?',(name,price,normal_price,stock,minimum,favorite,1 if d.get('active',True) else 0,pid))
             action='UPDATE'
         else:
-            cat=db.execute('SELECT id FROM categories ORDER BY id LIMIT 1').fetchone(); db.execute('INSERT INTO products(category_id,name,description,price,stock,stock_minimum,is_favorite) VALUES(?,?,?,?,?,?,?)',(cat['id'] if cat else None,name,d.get('description',''),price,stock,minimum,favorite)); action='CREATE'
+            cat=db.execute('SELECT id FROM categories ORDER BY id LIMIT 1').fetchone(); db.execute('INSERT INTO products(category_id,name,description,price,stock,stock_minimum,is_favorite,normal_price) VALUES(?,?,?,?,?,?,?,?)',(cat['id'] if cat else None,name,d.get('description',''),price,stock,minimum,favorite,normal_price)); action='CREATE'
         db.commit(); return jsonify(ok=True,action=action)
     rows=db.execute('SELECT p.*,c.name category FROM products p LEFT JOIN categories c ON c.id=p.category_id ORDER BY p.id').fetchall(); return jsonify([dict(r) for r in rows])
 
+@bp.route('/api/admin/products/<int:pid>/favorite',methods=['POST'])
+def toggle_product_favorite(pid):
+    if not require_role('admin','owner'):return jsonify(error='Forbidden'),403
+    db=get_db(); row=db.execute('SELECT is_favorite FROM products WHERE id=?',(pid,)).fetchone()
+    if not row:return jsonify(error='Menu tidak ditemukan'),404
+    new=0 if row['is_favorite'] else 1
+    db.execute('UPDATE products SET is_favorite=? WHERE id=?',(new,pid)); db.commit(); return jsonify(ok=True,is_favorite=bool(new))
 @bp.route('/api/admin/products/<int:pid>',methods=['DELETE'])
 def delete_product(pid):
     if not require_role('admin','owner'):return jsonify(error='Forbidden'),403
