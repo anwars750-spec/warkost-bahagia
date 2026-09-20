@@ -7,7 +7,7 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from .db import get_db
 from .order_contract import order_contract_status, resolve_order_bridge, normalize_supabase_order, create_order_bridge
-from .supabase_gateway import backend_status, configured as supabase_configured, enabled as supabase_enabled, get_profile, link_legacy_user, customer_delivery_order_v2, get_customer_order, get_customer_order_items, SupabaseGatewayError
+from .supabase_gateway import backend_status, configured as supabase_configured, enabled as supabase_enabled, get_profile, link_legacy_user, customer_delivery_order_v2, get_customer_order, get_customer_order_items, verify_payment, SupabaseGatewayError
 
 bp=Blueprint('main',__name__)
 ROLE_HOME={'customer':'main.index','admin':'main.dashboard','kasir':'main.dashboard','kitchen':'main.dashboard','driver':'main.dashboard','owner':'main.dashboard'}
@@ -883,6 +883,32 @@ def link_supabase_identity():
     db.execute('INSERT INTO audit_logs(user_id,action,entity,entity_id,details) VALUES(?,?,?,?,?)',(user()['id'],'LINK','supabase_identity',local_user_id,f'Linked Supabase profile {supabase_user_id}'))
     db.commit()
     return jsonify(ok=True,local_user_id=local_user_id,supabase_user_id=supabase_user_id)
+
+@bp.route('/api/admin/supabase/payment/verify', methods=['POST'])
+def admin_supabase_payment_verify():
+    """Operational/manual verification adapter for the real Supabase payment state machine.
+
+    This endpoint is staff-only and calls the protected server-side Supabase
+    verifier. It does not use the legacy SQLite demo-payment path.
+    """
+    if not require_role('admin', 'owner'):
+        return jsonify(error='Forbidden'),403
+    if not supabase_enabled():
+        return jsonify(error='Supabase backend belum aktif.'),400
+    data=request.json or {}
+    order_id=str(data.get('supabase_order_id') or '').strip()
+    status=str(data.get('status') or 'paid').strip().lower()
+    provider_reference=str(data.get('provider_reference') or '').strip()
+    transaction_reference=str(data.get('transaction_reference') or '').strip() or None
+    if not order_id or status not in ('paid','failed','expired'):
+        return jsonify(error='supabase_order_id dan status pembayaran tidak valid.'),400
+    if status == 'paid' and not provider_reference:
+        return jsonify(error='provider_reference wajib untuk status paid.'),400
+    try:
+        ok=verify_payment(order_id,status,provider_reference or None,transaction_reference)
+    except SupabaseGatewayError:
+        return jsonify(error='Gagal memverifikasi pembayaran di Supabase.'),502
+    return jsonify(ok=bool(ok),supabase_order_id=order_id,status=status)
 
 @bp.route('/api/system/backend')
 def backend():
