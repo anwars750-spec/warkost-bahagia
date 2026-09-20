@@ -661,5 +661,5 @@ async function confirmCheckout(){
   }catch(err){showMsg('<div class="error">Tidak dapat terhubung ke server. Coba lagi.</div>')}
 }
 function hideSplash(){const s=document.getElementById('splashScreen');if(s){s.classList.add('hide');setTimeout(()=>s.remove(),450);}}
-document.addEventListener('DOMContentLoaded',()=>setTimeout(hideSplash,700));
+setTimeout(hideSplash,700);
 load();initMaps();
