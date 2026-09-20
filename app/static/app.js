@@ -378,7 +378,8 @@ document.addEventListener('click',e=>{
 
   const cart=document.getElementById('cart');
   const cartButtons=[...document.querySelectorAll('[onclick="cartOpen()"]')];
-  if(cart?.classList.contains('show')&&!cart.contains(e.target)&&!cartButtons.some(btn=>btn.contains(e.target))){
+  const voucherModal=document.getElementById('voucherCenterModal');
+  if(cart?.classList.contains('show')&&!cart.contains(e.target)&&!cartButtons.some(btn=>btn.contains(e.target))&&!voucherModal?.contains(e.target)){
     closeCart();
   }
 
