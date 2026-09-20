@@ -170,6 +170,16 @@ def _ensure_categories_and_products(db):
         )
 
 
+def _ensure_demo_promotions(db):
+    """Create one clearly labeled local test voucher for checkout validation."""
+    existing = db.execute("SELECT id FROM promotions WHERE code='WARKOST20'").fetchone()
+    if not existing:
+        db.execute(
+            """INSERT INTO promotions(code,type,value,min_order,max_discount,quota,starts_at,ends_at,active)
+               VALUES('WARKOST20','percent',20,10000,5000,100,NULL,NULL,1)"""
+        )
+
+
 def _ensure_operational_defaults(db):
     if not db.execute('SELECT 1 FROM printer_settings WHERE id=1').fetchone():
         db.execute("INSERT INTO printer_settings(id,name,ip_address,port,connection,auto_print) VALUES(1,'Epson Thermal','',9100,'LAN',1)")
@@ -215,6 +225,7 @@ def migrate_existing(db):
     _ensure_demo_drivers(db)
     _ensure_categories_and_products(db)
     _ensure_operational_defaults(db)
+    _ensure_demo_promotions(db)
     # Demo menu promotion: Kopi Susu is 20% off (Rp15.000 -> Rp12.000).
     db.execute("UPDATE products SET normal_price=15000, price=12000 WHERE name='Kopi Susu' AND active=1")
     db.commit()
