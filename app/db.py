@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS products (
  stock INTEGER NOT NULL DEFAULT 0,
  stock_minimum INTEGER NOT NULL DEFAULT 0,
  is_favorite INTEGER NOT NULL DEFAULT 0,
+ normal_price INTEGER NOT NULL DEFAULT 0,
  active INTEGER NOT NULL DEFAULT 1,
  FOREIGN KEY(category_id) REFERENCES categories(id)
 );
@@ -162,8 +163,8 @@ def _ensure_categories_and_products(db):
             (minuman['id'] if minuman else None, 'Kopi Susu', 'Kopi susu gula aren', 15000, 20, 4),
         ]
         db.executemany(
-            'INSERT INTO products(category_id,name,description,price,stock,stock_minimum) VALUES(?,?,?,?,?,?)',
-            products
+            'INSERT INTO products(category_id,name,description,price,stock,stock_minimum,normal_price) VALUES(?,?,?,?,?,?,?)',
+            [(*p,p[3]) for p in products]
         )
 
 
@@ -197,6 +198,10 @@ def migrate_existing(db):
     cols = {r['name'] for r in db.execute('PRAGMA table_info(products)').fetchall()}
     if cols and 'is_favorite' not in cols:
         db.execute('ALTER TABLE products ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0')
+    cols = {r['name'] for r in db.execute('PRAGMA table_info(products)').fetchall()}
+    if cols and 'normal_price' not in cols:
+        db.execute('ALTER TABLE products ADD COLUMN normal_price INTEGER NOT NULL DEFAULT 0')
+    db.execute('UPDATE products SET normal_price=price WHERE normal_price<=0')
 
     _rebuild_users_with_kasir(db)
     _ensure_demo_users(db)
