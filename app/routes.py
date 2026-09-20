@@ -130,6 +130,7 @@ def create_order():
     if not require_role('customer'): return jsonify(error='Customer login required'),401
     data=request.json or {}; items=data.get('items',[])
     if not items: return jsonify(error='Keranjang kosong'),400
+    promo_code=str(data.get('promo_code','')).strip().upper() or None
     name=data.get('name','').strip(); phone=data.get('phone','').strip(); address=data.get('address','').strip()
     lat=data.get('latitude'); lon=data.get('longitude')
     if not name or not phone or not address: return jsonify(error='Nama, HP aktif, dan alamat wajib diisi'),400
@@ -154,16 +155,30 @@ def create_order():
         return jsonify(error=str(exc)),400
     if fee is None:
         return jsonify(error=f'Lokasi di luar radius delivery maksimal ({max_radius:g} km)'),400
-    total=subtotal+fee
+    discount=0; promo_id=None
+    if promo_code:
+        promo=db.execute("""SELECT * FROM promotions WHERE UPPER(code)=? AND active=1
+                            AND (starts_at IS NULL OR starts_at='' OR starts_at<=CURRENT_TIMESTAMP)
+                            AND (ends_at IS NULL OR ends_at='' OR ends_at>=CURRENT_TIMESTAMP)
+                            AND (quota IS NULL OR quota<=0 OR used_count<quota)
+                            LIMIT 1""",(promo_code,)).fetchone()
+        if not promo: return jsonify(error='Voucher tidak tersedia atau sudah tidak berlaku.'),400
+        if subtotal < int(promo['min_order'] or 0): return jsonify(error=f'Minimum order voucher Rp {int(promo["min_order"] or 0):,}.'),400
+        if str(promo['type'] or 'percent')=='fixed': discount=int(promo['value'] or 0)
+        else: discount=money(subtotal*int(promo['value'] or 0)/100)
+        if promo['max_discount'] is not None: discount=min(discount,int(promo['max_discount']))
+        discount=max(0,min(discount,subtotal)); promo_id=promo['id']
+    total=max(0,subtotal+fee-discount)
     order_no='WB-'+datetime.now().strftime('%y%m%d')+'-'+uuid.uuid4().hex[:5].upper()
-    cur=db.execute('INSERT INTO orders(order_no,customer_id,customer_name,customer_phone,address,latitude,longitude,distance_km,delivery_fee,subtotal,total,payment_method) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',(order_no,user()['id'],name,phone,address,lat,lon,distance,fee,subtotal,total,'qris_btn'))
+    cur=db.execute('INSERT INTO orders(order_no,customer_id,customer_name,customer_phone,address,latitude,longitude,distance_km,delivery_fee,subtotal,discount,total,payment_method,promo_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(order_no,user()['id'],name,phone,address,lat,lon,distance,fee,subtotal,discount,total,'qris_btn',promo_id))
     oid=cur.lastrowid
     for p,q,n in valid:
         db.execute('INSERT INTO order_items(order_id,product_id,name,qty,price,notes) VALUES(?,?,?,?,?,?)',(oid,p['id'],p['name'],q,p['price'],n))
         db.execute('UPDATE products SET stock=stock-? WHERE id=?',(q,p['id']))
     db.execute('INSERT INTO payments(order_id,provider,status) VALUES(?,?,?)',(oid,'qris_btn','pending'))
+    if promo_id: db.execute('UPDATE promotions SET used_count=used_count+1 WHERE id=?',(promo_id,))
     db.execute('INSERT INTO audit_logs(user_id,action,entity,entity_id,details) VALUES(?,?,?,?,?)',(user()['id'],'CREATE','order',oid,'Customer checkout'))
-    db.commit(); return jsonify(order_id=oid,order_no=order_no,subtotal=subtotal,delivery_fee=fee,discount=0,total=total,status='pending_payment')
+    db.commit(); return jsonify(order_id=oid,order_no=order_no,subtotal=subtotal,delivery_fee=fee,discount=discount,total=total,status='pending_payment')
 
 @bp.route('/api/simulate-payment/<int:oid>',methods=['POST'])
 def simulate_payment(oid):
@@ -220,6 +235,28 @@ def delivery_capacity_status(db):
         'waiting':waiting,
         'message':message
     }
+
+@bp.route('/api/customer/promo/validate',methods=['POST'])
+def validate_customer_promo():
+    u=user()
+    if not u or u['role']!='customer': return jsonify(error='Customer login required'),401
+    data=request.json or {}; code=str(data.get('code','')).strip().upper()
+    try: subtotal=money(float(data.get('subtotal',0)))
+    except (TypeError,ValueError): return jsonify(error='Subtotal tidak valid.'),400
+    if not code: return jsonify(error='Kode voucher wajib diisi.'),400
+    db=get_db()
+    promo=db.execute("""SELECT * FROM promotions WHERE UPPER(code)=? AND active=1
+                        AND (starts_at IS NULL OR starts_at='' OR starts_at<=CURRENT_TIMESTAMP)
+                        AND (ends_at IS NULL OR ends_at='' OR ends_at>=CURRENT_TIMESTAMP)
+                        AND (quota IS NULL OR quota<=0 OR used_count<quota)
+                        LIMIT 1""",(code,)).fetchone()
+    if not promo: return jsonify(error='Voucher tidak tersedia atau sudah tidak berlaku.'),404
+    if subtotal < int(promo['min_order'] or 0): return jsonify(error=f'Minimum order voucher Rp {int(promo["min_order"] or 0):,}.'),400
+    if str(promo['type'] or 'percent')=='fixed': discount=int(promo['value'] or 0)
+    else: discount=money(subtotal*int(promo['value'] or 0)/100)
+    if promo['max_discount'] is not None: discount=min(discount,int(promo['max_discount']))
+    discount=max(0,min(discount,subtotal))
+    return jsonify(ok=True,code=promo['code'],discount=discount,label=promo['code'])
 
 @bp.route('/api/customer/delivery-status')
 def customer_delivery_status():
@@ -343,13 +380,13 @@ def admin_products():
     if not require_role('admin','owner'):return jsonify(error='Forbidden'),403
     db=get_db()
     if request.method=='POST':
-        d=request.json or {}; pid=d.get('id'); name=(d.get('name') or '').strip(); price=int(d.get('price') or 0); stock=int(d.get('stock') or 0); minimum=int(d.get('stock_minimum') or 0)
+        d=request.json or {}; pid=d.get('id'); name=(d.get('name') or '').strip(); price=int(d.get('price') or 0); stock=int(d.get('stock') or 0); minimum=int(d.get('stock_minimum') or 0); favorite=1 if d.get('is_favorite') else 0
         if not name or price<0 or stock<0:return jsonify(error='Nama, harga, dan stock harus valid'),400
         if pid:
-            db.execute('UPDATE products SET name=?,price=?,stock=?,stock_minimum=?,active=? WHERE id=?',(name,price,stock,minimum,1 if d.get('active',True) else 0,pid))
+            db.execute('UPDATE products SET name=?,price=?,stock=?,stock_minimum=?,is_favorite=?,active=? WHERE id=?',(name,price,stock,minimum,favorite,1 if d.get('active',True) else 0,pid))
             action='UPDATE'
         else:
-            cat=db.execute('SELECT id FROM categories ORDER BY id LIMIT 1').fetchone(); db.execute('INSERT INTO products(category_id,name,description,price,stock,stock_minimum) VALUES(?,?,?,?,?,?)',(cat['id'] if cat else None,name,d.get('description',''),price,stock,minimum)); action='CREATE'
+            cat=db.execute('SELECT id FROM categories ORDER BY id LIMIT 1').fetchone(); db.execute('INSERT INTO products(category_id,name,description,price,stock,stock_minimum,is_favorite) VALUES(?,?,?,?,?,?,?)',(cat['id'] if cat else None,name,d.get('description',''),price,stock,minimum,favorite)); action='CREATE'
         db.commit(); return jsonify(ok=True,action=action)
     rows=db.execute('SELECT p.*,c.name category FROM products p LEFT JOIN categories c ON c.id=p.category_id ORDER BY p.id').fetchall(); return jsonify([dict(r) for r in rows])
 
