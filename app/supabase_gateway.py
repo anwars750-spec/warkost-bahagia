@@ -120,6 +120,34 @@ def customer_delivery_order_v2(customer_id, items, address, latitude, longitude,
     )
 
 
+def get_customer_order(customer_id, supabase_order_id):
+    """Fetch one customer-owned order through the server-only gateway."""
+    rows = rest_json(
+        "GET",
+        "/rest/v1/orders",
+        query={
+            "id": f"eq.{supabase_order_id}",
+            "customer_id": f"eq.{customer_id}",
+            "select": "id,order_number,customer_id,status,subtotal,discount,delivery_fee,total,delivery_address,delivery_latitude,delivery_longitude,distance_km,created_at",
+            "limit": "1",
+        },
+    )
+    return rows[0] if rows else None
+
+
+def get_customer_order_items(supabase_order_id):
+    """Fetch immutable order-item snapshots for one Supabase order."""
+    return rest_json(
+        "GET",
+        "/rest/v1/order_items",
+        query={
+            "order_id": f"eq.{supabase_order_id}",
+            "select": "id,order_id,product_name,quantity,unit_price,normal_price,discount_amount,final_unit_price,subtotal,notes,station",
+            "order": "id.asc",
+        },
+    ) or []
+
+
 def backend_status():
     backend, url, key = _config()
     return {
