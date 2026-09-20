@@ -85,7 +85,7 @@ function renderProducts(){
       ? '<div class="product-art"><img src="'+image+'" alt="'+escapeHtml(p.name)+'" loading="lazy" decoding="async" onerror="this.closest(\'.product-art\').classList.add(\'image-fallback\');this.remove()"></div>'
       : '<div class="product-art image-fallback" aria-hidden="true"></div>';
     return '<article class="product">'+imageMarkup+
-      '<span>'+escapeHtml(p.category||'Menu')+'</span>'+ 
+      '<span class="product-category">'+escapeHtml(p.category||'Menu')+(p.is_favorite?' <b class="favorite-star" title="Menu favorit" aria-label="Menu favorit">★</b>':'')+'</span>'+ 
       '<h3>'+escapeHtml(p.name)+'</h3>'+ 
       '<p>'+escapeHtml(p.description||'Pilihan menu Warkost Bahagia')+'</p>'+ 
       '<div class="product-bottom"><b>'+rupiah(p.price)+'</b><small>'+(p.stock<1?'Stok habis':'Tersedia')+'</small></div>'+ 
@@ -98,7 +98,8 @@ document.addEventListener('DOMContentLoaded',()=>{const s=document.getElementByI
 function add(id){let x=cart.find(i=>i.product_id===id);let p=products.find(x=>x.id===id);if(!p)return;if(x){if(x.qty>=p.stock)return;x.qty++;}else cart.push({product_id:id,qty:1});render()}
 function minus(id){let x=cart.find(i=>i.product_id===id);if(!x)return;x.qty--;if(x.qty<=0)cart=cart.filter(i=>i.product_id!==id);render()}
 function plus(id){add(id)}
-function totals(){let subtotal=cart.reduce((s,i)=>{let p=products.find(x=>x.id===i.product_id);return s+(p?p.price*i.qty:0)},0);let delivery=(deliveryQuote&&deliveryQuote.available)?Number(deliveryQuote.delivery_fee||0):0;return {subtotal,discount:0,delivery,total:subtotal+delivery}}
+let appliedPromo=null;
+function totals(){let subtotal=cart.reduce((s,i)=>{let p=products.find(x=>x.id===i.product_id);return s+(p?p.price*i.qty:0)},0);let delivery=(deliveryQuote&&deliveryQuote.available)?Number(deliveryQuote.delivery_fee||0):0;let discount=Number(appliedPromo?.discount||0);return {subtotal,discount,delivery,total:Math.max(0,subtotal+delivery-discount)}}
 function render(){
   const cartCount=cart.reduce((a,b)=>a+b.qty,0);
   const legacyCount=document.getElementById('count'); if(legacyCount) legacyCount.textContent=cartCount;
@@ -377,6 +378,21 @@ async function applyDeliveryCapacityNotice(target){
 }
 async function openOrderProcess(orderNo,total,status='confirmed'){document.getElementById('orderProcessContent').innerHTML=`<div class="process-order-no">${escapeHtml(orderNo)}</div><div class="process-total">Total ${rupiah(total)}</div><div class="process-steps"><div class="active"><strong>✓ Order dibuat</strong><span>Pesanan diterima sistem</span></div><div class="active"><strong>✓ Pembayaran</strong><span>PAID (demo)</span></div><div><strong>Kitchen</strong><span>Menunggu diproses</span></div><div><strong>Delivery</strong><span>Menunggu penugasan driver</span></div></div>`;document.getElementById('orderProcessModal').hidden=false;await applyDeliveryCapacityNotice(document.getElementById('orderProcessContent'));}
 function closeOrderProcess(){document.getElementById('orderProcessModal').hidden=true;const cartEl=document.getElementById('cart');if(cartEl)cartEl.classList.remove('show');render();window.scrollTo({top:0,behavior:'smooth'});}
+async function claimVoucher(){
+  const input=document.getElementById('promoCode'),msg=document.getElementById('promoMsg');
+  const code=(input?.value||'').trim().toUpperCase();
+  if(!code){appliedPromo=null;if(msg)msg.innerHTML='<div class="error">Masukkan kode voucher terlebih dahulu.</div>';render();return}
+  if(!cart.length){if(msg)msg.innerHTML='<div class="error">Tambahkan menu ke keranjang sebelum klaim voucher.</div>';return}
+  const subtotal=totals().subtotal;
+  try{
+    const r=await fetch('/api/customer/promo/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,subtotal})});
+    const d=await r.json();
+    if(!r.ok){appliedPromo=null;if(msg)msg.innerHTML='<div class="error">'+escapeHtml(d.error||'Voucher tidak dapat digunakan.')+'</div>';render();return}
+    appliedPromo={code:d.code,discount:Number(d.discount||0),label:d.label||d.code};
+    if(msg)msg.innerHTML='<div class="success">✓ Voucher '+escapeHtml(d.code)+' aktif. Hemat '+rupiah(d.discount)+'.</div>';
+    render();
+  }catch(e){if(msg)msg.innerHTML='<div class="error">Voucher belum dapat diverifikasi. Coba lagi.</div>'}
+}
 async function checkout(){
   const nameEl=document.getElementById('name'),phoneEl=document.getElementById('phone'),addressEl=document.getElementById('address'),latEl=document.getElementById('lat'),lonEl=document.getElementById('lon');
   showMsg('',0);
@@ -391,7 +407,7 @@ async function checkout(){
 async function confirmCheckout(){
   closeConfirm();
   const name=(document.getElementById('name').value||'').trim(),phone=(document.getElementById('phone').value||'').trim(),address=(document.getElementById('address').value||'').trim(),latitude=Number(document.getElementById('lat').value),longitude=Number(document.getElementById('lon').value);
-  const payload={items:cart,name,phone,address,latitude,longitude};
+  const payload={items:cart,name,phone,address,latitude,longitude,promo_code:(document.getElementById('promoCode')?.value||'').trim()};
   try{
     const r=await fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}),d=await r.json();
     if(r.status===401){window.location='/login';return}
@@ -399,7 +415,7 @@ async function confirmCheckout(){
     const pay=await fetch('/api/simulate-payment/'+d.order_id,{method:'POST'});
     if(!pay.ok){showMsg('<div class="error">Order dibuat, tetapi pembayaran demo gagal.</div>');return}
     await openOrderProcess(d.order_no,d.total,'confirmed');
-    cart=[];deliveryQuote=null;clearSelectedAddress();render();load();
+    cart=[];deliveryQuote=null;appliedPromo=null;const pc=document.getElementById('promoCode');if(pc)pc.value='';const pm=document.getElementById('promoMsg');if(pm)pm.innerHTML='';clearSelectedAddress();render();load();
   }catch(err){showMsg('<div class="error">Tidak dapat terhubung ke server. Coba lagi.</div>')}
 }
 load();initMaps();
