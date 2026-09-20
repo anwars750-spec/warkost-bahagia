@@ -98,7 +98,7 @@ def index():
 def login():
     if request.method=='POST':
         ident=request.form.get('identity','').strip(); pw=request.form.get('password','')
-        u=get_db().execute('SELECT * FROM users WHERE email=? OR phone=?',(ident,ident)).fetchone()
+        u=get_db().execute("SELECT * FROM users WHERE (email=? OR phone=?) AND role='customer'",(ident,ident)).fetchone()
         if u and u['password_hash'] and check_password_hash(u['password_hash'],pw) and u['status']=='active':
             session.clear(); session['user_id']=u['id']
             return redirect(url_for(ROLE_HOME.get(u['role'],'main.index')))
