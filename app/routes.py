@@ -422,6 +422,7 @@ def customer_addresses():
         data=request.json or {}
         address=str(data.get('address','')).strip()
         label=str(data.get('label','Rumah')).strip() or 'Rumah'
+        address_id=data.get('id')
         lat=data.get('latitude'); lon=data.get('longitude')
         if not address: return jsonify(error='Alamat wajib diisi.'),400
         try:
@@ -429,7 +430,15 @@ def customer_addresses():
             lon=float(lon) if lon not in (None,'') else None
         except (TypeError,ValueError):
             return jsonify(error='Koordinat alamat tidak valid.'),400
-        db.execute('UPDATE addresses SET label=? WHERE customer_id=?',(label,u['id']))
+        if address_id:
+            try: address_id=int(address_id)
+            except (TypeError,ValueError): return jsonify(error='ID alamat tidak valid.'),400
+            existing=db.execute('SELECT id FROM addresses WHERE id=? AND customer_id=?',(address_id,u['id'])).fetchone()
+            if not existing: return jsonify(error='Alamat tidak ditemukan.'),404
+            db.execute('UPDATE addresses SET label=?,address=?,latitude=?,longitude=? WHERE id=? AND customer_id=?',(label,address,lat,lon,address_id,u['id']))
+            db.commit()
+            row=db.execute('SELECT id,label,address,latitude,longitude FROM addresses WHERE id=?',(address_id,)).fetchone()
+            return jsonify(ok=True,address=dict(row))
         cur=db.execute('INSERT INTO addresses(customer_id,label,address,latitude,longitude) VALUES(?,?,?,?,?)',(u['id'],label,address,lat,lon))
         db.commit()
         row=db.execute('SELECT id,label,address,latitude,longitude FROM addresses WHERE id=?',(cur.lastrowid,)).fetchone()
