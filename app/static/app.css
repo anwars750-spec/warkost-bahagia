@@ -603,3 +603,55 @@ html,body{font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif;color:var(--wb-te
 .auth-two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}.register-card .consent-row{display:flex;gap:9px;align-items:flex-start;font-weight:600!important;color:#806d60!important;line-height:1.4}.register-card .consent-row input{width:16px;height:16px;margin:1px 0 0;flex:0 0 auto}.register-card .auth-submit{margin-top:16px}
 .auth-modern .error,.auth-modern .success{font-size:11px;line-height:1.45}.auth-modern .back-link{color:#806d60}.auth-modern .back-link:hover{color:#d4622a}
 @media(max-width:600px){.auth-modern{padding:12px 8px 30px}.auth-modern .auth-card{padding:26px 20px!important;border-radius:20px}.auth-modern .auth-card h1{font-size:32px}.auth-two-col{grid-template-columns:1fr}.auth-brand-mark img{width:84px;height:52px}}
+
+
+/* V1.6 AUTH REGISTER LAYOUT FIX — desktop vertical scroll + stronger brand mark */
+body.auth{
+  display:block!important;
+  min-height:100vh!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  padding:0!important;
+}
+.auth-modern{
+  width:min(100%,520px);
+  min-height:100vh;
+  margin:0 auto!important;
+  padding:34px 0 56px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+}
+.auth-modern .auth-brand-mark{
+  flex:0 0 auto;
+  margin:0 auto 22px!important;
+}
+.auth-modern .auth-brand-mark img{
+  width:150px!important;
+  height:auto!important;
+  max-height:92px;
+  object-fit:contain;
+}
+.auth-modern .auth-card{
+  flex:0 0 auto;
+  width:100%!important;
+}
+.auth-modern .auth-footer{
+  flex:0 0 auto;
+  margin-top:16px;
+}
+@media(max-width:600px){
+  .auth-modern{
+    width:100%;
+    min-height:100vh;
+    padding:18px 8px 34px!important;
+  }
+  .auth-modern .auth-brand-mark{
+    margin-bottom:16px!important;
+  }
+  .auth-modern .auth-brand-mark img{
+    width:128px!important;
+    max-height:78px;
+  }
+}
