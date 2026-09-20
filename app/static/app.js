@@ -10,11 +10,11 @@ async function loadCustomerPromos(){
   const r=await fetch('/api/customer/promotions');
   const d=await r.json();
   if(r.ok&&Array.isArray(d)&&d.length){
-    customerPromos=d.map(p=>({
+    customerPromos=d.map((p,i)=>({
       kicker:'VOUCHER '+(p.type==='percent'?p.value+'%':'HEMAT'),
       title:p.type==='percent'?'Hemat '+p.value+'% dengan '+p.code:'Potongan '+rupiah(p.value)+' dengan '+p.code,
       text:p.min_order>0?'Min. transaksi '+rupiah(p.min_order):'Bisa digunakan untuk menu pilihan Warkost.',
-      image:PROMOS[customerPromos.length%PROMOS.length].image,
+      image:PROMOS[i%PROMOS.length].image,
       code:p.code
     }));
   }
