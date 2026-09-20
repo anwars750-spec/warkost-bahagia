@@ -451,6 +451,28 @@ async function loadAccountSection(section){
       '<form class="account-password" onsubmit="changeAccountPassword(event)"><label for="currentPassword">Password saat ini</label><input id="currentPassword" type="password" placeholder="Masukkan password saat ini" autocomplete="current-password" required><label for="newPassword">Password baru</label><input id="newPassword" type="password" placeholder="Minimal 12 karakter" minlength="12" autocomplete="new-password" required><small class="password-hint">Minimal 12 karakter.</small><label for="confirmPassword">Konfirmasi password baru</label><input id="confirmPassword" type="password" placeholder="Ulangi password baru" minlength="12" autocomplete="new-password" required><button class="primary account-primary-button" type="submit">Simpan Password <span>→</span></button><div id="passwordMsg"></div></form>';
   }
 }
+async function changeAccountPassword(e){
+  e.preventDefault();
+  const msg=document.getElementById('passwordMsg');
+  const current=document.getElementById('currentPassword')?.value||'';
+  const next=document.getElementById('newPassword')?.value||'';
+  const confirm=document.getElementById('confirmPassword')?.value||'';
+  if(next.length<12){if(msg)msg.innerHTML='<div class="error">Password baru minimal 12 karakter.</div>';return;}
+  if(next!==confirm){if(msg)msg.innerHTML='<div class="error">Konfirmasi password tidak cocok.</div>';return;}
+  if(msg)msg.innerHTML='<div class="account-inline-loading">Menyimpan perubahan...</div>';
+  try{
+    const r=await fetch('/api/customer/password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({current_password:current,new_password:next})});
+    const data=await r.json();
+    if(msg)msg.innerHTML='<div class="'+(r.ok?'success':'error')+'">'+escapeHtml(data.message||data.error||'Gagal mengubah password.')+'</div>';
+    if(r.ok){
+      document.getElementById('currentPassword').value='';
+      document.getElementById('newPassword').value='';
+      document.getElementById('confirmPassword').value='';
+    }
+  }catch(err){
+    if(msg)msg.innerHTML='<div class="error">Koneksi gagal. Silakan coba lagi.</div>';
+  }
+}
 async function saveCustomerAddress(e){
  e.preventDefault();
  const msg=document.getElementById('addressMsg'),address=document.getElementById('addressValue').value.trim(),label=document.getElementById('addressLabel').value.trim()||'Rumah';
