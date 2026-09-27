@@ -35,15 +35,18 @@ Hostinger tidak termasuk milestone ini.
 
 ## Evidence
 
-- Unit/regression: 35/35 PASS pada head `b2ef1b6`.
-- MySQL Recovery #13: migration, schema, HTTP E2E, backup, restore, dan parity
+- Baseline `main`: `7dd87a30e926135fc3b6b1128962d9949523703f`.
+- Unit/regression lokal: 35/35 PASS.
+- MySQL Recovery #17: migration, schema, HTTP E2E, backup, restore, dan parity
   PASS.
-- Staging UAT #7: production startup, preflight, health, HTTP smoke, dan browser
-  UAT PASS.
-- Audit ini menambahkan browser vertical flow Customer → Admin → Driver →
-  loyalty; full browser regression sekarang 8/8 PASS pada desktop dan mobile.
-- Local readiness: config, database, storage, dan backup semuanya `true`.
-- `git diff --check`, syntax check test, dan pemeriksaan pola berbahaya PASS.
+- Staging UAT #11: production startup, preflight, health, HTTP smoke, dan
+  browser UAT PASS.
+- Operational UAT menambahkan login negatif, transfer manual, isolasi role
+  sebelum assignment, notifikasi, riwayat delivered, serta loyalty; full
+  browser regression sekarang 10/10 PASS pada desktop dan mobile.
+- Local readiness sebelum dan sesudah UAT: config, database, storage, dan
+  backup semuanya `true`.
+- `git diff --check`, syntax check test, dan format check PASS.
 
 ## Batas release candidate
 
@@ -56,6 +59,7 @@ Hostinger tidak termasuk milestone ini.
 
 ## Keputusan
 
-Core MVP memenuhi gate teknis release candidate lokal. Langkah berikutnya adalah
-UAT pengguna terarah menggunakan skenario bisnis nyata dan data demo, kemudian
-menutup defect yang ditemukan sebelum migrasi hosting.
+Core MVP memenuhi gate teknis release candidate lokal dan Operational UAT
+otomatis. Detail sign-off ada di `docs/OPERATIONAL_UAT_SIGNOFF.md`. Langkah
+berikutnya adalah demo terarah dan penerimaan bisnis oleh pemilik menggunakan
+data demo sebelum migrasi hosting.
