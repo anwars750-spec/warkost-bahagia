@@ -458,3 +458,21 @@ assert.equal(
       "product",
       {
         ...hidden,
+        id: hidden.id,
+        categoryId: hidden.category_id,
+        imageUrl: hidden.image_url,
+        active: false,
+      },
+      customer,
+    )
+  ).status,
+  401,
+);
+assert.equal(
+  (await call("category", { name: "Tes Kategori" }, driver)).status,
+  403,
+);
+console.log(
+  "HTTP PASS: login tiga role, RBAC, checkout, admin, driver, delivered, loyalty once; order #" +
+    id,
+);
