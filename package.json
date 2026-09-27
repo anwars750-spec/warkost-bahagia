@@ -1,0 +1,35 @@
+{
+  "name": "warkost-bahagia",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 0.0.0.0",
+    "build": "next build",
+    "start": "next start",
+    "test": "node --test tests/*.test.mjs",
+    "test:uat": "playwright test",
+    "test:backup": "node scripts/verify-backup.mjs",
+    "test:mysql": "node scripts/mysql-integration.mjs",
+    "backup:mysql": "node scripts/backup-mysql.mjs",
+    "restore:mysql": "node scripts/restore-mysql.mjs",
+    "verify:mysql": "node scripts/verify-mysql-schema.mjs",
+    "preflight": "node scripts/preflight.mjs"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "mysql2": "^3.24.4",
+    "next": "16.3.6",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "sharp": "^0.35.4"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.55.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "mysql-memory-server": "^1.16.0",
+    "prettier": "^3.9.9",
+    "typescript": "^5.9.3"
+  }
+}
