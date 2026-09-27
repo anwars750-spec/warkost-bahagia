@@ -57,6 +57,7 @@ jobs:
           mysqldump --version
 
       - name: Run MySQL migration and recovery drill
-        run: npm run test:mysql
+        timeout-minutes: 7
+        run: timeout --foreground 5m npm run test:mysql
         env:
           MYSQL_TEST_DATABASE_URL: mysql://root:mysql-ci-password@127.0.0.1:3306/warkost_source

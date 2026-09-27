@@ -23,13 +23,18 @@ let sourceUrl;
 let mysqlVersion;
 
 function run(script, env) {
+  console.log(`MYSQL INTEGRATION: mulai ${script}`);
   const result = spawnSync(process.execPath, [path.join(root, script)], {
     cwd: root,
     env: { ...process.env, ...env },
     encoding: "utf8",
+    timeout: 120_000,
   });
   if (result.status !== 0)
-    throw Error(`${script} gagal\n${result.stdout}\n${result.stderr}`);
+    throw Error(
+      `${script} gagal${result.signal ? ` (${result.signal})` : ""}\n${result.stdout}\n${result.stderr}`,
+    );
+  console.log(`MYSQL INTEGRATION: selesai ${script}`);
   return result.stdout.trim();
 }
 
@@ -93,6 +98,7 @@ async function stopWeb() {
 try {
   const externalUrl = process.env.MYSQL_TEST_DATABASE_URL?.trim();
   if (externalUrl) {
+    console.log("MYSQL INTEGRATION: verifikasi database MySQL eksternal");
     sourceUrl = externalUrl;
     const externalConfig = parseMysqlUrl(sourceUrl);
     const probe = await mysql.createConnection(sourceUrl);
@@ -112,6 +118,7 @@ try {
       await probe.end();
     }
   } else {
+    console.log("MYSQL INTEGRATION: mulai MySQL ephemeral lokal");
     await requireUnixSocket();
     database = await createDB({
       version: process.env.MYSQL_TEST_VERSION || "8.0.x",
@@ -135,6 +142,7 @@ try {
     UPLOAD_DIRECTORY: path.join(temporary, "uploads"),
   };
 
+  console.log("MYSQL INTEGRATION: migration, schema, dan seed");
   const firstMigration = run("scripts/migrate-mysql.mjs", common);
   assert.match(firstMigration, /Migrasi diterapkan: 009_order_idempotency.sql/);
   const secondMigration = run("scripts/migrate-mysql.mjs", common);
@@ -167,7 +175,9 @@ try {
   };
   web.stdout.on("data", append);
   web.stderr.on("data", append);
+  console.log("MYSQL INTEGRATION: menunggu HTTP readiness");
   await waitForReady(origin, () => serverOutput);
+  console.log("MYSQL INTEGRATION: HTTP readiness PASS");
   run("scripts/http-smoke.mjs", { ...common, SMOKE_ORIGIN: origin });
 
   const binaryDirectory = database
@@ -193,6 +203,7 @@ try {
   assert.ok(fs.existsSync(backup));
   assert.ok(fs.existsSync(backup + ".sha256"));
 
+  console.log("MYSQL INTEGRATION: membuat database target restore");
   const admin = await mysql.createConnection(sourceUrl);
   await admin.query(
     "CREATE DATABASE warkost_restore CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
@@ -209,6 +220,7 @@ try {
       (binaryDirectory ? path.join(binaryDirectory, "mysql") : "mysql"),
   });
 
+  console.log("MYSQL INTEGRATION: verifikasi parity record");
   const source = await mysql.createConnection(sourceUrl);
   const restored = await mysql.createConnection(restoreUrl);
   try {
