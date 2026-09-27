@@ -4,13 +4,16 @@ const password = process.env.SEED_DEMO_PASSWORD;
 
 if (!password) throw new Error("SEED_DEMO_PASSWORD wajib untuk browser UAT");
 
-async function login(page, email) {
+function captureConsoleErrors(page) {
   const consoleErrors = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
   page.on("pageerror", (error) => consoleErrors.push(error.message));
+  return consoleErrors;
+}
 
+async function signIn(page, email) {
   await page.goto("/");
   await expect(
     page.getByRole("heading", { name: "Mau makan apa hari ini?" }),
@@ -26,8 +29,26 @@ async function login(page, email) {
   await expect(
     page.locator("nav").getByRole("button", { name: "Keluar" }),
   ).toBeVisible();
+}
 
+async function login(page, email) {
+  const consoleErrors = captureConsoleErrors(page);
+  await signIn(page, email);
   return consoleErrors;
+}
+
+async function signOut(page) {
+  await page
+    .locator("nav")
+    .getByRole("button", { name: "Keluar", exact: true })
+    .click();
+  await expect(
+    page.locator("nav").getByRole("button", { name: "Masuk", exact: true }),
+  ).toBeVisible();
+}
+
+function orderCard(page, orderId) {
+  return page.locator("article.order").filter({ hasText: `#${orderId} ·` });
 }
 
 async function expectResponsiveShell(page) {
@@ -146,6 +167,83 @@ test("driver dapat membuka tugas dan notifikasi", async ({
   expect(consoleErrors).toEqual([]);
   await page.screenshot({
     path: testInfo.outputPath("driver.png"),
+    fullPage: true,
+  });
+});
+
+test("alur UI customer ke admin ke driver memberi poin loyalitas", async ({
+  page,
+}, testInfo) => {
+  const consoleErrors = captureConsoleErrors(page);
+
+  await signIn(page, "customer@warkost.local");
+  const firstProduct = page.locator("article.product").first();
+  await expect(firstProduct).toBeVisible();
+  await firstProduct.getByRole("button", { name: /^Tambah / }).click();
+  await page.getByRole("button", { name: /^Keranjang · 1 ·/ }).click();
+  await page.getByRole("button", { name: /^Buat pesanan ·/ }).click();
+
+  const checkoutMessage = page.getByRole("status");
+  await expect(checkoutMessage).toContainText(/Pesanan #\d+ berhasil dibuat/);
+  const match = (await checkoutMessage.textContent()).match(/Pesanan #(\d+)/);
+  expect(match).not.toBeNull();
+  const orderId = Number(match[1]);
+  await expect(orderCard(page, orderId).locator(".badge")).toHaveText(
+    "PENDING",
+  );
+
+  await signOut(page);
+  await signIn(page, "admin@warkost.local");
+  const adminOrder = orderCard(page, orderId);
+  await expect(adminOrder).toHaveCount(1);
+  await adminOrder.getByRole("button", { name: "Tandai lunas" }).click();
+  await expect(adminOrder.getByText("PAID", { exact: true })).toBeVisible();
+
+  for (const status of ["CONFIRMED", "PREPARING", "READY"]) {
+    await adminOrder
+      .getByRole("button", { name: `Lanjutkan ke ${status}` })
+      .click();
+    await expect(adminOrder.locator(".badge")).toHaveText(status);
+  }
+  await adminOrder.locator("select").selectOption({ label: "Driver Warkost" });
+  await adminOrder.getByRole("button", { name: "Tugaskan driver" }).click();
+  await expect(adminOrder.locator(".badge")).toHaveText("ASSIGNED");
+
+  await signOut(page);
+  await signIn(page, "driver@warkost.local");
+  const driverOrder = orderCard(page, orderId);
+  await expect(driverOrder).toHaveCount(1);
+  await driverOrder.getByRole("button", { name: "Terima tugas" }).click();
+  await expect(
+    driverOrder.getByRole("button", { name: "Sudah diambil · Pickup" }),
+  ).toBeVisible();
+  await driverOrder
+    .getByRole("button", { name: "Sudah diambil · Pickup" })
+    .click();
+  await expect(driverOrder.locator(".badge")).toHaveText("PICKED UP");
+  await driverOrder.getByRole("button", { name: "Mulai pengantaran" }).click();
+  await expect(driverOrder.locator(".badge")).toHaveText("ON DELIVERY");
+  await driverOrder
+    .getByRole("button", { name: "Selesaikan pengantaran" })
+    .click();
+  await expect(driverOrder.locator(".badge")).toHaveText("DELIVERED");
+
+  await signOut(page);
+  await signIn(page, "customer@warkost.local");
+  await page
+    .locator("nav")
+    .getByRole("button", { name: "Akun", exact: true })
+    .click();
+  const loyaltyEntry = page.locator(".line").filter({
+    hasText: `Pesanan #${orderId}`,
+  });
+  await expect(loyaltyEntry).toHaveCount(1);
+  await expect(loyaltyEntry.locator("strong")).toHaveText(/^\+\d+$/);
+
+  await expectResponsiveShell(page);
+  expect(consoleErrors).toEqual([]);
+  await page.screenshot({
+    path: testInfo.outputPath(`vertical-flow-${orderId}.png`),
     fullPage: true,
   });
 });
