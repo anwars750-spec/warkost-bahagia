@@ -68,6 +68,9 @@ jobs:
 
       - name: Unit tests
         run: npm test
+        env:
+          DATABASE_URL: ""
+          DATABASE_PATH: ${{ runner.temp }}/warkost-unit.db
 
       - name: Production build and preflight
         run: |
