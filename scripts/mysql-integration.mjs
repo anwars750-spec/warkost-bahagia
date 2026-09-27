@@ -69,16 +69,22 @@ async function requireUnixSocket() {
 }
 
 async function waitForReady(origin, output) {
+  let lastResponse = "belum ada respons HTTP";
   for (let attempt = 0; attempt < 80; attempt++) {
     if (web.exitCode !== null)
       throw Error("Next.js berhenti sebelum siap\n" + output());
     try {
       const response = await fetch(origin + "/api/health/ready");
       if (response.status === 200) return;
-    } catch {}
+      lastResponse = `${response.status} ${await response.text()}`;
+    } catch (error) {
+      lastResponse = error.message;
+    }
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  throw Error("Next.js tidak siap dalam batas waktu\n" + output());
+  throw Error(
+    `Next.js tidak siap dalam batas waktu; respons terakhir: ${lastResponse}\n${output()}`,
+  );
 }
 
 async function stopWeb() {
