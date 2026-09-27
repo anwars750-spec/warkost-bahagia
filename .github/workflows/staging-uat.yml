@@ -76,11 +76,15 @@ jobs:
         run: |
           npm run build
           npm run preflight
+        env:
+          NODE_ENV: production
 
       - name: Start production staging server
         run: |
           nohup npm start -- --hostname 127.0.0.1 >/tmp/warkost-staging.log 2>&1 &
           echo $! >/tmp/warkost-staging.pid
+        env:
+          NODE_ENV: production
 
       - name: Health check
         run: |
