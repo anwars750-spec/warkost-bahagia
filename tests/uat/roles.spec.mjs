@@ -51,6 +51,16 @@ function orderCard(page, orderId) {
   return page.locator("article.order").filter({ hasText: `#${orderId} ·` });
 }
 
+async function authenticatedGet(page, path) {
+  const session = (await page.context().cookies()).find(
+    (cookie) => cookie.name === "wb_session",
+  );
+  expect(session).toBeDefined();
+  return page.context().request.get(path, {
+    headers: { cookie: `wb_session=${session.value}` },
+  });
+}
+
 async function expectResponsiveShell(page) {
   await expect(
     page.locator("[data-nextjs-dialog], .nextjs-container-errors-header"),
@@ -63,6 +73,39 @@ async function expectResponsiveShell(page) {
   expect(dimensions.text).toBeGreaterThan(100);
   expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport + 1);
 }
+
+test("OP-UAT-01 login gagal tidak membuat sesi", async ({ page }, testInfo) => {
+  const consoleErrors = captureConsoleErrors(page);
+  await page.goto("/");
+  await page
+    .locator("nav")
+    .getByRole("button", { name: "Masuk", exact: true })
+    .click();
+
+  const form = page.locator("form");
+  await form
+    .getByLabel("Email")
+    .fill(`invalid-${testInfo.project.name}@example.test`);
+  await form.getByLabel("Password").fill("password-yang-salah");
+  await form.getByRole("button", { name: "Masuk", exact: true }).click();
+
+  await expect(page.locator(".alert[role='alert']")).toHaveText(
+    "Email atau password salah",
+  );
+  await expect(
+    page.locator("nav").getByRole("button", { name: "Keluar" }),
+  ).toHaveCount(0);
+  await expect(
+    page.locator("nav").getByRole("button", { name: "Masuk", exact: true }),
+  ).toBeVisible();
+  await expectResponsiveShell(page);
+  expect(consoleErrors).toHaveLength(1);
+  expect(consoleErrors[0]).toContain("401 (Unauthorized)");
+  await page.screenshot({
+    path: testInfo.outputPath("login-ditolak.png"),
+    fullPage: true,
+  });
+});
 
 test("customer dapat membuka menu, pesanan, dan akun", async ({
   page,
@@ -171,7 +214,7 @@ test("driver dapat membuka tugas dan notifikasi", async ({
   });
 });
 
-test("alur UI customer ke admin ke driver memberi poin loyalitas", async ({
+test("OP-UAT-02 transfer customer ke admin ke driver memberi poin", async ({
   page,
 }, testInfo) => {
   const consoleErrors = captureConsoleErrors(page);
@@ -181,6 +224,7 @@ test("alur UI customer ke admin ke driver memberi poin loyalitas", async ({
   await expect(firstProduct).toBeVisible();
   await firstProduct.getByRole("button", { name: /^Tambah / }).click();
   await page.getByRole("button", { name: /^Keranjang · 1 ·/ }).click();
+  await page.getByLabel("Metode pembayaran").selectOption("BANK_TRANSFER");
   await page.getByRole("button", { name: /^Buat pesanan ·/ }).click();
 
   const checkoutMessage = page.getByRole("status");
@@ -192,10 +236,30 @@ test("alur UI customer ke admin ke driver memberi poin loyalitas", async ({
     "PENDING",
   );
 
+  const customerOrdersResponse = await authenticatedGet(page, "/api/orders");
+  expect(customerOrdersResponse.status()).toBe(200);
+  const customerOrders = await customerOrdersResponse.json();
+  expect(
+    customerOrders.orders.find((order) => order.id === orderId)?.method,
+  ).toBe("BANK_TRANSFER");
+  expect((await authenticatedGet(page, "/api/inventory")).status()).toBe(403);
+  await page.screenshot({
+    path: testInfo.outputPath(`customer-order-${orderId}.png`),
+    fullPage: true,
+  });
+
+  await signOut(page);
+  await signIn(page, "driver@warkost.local");
+  await expect(orderCard(page, orderId)).toHaveCount(0);
+  expect(
+    (await authenticatedGet(page, `/api/order-items?id=${orderId}`)).status(),
+  ).toBe(403);
+
   await signOut(page);
   await signIn(page, "admin@warkost.local");
   const adminOrder = orderCard(page, orderId);
   await expect(adminOrder).toHaveCount(1);
+  await expect(adminOrder.getByText("UNPAID", { exact: true })).toBeVisible();
   await adminOrder.getByRole("button", { name: "Tandai lunas" }).click();
   await expect(adminOrder.getByText("PAID", { exact: true })).toBeVisible();
 
@@ -208,9 +272,26 @@ test("alur UI customer ke admin ke driver memberi poin loyalitas", async ({
   await adminOrder.locator("select").selectOption({ label: "Driver Warkost" });
   await adminOrder.getByRole("button", { name: "Tugaskan driver" }).click();
   await expect(adminOrder.locator(".badge")).toHaveText("ASSIGNED");
+  await page.screenshot({
+    path: testInfo.outputPath(`admin-assigned-${orderId}.png`),
+    fullPage: true,
+  });
 
   await signOut(page);
   await signIn(page, "driver@warkost.local");
+  await page
+    .locator("nav")
+    .getByRole("button", { name: /Notifikasi/ })
+    .click();
+  await expect(
+    page.getByText(`Pengantaran pesanan #${orderId} ditugaskan kepada Anda`, {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page
+    .locator("nav")
+    .getByRole("button", { name: "Tugas saya", exact: true })
+    .click();
   const driverOrder = orderCard(page, orderId);
   await expect(driverOrder).toHaveCount(1);
   await driverOrder.getByRole("button", { name: "Terima tugas" }).click();
@@ -227,9 +308,33 @@ test("alur UI customer ke admin ke driver memberi poin loyalitas", async ({
     .getByRole("button", { name: "Selesaikan pengantaran" })
     .click();
   await expect(driverOrder.locator(".badge")).toHaveText("DELIVERED");
+  await driverOrder
+    .getByRole("button", { name: "Lihat item & riwayat" })
+    .click();
+  await expect(driverOrder.locator(".order-details")).toContainText(
+    "DELIVERED",
+  );
+  await page.screenshot({
+    path: testInfo.outputPath(`driver-delivered-${orderId}.png`),
+    fullPage: true,
+  });
 
   await signOut(page);
   await signIn(page, "customer@warkost.local");
+  await page
+    .locator("nav")
+    .getByRole("button", { name: "Pesanan", exact: true })
+    .click();
+  await expect(orderCard(page, orderId).locator(".badge")).toHaveText(
+    "DELIVERED",
+  );
+  await page
+    .locator("nav")
+    .getByRole("button", { name: /Notifikasi/ })
+    .click();
+  await expect(
+    page.getByText(`Pesanan #${orderId} telah diterima`, { exact: true }),
+  ).toBeVisible();
   await page
     .locator("nav")
     .getByRole("button", { name: "Akun", exact: true })
@@ -239,6 +344,25 @@ test("alur UI customer ke admin ke driver memberi poin loyalitas", async ({
   });
   await expect(loyaltyEntry).toHaveCount(1);
   await expect(loyaltyEntry.locator("strong")).toHaveText(/^\+\d+$/);
+
+  await testInfo.attach("operational-uat-evidence.json", {
+    body: Buffer.from(
+      JSON.stringify(
+        {
+          scenario: "OP-UAT-02",
+          orderId,
+          paymentMethod: "BANK_TRANSFER",
+          paymentStatus: "PAID",
+          orderStatus: "DELIVERED",
+          loyaltyLedgerEntries: 1,
+          roleIsolationBeforeAssignment: "PASS",
+        },
+        null,
+        2,
+      ),
+    ),
+    contentType: "application/json",
+  });
 
   await expectResponsiveShell(page);
   expect(consoleErrors).toEqual([]);
