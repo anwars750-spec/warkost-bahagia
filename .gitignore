@@ -1,14 +1,7 @@
-__pycache__/
-*.py[cod]
-instance/
-.env
-.venv/
-venv/
-.vscode/
-
-# Additional repository exclusions
-*.sqlite
-*.db
-.env.*
-!.env.example.idea/
-.DS_Store
+node_modules/
+.next/
+.env*
+!.env.example
+data/*.db*
+backups/
+data/uploads/
