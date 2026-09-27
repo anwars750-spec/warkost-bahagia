@@ -25,6 +25,7 @@ import {
 import { createDriver, setDriverActive } from "../../../lib/staff.mjs";
 import { listCustomers, setCustomerActive } from "../../../lib/customers.mjs";
 import { dailyReport } from "../../../lib/reports.mjs";
+import { nonNegativeInteger } from "../../../lib/numbers.mjs";
 import { verifyPayment } from "../../../lib/payments.mjs";
 import { getSettings, saveSettings } from "../../../lib/settings.mjs";
 import {
@@ -73,13 +74,18 @@ export async function GET(request, { params }) {
     }
     if (action === "settings") return out(await getSettings(user));
     if (action === "report")
-      return out(await dailyReport(
-        user,
-        request.nextUrl.searchParams.get("date") ||
-          new Intl.DateTimeFormat("en-CA", {
-            timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit",
-          }).format(new Date()),
-      ));
+      return out(
+        await dailyReport(
+          user,
+          request.nextUrl.searchParams.get("date") ||
+            new Intl.DateTimeFormat("en-CA", {
+              timeZone: "Asia/Jakarta",
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+            }).format(new Date()),
+        ),
+      );
     if (action === "dashboard") {
       required(user, ["ADMIN"]);
       const localDate = new Intl.DateTimeFormat("en-CA", {
@@ -99,6 +105,7 @@ export async function GET(request, { params }) {
         from,
         until,
       );
+      today.orders = nonNegativeInteger(today.orders, "Jumlah pesanan");
       today.revenue = (
         await store.get(
           "SELECT COALESCE(SUM(o.total),0) revenue FROM payments p JOIN orders o ON o.id=p.order_id WHERE p.status='PAID' AND p.paid_at>=? AND p.paid_at<?",
@@ -106,31 +113,43 @@ export async function GET(request, { params }) {
           until,
         )
       ).revenue;
+      today.revenue = nonNegativeInteger(today.revenue, "Revenue");
       const statuses = await store.all(
         "SELECT status,COUNT(*) count FROM orders WHERE created_at>=? AND created_at<? GROUP BY status",
         from,
         until,
       );
+      for (const row of statuses)
+        row.count = nonNegativeInteger(row.count, "Jumlah status");
       return out({
         today,
         statuses,
-        customers: (
-          await store.get(
-            "SELECT COUNT(*) count FROM users WHERE role='CUSTOMER'",
-          )
-        ).count,
-        drivers: (
-          await store.get(
-            "SELECT COUNT(*) count FROM users WHERE role='DRIVER' AND active=1",
-          )
-        ).count,
-        loyalty: (
-          await store.get(
-            "SELECT COUNT(*) count FROM loyalty_transactions WHERE created_at>=? AND created_at<?",
-            from,
-            until,
-          )
-        ).count,
+        customers: nonNegativeInteger(
+          (
+            await store.get(
+              "SELECT COUNT(*) count FROM users WHERE role='CUSTOMER'",
+            )
+          ).count,
+          "Jumlah pelanggan",
+        ),
+        drivers: nonNegativeInteger(
+          (
+            await store.get(
+              "SELECT COUNT(*) count FROM users WHERE role='DRIVER' AND active=1",
+            )
+          ).count,
+          "Jumlah driver",
+        ),
+        loyalty: nonNegativeInteger(
+          (
+            await store.get(
+              "SELECT COUNT(*) count FROM loyalty_transactions WHERE created_at>=? AND created_at<?",
+              from,
+              until,
+            )
+          ).count,
+          "Jumlah transaksi loyalti",
+        ),
       });
     }
     if (action === "orders") {
@@ -143,19 +162,25 @@ export async function GET(request, { params }) {
       let orders;
       if (user.role === "CUSTOMER")
         orders = await store.all(
-          "SELECT o.*,a.label address_label,a.detail address,p.method,p.status payment_status,d.driver_id FROM orders o JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id WHERE o.customer_id=?" + bound + " ORDER BY o.id DESC LIMIT 26",
+          "SELECT o.*,a.label address_label,a.detail address,p.method,p.status payment_status,d.driver_id FROM orders o JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id WHERE o.customer_id=?" +
+            bound +
+            " ORDER BY o.id DESC LIMIT 26",
           user.id,
           ...(before === null ? [] : [before]),
         );
       else if (user.role === "DRIVER")
         orders = await store.all(
-          "SELECT o.*,a.detail address,u.name customer_name,d.accepted_at FROM orders o JOIN deliveries d ON d.order_id=o.id JOIN addresses a ON a.id=o.address_id JOIN users u ON u.id=o.customer_id WHERE d.driver_id=?" + bound + " ORDER BY o.id DESC LIMIT 26",
+          "SELECT o.*,a.detail address,u.name customer_name,d.accepted_at FROM orders o JOIN deliveries d ON d.order_id=o.id JOIN addresses a ON a.id=o.address_id JOIN users u ON u.id=o.customer_id WHERE d.driver_id=?" +
+            bound +
+            " ORDER BY o.id DESC LIMIT 26",
           user.id,
           ...(before === null ? [] : [before]),
         );
       else
         orders = await store.all(
-          "SELECT o.*,u.name customer_name,a.detail address,p.status payment_status,d.driver_id FROM orders o JOIN users u ON u.id=o.customer_id JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id WHERE 1=1" + bound + " ORDER BY o.id DESC LIMIT 26",
+          "SELECT o.*,u.name customer_name,a.detail address,p.status payment_status,d.driver_id FROM orders o JOIN users u ON u.id=o.customer_id JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id WHERE 1=1" +
+            bound +
+            " ORDER BY o.id DESC LIMIT 26",
           ...(before === null ? [] : [before]),
         );
       const hasMore = orders.length > 25;
@@ -191,11 +216,13 @@ export async function GET(request, { params }) {
     }
     if (action === "customers") {
       const rawBefore = request.nextUrl.searchParams.get("before");
-      return out(await listCustomers(
-        user,
-        request.nextUrl.searchParams.get("q") || "",
-        rawBefore === null ? null : integer(rawBefore),
-      ));
+      return out(
+        await listCustomers(
+          user,
+          request.nextUrl.searchParams.get("q") || "",
+          rawBefore === null ? null : integer(rawBefore),
+        ),
+      );
     }
     if (action === "order-items") {
       required(user, ["CUSTOMER", "ADMIN", "DRIVER"]);
@@ -239,11 +266,16 @@ export async function POST(request, { params }) {
     const { action } = await params;
     const body = await readJsonBody(request);
     if (["login", "register"].includes(action)) {
-      if (!(await recordAttempt(
-        action,
-        String(body.email || "").trim().toLowerCase().slice(0, 255),
-        12,
-      )))
+      if (
+        !(await recordAttempt(
+          action,
+          String(body.email || "")
+            .trim()
+            .toLowerCase()
+            .slice(0, 255),
+          12,
+        ))
+      )
         throw new DomainError(
           "Terlalu banyak percobaan. Coba lagi nanti.",
           429,
