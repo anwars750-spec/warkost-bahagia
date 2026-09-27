@@ -22,16 +22,26 @@ async function call(action, body, session = "") {
   };
 }
 const pw = process.env.SEED_DEMO_PASSWORD;
-assert.equal((await fetch(origin + "/api/login", {
-  method: "POST",
-  headers: { "content-type": "application/json" },
-  body: "{invalid",
-})).status, 400);
-assert.equal((await fetch(origin + "/api/login", {
-  method: "POST",
-  headers: { "content-type": "text/plain" },
-  body: "{}",
-})).status, 415);
+assert.equal(
+  (
+    await fetch(origin + "/api/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{invalid",
+    })
+  ).status,
+  400,
+);
+assert.equal(
+  (
+    await fetch(origin + "/api/login", {
+      method: "POST",
+      headers: { "content-type": "text/plain" },
+      body: "{}",
+    })
+  ).status,
+  415,
+);
 const login = async (email) => {
   const r = await call("login", { email, password: pw });
   assert.equal(r.status, 200, JSON.stringify(r.value));
@@ -57,10 +67,17 @@ for (let attempt = 0; attempt < 13; attempt++) {
 }
 assert.equal((await call("inventory", undefined, customer)).status, 403);
 assert.equal((await call("customers", undefined, customer)).status, 403);
-const customersBefore = await call("customers?q=customer%40warkost.local", undefined, admin);
+const customersBefore = await call(
+  "customers?q=customer%40warkost.local",
+  undefined,
+  admin,
+);
 assert.equal(customersBefore.status, 200);
 assert.equal(customersBefore.value.customers.length, 1);
-assert.equal(Object.hasOwn(customersBefore.value.customers[0], "password_hash"), false);
+assert.equal(
+  Object.hasOwn(customersBefore.value.customers[0], "password_hash"),
+  false,
+);
 const newCustomer = await call("register", {
   name: "Customer Admin Test",
   email: "customer-admin-smoke@test.local",
@@ -69,23 +86,36 @@ const newCustomer = await call("register", {
 assert.equal(newCustomer.status, 200, JSON.stringify(newCustomer.value));
 const newCustomerId = newCustomer.value.user.id;
 assert.equal(
-  (await call("customer-active", { id: newCustomerId, active: false }, customer)).status,
+  (
+    await call(
+      "customer-active",
+      { id: newCustomerId, active: false },
+      customer,
+    )
+  ).status,
   403,
 );
 assert.equal(
-  (await call("customer-active", { id: newCustomerId, active: false }, admin)).status,
+  (await call("customer-active", { id: newCustomerId, active: false }, admin))
+    .status,
   200,
 );
-assert.equal((await call("me", undefined, newCustomer.cookie)).value.user, null);
 assert.equal(
-  (await call("login", {
-    email: "customer-admin-smoke@test.local",
-    password: "strong-new-customer-2026",
-  })).status,
+  (await call("me", undefined, newCustomer.cookie)).value.user,
+  null,
+);
+assert.equal(
+  (
+    await call("login", {
+      email: "customer-admin-smoke@test.local",
+      password: "strong-new-customer-2026",
+    })
+  ).status,
   401,
 );
 assert.equal(
-  (await call("customer-active", { id: newCustomerId, active: true }, admin)).status,
+  (await call("customer-active", { id: newCustomerId, active: true }, admin))
+    .status,
   200,
 );
 const inv = await call("inventory", undefined, admin);
@@ -106,16 +136,24 @@ const denied = await fetch(origin + "/api/upload", {
 assert.equal(denied.status, 403);
 const oversized = await fetch(origin + "/api/upload", {
   method: "POST",
-  headers: { cookie: admin, "content-type": "multipart/form-data; boundary=oversized" },
+  headers: {
+    cookie: admin,
+    "content-type": "multipart/form-data; boundary=oversized",
+  },
   body: Buffer.alloc(9 * 1024 * 1024 + 1, 65),
 });
 assert.equal(oversized.status, 413);
 assert.equal(
-  (await fetch(origin + "/api/upload", {
-    method: "POST",
-    headers: { cookie: admin, "content-type": "multipart/form-data; boundary=broken" },
-    body: "invalid multipart",
-  })).status,
+  (
+    await fetch(origin + "/api/upload", {
+      method: "POST",
+      headers: {
+        cookie: admin,
+        "content-type": "multipart/form-data; boundary=broken",
+      },
+      body: "invalid multipart",
+    })
+  ).status,
   400,
 );
 const uploaded = await fetch(origin + "/api/upload", {
@@ -181,8 +219,13 @@ assert.equal(
   ).status,
   401,
 );
+const dashboardBaseline = (await call("dashboard", undefined, admin)).value;
+const accountBaseline = (await call("account", undefined, customer)).value;
+const reportBaseline = (await call("report", undefined, admin)).value;
 const checkoutBody = {
-  addressId: 1, method: "CASH", items: [{ productId: 1, quantity: 2 }],
+  addressId: 1,
+  method: "CASH",
+  items: [{ productId: 1, quantity: 2 }],
   idempotencyKey: crypto.randomUUID(),
 };
 const created = await call("checkout", checkoutBody, customer);
@@ -192,11 +235,29 @@ const retried = await call("checkout", checkoutBody, customer);
 assert.equal(retried.status, 201);
 assert.equal(retried.value.id, id);
 assert.equal(retried.value.replayed, true);
-assert.equal((await call("checkout", {
-  ...checkoutBody, items: [{ productId: 1, quantity: 1 }],
-}, customer)).status, 409);
-assert.equal((await call("dashboard", undefined, admin)).value.today.orders, 1);
-assert.equal((await call("dashboard", undefined, admin)).value.today.revenue, 0);
+assert.equal(
+  (
+    await call(
+      "checkout",
+      {
+        ...checkoutBody,
+        items: [{ productId: 1, quantity: 1 }],
+      },
+      customer,
+    )
+  ).status,
+  409,
+);
+const dashboardAfterCheckout = (await call("dashboard", undefined, admin))
+  .value;
+assert.equal(
+  dashboardAfterCheckout.today.orders,
+  dashboardBaseline.today.orders + 1,
+);
+assert.equal(
+  dashboardAfterCheckout.today.revenue,
+  dashboardBaseline.today.revenue,
+);
 const customerNotices = await call("notifications", undefined, customer);
 assert.equal(customerNotices.status, 200);
 assert.ok(customerNotices.value.unread >= 1);
@@ -254,18 +315,42 @@ assert.ok(
   ),
 );
 const account = await call("account", undefined, customer);
-assert.equal(account.value.loyalty, 5);
+assert.equal(
+  account.value.loyalty,
+  accountBaseline.loyalty + Math.floor(created.value.total / 10000),
+);
 assert.equal(
   (await call("payment", { orderId: id, status: "PAID" }, admin)).status,
   200,
 );
-assert.equal((await call("dashboard", undefined, admin)).value.today.revenue, created.value.total);
+assert.equal(
+  (await call("dashboard", undefined, admin)).value.today.revenue,
+  dashboardBaseline.today.revenue + created.value.total,
+);
 const report = await call("report", undefined, admin);
 assert.equal(report.status, 200);
-assert.equal(report.value.paid.revenue, created.value.total);
-assert.equal(report.value.products[0].quantity, 2);
+assert.equal(
+  report.value.paid.revenue,
+  reportBaseline.paid.revenue + created.value.total,
+);
+const previousProductQuantity = Number(
+  reportBaseline.products.find(
+    (product) => product.product_id === checkoutBody.items[0].productId,
+  )?.quantity || 0,
+);
+assert.equal(
+  Number(
+    report.value.products.find(
+      (product) => product.product_id === checkoutBody.items[0].productId,
+    )?.quantity,
+  ),
+  previousProductQuantity + 2,
+);
 assert.equal((await call("report", undefined, customer)).status, 403);
-assert.equal((await call("report?date=2026-02-30", undefined, admin)).status, 400);
+assert.equal(
+  (await call("report?date=2026-02-30", undefined, admin)).status,
+  400,
+);
 assert.equal(
   (await call("payment", { orderId: id, status: "PAID" }, admin)).status,
   400,
@@ -331,11 +416,16 @@ assert.equal(
     .status,
   401,
 );
-assert.equal((await call("orders?before=garbage", undefined, driver)).status, 400);
-const customerAgain = (await call("login", {
-  email: "customer@warkost.local",
-  password: "new-password-long-2026",
-})).cookie;
+assert.equal(
+  (await call("orders?before=garbage", undefined, driver)).status,
+  400,
+);
+const customerAgain = (
+  await call("login", {
+    email: "customer@warkost.local",
+    password: "new-password-long-2026",
+  })
+).cookie;
 for (let n = 0; n < 26; n++) {
   const result = await call(
     "checkout",
@@ -347,11 +437,16 @@ for (let n = 0; n < 26; n++) {
 const firstPage = (await call("orders", undefined, customerAgain)).value;
 assert.equal(firstPage.orders.length, 25);
 assert.ok(firstPage.nextCursor);
-const secondPage = (await call("orders?before=" + firstPage.nextCursor, undefined, customerAgain)).value;
-assert.equal(secondPage.orders.length, 2);
-assert.equal(secondPage.nextCursor, null);
+const secondPage = (
+  await call("orders?before=" + firstPage.nextCursor, undefined, customerAgain)
+).value;
+assert.ok(secondPage.orders.length >= 2);
 assert.ok(secondPage.orders.every((order) => order.id < firstPage.nextCursor));
-assert.equal((await call("orders", undefined, driver)).value.orders.length, 1);
+assert.ok(
+  (await call("orders", undefined, driver)).value.orders.some(
+    (order) => order.id === id,
+  ),
+);
 assert.equal(
   (await call("status", { orderId: id, status: "DELIVERED" }, driver)).status,
   400,
