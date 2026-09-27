@@ -22,14 +22,18 @@ let web;
 let sourceUrl;
 let mysqlVersion;
 
-function run(script, env) {
+function run(script, env, args = []) {
   console.log(`MYSQL INTEGRATION: mulai ${script}`);
-  const result = spawnSync(process.execPath, [path.join(root, script)], {
-    cwd: root,
-    env: { ...process.env, ...env },
-    encoding: "utf8",
-    timeout: 120_000,
-  });
+  const result = spawnSync(
+    process.execPath,
+    [path.join(root, script), ...args],
+    {
+      cwd: root,
+      env: { ...process.env, ...env },
+      encoding: "utf8",
+      timeout: 120_000,
+    },
+  );
   if (result.status !== 0)
     throw Error(
       `${script} gagal${result.signal ? ` (${result.signal})` : ""}\n${result.stdout}\n${result.stderr}`,
@@ -218,13 +222,17 @@ try {
   const restoreUrlObject = new URL(sourceUrl);
   restoreUrlObject.pathname = "/warkost_restore";
   const restoreUrl = restoreUrlObject.toString();
-  run("scripts/restore-mysql.mjs", {
-    ...common,
-    DATABASE_URL: restoreUrl,
-    MYSQL_BINARY:
-      process.env.MYSQL_BINARY ||
-      (binaryDirectory ? path.join(binaryDirectory, "mysql") : "mysql"),
-  });
+  run(
+    "scripts/restore-mysql.mjs",
+    {
+      ...common,
+      DATABASE_URL: restoreUrl,
+      MYSQL_BINARY:
+        process.env.MYSQL_BINARY ||
+        (binaryDirectory ? path.join(binaryDirectory, "mysql") : "mysql"),
+    },
+    [backup],
+  );
 
   console.log("MYSQL INTEGRATION: verifikasi parity record");
   const source = await mysql.createConnection(sourceUrl);
