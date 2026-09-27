@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { recordAttempt } from "../../../lib/rate-limit.mjs";
-import { readJsonBody } from "../../../lib/request.mjs";
+import { assertSameOrigin, readJsonBody } from "../../../lib/request.mjs";
 import * as store from "../../../lib/store.mjs";
 import {
   currentUser,
@@ -260,9 +260,7 @@ export async function GET(request, { params }) {
 }
 export async function POST(request, { params }) {
   try {
-    const origin = request.headers.get("origin");
-    if (origin && origin !== request.nextUrl.origin)
-      throw new DomainError("Asal permintaan tidak diizinkan", 403);
+    assertSameOrigin(request);
     const { action } = await params;
     const body = await readJsonBody(request);
     if (["login", "register"].includes(action)) {

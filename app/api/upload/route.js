@@ -1,17 +1,17 @@
 import { currentUser } from "../../../lib/auth.mjs";
 import { uploadImage } from "../../../lib/media.mjs";
 import { DomainError, required } from "../../../lib/domain.mjs";
+import { assertSameOrigin } from "../../../lib/request.mjs";
 export const runtime = "nodejs";
 export async function POST(request) {
   try {
-    const origin = request.headers.get("origin");
-    if (origin && origin !== request.nextUrl.origin)
-      throw new DomainError("Asal permintaan tidak diizinkan", 403);
+    assertSameOrigin(request);
     const user = await currentUser(request);
     required(user, ["ADMIN"]);
     const limit = 9 * 1024 * 1024;
     const contentLength = Number(request.headers.get("content-length") || 0);
-    if (contentLength > limit) throw new DomainError("Gambar terlalu besar", 413);
+    if (contentLength > limit)
+      throw new DomainError("Gambar terlalu besar", 413);
     const type = request.headers.get("content-type") || "";
     if (!type.toLowerCase().startsWith("multipart/form-data;"))
       throw new DomainError("Format unggahan tidak valid");
