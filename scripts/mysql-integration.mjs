@@ -145,20 +145,27 @@ try {
     /^8\.0\./,
     "Recovery drill wajib memakai MySQL 8.0",
   );
+  const backupDirectory = path.join(temporary, "backups");
   const common = {
     DATABASE_URL: sourceUrl,
+    DEPLOYMENT_ENV: "staging",
+    STAGING_UAT_PASSWORD: password,
     SEED_DEMO_PASSWORD: password,
     SESSION_SECRET: "mysql-integration-session-secret-32-bytes",
     UPLOAD_DIRECTORY: path.join(temporary, "uploads"),
+    BACKUP_DIRECTORY: backupDirectory,
   };
 
-  console.log("MYSQL INTEGRATION: migration, schema, dan seed");
+  console.log("MYSQL INTEGRATION: migration, schema, dan bootstrap staging");
   const firstMigration = run("scripts/migrate-mysql.mjs", common);
   assert.match(firstMigration, /Migrasi diterapkan: 009_order_idempotency.sql/);
   const secondMigration = run("scripts/migrate-mysql.mjs", common);
   assert.match(secondMigration, /Sudah diterapkan: 001_mysql.sql/);
   run("scripts/verify-mysql-schema.mjs", common);
-  run("scripts/seed.mjs", common);
+  run("scripts/bootstrap-staging.mjs", {
+    ...common,
+    NODE_ENV: "production",
+  });
 
   const port = await availablePort();
   const origin = `http://127.0.0.1:${port}`;
@@ -200,7 +207,6 @@ try {
         "bin",
       )
     : undefined;
-  const backupDirectory = path.join(temporary, "backups");
   const backup = run("scripts/backup-mysql.mjs", {
     ...common,
     BACKUP_DIRECTORY: backupDirectory,

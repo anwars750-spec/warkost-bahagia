@@ -1,0 +1,58 @@
+name: Hostinger Staging Verify
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hostinger-staging-verify
+  cancel-in-progress: false
+
+jobs:
+  public-staging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: hostinger-staging
+    env:
+      CI: "true"
+      STAGING_ORIGIN: ${{ vars.HOSTINGER_STAGING_URL }}
+      BASE_URL: ${{ vars.HOSTINGER_STAGING_URL }}
+      STAGING_UAT_PASSWORD: ${{ secrets.HOSTINGER_STAGING_UAT_PASSWORD }}
+      SEED_DEMO_PASSWORD: ${{ secrets.HOSTINGER_STAGING_UAT_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Validate staging inputs
+        run: |
+          test -n "$STAGING_ORIGIN"
+          test -n "$STAGING_UAT_PASSWORD"
+
+      - run: npm ci
+
+      - name: HTTPS health, readiness, CSRF, login, and RBAC smoke
+        run: npm run verify:hostinger
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Cross-role browser UAT desktop and mobile
+        run: npm run test:uat
+
+      - name: Upload public staging evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: hostinger-staging-browser-evidence
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7

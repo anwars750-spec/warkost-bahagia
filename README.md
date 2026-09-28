@@ -1,6 +1,6 @@
 # Warkost Bahagia — checkpoint MVP
 
-Next.js 16, React, API/service terpisah. Database development SQLite (`node:sqlite`, Node 24+); adapter MySQL memakai `mysql2/promise` dan transaksi. **Jalur MySQL belum diuji pada server MySQL nyata di lingkungan ini.** Jangan deploy sebagai production sebelum integrasi dan UAT selesai.
+Next.js 16, React, API/service terpisah. Database development SQLite (`node:sqlite`, Node 24+); adapter MySQL memakai `mysql2/promise` dan transaksi. MySQL 8 recovery dan production-mode staging UAT berjalan otomatis di GitHub Actions. Deployment Hostinger tetap harus melewati staging publik sebelum production.
 
 ## Development SQLite
 
@@ -12,6 +12,8 @@ Next.js 16, React, API/service terpisah. Database development SQLite (`node:sqli
 ## Production preflight dan health
 
 Sebelum server production dijalankan, set `NODE_ENV=production`, `SESSION_SECRET` minimal 32 byte, database, `UPLOAD_DIRECTORY`, dan `BACKUP_DIRECTORY` memakai path absolut. Jalankan `npm run preflight`; proses gagal jika konfigurasi, koneksi database, skema inti, storage, atau lokasi backup tidak siap. `GET /api/health/live` hanya memeriksa proses hidup. `GET /api/health/ready` memeriksa konfigurasi, database, storage, dan backup tanpa menampilkan secret atau detail error internal.
+
+Untuk Hostinger staging, ikuti [runbook Hostinger](docs/HOSTINGER_STAGING.md). Startup `npm run start:hostinger` menjalankan migrasi, bootstrap staging, verifikasi schema, dan preflight sebelum membuka server.
 
 ## Development MySQL (database khusus development)
 
@@ -49,4 +51,4 @@ Admin dapat unggah JPEG, PNG, WebP, atau AVIF maksimal 8 MB. Server memvalidasi 
 
 ## Batas saat ini
 
-MySQL adapter, migrasi ber-checksum, backup/restore, schema verifier, dan integration harness tersedia, tetapi full recovery drill belum lulus pada server MySQL yang dapat dijalankan di environment ini. ORM belum dipakai. Upload gambar tersimpan di filesystem lokal dan belum diuji di Hostinger. Profil driver lanjutan, reset password, rate limit berbasis IP/tepi jaringan, CSRF token tambahan, audit penuh, uji browser/mobile, review keamanan dan performa menyeluruh, Hostinger PoC, deployment, UAT, dan handover masih tertunda. Jangan gunakan data pelanggan nyata sampai gate tersebut selesai.
+MySQL adapter, migrasi ber-checksum, backup/restore, schema verifier, recovery drill MySQL 8, health check, HTTP smoke, dan browser UAT desktop/mobile tersedia dan lulus di CI. ORM belum dipakai. Upload gambar serta backup path belum diverifikasi pada filesystem Hostinger nyata. Profil driver lanjutan, reset password, rate limit berbasis IP/tepi jaringan, CSRF token tambahan, audit penuh, review keamanan/performa menyeluruh, Hostinger PoC publik, UAT pengguna, dan handover masih tertunda. Jangan gunakan data pelanggan nyata sampai gate tersebut selesai.

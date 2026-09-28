@@ -2,6 +2,7 @@ node_modules/
 .next/
 .env*
 !.env.example
+!.env.hostinger.example
 data/*.db*
 backups/
 data/uploads/

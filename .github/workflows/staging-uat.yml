@@ -36,8 +36,10 @@ jobs:
       CI: "true"
       BASE_URL: http://127.0.0.1:3000
       DATABASE_URL: mysql://root:mysql-ci-password@127.0.0.1:3306/warkost_staging
+      DEPLOYMENT_ENV: staging
       SESSION_SECRET: staging-ci-session-secret-2026-minimum-32-characters
       SEED_DEMO_PASSWORD: staging-uat-password-2026
+      STAGING_UAT_PASSWORD: staging-uat-password-2026
       UPLOAD_DIRECTORY: ${{ github.workspace }}/.uat/uploads
       BACKUP_DIRECTORY: ${{ github.workspace }}/.uat/backups
 
@@ -63,8 +65,8 @@ jobs:
             -e "CREATE DATABASE warkost_staging CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
           mkdir -p "$UPLOAD_DIRECTORY" "$BACKUP_DIRECTORY"
           node scripts/migrate-mysql.mjs
+          NODE_ENV=production node scripts/bootstrap-staging.mjs
           npm run verify:mysql
-          node scripts/seed.mjs
 
       - name: Unit tests
         run: npm test
@@ -81,7 +83,7 @@ jobs:
 
       - name: Start production staging server
         run: |
-          nohup npm start -- --hostname 127.0.0.1 >/tmp/warkost-staging.log 2>&1 &
+          nohup npm run start:hostinger >/tmp/warkost-staging.log 2>&1 &
           echo $! >/tmp/warkost-staging.pid
         env:
           NODE_ENV: production
