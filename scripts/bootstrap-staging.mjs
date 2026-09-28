@@ -26,6 +26,22 @@ try {
       "rupiah_per_point",
       "10000",
     );
+    for (const [key, value] of [
+      ["business_whatsapp", "6281546407856"],
+      ["business_latitude", "-6.9217"],
+      ["business_longitude", "106.9272"],
+      ["delivery_free_km", "5"],
+      ["delivery_fee_per_km", "2500"],
+      ["delivery_max_km", "15"],
+      ["printer_simulation", "true"],
+      ["printer_admin", "LAN 80mm Admin (simulasi)"],
+      ["printer_kitchen", "LAN 80mm Kitchen (simulasi)"],
+    ])
+      await tx.run(
+        "INSERT OR IGNORE INTO settings(`key`,value) VALUES(?,?)",
+        key,
+        value,
+      );
 
     for (const [email, name, role] of accounts)
       await tx.run(
@@ -35,6 +51,10 @@ try {
         hashPassword(password),
         role,
       );
+    await tx.run(
+      "UPDATE users SET phone=? WHERE role='DRIVER' AND phone IS NULL",
+      "6281546407856",
+    );
 
     if (process.env.STAGING_RESET_DEMO_PASSWORD === "true") {
       for (const [email] of accounts) {
@@ -109,10 +129,12 @@ try {
       !(await tx.get("SELECT id FROM addresses WHERE user_id=?", customer.id))
     )
       await tx.run(
-        "INSERT INTO addresses(user_id,label,detail) VALUES(?,?,?)",
+        "INSERT INTO addresses(user_id,label,detail,latitude,longitude) VALUES(?,?,?,?,?)",
         customer.id,
         "Alamat Staging",
         "Jl. Ahmad Yani No. 12, Sukabumi",
+        -6.9217,
+        106.9272,
       );
   });
   console.log("Bootstrap staging siap untuk lima role UAT");

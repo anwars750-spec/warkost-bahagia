@@ -232,6 +232,7 @@ const newDriver = await call(
     name: "Driver Smoke",
     email: "driver-smoke@test.local",
     password: "a-long-unique-password-123",
+    phone: "081546407856",
   },
   admin,
 );
@@ -424,7 +425,12 @@ assert.equal(
 assert.equal((await call("menu")).value.brand, "Kafe Smoke");
 const added = await call(
   "address",
-  { label: "Kantor", detail: "Jl. Karya No. 88 Sukabumi" },
+  {
+    label: "Kantor",
+    detail: "Jl. Karya No. 88 Sukabumi",
+    latitude: -6.9217,
+    longitude: 106.9272,
+  },
   customer,
 );
 assert.equal(added.status, 200);
@@ -434,6 +440,8 @@ const replaced = await call(
     id: added.value.id,
     label: "Kantor Baru",
     detail: "Jl. Karya No. 99 Sukabumi",
+    latitude: -6.9217,
+    longitude: 106.9272,
   },
   customer,
 );

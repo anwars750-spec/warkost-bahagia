@@ -31,6 +31,8 @@ test("perubahan alamat mempertahankan histori dan menghalangi checkout alamat no
   const address = await addAddress(customer, {
     label: "Rumah",
     detail: "Jalan Lama Nomor 100",
+    latitude: -6.9217,
+    longitude: 106.9272,
   });
   const order = await createOrder(customer, {
     addressId: address.id,
@@ -40,6 +42,8 @@ test("perubahan alamat mempertahankan histori dan menghalangi checkout alamat no
   const newAddress = await replaceAddress(customer, address.id, {
     label: "Kantor",
     detail: "Jalan Baru Nomor 200",
+    latitude: -6.92,
+    longitude: 106.93,
   });
   assert.equal(
     database.prepare("SELECT address_id FROM orders WHERE id=?").get(order.id)

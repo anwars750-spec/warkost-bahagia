@@ -229,6 +229,24 @@ textarea {
   grid-template-columns: 1fr 1fr;
   gap: 20px;
 }
+.compact-columns {
+  gap: 12px;
+}
+.button-link {
+  display: inline-block;
+  border: 1px solid #d8cec3;
+  background: #fff;
+  color: #352721;
+  border-radius: 11px;
+  padding: 11px 16px;
+  text-decoration: none;
+}
+.button-link:hover {
+  border-color: #a25931;
+}
+.payment-stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
 .big-number {
   font-size: 48px;
   font-weight: 800;

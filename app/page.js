@@ -2,6 +2,8 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 const money = (n) => "Rp" + Number(n || 0).toLocaleString("id-ID");
+const whatsappLink = (number, text) =>
+  `https://wa.me/${String(number || "").replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
 async function api(route, body, signal) {
   const response = await fetch("/api/" + route, {
     method: body ? "POST" : "GET",
@@ -40,9 +42,16 @@ export default function App() {
     [stock, setStock] = useState({ products: [], movements: [] }),
     [audit, setAudit] = useState({ logs: [], nextCursor: null }),
     [report, setReport] = useState(null),
+    [printJobs, setPrintJobs] = useState([]),
     [settings, setSettings] = useState({
       brandName: "Warkost Bahagia",
       rupiahPerPoint: 10000,
+      businessWhatsApp: "6281546407856",
+      businessLatitude: -6.9217,
+      businessLongitude: 106.9272,
+      printerSimulation: true,
+      adminPrinter: "LAN 80mm Admin (simulasi)",
+      kitchenPrinter: "LAN 80mm Kitchen (simulasi)",
     }),
     [cart, setCart] = useState({}),
     [view, setView] = useState("menu"),
@@ -105,6 +114,8 @@ export default function App() {
         }
         if (me.user.role === "OWNER") setAudit(await api("audit"));
       }
+      if (["ADMIN", "KITCHEN", "OWNER"].includes(me.user.role))
+        setPrintJobs((await api("print-jobs")).jobs);
     } else {
       setOrders([]);
       setNextOrderCursor(null);
@@ -246,12 +257,14 @@ export default function App() {
                     Pengaturan
                   </button>
                   <button onClick={() => setView("stock")}>Stok</button>
+                  <button onClick={() => setView("printing")}>Printer</button>
                 </>
               )}
               {role === "OWNER" && (
                 <>
                   <button onClick={() => setView("stock")}>Stok</button>
                   <button onClick={() => setView("audit")}>Audit log</button>
+                  <button onClick={() => setView("printing")}>Printer</button>
                   <button
                     onClick={async () => {
                       setView("reports");
@@ -265,6 +278,9 @@ export default function App() {
                     Laporan
                   </button>
                 </>
+              )}
+              {role === "KITCHEN" && (
+                <button onClick={() => setView("printing")}>Printer</button>
               )}
             </>
           ) : null}
@@ -516,7 +532,13 @@ export default function App() {
                     checkoutAttempt.current = null;
                     setCart({});
                     setView("orders");
-                    setMessage("Pesanan #" + result.id + " berhasil dibuat");
+                    setMessage(
+                      `Pesanan #${result.id} berhasil dibuat · ongkir ${money(result.deliveryFee)}${
+                        result.driverDelayNotice
+                          ? " · Mohon maaf, pesanan mungkin lebih lama karena semua driver sedang bertugas."
+                          : ""
+                      }`,
+                    );
                   });
                 }}
               >
@@ -588,6 +610,8 @@ export default function App() {
                       ...(editingAddress ? { id: editingAddress } : {}),
                       label: f.get("label"),
                       detail: f.get("detail"),
+                      latitude: Number(f.get("latitude")),
+                      longitude: Number(f.get("longitude")),
                     });
                     setEditingAddress(null);
                     e.target.reset();
@@ -620,6 +644,42 @@ export default function App() {
                     required
                   />
                 </label>
+                <div className="columns compact-columns">
+                  <label>
+                    Latitude pin lokasi
+                    <input
+                      name="latitude"
+                      type="number"
+                      step="any"
+                      min="-90"
+                      max="90"
+                      defaultValue={
+                        account.addresses.find((a) => a.id === editingAddress)
+                          ?.latitude ?? ""
+                      }
+                      required
+                    />
+                  </label>
+                  <label>
+                    Longitude pin lokasi
+                    <input
+                      name="longitude"
+                      type="number"
+                      step="any"
+                      min="-180"
+                      max="180"
+                      defaultValue={
+                        account.addresses.find((a) => a.id === editingAddress)
+                          ?.longitude ?? ""
+                      }
+                      required
+                    />
+                  </label>
+                </div>
+                <small>
+                  Ongkir dihitung server: gratis hingga 5 km, Rp2.500 per km
+                  berikutnya, maksimal 15 km.
+                </small>
                 <div className="actions">
                   <button className="primary" disabled={busy}>
                     Simpan alamat
@@ -780,7 +840,11 @@ export default function App() {
           <section className="panel narrow">
             <h2>Pengaturan café</h2>
             <form
-              key={settings.brandName + settings.rupiahPerPoint}
+              key={
+                settings.brandName +
+                settings.rupiahPerPoint +
+                settings.businessWhatsApp
+              }
               onSubmit={(e) => {
                 e.preventDefault();
                 const f = new FormData(e.currentTarget);
@@ -788,6 +852,12 @@ export default function App() {
                   api("settings", {
                     brandName: f.get("brandName"),
                     rupiahPerPoint: Number(f.get("rupiahPerPoint")),
+                    businessWhatsApp: f.get("businessWhatsApp"),
+                    businessLatitude: Number(f.get("businessLatitude")),
+                    businessLongitude: Number(f.get("businessLongitude")),
+                    printerSimulation: f.get("printerSimulation") === "on",
+                    adminPrinter: f.get("adminPrinter"),
+                    kitchenPrinter: f.get("kitchenPrinter"),
                   }),
                 );
               }}
@@ -812,6 +882,64 @@ export default function App() {
                   required
                 />
               </label>
+              <label>
+                WhatsApp Admin
+                <input
+                  name="businessWhatsApp"
+                  defaultValue={settings.businessWhatsApp}
+                  required
+                />
+              </label>
+              <div className="columns compact-columns">
+                <label>
+                  Latitude Warkost
+                  <input
+                    name="businessLatitude"
+                    type="number"
+                    step="any"
+                    defaultValue={settings.businessLatitude}
+                    required
+                  />
+                </label>
+                <label>
+                  Longitude Warkost
+                  <input
+                    name="businessLongitude"
+                    type="number"
+                    step="any"
+                    defaultValue={settings.businessLongitude}
+                    required
+                  />
+                </label>
+              </div>
+              <label>
+                Profil printer Admin
+                <input
+                  name="adminPrinter"
+                  defaultValue={settings.adminPrinter}
+                  required
+                />
+              </label>
+              <label>
+                Profil printer Kitchen
+                <input
+                  name="kitchenPrinter"
+                  defaultValue={settings.kitchenPrinter}
+                  required
+                />
+              </label>
+              <label className="checkbox">
+                <input
+                  name="printerSimulation"
+                  type="checkbox"
+                  defaultChecked={settings.printerSimulation}
+                />
+                Mode simulasi printer sampai hardware LAN terpasang
+              </label>
+              <p>
+                Aturan delivery terkunci: gratis 5 km · Rp2.500/km berikutnya ·
+                batas 15 km.
+              </p>
               <button className="primary" disabled={busy}>
                 Simpan pengaturan
               </button>
@@ -829,6 +957,7 @@ export default function App() {
               <div className="line" key={d.id}>
                 <span>
                   <strong>{d.name}</strong> · {d.email} ·{" "}
+                  {d.phone || "Nomor belum diisi"} · {d.active_load}/5 tugas ·{" "}
                   {d.active ? "Aktif" : "Nonaktif"}
                 </span>
                 <button
@@ -853,6 +982,7 @@ export default function App() {
                     name: f.get("name"),
                     email: f.get("email"),
                     password: f.get("password"),
+                    phone: f.get("phone"),
                   });
                   e.target.reset();
                 });
@@ -865,6 +995,10 @@ export default function App() {
               <label>
                 Email
                 <input name="email" type="email" required />
+              </label>
+              <label>
+                Nomor WhatsApp
+                <input name="phone" placeholder="08xxxxxxxxxx" required />
               </label>
               <label>
                 Password awal (minimal 14 karakter)
@@ -1133,6 +1267,38 @@ export default function App() {
             )}
           </section>
         )}
+        {["ADMIN", "KITCHEN", "OWNER"].includes(role) &&
+          view === "printing" && (
+            <section className="panel">
+              <h2>Antrean cetak struk 80mm</h2>
+              <p>
+                Admin menerima seluruh item; Kitchen hanya menerima makanan.
+                Owner memiliki akses pantau saja.
+              </p>
+              {printJobs.map((job) => (
+                <div className="line" key={job.id}>
+                  <span>
+                    <strong>Pesanan #{job.order_id}</strong> · {job.station}
+                    <br />
+                    {job.status} · percobaan {job.attempts} · cetak ulang{" "}
+                    {job.reprint_count}
+                  </span>
+                  {role !== "OWNER" &&
+                    ["FAILED", "PRINTED", "REPRINTED"].includes(job.status) && (
+                      <button
+                        disabled={busy}
+                        onClick={() =>
+                          run(() => api("print-retry", { id: job.id }))
+                        }
+                      >
+                        Cetak ulang
+                      </button>
+                    )}
+                </div>
+              ))}
+              {!printJobs.length && <p>Belum ada print job.</p>}
+            </section>
+          )}
         {role && view === "notifications" && (
           <section className="panel narrow">
             <h2>Kabar terbaru</h2>
@@ -1214,6 +1380,20 @@ export default function App() {
                   <div className="stat" key={label}>
                     <small>{label}</small>
                     <strong>{value}</strong>
+                  </div>
+                ))}
+              </div>
+            )}
+            {["ADMIN", "OWNER"].includes(role) && dashboard && (
+              <div className="stats payment-stats">
+                {["PENDING", "PAID", "FAILED", "EXPIRED"].map((status) => (
+                  <div className="stat" key={status}>
+                    <small>Pembayaran {status}</small>
+                    <strong>
+                      {dashboard.paymentStatuses?.find(
+                        (item) => item.status === status,
+                      )?.count || 0}
+                    </strong>
                   </div>
                 ))}
               </div>
@@ -1300,6 +1480,48 @@ function Order({ order: o, role, drivers, busy, action }) {
         <strong>{money(o.total)}</strong>
         <span>{o.payment_status || ""}</span>
       </div>
+      {role === "CUSTOMER" && (
+        <div className="order-details">
+          <small>
+            Subtotal {money(o.subtotal)} · Ongkir {money(o.delivery_fee)} ·{" "}
+            {(Number(o.distance_meters) / 1000).toFixed(1)} km
+          </small>
+          {o.driver_delay_notice === 1 && (
+            <p>
+              Mohon maaf, pesanan dapat lebih lama karena driver sedang
+              bertugas.
+            </p>
+          )}
+          <div className="actions">
+            {o.admin_whatsapp && (
+              <a
+                className="button-link"
+                href={whatsappLink(
+                  o.admin_whatsapp,
+                  `Halo Admin Warkost, saya perlu bantuan untuk pesanan #${o.id}.`,
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Chat Admin via WhatsApp
+              </a>
+            )}
+            {o.driver_whatsapp && (
+              <a
+                className="button-link"
+                href={whatsappLink(
+                  o.driver_whatsapp,
+                  `Halo Driver Warkost, saya ingin membantu konfirmasi lokasi pesanan #${o.id}.`,
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Chat Driver untuk lokasi
+              </a>
+            )}
+          </div>
+        </div>
+      )}
       {(o.kitchen_status || o.cashier_status) && (
         <div className="station-statuses">
           {o.kitchen_status && (
@@ -1409,15 +1631,25 @@ function Order({ order: o, role, drivers, busy, action }) {
               </button>
             </>
           )}
-          {o.payment_status === "UNPAID" && (
-            <button
-              onClick={() =>
-                action("payment", { orderId: o.id, status: "PAID" })
-              }
-              disabled={busy}
-            >
-              Tandai lunas
-            </button>
+          {["UNPAID", "PENDING"].includes(o.payment_status) && (
+            <>
+              <button
+                onClick={() =>
+                  action("payment", { orderId: o.id, status: "PAID" })
+                }
+                disabled={busy}
+              >
+                Tandai lunas
+              </button>
+              <button
+                onClick={() =>
+                  action("payment", { orderId: o.id, status: "FAILED" })
+                }
+                disabled={busy}
+              >
+                Tandai gagal
+              </button>
+            </>
           )}
         </div>
       )}

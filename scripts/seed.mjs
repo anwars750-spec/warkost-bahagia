@@ -17,6 +17,22 @@ async function seed() {
     "rupiah_per_point",
     "10000",
   );
+  for (const [key, value] of [
+    ["business_whatsapp", "6281546407856"],
+    ["business_latitude", "-6.9217"],
+    ["business_longitude", "106.9272"],
+    ["delivery_free_km", "5"],
+    ["delivery_fee_per_km", "2500"],
+    ["delivery_max_km", "15"],
+    ["printer_simulation", "true"],
+    ["printer_admin", "LAN 80mm Admin (simulasi)"],
+    ["printer_kitchen", "LAN 80mm Kitchen (simulasi)"],
+  ])
+    await store.run(
+      "INSERT OR IGNORE INTO settings(`key`,value) VALUES(?,?)",
+      key,
+      value,
+    );
   for (const [email, name, role] of [
     ["admin@warkost.local", "Admin Warkost", "ADMIN"],
     ["kitchen@warkost.local", "Kitchen Warkost", "KITCHEN"],
@@ -31,6 +47,10 @@ async function seed() {
       hashPassword(demo),
       role,
     );
+  await store.run(
+    "UPDATE users SET phone=? WHERE role='DRIVER' AND phone IS NULL",
+    "6281546407856",
+  );
   for (const name of ["Makanan", "Minuman"])
     await store.run("INSERT OR IGNORE INTO categories(name) VALUES(?)", name);
   if ((await store.get("SELECT COUNT(*) n FROM products")).n === 0) {
@@ -79,10 +99,12 @@ async function seed() {
     !(await store.get("SELECT id FROM addresses WHERE user_id=?", customer.id))
   )
     await store.run(
-      "INSERT INTO addresses(user_id,label,detail) VALUES(?,?,?)",
+      "INSERT INTO addresses(user_id,label,detail,latitude,longitude) VALUES(?,?,?,?,?)",
       customer.id,
       "Rumah",
       "Jl. Ahmad Yani No. 12, Sukabumi",
+      -6.9217,
+      106.9272,
     );
 }
 
