@@ -173,8 +173,9 @@ export default function App() {
         );
         setAlerts(latestAlerts);
         if (["ADMIN", "OWNER"].includes(user.role))
-          setDashboard(await api("dashboard"));
-        if (user.role === "CUSTOMER") setAccount(await api("account"));
+          setDashboard(await api("dashboard", undefined, controller.signal));
+        if (user.role === "CUSTOMER")
+          setAccount(await api("account", undefined, controller.signal));
       } catch (e) {
         if (!controller.signal.aborted) setError(e.message);
       } finally {
