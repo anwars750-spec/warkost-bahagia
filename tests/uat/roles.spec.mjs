@@ -344,6 +344,35 @@ test("OP-UAT-02 transfer customer ke admin ke driver memberi poin", async ({
   });
   await expect(loyaltyEntry).toHaveCount(1);
   await expect(loyaltyEntry.locator("strong")).toHaveText(/^\+\d+$/);
+  await page.screenshot({
+    path: testInfo.outputPath(`vertical-flow-${orderId}.png`),
+    fullPage: true,
+  });
+
+  await signOut(page);
+  await signIn(page, "admin@warkost.local");
+  await page
+    .locator("nav")
+    .getByRole("button", { name: "Laporan", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Ringkasan operasional" }),
+  ).toBeVisible();
+  const paidStat = page
+    .locator(".stat")
+    .filter({ hasText: "Pembayaran lunas" });
+  const revenueStat = page
+    .locator(".stat")
+    .filter({ hasText: "Revenue terverifikasi" });
+  await expect(paidStat.locator("strong")).not.toHaveText("0");
+  await expect(revenueStat.locator("strong")).not.toHaveText("Rp0");
+  await expect(
+    page.getByRole("heading", { name: "Produk terlaris" }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath(`owner-report-${orderId}.png`),
+    fullPage: true,
+  });
 
   await testInfo.attach("operational-uat-evidence.json", {
     body: Buffer.from(
@@ -356,6 +385,7 @@ test("OP-UAT-02 transfer customer ke admin ke driver memberi poin", async ({
           orderStatus: "DELIVERED",
           loyaltyLedgerEntries: 1,
           roleIsolationBeforeAssignment: "PASS",
+          ownerReportObserved: "PASS",
         },
         null,
         2,
@@ -366,8 +396,4 @@ test("OP-UAT-02 transfer customer ke admin ke driver memberi poin", async ({
 
   await expectResponsiveShell(page);
   expect(consoleErrors).toEqual([]);
-  await page.screenshot({
-    path: testInfo.outputPath(`vertical-flow-${orderId}.png`),
-    fullPage: true,
-  });
 });

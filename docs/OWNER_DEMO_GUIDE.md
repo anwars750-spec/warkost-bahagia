@@ -42,14 +42,14 @@ setelah demo selesai.
 
 ## Alur demo 12–15 menit
 
-| Waktu       | Peran    | Demonstrasi                                                           | Bukti yang harus terlihat                                          |
-| ----------- | -------- | --------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0–2 menit   | Publik   | Buka menu dan kategori                                                | Brand, produk, harga, dan tampilan mobile/desktop                  |
-| 2–5 menit   | Customer | Login, tambah produk, buka keranjang, pilih transfer, checkout        | Order baru berstatus PENDING dan total dihitung server             |
-| 5–8 menit   | Admin    | Buka order, tandai PAID, lanjutkan sampai READY, pilih Driver Warkost | Status dan pembayaran berubah berurutan                            |
-| 8–11 menit  | Driver   | Buka notifikasi, terima tugas, pickup, mulai antar, selesaikan        | Order berstatus DELIVERED dan riwayat lengkap                      |
-| 11–13 menit | Customer | Buka Pesanan, Notifikasi, lalu Akun                                   | Status DELIVERED dan poin bertambah tepat sekali                   |
-| 13–15 menit | Admin    | Buka dashboard dan Laporan                                            | Order, revenue terverifikasi, status, dan produk terlaris tercatat |
+| Waktu       | Peran                  | Demonstrasi                                                           | Bukti yang harus terlihat                                          |
+| ----------- | ---------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| 0–2 menit   | Publik                 | Buka menu dan kategori                                                | Brand, produk, harga, dan tampilan mobile/desktop                  |
+| 2–5 menit   | Customer               | Login, tambah produk, buka keranjang, pilih transfer, checkout        | Order baru berstatus PENDING dan total dihitung server             |
+| 5–8 menit   | Admin                  | Buka order, tandai PAID, lanjutkan sampai READY, pilih Driver Warkost | Status dan pembayaran berubah berurutan                            |
+| 8–11 menit  | Driver                 | Buka notifikasi, terima tugas, pickup, mulai antar, selesaikan        | Order berstatus DELIVERED dan riwayat lengkap                      |
+| 11–13 menit | Customer               | Buka Pesanan, Notifikasi, lalu Akun                                   | Status DELIVERED dan poin bertambah tepat sekali                   |
+| 13–15 menit | Owner didampingi Admin | Admin membuka dashboard dan Laporan; owner memvalidasi hasil          | Order, revenue terverifikasi, status, dan produk terlaris tercatat |
 
 ## Pertanyaan penerimaan
 
