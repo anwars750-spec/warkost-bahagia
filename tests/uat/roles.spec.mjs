@@ -124,7 +124,7 @@ test("customer dapat membuka menu, pesanan, dan akun", async ({
     .getByRole("button", { name: "Pesanan", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Pesanan saya" }),
+    page.getByRole("heading", { name: "Pesanan saya", level: 1 }),
   ).toBeVisible();
   await page
     .locator("nav")
