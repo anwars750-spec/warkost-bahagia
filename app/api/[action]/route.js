@@ -49,6 +49,7 @@ import {
 } from "../../../lib/operations.mjs";
 import { listPrintJobs, retryPrintJob } from "../../../lib/printer.mjs";
 import { driverContactIsVisible } from "../../../lib/delivery.mjs";
+import { listPromotions, savePromotion } from "../../../lib/promotions.mjs";
 export const runtime = "nodejs";
 const out = (data, status = 200) =>
   NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
@@ -94,6 +95,8 @@ export async function GET(request, { params }) {
       );
     }
     if (action === "settings") return out(await getSettings(user));
+    if (action === "promotions")
+      return out({ promotions: await listPromotions(user) });
     if (action === "print-jobs")
       return out({ jobs: await listPrintJobs(user) });
     if (action === "delivery-capacity") {
@@ -512,6 +515,7 @@ export async function POST(request, { params }) {
     if (action === "customer-active")
       return out(await setCustomerActive(user, integer(body.id), body.active));
     if (action === "product") return out(await saveProduct(user, body));
+    if (action === "promotion") return out(await savePromotion(user, body));
     if (action === "category") return out(await saveCategory(user, body));
     throw new DomainError("Endpoint tidak ditemukan", 404);
   } catch (e) {

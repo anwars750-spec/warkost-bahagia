@@ -71,6 +71,65 @@ assert.equal((await call("inventory", undefined, customer)).status, 403);
 assert.equal((await call("stock", undefined, kitchen)).status, 403);
 assert.equal((await call("audit", undefined, admin)).status, 403);
 assert.equal((await call("audit", undefined, owner)).status, 200);
+assert.equal((await call("promotions", undefined, customer)).status, 403);
+assert.equal((await call("promotions", undefined, owner)).status, 403);
+const scheduledPromotion = await call(
+  "promotion",
+  {
+    title: "Promo Smoke Terjadwal",
+    description: "Promo untuk verifikasi HTTP end-to-end",
+    badge: "PROMO SMOKE",
+    terms: "Berlaku selama pengujian smoke",
+    ctaLabel: "Pilih Menu",
+    imageUrl: "",
+    startsAt: new Date(Date.now() + 3600000).toISOString(),
+    endsAt: new Date(Date.now() + 7200000).toISOString(),
+    active: true,
+  },
+  admin,
+);
+assert.equal(
+  scheduledPromotion.status,
+  200,
+  JSON.stringify(scheduledPromotion.value),
+);
+assert.equal(
+  (await call("menu")).value.promotions.some(
+    (item) => item.id === scheduledPromotion.value.id,
+  ),
+  false,
+);
+const activatedPromotion = await call(
+  "promotion",
+  {
+    id: scheduledPromotion.value.id,
+    title: "Promo Smoke Aktif",
+    description: "Promo untuk verifikasi HTTP end-to-end",
+    badge: "PROMO SMOKE",
+    terms: "Berlaku selama pengujian smoke",
+    ctaLabel: "Pilih Menu",
+    imageUrl: "",
+    startsAt: new Date(Date.now() - 3600000).toISOString(),
+    endsAt: new Date(Date.now() + 3600000).toISOString(),
+    active: true,
+  },
+  admin,
+);
+assert.equal(
+  activatedPromotion.status,
+  200,
+  JSON.stringify(activatedPromotion.value),
+);
+assert.equal(
+  (await call("menu")).value.promotions.some(
+    (item) => item.id === scheduledPromotion.value.id,
+  ),
+  true,
+);
+assert.equal(
+  (await call("promotion", { ...activatedPromotion.value }, customer)).status,
+  403,
+);
 assert.equal((await call("customers", undefined, customer)).status, 403);
 const customersBefore = await call(
   "customers?q=customer%40warkost.local",

@@ -1,0 +1,20 @@
+CREATE TABLE promotions(
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(100) NOT NULL,
+  description VARCHAR(500) NOT NULL,
+  badge VARCHAR(40) NOT NULL,
+  terms VARCHAR(300) NOT NULL,
+  cta_label VARCHAR(40) NOT NULL,
+  image_url VARCHAR(1000) NOT NULL DEFAULT '',
+  starts_at TIMESTAMP NOT NULL,
+  ends_at TIMESTAMP NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_by BIGINT UNSIGNED NOT NULL,
+  updated_by BIGINT UNSIGNED NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_promotions_active_window(active,starts_at,ends_at,id),
+  FOREIGN KEY(created_by) REFERENCES users(id),
+  FOREIGN KEY(updated_by) REFERENCES users(id),
+  CHECK(ends_at>starts_at)
+);

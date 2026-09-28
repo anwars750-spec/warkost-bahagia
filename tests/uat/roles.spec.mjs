@@ -117,6 +117,10 @@ test("customer dapat membuka menu, pesanan, dan akun", async ({
   await expect(
     page.getByRole("heading", { name: "Mau makan apa hari ini?" }),
   ).toBeVisible();
+  const promo = page.getByRole("region", { name: "Promo berlangsung" });
+  await expect(promo).toBeVisible();
+  await expect(promo).toContainText("Gratis Ongkir 5 KM");
+  await expect(promo.getByRole("button", { name: "Pilih Menu" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Keranjang/ })).toBeVisible();
 
   await page
@@ -166,6 +170,14 @@ test("admin dapat membuka area operasional utama", async ({
   await expect(
     page.getByRole("heading", { name: "Kelola pelanggan" }),
   ).toBeVisible();
+  await page
+    .locator("nav")
+    .getByRole("button", { name: "Promo", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Promo customer", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".promo-editor").first()).toContainText("ACTIVE");
   await page
     .locator("nav")
     .getByRole("button", { name: "Laporan", exact: true })

@@ -38,6 +38,16 @@ const requiredSchema = {
     "reprint_count",
     "payload_json",
   ],
+  promotions: [
+    "id",
+    "title",
+    "description",
+    "starts_at",
+    "ends_at",
+    "active",
+    "created_by",
+    "updated_by",
+  ],
   loyalty_accounts: ["user_id", "balance"],
   loyalty_transactions: [
     "user_id",
