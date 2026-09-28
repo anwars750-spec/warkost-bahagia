@@ -27,7 +27,10 @@ import { createDriver, setDriverActive } from "../../../lib/staff.mjs";
 import { listCustomers, setCustomerActive } from "../../../lib/customers.mjs";
 import { dailyReport } from "../../../lib/reports.mjs";
 import { nonNegativeInteger } from "../../../lib/numbers.mjs";
-import { verifyPayment } from "../../../lib/payments.mjs";
+import {
+  expirePendingPayments,
+  verifyPayment,
+} from "../../../lib/payments.mjs";
 import { getSettings, saveSettings } from "../../../lib/settings.mjs";
 import {
   listNotifications,
@@ -44,6 +47,8 @@ import {
   listStock,
   listAuditLogs,
 } from "../../../lib/operations.mjs";
+import { listPrintJobs, retryPrintJob } from "../../../lib/printer.mjs";
+import { driverContactIsVisible } from "../../../lib/delivery.mjs";
 export const runtime = "nodejs";
 const out = (data, status = 200) =>
   NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
@@ -89,6 +94,26 @@ export async function GET(request, { params }) {
       );
     }
     if (action === "settings") return out(await getSettings(user));
+    if (action === "print-jobs")
+      return out({ jobs: await listPrintJobs(user) });
+    if (action === "delivery-capacity") {
+      required(user, ["CUSTOMER", "ADMIN", "OWNER"]);
+      const result = await store.get(
+        "SELECT COUNT(*) available_drivers,COALESCE(SUM(5-active_load),0) available_slots FROM (SELECT u.id,(SELECT COUNT(*) FROM deliveries d JOIN orders o ON o.id=d.order_id WHERE d.driver_id=u.id AND o.status IN ('ASSIGNED','PICKED_UP','ON_DELIVERY')) active_load FROM users u WHERE u.role='DRIVER' AND u.active=1) capacity WHERE active_load<5",
+      );
+      const availableDrivers = nonNegativeInteger(
+        result.available_drivers,
+        "Driver tersedia",
+      );
+      return out({
+        availableDrivers,
+        availableSlots: nonNegativeInteger(
+          result.available_slots,
+          "Slot tersedia",
+        ),
+        delayed: availableDrivers === 0,
+      });
+    }
     if (action === "report")
       return out(
         await dailyReport(
@@ -104,6 +129,7 @@ export async function GET(request, { params }) {
       );
     if (action === "dashboard") {
       required(user, ["ADMIN", "OWNER"]);
+      await expirePendingPayments();
       const localDate = new Intl.DateTimeFormat("en-CA", {
         timeZone: "Asia/Jakarta",
         year: "numeric",
@@ -137,9 +163,17 @@ export async function GET(request, { params }) {
       );
       for (const row of statuses)
         row.count = nonNegativeInteger(row.count, "Jumlah status");
+      const paymentStatuses = await store.all(
+        "SELECT p.status,COUNT(*) count FROM payments p JOIN orders o ON o.id=p.order_id WHERE o.created_at>=? AND o.created_at<? AND p.status IN ('PENDING','PAID','FAILED','EXPIRED') GROUP BY p.status",
+        from,
+        until,
+      );
+      for (const row of paymentStatuses)
+        row.count = nonNegativeInteger(row.count, "Jumlah status pembayaran");
       return out({
         today,
         statuses,
+        paymentStatuses,
         customers: nonNegativeInteger(
           (
             await store.get(
@@ -170,6 +204,7 @@ export async function GET(request, { params }) {
     }
     if (action === "orders") {
       required(user, ["CUSTOMER", "ADMIN", "DRIVER", "KITCHEN", "OWNER"]);
+      await expirePendingPayments();
       const rawBefore = request.nextUrl.searchParams.get("before");
       const before = rawBefore === null ? null : integer(rawBefore);
       if (rawBefore !== null && !Number.isSafeInteger(before))
@@ -178,7 +213,7 @@ export async function GET(request, { params }) {
       let orders;
       if (user.role === "CUSTOMER")
         orders = await store.all(
-          "SELECT o.*,a.label address_label,a.detail address,p.method,p.status payment_status,d.driver_id FROM orders o JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id WHERE o.customer_id=?" +
+          "SELECT o.*,a.label address_label,a.detail address,p.method,p.status payment_status,d.driver_id,d.accepted_at,d.delivered_at,du.phone driver_phone FROM orders o JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id LEFT JOIN users du ON du.id=d.driver_id WHERE o.customer_id=?" +
             bound +
             " ORDER BY o.id DESC LIMIT 26",
           user.id,
@@ -186,7 +221,7 @@ export async function GET(request, { params }) {
         );
       else if (user.role === "DRIVER")
         orders = await store.all(
-          "SELECT o.*,a.detail address,u.name customer_name,d.accepted_at FROM orders o JOIN deliveries d ON d.order_id=o.id JOIN addresses a ON a.id=o.address_id JOIN users u ON u.id=o.customer_id WHERE d.driver_id=?" +
+          "SELECT o.*,a.detail address,a.latitude,a.longitude,u.name customer_name,d.accepted_at FROM orders o JOIN deliveries d ON d.order_id=o.id JOIN addresses a ON a.id=o.address_id JOIN users u ON u.id=o.customer_id WHERE d.driver_id=?" +
             bound +
             " ORDER BY o.id DESC LIMIT 26",
           user.id,
@@ -208,6 +243,24 @@ export async function GET(request, { params }) {
         );
       const hasMore = orders.length > 25;
       const page = orders.slice(0, 25);
+      if (user.role === "CUSTOMER") {
+        const businessWhatsApp =
+          (
+            await store.get(
+              "SELECT value FROM settings WHERE `key`='business_whatsapp'",
+            )
+          )?.value || "6281546407856";
+        for (const order of page) {
+          order.admin_whatsapp = businessWhatsApp;
+          order.driver_whatsapp = driverContactIsVisible(
+            order.accepted_at,
+            order.delivered_at,
+          )
+            ? order.driver_phone
+            : null;
+          delete order.driver_phone;
+        }
+      }
       return out({ orders: page, nextCursor: hasMore ? page.at(-1).id : null });
     }
     if (action === "account") {
@@ -233,7 +286,7 @@ export async function GET(request, { params }) {
       required(user, ["ADMIN", "OWNER"]);
       return out({
         drivers: await store.all(
-          "SELECT u.id,u.name,u.email,u.active,(SELECT COUNT(*) FROM deliveries d JOIN orders o ON o.id=d.order_id WHERE d.driver_id=u.id AND o.status IN ('ASSIGNED','PICKED_UP','ON_DELIVERY')) active_load FROM users u WHERE u.role='DRIVER'",
+          "SELECT u.id,u.name,u.email,u.phone,u.active,(SELECT COUNT(*) FROM deliveries d JOIN orders o ON o.id=d.order_id WHERE d.driver_id=u.id AND o.status IN ('ASSIGNED','PICKED_UP','ON_DELIVERY')) active_load FROM users u WHERE u.role='DRIVER' ORDER BY active_load,u.name",
         ),
       });
     }
@@ -450,6 +503,8 @@ export async function POST(request, { params }) {
       return out(await acceptDelivery(user, integer(body.orderId)));
     if (action === "payment")
       return out(await verifyPayment(user, integer(body.orderId), body.status));
+    if (action === "print-retry")
+      return out(await retryPrintJob(user, integer(body.id)));
     if (action === "settings") return out(await saveSettings(user, body));
     if (action === "driver") return out(await createDriver(user, body), 201);
     if (action === "driver-active")

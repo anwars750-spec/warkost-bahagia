@@ -308,7 +308,7 @@ test("OP-UAT-02 transfer customer ke admin ke driver memberi poin", async ({
   await signIn(page, "admin@warkost.local");
   const adminOrder = orderCard(page, orderId);
   await expect(adminOrder).toHaveCount(1);
-  await expect(adminOrder.getByText("UNPAID", { exact: true })).toBeVisible();
+  await expect(adminOrder.getByText("PENDING", { exact: true })).toBeVisible();
   await adminOrder.getByRole("button", { name: "Tandai lunas" }).click();
   await expect(adminOrder.getByText("PAID", { exact: true })).toBeVisible();
 

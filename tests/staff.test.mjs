@@ -50,6 +50,7 @@ test("akun driver dilindungi, tugas aktif mencegah nonaktif, sesi dicabut saat d
       name: "Fake",
       email: "fake@test.local",
       password: "a-very-long-password",
+      phone: "081546407856",
     }),
     /Akses/,
   );
@@ -57,12 +58,14 @@ test("akun driver dilindungi, tugas aktif mencegah nonaktif, sesi dicabut saat d
     name: "Driver Baru",
     email: "driver@test.local",
     password: "a-very-long-password",
+    phone: "081546407856",
   });
   await assert.rejects(
     createDriver(admin, {
       name: "Duplicate",
       email: "driver@test.local",
       password: "a-very-long-password",
+      phone: "081546407856",
     }),
     /sudah terdaftar/,
   );
