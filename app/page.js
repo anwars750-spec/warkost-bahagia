@@ -4,6 +4,24 @@ import { useEffect, useRef, useState } from "react";
 const money = (n) => "Rp" + Number(n || 0).toLocaleString("id-ID");
 const whatsappLink = (number, text) =>
   `https://wa.me/${String(number || "").replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
+const localDateTime = (value) => {
+  const date = value
+    ? new Date(
+        typeof value === "number"
+          ? value
+          : String(value).replace(" ", "T") + "Z",
+      )
+    : new Date();
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16);
+};
+const promoDate = (value) =>
+  new Date(String(value).replace(" ", "T") + "Z").toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 async function api(route, body, signal) {
   const response = await fetch("/api/" + route, {
     method: body ? "POST" : "GET",
@@ -43,6 +61,7 @@ export default function App() {
     [audit, setAudit] = useState({ logs: [], nextCursor: null }),
     [report, setReport] = useState(null),
     [printJobs, setPrintJobs] = useState([]),
+    [promotions, setPromotions] = useState([]),
     [settings, setSettings] = useState({
       brandName: "Warkost Bahagia",
       rupiahPerPoint: 10000,
@@ -111,6 +130,7 @@ export default function App() {
         if (me.user.role === "ADMIN") {
           await loadCustomers(customerSearch);
           setSettings(await api("settings"));
+          setPromotions((await api("promotions")).promotions);
         }
         if (me.user.role === "OWNER") setAudit(await api("audit"));
       }
@@ -237,6 +257,7 @@ export default function App() {
               {role === "ADMIN" && (
                 <>
                   <button onClick={() => setView("products")}>Produk</button>
+                  <button onClick={() => setView("promotions")}>Promo</button>
                   <button onClick={() => setView("drivers")}>Driver</button>
                   <button onClick={() => setView("customers")}>
                     Pelanggan
@@ -324,31 +345,33 @@ export default function App() {
             <h1>
               {view === "notifications"
                 ? "Notifikasi"
-                : view === "customers" && role === "ADMIN"
-                  ? "Kelola pelanggan"
-                  : view === "reports" && role === "ADMIN"
-                    ? "Laporan harian"
-                    : view === "reports" && role === "OWNER"
+                : view === "promotions" && role === "ADMIN"
+                  ? "Kelola promo"
+                  : view === "customers" && role === "ADMIN"
+                    ? "Kelola pelanggan"
+                    : view === "reports" && role === "ADMIN"
                       ? "Laporan harian"
-                      : view === "stock" && ["ADMIN", "OWNER"].includes(role)
-                        ? "Kontrol stok"
-                        : view === "audit" && role === "OWNER"
-                          ? "Audit aktivitas"
-                          : role === "KITCHEN"
-                            ? "Antrean makanan"
-                            : role === "OWNER"
-                              ? "Ringkasan usaha"
-                              : role === "ADMIN"
-                                ? "Pantau pesanan hari ini"
-                                : role === "DRIVER"
-                                  ? "Tugas pengantaran"
-                                  : view === "menu"
-                                    ? "Mau makan apa hari ini?"
-                                    : view === "orders"
-                                      ? "Pesanan saya"
-                                      : view === "account"
-                                        ? "Akun saya"
-                                        : "Selamat datang"}
+                      : view === "reports" && role === "OWNER"
+                        ? "Laporan harian"
+                        : view === "stock" && ["ADMIN", "OWNER"].includes(role)
+                          ? "Kontrol stok"
+                          : view === "audit" && role === "OWNER"
+                            ? "Audit aktivitas"
+                            : role === "KITCHEN"
+                              ? "Antrean makanan"
+                              : role === "OWNER"
+                                ? "Ringkasan usaha"
+                                : role === "ADMIN"
+                                  ? "Pantau pesanan hari ini"
+                                  : role === "DRIVER"
+                                    ? "Tugas pengantaran"
+                                    : view === "menu"
+                                      ? "Mau makan apa hari ini?"
+                                      : view === "orders"
+                                        ? "Pesanan saya"
+                                        : view === "account"
+                                          ? "Akun saya"
+                                          : "Selamat datang"}
             </h1>
           </div>
           {role === "CUSTOMER" && view === "menu" && (
@@ -411,6 +434,57 @@ export default function App() {
         ) : null}
         {(!role || role === "CUSTOMER") && view === "menu" && (
           <>
+            {menu.promotions?.length > 0 && (
+              <section className="promo-section" aria-label="Promo berlangsung">
+                <div className="promo-heading">
+                  <div>
+                    <span className="eyebrow">PROMO BERLANGSUNG</span>
+                    <h2>Lebih hemat, tetap nikmat.</h2>
+                  </div>
+                  <small>{menu.promotions.length} promo aktif</small>
+                </div>
+                <div className="promo-grid">
+                  {menu.promotions.map((promo) => (
+                    <article className="promo-card" key={promo.id}>
+                      {promo.image_url ? (
+                        <Image
+                          className="promo-image"
+                          src={promo.image_url}
+                          alt=""
+                          width={720}
+                          height={360}
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="promo-mark" aria-hidden="true">
+                          WB
+                        </div>
+                      )}
+                      <div className="promo-copy">
+                        <span className="promo-badge">{promo.badge}</span>
+                        <h2>{promo.title}</h2>
+                        <p>{promo.description}</p>
+                        <small>
+                          {promoDate(promo.starts_at)}–
+                          {promoDate(promo.ends_at)}
+                        </small>
+                        <small>{promo.terms}</small>
+                        <button
+                          className="primary"
+                          onClick={() =>
+                            document
+                              .getElementById("menu-grid")
+                              ?.scrollIntoView({ behavior: "smooth" })
+                          }
+                        >
+                          {promo.cta_label}
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )}
             <div className="filters">
               <button
                 className={!selectedCategory ? "active" : ""}
@@ -428,7 +502,7 @@ export default function App() {
                 </button>
               ))}
             </div>
-            <div className="grid">
+            <div className="grid" id="menu-grid">
               {menu.products
                 .filter(
                   (p) =>
@@ -1095,6 +1169,39 @@ export default function App() {
             )}
           </section>
         )}
+        {role === "ADMIN" && view === "promotions" && (
+          <section className="panel">
+            <h2>Promo customer</h2>
+            <p>
+              Promo hanya menjadi materi komunikasi. Harga checkout tidak
+              berubah otomatis dan tetap dihitung server-side.
+            </p>
+            {promotions.map((promotion) => (
+              <PromotionEditor
+                key={promotion.id}
+                promotion={promotion}
+                busy={busy}
+                onSave={(body) =>
+                  run(async () => {
+                    await api("promotion", body);
+                    setMessage("Promo diperbarui");
+                  })
+                }
+              />
+            ))}
+            {!promotions.length && <p>Belum ada promo tersimpan.</p>}
+            <h2>Tambah promo</h2>
+            <PromotionEditor
+              busy={busy}
+              onSave={(body) =>
+                run(async () => {
+                  await api("promotion", body);
+                  setMessage("Promo dibuat");
+                })
+              }
+            />
+          </section>
+        )}
         {role === "ADMIN" && view === "products" && (
           <section className="panel">
             <h2>Kelola kategori</h2>
@@ -1701,6 +1808,131 @@ function Order({ order: o, role, drivers, busy, action }) {
         </div>
       )}
     </article>
+  );
+}
+
+function PromotionEditor({ promotion, busy, onSave }) {
+  const defaultEnd = localDateTime(Date.now() + 30 * 86400000);
+  return (
+    <form
+      className="promo-editor"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const form = new FormData(event.currentTarget);
+        onSave({
+          ...(promotion ? { id: promotion.id } : {}),
+          title: form.get("title"),
+          description: form.get("description"),
+          badge: form.get("badge"),
+          terms: form.get("terms"),
+          ctaLabel: form.get("ctaLabel"),
+          imageUrl: form.get("imageUrl"),
+          startsAt: new Date(form.get("startsAt")).toISOString(),
+          endsAt: new Date(form.get("endsAt")).toISOString(),
+          active: form.get("active") === "on",
+        });
+      }}
+    >
+      {promotion && (
+        <div className="line">
+          <strong>{promotion.title}</strong>
+          <span className="badge">{promotion.status}</span>
+        </div>
+      )}
+      <label>
+        Judul promo
+        <input
+          name="title"
+          defaultValue={promotion?.title || ""}
+          minLength="2"
+          maxLength="100"
+          required
+        />
+      </label>
+      <label>
+        Deskripsi
+        <textarea
+          name="description"
+          defaultValue={promotion?.description || ""}
+          minLength="5"
+          maxLength="500"
+          required
+        />
+      </label>
+      <div className="columns compact-columns">
+        <label>
+          Badge
+          <input
+            name="badge"
+            defaultValue={promotion?.badge || "PROMO BERLANGSUNG"}
+            minLength="2"
+            maxLength="40"
+            required
+          />
+        </label>
+        <label>
+          Teks tombol
+          <input
+            name="ctaLabel"
+            defaultValue={promotion?.cta_label || "Pilih Menu"}
+            minLength="2"
+            maxLength="40"
+            required
+          />
+        </label>
+      </div>
+      <label>
+        Syarat promo
+        <textarea
+          name="terms"
+          defaultValue={promotion?.terms || ""}
+          minLength="3"
+          maxLength="300"
+          required
+        />
+      </label>
+      <label>
+        URL gambar HTTPS atau media internal (opsional)
+        <input
+          name="imageUrl"
+          defaultValue={promotion?.image_url || ""}
+          placeholder="https://..."
+        />
+      </label>
+      <div className="columns compact-columns">
+        <label>
+          Mulai
+          <input
+            name="startsAt"
+            type="datetime-local"
+            defaultValue={localDateTime(promotion?.starts_at)}
+            required
+          />
+        </label>
+        <label>
+          Selesai
+          <input
+            name="endsAt"
+            type="datetime-local"
+            defaultValue={
+              promotion ? localDateTime(promotion.ends_at) : defaultEnd
+            }
+            required
+          />
+        </label>
+      </div>
+      <label className="checkbox">
+        <input
+          name="active"
+          type="checkbox"
+          defaultChecked={promotion ? promotion.active === 1 : true}
+        />
+        Aktifkan promo
+      </label>
+      <button className="primary" disabled={busy}>
+        {promotion ? "Simpan promo" : "Buat promo"}
+      </button>
+    </form>
   );
 }
 

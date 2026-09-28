@@ -55,6 +55,38 @@ try {
       "UPDATE users SET phone=? WHERE role='DRIVER' AND phone IS NULL",
       "6281546407856",
     );
+    const admin = await tx.get(
+      "SELECT id FROM users WHERE email=?",
+      "admin@warkost.local",
+    );
+    if (
+      !(await tx.get(
+        "SELECT id FROM promotions WHERE title=?",
+        "Gratis Ongkir 5 KM",
+      ))
+    ) {
+      const startsAt = new Date(Date.now() - 86400000)
+          .toISOString()
+          .slice(0, 19)
+          .replace("T", " "),
+        endsAt = new Date(Date.now() + 30 * 86400000)
+          .toISOString()
+          .slice(0, 19)
+          .replace("T", " ");
+      await tx.run(
+        "INSERT INTO promotions(title,description,badge,terms,cta_label,starts_at,ends_at,active,created_by,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?)",
+        "Gratis Ongkir 5 KM",
+        "Pesan menu favoritmu dan nikmati gratis ongkir untuk alamat dalam radius 5 km.",
+        "PROMO BERLANGSUNG",
+        "Berlaku untuk alamat yang terverifikasi dalam radius maksimal 5 km.",
+        "Pilih Menu",
+        startsAt,
+        endsAt,
+        1,
+        admin.id,
+        admin.id,
+      );
+    }
 
     if (process.env.STAGING_RESET_DEMO_PASSWORD === "true") {
       for (const [email] of accounts) {
