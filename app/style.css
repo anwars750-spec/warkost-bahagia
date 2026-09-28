@@ -64,15 +64,11 @@ button:disabled {
   color: #81736b;
   margin-top: 3px;
 }
-.mark {
-  background: #682c20;
-  color: #fff;
-  font-weight: 900;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
+.brand-logo {
+  display: block;
+  width: 112px;
+  height: auto;
+  flex: 0 0 auto;
 }
 nav {
   display: flex;
@@ -299,6 +295,21 @@ textarea {
   width: auto;
   min-width: 170px;
 }
+.station-statuses {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+.stock-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 140px minmax(200px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border-top: 1px solid #f0e9df;
+  padding: 14px 0;
+  margin: 0;
+}
 footer {
   text-align: center;
   color: #8a7c70;
@@ -321,10 +332,13 @@ footer {
   .brand small {
     font-size: 12px;
   }
+  .brand-logo {
+    width: 96px;
+  }
   nav {
     width: 100%;
-    overflow: auto;
-    flex-wrap: nowrap;
+    overflow: visible;
+    flex-wrap: wrap;
   }
   nav button {
     white-space: nowrap;
@@ -342,7 +356,8 @@ footer {
   }
   .grid,
   .columns,
-  .order-list {
+  .order-list,
+  .stock-row {
     grid-template-columns: 1fr;
   }
   .food-visual {

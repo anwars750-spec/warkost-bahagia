@@ -14,6 +14,7 @@ import {
   required,
   createOrder,
   changeStatus,
+  updateStationStatus,
   acceptDelivery,
   DomainError,
 } from "../../../lib/domain.mjs";
@@ -38,6 +39,11 @@ import {
   removeAddress,
   updateProfile,
 } from "../../../lib/account.mjs";
+import {
+  adjustStock,
+  listStock,
+  listAuditLogs,
+} from "../../../lib/operations.mjs";
 export const runtime = "nodejs";
 const out = (data, status = 200) =>
   NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
@@ -69,8 +75,18 @@ export async function GET(request, { params }) {
     if (action === "notifications") return out(await listNotifications(user));
     if (action === "menu") return out(await listCatalog(false));
     if (action === "inventory") {
-      required(user, ["ADMIN"]);
+      required(user, ["ADMIN", "OWNER"]);
       return out(await listCatalog(true));
+    }
+    if (action === "stock") return out(await listStock(user));
+    if (action === "audit") {
+      const rawBefore = request.nextUrl.searchParams.get("before");
+      return out(
+        await listAuditLogs(
+          user,
+          rawBefore === null ? null : integer(rawBefore),
+        ),
+      );
     }
     if (action === "settings") return out(await getSettings(user));
     if (action === "report")
@@ -87,7 +103,7 @@ export async function GET(request, { params }) {
         ),
       );
     if (action === "dashboard") {
-      required(user, ["ADMIN"]);
+      required(user, ["ADMIN", "OWNER"]);
       const localDate = new Intl.DateTimeFormat("en-CA", {
         timeZone: "Asia/Jakarta",
         year: "numeric",
@@ -153,7 +169,7 @@ export async function GET(request, { params }) {
       });
     }
     if (action === "orders") {
-      required(user, ["CUSTOMER", "ADMIN", "DRIVER"]);
+      required(user, ["CUSTOMER", "ADMIN", "DRIVER", "KITCHEN", "OWNER"]);
       const rawBefore = request.nextUrl.searchParams.get("before");
       const before = rawBefore === null ? null : integer(rawBefore);
       if (rawBefore !== null && !Number.isSafeInteger(before))
@@ -176,9 +192,16 @@ export async function GET(request, { params }) {
           user.id,
           ...(before === null ? [] : [before]),
         );
+      else if (user.role === "KITCHEN")
+        orders = await store.all(
+          "SELECT o.*,u.name customer_name,s.status kitchen_status FROM orders o JOIN order_stations s ON s.order_id=o.id AND s.station='KITCHEN' JOIN users u ON u.id=o.customer_id WHERE o.status IN ('CONFIRMED','PREPARING','READY')" +
+            bound +
+            " ORDER BY o.id DESC LIMIT 26",
+          ...(before === null ? [] : [before]),
+        );
       else
         orders = await store.all(
-          "SELECT o.*,u.name customer_name,a.detail address,p.status payment_status,d.driver_id FROM orders o JOIN users u ON u.id=o.customer_id JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id WHERE 1=1" +
+          "SELECT o.*,u.name customer_name,a.detail address,p.status payment_status,d.driver_id,(SELECT status FROM order_stations WHERE order_id=o.id AND station='KITCHEN') kitchen_status,(SELECT status FROM order_stations WHERE order_id=o.id AND station='CASHIER') cashier_status FROM orders o JOIN users u ON u.id=o.customer_id JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id WHERE 1=1" +
             bound +
             " ORDER BY o.id DESC LIMIT 26",
           ...(before === null ? [] : [before]),
@@ -207,10 +230,10 @@ export async function GET(request, { params }) {
       return out({ addresses, loyalty, transactions });
     }
     if (action === "drivers") {
-      required(user, ["ADMIN"]);
+      required(user, ["ADMIN", "OWNER"]);
       return out({
         drivers: await store.all(
-          "SELECT id,name,email,active FROM users WHERE role='DRIVER'",
+          "SELECT u.id,u.name,u.email,u.active,(SELECT COUNT(*) FROM deliveries d JOIN orders o ON o.id=d.order_id WHERE d.driver_id=u.id AND o.status IN ('ASSIGNED','PICKED_UP','ON_DELIVERY')) active_load FROM users u WHERE u.role='DRIVER'",
         ),
       });
     }
@@ -225,7 +248,7 @@ export async function GET(request, { params }) {
       );
     }
     if (action === "order-items") {
-      required(user, ["CUSTOMER", "ADMIN", "DRIVER"]);
+      required(user, ["CUSTOMER", "ADMIN", "DRIVER", "KITCHEN", "OWNER"]);
       const id = integer(request.nextUrl.searchParams.get("id"));
       const order = await store.get(
         "SELECT customer_id FROM orders WHERE id=?",
@@ -239,12 +262,18 @@ export async function GET(request, { params }) {
             "SELECT id FROM deliveries WHERE order_id=? AND driver_id=?",
             id,
             user.id,
+          ))) ||
+        (user.role === "KITCHEN" &&
+          !(await store.get(
+            "SELECT id FROM order_stations WHERE order_id=? AND station='KITCHEN'",
+            id,
           )))
       )
         throw new DomainError("Akses ditolak", 403);
       return out({
         items: await store.all(
-          "SELECT name,price,quantity FROM order_items WHERE order_id=?",
+          "SELECT name,price,quantity,prep_station FROM order_items WHERE order_id=?" +
+            (user.role === "KITCHEN" ? " AND prep_station='KITCHEN'" : ""),
           id,
         ),
         events: await store.all(
@@ -404,6 +433,18 @@ export async function POST(request, { params }) {
           body.status,
           integer(body.driverId),
         ),
+      );
+    if (action === "station-status")
+      return out(
+        await updateStationStatus(user, integer(body.orderId), body.status),
+      );
+    if (action === "stock")
+      return out(
+        await adjustStock(user, {
+          productId: integer(body.productId),
+          quantity: Number(body.quantity),
+          reason: body.reason,
+        }),
       );
     if (action === "accept")
       return out(await acceptDelivery(user, integer(body.orderId)));

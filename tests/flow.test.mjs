@@ -12,14 +12,14 @@ process.env.SESSION_SECRET =
 const { db } = await import("../lib/db.mjs");
 const { hashPassword, checkPassword, issueSession, sessionSecret } =
   await import("../lib/auth.mjs");
-const { createOrder, changeStatus, acceptDelivery } =
+const { createOrder, changeStatus, acceptDelivery, updateStationStatus } =
   await import("../lib/domain.mjs");
 const database = db();
 const insert = database.prepare(
   "INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,?)",
 );
 let people = {};
-for (const role of ["CUSTOMER", "ADMIN", "DRIVER"]) {
+for (const role of ["CUSTOMER", "ADMIN", "DRIVER", "KITCHEN"]) {
   const id = Number(
     insert.run(
       role,
@@ -61,7 +61,8 @@ test("produksi menolak secret sesi kosong atau pendek", () => {
     assert.throws(() => sessionSecret(), /minimal 32 byte/);
     process.env.SESSION_SECRET = "short";
     assert.throws(() => sessionSecret(), /minimal 32 byte/);
-    process.env.SESSION_SECRET = "a-secure-test-secret-with-more-than-32-characters";
+    process.env.SESSION_SECRET =
+      "a-secure-test-secret-with-more-than-32-characters";
     assert.ok(sessionSecret().length >= 32);
   } finally {
     if (previousMode === undefined) delete process.env.NODE_ENV;
@@ -89,8 +90,9 @@ test("order sampai delivered, poin tepat sekali, otorisasi dan status tervalidas
     changeStatus(people.ADMIN, o.id, "DELIVERED"),
     /tidak diizinkan/,
   );
-  for (const status of ["CONFIRMED", "PREPARING", "READY"])
-    await changeStatus(people.ADMIN, o.id, status);
+  await changeStatus(people.ADMIN, o.id, "CONFIRMED");
+  await updateStationStatus(people.KITCHEN, o.id, "PREPARING");
+  await updateStationStatus(people.KITCHEN, o.id, "READY");
   await changeStatus(people.ADMIN, o.id, "ASSIGNED", people.DRIVER.id);
   await assert.rejects(
     changeStatus(people.DRIVER, o.id, "PICKED_UP"),

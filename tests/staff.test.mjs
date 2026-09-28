@@ -10,7 +10,7 @@ process.env.DATABASE_PATH = path.join(
 process.env.SESSION_SECRET = "staff-test-secret-with-over-32-characters";
 const { db } = await import("../lib/db.mjs");
 const { createDriver, setDriverActive } = await import("../lib/staff.mjs");
-const { createOrder, changeStatus, acceptDelivery } =
+const { createOrder, changeStatus, acceptDelivery, updateStationStatus } =
   await import("../lib/domain.mjs");
 const { currentUser, issueSession, hashPassword } =
   await import("../lib/auth.mjs");
@@ -23,6 +23,11 @@ database
 database
   .prepare(
     "INSERT INTO users(name,email,password_hash,role) VALUES('Customer','customer@t.test',?,'CUSTOMER')",
+  )
+  .run(hashPassword("password-that-is-long"));
+database
+  .prepare(
+    "INSERT INTO users(name,email,password_hash,role) VALUES('Kitchen','kitchen@t.test',?,'KITCHEN')",
   )
   .run(hashPassword("password-that-is-long"));
 database.prepare("INSERT INTO categories(name) VALUES('Food')").run();
@@ -38,6 +43,7 @@ database
   .run();
 const admin = { id: 1, role: "ADMIN" },
   customer = { id: 2, role: "CUSTOMER" };
+const kitchen = { id: 3, role: "KITCHEN" };
 test("akun driver dilindungi, tugas aktif mencegah nonaktif, sesi dicabut saat dinonaktifkan", async () => {
   await assert.rejects(
     createDriver(customer, {
@@ -68,8 +74,9 @@ test("akun driver dilindungi, tugas aktif mencegah nonaktif, sesi dicabut saat d
     method: "CASH",
     items: [{ productId: 1, quantity: 1 }],
   });
-  for (const status of ["CONFIRMED", "PREPARING", "READY"])
-    await changeStatus(admin, order.id, status);
+  await changeStatus(admin, order.id, "CONFIRMED");
+  await updateStationStatus(kitchen, order.id, "PREPARING");
+  await updateStationStatus(kitchen, order.id, "READY");
   await changeStatus(admin, order.id, "ASSIGNED", driver.id);
   await assert.rejects(
     setDriverActive(admin, driver.id, false),

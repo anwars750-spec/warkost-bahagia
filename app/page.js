@@ -1,12 +1,14 @@
 "use client";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 const money = (n) => "Rp" + Number(n || 0).toLocaleString("id-ID");
-async function api(route, body) {
+async function api(route, body, signal) {
   const response = await fetch("/api/" + route, {
     method: body ? "POST" : "GET",
     headers: body ? { "Content-Type": "application/json" } : {},
     body: body ? JSON.stringify(body) : undefined,
     cache: "no-store",
+    signal,
   });
   const data = await response.json();
   if (!response.ok) throw Error(data.error || "Gagal memuat");
@@ -14,6 +16,7 @@ async function api(route, body) {
 }
 export default function App() {
   const checkoutAttempt = useRef(null);
+  const pollController = useRef(null);
   const [user, setUser] = useState(null),
     [menu, setMenu] = useState({
       products: [],
@@ -34,6 +37,8 @@ export default function App() {
     [customerSearch, setCustomerSearch] = useState(""),
     [inventory, setInventory] = useState({ products: [], categories: [] }),
     [dashboard, setDashboard] = useState(null),
+    [stock, setStock] = useState({ products: [], movements: [] }),
+    [audit, setAudit] = useState({ logs: [], nextCursor: null }),
     [report, setReport] = useState(null),
     [settings, setSettings] = useState({
       brandName: "Warkost Bahagia",
@@ -49,10 +54,13 @@ export default function App() {
     [selectedCategory, setSelectedCategory] = useState(0);
   async function loadCustomers(query = "", before = null) {
     const page = await api(
-      "customers?q=" + encodeURIComponent(query) +
+      "customers?q=" +
+        encodeURIComponent(query) +
         (before === null ? "" : "&before=" + before),
     );
-    setCustomers((previous) => before === null ? page.customers : [...previous, ...page.customers]);
+    setCustomers((previous) =>
+      before === null ? page.customers : [...previous, ...page.customers],
+    );
     setCustomerCursor(page.nextCursor);
   }
   function saveProductWithImage(body, file) {
@@ -84,13 +92,18 @@ export default function App() {
       setNextOrderCursor(o.nextCursor);
       setAlerts(await api("notifications"));
       if (me.user.role === "CUSTOMER") setAccount(await api("account"));
-      if (me.user.role === "ADMIN") {
+      if (["ADMIN", "OWNER"].includes(me.user.role)) {
         setDrivers((await api("drivers")).drivers);
-        await loadCustomers(customerSearch);
         setInventory(await api("inventory"));
         setDashboard(await api("dashboard"));
-        if (view === "reports") setReport(await api("report?date=" + (report?.date || "")));
-        setSettings(await api("settings"));
+        setStock(await api("stock"));
+        if (view === "reports")
+          setReport(await api("report?date=" + (report?.date || "")));
+        if (me.user.role === "ADMIN") {
+          await loadCustomers(customerSearch);
+          setSettings(await api("settings"));
+        }
+        if (me.user.role === "OWNER") setAudit(await api("audit"));
       }
     } else {
       setOrders([]);
@@ -105,32 +118,43 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     let running = false;
+    const controller = new AbortController();
+    pollController.current = controller;
     const timer = setInterval(async () => {
       if (document.visibilityState === "hidden" || running) return;
       running = true;
       try {
         const [latestOrders, latestAlerts] = await Promise.all([
-          api("orders"),
-          api("notifications"),
+          api("orders", undefined, controller.signal),
+          api("notifications", undefined, controller.signal),
         ]);
         setOrders((previous) => {
           const fresh = new Set(latestOrders.orders.map((order) => order.id));
-          return [...latestOrders.orders, ...previous.filter((order) => !fresh.has(order.id))]
-            .sort((a, b) => b.id - a.id);
+          return [
+            ...latestOrders.orders,
+            ...previous.filter((order) => !fresh.has(order.id)),
+          ].sort((a, b) => b.id - a.id);
         });
         setNextOrderCursor((cursor) =>
-          cursor === null ? null : Math.min(cursor, latestOrders.nextCursor ?? cursor),
+          cursor === null
+            ? null
+            : Math.min(cursor, latestOrders.nextCursor ?? cursor),
         );
         setAlerts(latestAlerts);
-        if (user.role === "ADMIN") setDashboard(await api("dashboard"));
+        if (["ADMIN", "OWNER"].includes(user.role))
+          setDashboard(await api("dashboard"));
         if (user.role === "CUSTOMER") setAccount(await api("account"));
       } catch (e) {
-        setError(e.message);
+        if (!controller.signal.aborted) setError(e.message);
       } finally {
         running = false;
       }
     }, 20000);
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      controller.abort();
+      if (pollController.current === controller) pollController.current = null;
+    };
   }, [user?.id, user?.role]);
   async function run(fn) {
     setError("");
@@ -168,7 +192,14 @@ export default function App() {
     <>
       <header className="top">
         <div className="brand">
-          <span className="mark">WB</span>
+          <Image
+            className="brand-logo"
+            src="/warkost-bahagia-logo-transparent.png"
+            alt="Warkost Bahagia"
+            width={1672}
+            height={941}
+            priority
+          />
           <div>
             <strong>{menu.brand}</strong>
             <small>Pesanan hangat, sampai dengan aman.</small>
@@ -184,23 +215,54 @@ export default function App() {
           ) : role ? (
             <>
               <button onClick={() => setView("orders")}>
-                {role === "ADMIN" ? "Operasional" : "Tugas saya"}
+                {role === "ADMIN"
+                  ? "Operasional"
+                  : role === "KITCHEN"
+                    ? "Dapur"
+                    : role === "OWNER"
+                      ? "Dashboard"
+                      : "Tugas saya"}
               </button>
               {role === "ADMIN" && (
                 <>
                   <button onClick={() => setView("products")}>Produk</button>
                   <button onClick={() => setView("drivers")}>Driver</button>
-                  <button onClick={() => setView("customers")}>Pelanggan</button>
-                  <button onClick={async () => {
-                    setView("reports");
-                    try {
-                      setReport(await api("report"));
-                    } catch (e) {
-                      setError(e.message);
-                    }
-                  }}>Laporan</button>
+                  <button onClick={() => setView("customers")}>
+                    Pelanggan
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setView("reports");
+                      try {
+                        setReport(await api("report"));
+                      } catch (e) {
+                        setError(e.message);
+                      }
+                    }}
+                  >
+                    Laporan
+                  </button>
                   <button onClick={() => setView("settings")}>
                     Pengaturan
+                  </button>
+                  <button onClick={() => setView("stock")}>Stok</button>
+                </>
+              )}
+              {role === "OWNER" && (
+                <>
+                  <button onClick={() => setView("stock")}>Stok</button>
+                  <button onClick={() => setView("audit")}>Audit log</button>
+                  <button
+                    onClick={async () => {
+                      setView("reports");
+                      try {
+                        setReport(await api("report"));
+                      } catch (e) {
+                        setError(e.message);
+                      }
+                    }}
+                  >
+                    Laporan
                   </button>
                 </>
               )}
@@ -215,6 +277,7 @@ export default function App() {
             <button
               onClick={() =>
                 run(async () => {
+                  pollController.current?.abort();
                   await api("logout", {});
                   setUser(null);
                   setView("menu");
@@ -234,28 +297,42 @@ export default function App() {
             <span className="eyebrow">
               {role === "ADMIN"
                 ? "PUSAT OPERASIONAL"
-                : role === "DRIVER"
-                  ? "PENGANTARAN"
-                  : "DAPUR WARKOST"}
+                : role === "KITCHEN"
+                  ? "STASIUN DAPUR"
+                  : role === "OWNER"
+                    ? "KONTROL OWNER"
+                    : role === "DRIVER"
+                      ? "PENGANTARAN"
+                      : "DAPUR WARKOST"}
             </span>
             <h1>
               {view === "notifications"
                 ? "Notifikasi"
                 : view === "customers" && role === "ADMIN"
                   ? "Kelola pelanggan"
-                : view === "reports" && role === "ADMIN"
-                  ? "Laporan harian"
-                : role === "ADMIN"
-                  ? "Pantau pesanan hari ini"
-                  : role === "DRIVER"
-                    ? "Tugas pengantaran"
-                    : view === "menu"
-                      ? "Mau makan apa hari ini?"
-                      : view === "orders"
-                        ? "Pesanan saya"
-                        : view === "account"
-                          ? "Akun saya"
-                          : "Selamat datang"}
+                  : view === "reports" && role === "ADMIN"
+                    ? "Laporan harian"
+                    : view === "reports" && role === "OWNER"
+                      ? "Laporan harian"
+                      : view === "stock" && ["ADMIN", "OWNER"].includes(role)
+                        ? "Kontrol stok"
+                        : view === "audit" && role === "OWNER"
+                          ? "Audit aktivitas"
+                          : role === "KITCHEN"
+                            ? "Antrean makanan"
+                            : role === "OWNER"
+                              ? "Ringkasan usaha"
+                              : role === "ADMIN"
+                                ? "Pantau pesanan hari ini"
+                                : role === "DRIVER"
+                                  ? "Tugas pengantaran"
+                                  : view === "menu"
+                                    ? "Mau makan apa hari ini?"
+                                    : view === "orders"
+                                      ? "Pesanan saya"
+                                      : view === "account"
+                                        ? "Akun saya"
+                                        : "Selamat datang"}
             </h1>
           </div>
           {role === "CUSTOMER" && view === "menu" && (
@@ -623,28 +700,43 @@ export default function App() {
             </section>
           </div>
         )}
-        {role === "ADMIN" && view === "reports" && (
+        {["ADMIN", "OWNER"].includes(role) && view === "reports" && (
           <section className="panel">
             <h2>Ringkasan operasional</h2>
-            <p>Pesanan dihitung menurut tanggal dibuat; revenue menurut tanggal pembayaran diverifikasi. Waktu mengikuti Asia/Jakarta.</p>
-            <form onSubmit={async (event) => {
-              event.preventDefault();
-              const date = new FormData(event.currentTarget).get("date");
-              setBusy(true);
-              setError("");
-              try {
-                setReport(await api("report?date=" + encodeURIComponent(date)));
-              } catch (e) {
-                setError(e.message);
-              } finally {
-                setBusy(false);
-              }
-            }}>
+            <p>
+              Pesanan dihitung menurut tanggal dibuat; revenue menurut tanggal
+              pembayaran diverifikasi. Waktu mengikuti Asia/Jakarta.
+            </p>
+            <form
+              onSubmit={async (event) => {
+                event.preventDefault();
+                const date = new FormData(event.currentTarget).get("date");
+                setBusy(true);
+                setError("");
+                try {
+                  setReport(
+                    await api("report?date=" + encodeURIComponent(date)),
+                  );
+                } catch (e) {
+                  setError(e.message);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
               <label>
                 Tanggal
-                <input key={report?.date} name="date" type="date" defaultValue={report?.date || ""} required />
+                <input
+                  key={report?.date}
+                  name="date"
+                  type="date"
+                  defaultValue={report?.date || ""}
+                  required
+                />
               </label>
-              <button className="primary" disabled={busy}>Lihat laporan</button>
+              <button className="primary" disabled={busy}>
+                Lihat laporan
+              </button>
             </form>
             {report && (
               <>
@@ -655,18 +747,29 @@ export default function App() {
                     ["Pembayaran lunas", report.paid.count],
                     ["Revenue terverifikasi", money(report.paid.revenue)],
                   ].map(([label, value]) => (
-                    <div className="stat" key={label}><small>{label}</small><strong>{value}</strong></div>
+                    <div className="stat" key={label}>
+                      <small>{label}</small>
+                      <strong>{value}</strong>
+                    </div>
                   ))}
                 </div>
                 <h2>Status pesanan</h2>
                 {report.statuses.map((item) => (
-                  <div className="line" key={item.status}><span>{item.status}</span><strong>{item.count}</strong></div>
+                  <div className="line" key={item.status}>
+                    <span>{item.status}</span>
+                    <strong>{item.count}</strong>
+                  </div>
                 ))}
-                {!report.statuses.length && <p>Belum ada pesanan pada tanggal ini.</p>}
+                {!report.statuses.length && (
+                  <p>Belum ada pesanan pada tanggal ini.</p>
+                )}
                 <h2>Produk terlaris</h2>
                 {report.products.map((item) => (
                   <div className="line" key={item.product_id + ":" + item.name}>
-                    <span>{item.name} · {item.quantity} item</span><strong>{money(item.value)}</strong>
+                    <span>
+                      {item.name} · {item.quantity} item
+                    </span>
+                    <strong>{money(item.value)}</strong>
                   </div>
                 ))}
               </>
@@ -785,7 +888,10 @@ export default function App() {
             <form
               onSubmit={async (event) => {
                 event.preventDefault();
-                const query = new FormData(event.currentTarget).get("search").toString().trim();
+                const query = new FormData(event.currentTarget)
+                  .get("search")
+                  .toString()
+                  .trim();
                 setBusy(true);
                 setError("");
                 try {
@@ -800,22 +906,34 @@ export default function App() {
             >
               <label>
                 Cari nama atau email
-                <input name="search" defaultValue={customerSearch} maxLength="80" />
+                <input
+                  name="search"
+                  defaultValue={customerSearch}
+                  maxLength="80"
+                />
               </label>
-              <button className="primary" disabled={busy}>Cari pelanggan</button>
+              <button className="primary" disabled={busy}>
+                Cari pelanggan
+              </button>
             </form>
             {customers.map((customer) => (
               <div className="line" key={customer.id}>
                 <span>
-                  <strong>{customer.name}</strong> · {customer.email}<br />
-                  {customer.active ? "Aktif" : "Nonaktif"} · {customer.order_count} pesanan · {customer.points} poin
+                  <strong>{customer.name}</strong> · {customer.email}
+                  <br />
+                  {customer.active ? "Aktif" : "Nonaktif"} ·{" "}
+                  {customer.order_count} pesanan · {customer.points} poin
                 </span>
                 <button
                   disabled={busy}
-                  onClick={() => run(() => api("customer-active", {
-                    id: customer.id,
-                    active: !customer.active,
-                  }))}
+                  onClick={() =>
+                    run(() =>
+                      api("customer-active", {
+                        id: customer.id,
+                        active: !customer.active,
+                      }),
+                    )
+                  }
                 >
                   {customer.active ? "Nonaktifkan" : "Aktifkan"}
                 </button>
@@ -823,17 +941,23 @@ export default function App() {
             ))}
             {!customers.length && <p>Belum ada pelanggan yang cocok.</p>}
             {customerCursor && (
-              <button className="refresh" disabled={busy} onClick={async () => {
-                setBusy(true);
-                setError("");
-                try {
-                  await loadCustomers(customerSearch, customerCursor);
-                } catch (e) {
-                  setError(e.message);
-                } finally {
-                  setBusy(false);
-                }
-              }}>Muat pelanggan lain</button>
+              <button
+                className="refresh"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  setError("");
+                  try {
+                    await loadCustomers(customerSearch, customerCursor);
+                  } catch (e) {
+                    setError(e.message);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                Muat pelanggan lain
+              </button>
             )}
           </section>
         )}
@@ -897,6 +1021,118 @@ export default function App() {
             />
           </section>
         )}
+        {["ADMIN", "OWNER"].includes(role) && view === "stock" && (
+          <section className="panel">
+            <h2>Stok produk</h2>
+            <p>
+              Admin hanya dapat menambah stok. Pengurangan manual hanya dapat
+              dilakukan Owner dan selalu dicatat.
+            </p>
+            {stock.products.map((product) => (
+              <form
+                className="stock-row"
+                key={product.id + ":" + product.stock_quantity}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const form = new FormData(event.currentTarget);
+                  run(async () => {
+                    await api("stock", {
+                      productId: product.id,
+                      quantity: Number(form.get("quantity")),
+                      reason: form.get("reason"),
+                    });
+                    setMessage("Stok " + product.name + " diperbarui");
+                  });
+                }}
+              >
+                <div>
+                  <strong>{product.name}</strong>
+                  <small className="notification-date">
+                    {product.prep_station === "KITCHEN" ? "Dapur" : "Kasir"}
+                    {" · "}stok {product.stock_quantity}
+                  </small>
+                </div>
+                <input
+                  name="quantity"
+                  type="number"
+                  min={role === "ADMIN" ? "1" : undefined}
+                  placeholder={role === "ADMIN" ? "+ jumlah" : "+ / − jumlah"}
+                  required
+                />
+                <input
+                  name="reason"
+                  minLength="3"
+                  maxLength="240"
+                  placeholder="Alasan perubahan"
+                  required
+                />
+                <button className="primary" disabled={busy}>
+                  Simpan
+                </button>
+              </form>
+            ))}
+            <h2>100 pergerakan terakhir</h2>
+            {stock.movements.map((movement) => (
+              <div className="line" key={movement.id}>
+                <span>
+                  <strong>{movement.product_name}</strong> · {movement.kind}
+                  <br />
+                  {movement.reason} · {movement.actor_name || "Sistem"}
+                </span>
+                <strong>
+                  {movement.quantity_delta > 0 ? "+" : ""}
+                  {movement.quantity_delta}
+                  {" → "}
+                  {movement.balance_after}
+                </strong>
+              </div>
+            ))}
+          </section>
+        )}
+        {role === "OWNER" && view === "audit" && (
+          <section className="panel">
+            <h2>Audit log</h2>
+            <p>
+              Catatan bersifat hanya-baca dan diurutkan dari aktivitas terbaru.
+            </p>
+            {audit.logs.map((log) => (
+              <div className="line audit-row" key={log.id}>
+                <span>
+                  <strong>{log.action}</strong>
+                  <br />
+                  {log.actor_name || "Sistem"} · {log.actor_role || "SYSTEM"} ·{" "}
+                  {log.created_at}
+                  {log.details && (
+                    <small className="notification-date">{log.details}</small>
+                  )}
+                </span>
+              </div>
+            ))}
+            {!audit.logs.length && <p>Belum ada aktivitas tercatat.</p>}
+            {audit.nextCursor && (
+              <button
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  setError("");
+                  try {
+                    const next = await api("audit?before=" + audit.nextCursor);
+                    setAudit({
+                      logs: [...audit.logs, ...next.logs],
+                      nextCursor: next.nextCursor,
+                    });
+                  } catch (e) {
+                    setError(e.message);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                Muat aktivitas lama
+              </button>
+            )}
+          </section>
+        )}
         {role && view === "notifications" && (
           <section className="panel narrow">
             <h2>Kabar terbaru</h2>
@@ -933,11 +1169,14 @@ export default function App() {
             >
               Perbarui status
             </button>
-            {role === "ADMIN" && dashboard && (
+            {["ADMIN", "OWNER"].includes(role) && dashboard && (
               <div className="stats">
                 {[
                   ["Order hari ini", dashboard.today.orders],
-                  ["Revenue terverifikasi hari ini", money(dashboard.today.revenue)],
+                  [
+                    "Revenue terverifikasi hari ini",
+                    money(dashboard.today.revenue),
+                  ],
                   [
                     "Menunggu",
                     dashboard.statuses.find((s) => s.status === "PENDING")
@@ -1008,8 +1247,10 @@ export default function App() {
                     const page = await api("orders?before=" + nextOrderCursor);
                     setOrders((current) => {
                       const known = new Set(current.map((order) => order.id));
-                      return [...current, ...page.orders.filter((order) => !known.has(order.id))]
-                        .sort((a, b) => b.id - a.id);
+                      return [
+                        ...current,
+                        ...page.orders.filter((order) => !known.has(order.id)),
+                      ].sort((a, b) => b.id - a.id);
                     });
                     setNextOrderCursor(page.nextCursor);
                   } catch (e) {
@@ -1037,8 +1278,6 @@ function Order({ order: o, role, drivers, busy, action }) {
   const [detailError, setDetailError] = useState("");
   const adminNext = {
     PENDING: "CONFIRMED",
-    CONFIRMED: "PREPARING",
-    PREPARING: "READY",
   };
   const driverNext = {
     ASSIGNED: "PICKED_UP",
@@ -1061,6 +1300,16 @@ function Order({ order: o, role, drivers, busy, action }) {
         <strong>{money(o.total)}</strong>
         <span>{o.payment_status || ""}</span>
       </div>
+      {(o.kitchen_status || o.cashier_status) && (
+        <div className="station-statuses">
+          {o.kitchen_status && (
+            <span className="badge">Dapur · {o.kitchen_status}</span>
+          )}
+          {o.cashier_status && (
+            <span className="badge">Kasir · {o.cashier_status}</span>
+          )}
+        </div>
+      )}
       <button
         onClick={() => {
           if (details) {
@@ -1081,6 +1330,8 @@ function Order({ order: o, role, drivers, busy, action }) {
             <div className="line" key={i}>
               <span>
                 {item.quantity} × {item.name}
+                {item.prep_station &&
+                  ` · ${item.prep_station === "KITCHEN" ? "Dapur" : "Kasir"}`}
               </span>
               <strong>{money(item.quantity * item.price)}</strong>
             </div>
@@ -1093,7 +1344,7 @@ function Order({ order: o, role, drivers, busy, action }) {
           ))}
         </div>
       )}
-      {role === "ADMIN" && (
+      {["ADMIN", "OWNER"].includes(role) && (
         <div className="actions">
           {adminNext[o.status] && (
             <button
@@ -1106,6 +1357,28 @@ function Order({ order: o, role, drivers, busy, action }) {
               Lanjutkan ke {adminNext[o.status]}
             </button>
           )}
+          {role === "ADMIN" && o.cashier_status === "QUEUED" && (
+            <button
+              className="primary"
+              disabled={busy}
+              onClick={() =>
+                action("station-status", { orderId: o.id, status: "PREPARING" })
+              }
+            >
+              Mulai siapkan minuman
+            </button>
+          )}
+          {role === "ADMIN" && o.cashier_status === "PREPARING" && (
+            <button
+              className="primary"
+              disabled={busy}
+              onClick={() =>
+                action("station-status", { orderId: o.id, status: "READY" })
+              }
+            >
+              Minuman siap
+            </button>
+          )}
           {o.status === "READY" && (
             <>
               <select
@@ -1114,10 +1387,10 @@ function Order({ order: o, role, drivers, busy, action }) {
               >
                 <option value="">Pilih driver</option>
                 {drivers
-                  .filter((d) => d.active)
+                  .filter((d) => d.active && Number(d.active_load) < 5)
                   .map((d) => (
                     <option key={d.id} value={d.id}>
-                      {d.name}
+                      {d.name} · {d.active_load}/5
                     </option>
                   ))}
               </select>
@@ -1148,6 +1421,23 @@ function Order({ order: o, role, drivers, busy, action }) {
           )}
         </div>
       )}
+      {role === "KITCHEN" &&
+        ["QUEUED", "PREPARING"].includes(o.kitchen_status) && (
+          <div className="actions">
+            <button
+              className="primary"
+              disabled={busy}
+              onClick={() =>
+                action("station-status", {
+                  orderId: o.id,
+                  status: o.kitchen_status === "QUEUED" ? "PREPARING" : "READY",
+                })
+              }
+            >
+              {o.kitchen_status === "QUEUED" ? "Mulai masak" : "Makanan siap"}
+            </button>
+          </div>
+        )}
       {role === "DRIVER" && driverNext[o.status] && (
         <div className="actions">
           {o.status === "ASSIGNED" && !o.accepted_at ? (
@@ -1198,6 +1488,7 @@ function ProductEditor({ product: p, categories, busy, onSave }) {
             price: Number(f.get("price")),
             categoryId: Number(f.get("categoryId")),
             imageUrl: f.get("imageUrl"),
+            prepStation: f.get("prepStation"),
             active: f.get("active") === "on",
           },
           f.get("image"),
@@ -1238,6 +1529,13 @@ function ProductEditor({ product: p, categories, busy, onSave }) {
               {c.name}
             </option>
           ))}
+        </select>
+      </label>
+      <label>
+        Stasiun persiapan
+        <select name="prepStation" defaultValue={p?.prep_station || "KITCHEN"}>
+          <option value="KITCHEN">Dapur · makanan</option>
+          <option value="CASHIER">Kasir · minuman</option>
         </select>
       </label>
       <label>

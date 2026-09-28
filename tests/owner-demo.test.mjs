@@ -41,17 +41,17 @@ test("owner demo membuat database baru yang siap dan terisolasi", () => {
     ),
   );
   assert.equal(evidence.url, "http://127.0.0.1:3000");
-  assert.equal(evidence.roles.length, 3);
+  assert.equal(evidence.roles.length, 5);
 
   const database = new DatabaseSync(evidence.databasePath, { readOnly: true });
   try {
     assert.equal(
       database
         .prepare(
-          "SELECT COUNT(*) total FROM users WHERE role IN ('CUSTOMER','ADMIN','DRIVER')",
+          "SELECT COUNT(*) total FROM users WHERE role IN ('CUSTOMER','ADMIN','DRIVER','KITCHEN','OWNER')",
         )
         .get().total,
-      3,
+      5,
     );
     assert.equal(
       database.prepare("SELECT COUNT(*) total FROM orders").get().total,

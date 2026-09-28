@@ -1,17 +1,19 @@
 # Warkost Bahagia — checkpoint MVP
 
-Next.js 16, React, API/service terpisah. Database development SQLite (`node:sqlite`, Node 24+); adapter MySQL memakai `mysql2/promise` dan transaksi. **Jalur MySQL belum diuji pada server MySQL nyata di lingkungan ini.** Jangan deploy sebagai production sebelum integrasi dan UAT selesai.
+Next.js 16, React, API/service terpisah. Database development SQLite (`node:sqlite`, Node 24+); adapter MySQL memakai `mysql2/promise` dan transaksi. MySQL 8 recovery dan production-mode staging UAT berjalan otomatis di GitHub Actions. Deployment Hostinger tetap harus melewati staging publik sebelum production.
 
 ## Development SQLite
 
 1. `npm install` dan salin `.env.example` ke `.env.local`; ganti `SESSION_SECRET` (minimal 32 byte acak untuk produksi).
 2. `SEED_DEMO_PASSWORD='password-unik-minimal-10' node scripts/seed.mjs`, lalu `npm run dev`.
-3. Login demo `customer@warkost.local`, `admin@warkost.local`, atau `driver@warkost.local` dengan password seed.
-4. `npm test`, `npm run build`; dengan server di port 3000, `SEED_DEMO_PASSWORD='...' node scripts/http-smoke.mjs` menguji tiga role sampai poin loyalitas.
+3. Login demo memakai `customer@warkost.local`, `admin@warkost.local`, `kitchen@warkost.local`, `driver@warkost.local`, atau `owner@warkost.local` dengan password seed.
+4. `npm test`, `npm run build`; dengan server di port 3000, `SEED_DEMO_PASSWORD='...' node scripts/http-smoke.mjs` menguji lima role sampai poin loyalitas.
 
 ## Production preflight dan health
 
 Sebelum server production dijalankan, set `NODE_ENV=production`, `SESSION_SECRET` minimal 32 byte, database, `UPLOAD_DIRECTORY`, dan `BACKUP_DIRECTORY` memakai path absolut. Jalankan `npm run preflight`; proses gagal jika konfigurasi, koneksi database, skema inti, storage, atau lokasi backup tidak siap. `GET /api/health/live` hanya memeriksa proses hidup. `GET /api/health/ready` memeriksa konfigurasi, database, storage, dan backup tanpa menampilkan secret atau detail error internal.
+
+Untuk Hostinger staging, ikuti [runbook Hostinger](docs/HOSTINGER_STAGING.md). Startup `npm run start:hostinger` menjalankan migrasi, bootstrap staging, verifikasi schema, dan preflight sebelum membuka server.
 
 ## Development MySQL (database khusus development)
 
@@ -19,7 +21,7 @@ Sebelum server production dijalankan, set `NODE_ENV=production`, `SESSION_SECRET
 2. `node scripts/migrate-mysql.mjs` menerapkan migrasi bernomor di `migrations/` secara berurutan; perubahan berikutnya perlu migrasi baru, bukan mengubah tabel produksi manual.
 3. `SEED_DEMO_PASSWORD='password-unik-minimal-10' node scripts/seed.mjs` untuk database development saja.
 4. Jalankan `npm run dev`; lakukan uji HTTP end-to-end memakai `SEED_DEMO_PASSWORD='...' node scripts/http-smoke.mjs` terhadap server yang memakai `DATABASE_URL` yang sama. Jangan jalankan seed atau smoke pada database pelanggan.
-5. Untuk staf produksi, siapkan akun lewat `STAFF_ROLE=ADMIN STAFF_NAME='...' STAFF_EMAIL='...' STAFF_PASSWORD='password-panjang-unik' node scripts/create-staff.mjs`. Peran admin/driver tidak tersedia melalui register publik.
+5. Untuk staf produksi, siapkan akun lewat `STAFF_ROLE=ADMIN STAFF_NAME='...' STAFF_EMAIL='...' STAFF_PASSWORD='password-panjang-unik' node scripts/create-staff.mjs`. Nilai `STAFF_ROLE` yang tersedia adalah `ADMIN`, `DRIVER`, `KITCHEN`, dan `OWNER`; semuanya tidak tersedia melalui register publik.
 
 ### Backup dan restore MySQL
 
@@ -27,11 +29,11 @@ Sebelum server production dijalankan, set `NODE_ENV=production`, `SESSION_SECRET
 
 Restore hanya menerima database target yang benar-benar kosong: `DATABASE_URL='mysql://.../database_kosong' npm run restore:mysql -- /path/backup.sql`. Checksum diperiksa sebelum koneksi dan hasil restore diverifikasi terhadap charset `utf8mb4`, engine InnoDB, tabel, kolom, serta checksum seluruh migration. Set `MYSQL_BINARY` bila client `mysql` tidak ada di `PATH`. Jangan mengarahkan restore ke database aktif.
 
-`npm run test:mysql` menyediakan MySQL 8.0 sementara, menerapkan dan mengulang migrasi, menjalankan HTTP E2E tiga peran, membuat backup, memulihkan ke database baru, lalu membandingkan seluruh jumlah record. Test ini memerlukan environment yang mengizinkan TCP dan UNIX socket lokal serta download binary MySQL pada eksekusi pertama.
+`npm run test:mysql` menyediakan MySQL 8.0 sementara, menerapkan dan mengulang migrasi, menjalankan HTTP E2E lima peran, membuat backup, memulihkan ke database baru, lalu membandingkan seluruh jumlah record. Test ini memerlukan environment yang mengizinkan TCP dan UNIX socket lokal serta download binary MySQL pada eksekusi pertama.
 
 ## Implementasi
 
-Customer: registrasi/login dengan sesi yang dapat dicabut, ubah nama/password, tambah/ubah/hapus alamat tanpa mengubah alamat pada pesanan lama, menu, keranjang, checkout dengan harga dihitung di server, riwayat order, notifikasi status dengan pemeriksaan berkala 20 detik saat halaman aktif, poin ledger. Riwayat order semua peran memakai halaman 25 pesanan dengan cursor dan pembatasan akses di server. Percobaan login dan registrasi dibatasi per alamat email selama satu menit, sedangkan perubahan password dibatasi per akun; penghitung disimpan di database agar tetap berlaku lintas proses dan restart. Admin: KPI menurut tanggal Asia/Jakarta, kategori/produk aktif dan nonaktif serta upload gambar WebP, pencarian customer bertahap dan aktivasi/nonaktivasi akun, akun driver aktif/nonaktif, detail order/status, verifikasi pembayaran manual dan assign driver, serta pengaturan nama café dan nilai belanja per poin. Nonaktivasi customer mencabut sesi dan ditolak bila masih ada pesanan aktif. Revenue harian dihitung dari pembayaran berstatus PAID berdasarkan waktu verifikasi, bukan dari pesanan yang belum dibayar. Order lunas tidak dapat dibatalkan selama proses refund belum tersedia. Driver: tugas miliknya, notifikasi penugasan, terima, pickup, antarkan, selesai. Poin diberikan sekali saat `DELIVERED` dengan nilai default 1 per Rp10.000 yang dapat diubah admin. Tunai dan transfer manual tersedia tanpa gateway.
+Customer: registrasi/login dengan sesi yang dapat dicabut, ubah nama/password, alamat, menu, checkout server-side, riwayat, notifikasi, dan poin ledger. Admin/Kasir: KPI, katalog, customer, driver, pembayaran, stasiun minuman, stok masuk, laporan, dan pengaturan. Kitchen hanya menerima item makanan dan memperbarui stasiun Dapur. Pesanan campuran menjadi `READY` setelah Dapur dan Kasir sama-sama siap. Owner memiliki dashboard, laporan, kontrol stok naik/turun, dan audit log hanya-baca. Stok dipotong atomik saat konfirmasi, dipulihkan sekali saat pembatalan yang valid, dan seluruh perubahan memiliki ledger. Driver menangani maksimal lima pesanan aktif sekaligus; tugas keenam ditolak atomik. Driver: notifikasi, terima tugas, pickup, antar, selesai. Poin diberikan sekali saat `DELIVERED`. Tunai dan transfer manual tersedia tanpa gateway.
 
 Body JSON API dibatasi 64 KiB dan harus berupa objek JSON dengan `Content-Type: application/json`; format rusak dan ukuran berlebih mendapat respons 400/413. Endpoint gambar memiliki batas terpisah.
 
@@ -49,4 +51,4 @@ Admin dapat unggah JPEG, PNG, WebP, atau AVIF maksimal 8 MB. Server memvalidasi 
 
 ## Batas saat ini
 
-MySQL adapter, migrasi ber-checksum, backup/restore, schema verifier, dan integration harness tersedia, tetapi full recovery drill belum lulus pada server MySQL yang dapat dijalankan di environment ini. ORM belum dipakai. Upload gambar tersimpan di filesystem lokal dan belum diuji di Hostinger. Profil driver lanjutan, reset password, rate limit berbasis IP/tepi jaringan, CSRF token tambahan, audit penuh, uji browser/mobile, review keamanan dan performa menyeluruh, Hostinger PoC, deployment, UAT, dan handover masih tertunda. Jangan gunakan data pelanggan nyata sampai gate tersebut selesai.
+MySQL adapter, migrasi ber-checksum, backup/restore, schema verifier, recovery drill MySQL 8, health check, HTTP smoke, dan browser UAT desktop/mobile tersedia. ORM belum dipakai. Upload gambar serta backup path belum diverifikasi pada filesystem Hostinger nyata. Promo, bantuan WhatsApp, radius/ongkir, printer otomatis, payment gateway, profil driver lanjutan, reset password, rate limit berbasis IP/tepi jaringan, CSRF token tambahan, review keamanan/performa menyeluruh, Hostinger PoC publik, UAT pengguna, dan handover masih tertunda. Jangan gunakan data pelanggan nyata sampai gate tersebut selesai.
