@@ -37,6 +37,7 @@ async function api(route, body, signal) {
 export default function App() {
   const checkoutAttempt = useRef(null);
   const pollController = useRef(null);
+  const refreshController = useRef(null);
   const [user, setUser] = useState(null),
     [menu, setMenu] = useState({
       products: [],
@@ -80,11 +81,13 @@ export default function App() {
     [busy, setBusy] = useState(false),
     [editingAddress, setEditingAddress] = useState(null),
     [selectedCategory, setSelectedCategory] = useState(0);
-  async function loadCustomers(query = "", before = null) {
+  async function loadCustomers(query = "", before = null, signal) {
     const page = await api(
       "customers?q=" +
         encodeURIComponent(query) +
         (before === null ? "" : "&before=" + before),
+      undefined,
+      signal,
     );
     setCustomers((previous) =>
       before === null ? page.customers : [...previous, ...page.customers],
@@ -109,38 +112,62 @@ export default function App() {
     });
   }
   async function refresh() {
-    const [m, me] = await Promise.all([api("menu"), api("me")]);
-    setMenu(m);
-    setUser(me.user);
-    if (me.user && me.user.role !== "CUSTOMER")
-      setView((prev) => (prev === "menu" ? "orders" : prev));
-    if (me.user) {
-      const o = await api("orders");
-      setOrders(o.orders);
-      setNextOrderCursor(o.nextCursor);
-      setAlerts(await api("notifications"));
-      if (me.user.role === "CUSTOMER") setAccount(await api("account"));
-      if (["ADMIN", "OWNER"].includes(me.user.role)) {
-        setDrivers((await api("drivers")).drivers);
-        setInventory(await api("inventory"));
-        setDashboard(await api("dashboard"));
-        setStock(await api("stock"));
-        if (view === "reports")
-          setReport(await api("report?date=" + (report?.date || "")));
-        if (me.user.role === "ADMIN") {
-          await loadCustomers(customerSearch);
-          setSettings(await api("settings"));
-          setPromotions((await api("promotions")).promotions);
+    refreshController.current?.abort();
+    const controller = new AbortController();
+    refreshController.current = controller;
+    const signal = controller.signal;
+    try {
+      const [m, me] = await Promise.all([
+        api("menu", undefined, signal),
+        api("me", undefined, signal),
+      ]);
+      setMenu(m);
+      setUser(me.user);
+      if (me.user && me.user.role !== "CUSTOMER")
+        setView((prev) => (prev === "menu" ? "orders" : prev));
+      if (me.user) {
+        const o = await api("orders", undefined, signal);
+        setOrders(o.orders);
+        setNextOrderCursor(o.nextCursor);
+        setAlerts(await api("notifications", undefined, signal));
+        if (me.user.role === "CUSTOMER")
+          setAccount(await api("account", undefined, signal));
+        if (["ADMIN", "OWNER"].includes(me.user.role)) {
+          setDrivers((await api("drivers", undefined, signal)).drivers);
+          setInventory(await api("inventory", undefined, signal));
+          setDashboard(await api("dashboard", undefined, signal));
+          setStock(await api("stock", undefined, signal));
+          if (view === "reports")
+            setReport(
+              await api(
+                "report?date=" + (report?.date || ""),
+                undefined,
+                signal,
+              ),
+            );
+          if (me.user.role === "ADMIN") {
+            await loadCustomers(customerSearch, null, signal);
+            setSettings(await api("settings", undefined, signal));
+            setPromotions(
+              (await api("promotions", undefined, signal)).promotions,
+            );
+          }
+          if (me.user.role === "OWNER")
+            setAudit(await api("audit", undefined, signal));
         }
-        if (me.user.role === "OWNER") setAudit(await api("audit"));
+        if (["ADMIN", "KITCHEN", "OWNER"].includes(me.user.role))
+          setPrintJobs((await api("print-jobs", undefined, signal)).jobs);
+      } else {
+        setOrders([]);
+        setNextOrderCursor(null);
+        setCustomers([]);
+        setCustomerSearch("");
       }
-      if (["ADMIN", "KITCHEN", "OWNER"].includes(me.user.role))
-        setPrintJobs((await api("print-jobs")).jobs);
-    } else {
-      setOrders([]);
-      setNextOrderCursor(null);
-      setCustomers([]);
-      setCustomerSearch("");
+    } catch (error) {
+      if (error.name !== "AbortError") throw error;
+    } finally {
+      if (refreshController.current === controller)
+        refreshController.current = null;
     }
   }
   useEffect(() => {
@@ -173,8 +200,9 @@ export default function App() {
         );
         setAlerts(latestAlerts);
         if (["ADMIN", "OWNER"].includes(user.role))
-          setDashboard(await api("dashboard"));
-        if (user.role === "CUSTOMER") setAccount(await api("account"));
+          setDashboard(await api("dashboard", undefined, controller.signal));
+        if (user.role === "CUSTOMER")
+          setAccount(await api("account", undefined, controller.signal));
       } catch (e) {
         if (!controller.signal.aborted) setError(e.message);
       } finally {
@@ -315,6 +343,7 @@ export default function App() {
               onClick={() =>
                 run(async () => {
                   pollController.current?.abort();
+                  refreshController.current?.abort();
                   await api("logout", {});
                   setUser(null);
                   setView("menu");

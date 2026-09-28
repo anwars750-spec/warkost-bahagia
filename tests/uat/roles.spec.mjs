@@ -7,7 +7,12 @@ if (!password) throw new Error("SEED_DEMO_PASSWORD wajib untuk browser UAT");
 function captureConsoleErrors(page) {
   const consoleErrors = [];
   page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
+    if (message.type() === "error") {
+      const location = message.location().url;
+      consoleErrors.push(
+        location ? `${message.text()} @ ${location}` : message.text(),
+      );
+    }
   });
   page.on("pageerror", (error) => consoleErrors.push(error.message));
   return consoleErrors;
