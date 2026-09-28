@@ -29,6 +29,9 @@ async function signIn(page, email) {
   await expect(
     page.locator("nav").getByRole("button", { name: "Keluar" }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("img", { name: "Warkost Bahagia" }),
+  ).toBeVisible();
 }
 
 async function login(page, email) {
@@ -214,13 +217,59 @@ test("driver dapat membuka tugas dan notifikasi", async ({
   });
 });
 
+test("kitchen dan owner memiliki area terpisah yang responsif", async ({
+  page,
+}, testInfo) => {
+  const consoleErrors = captureConsoleErrors(page);
+  await signIn(page, "kitchen@warkost.local");
+  await expect(
+    page.getByRole("heading", { name: "Antrean makanan" }),
+  ).toBeVisible();
+  await expect(page.getByText("STASIUN DAPUR", { exact: true })).toBeVisible();
+  await expect((await authenticatedGet(page, "/api/stock")).status()).toBe(403);
+  await expectResponsiveShell(page);
+
+  await signOut(page);
+  await signIn(page, "owner@warkost.local");
+  await expect(
+    page.getByRole("heading", { name: "Ringkasan usaha" }),
+  ).toBeVisible();
+  await page
+    .locator("nav")
+    .getByRole("button", { name: "Stok", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Kontrol stok" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Stok produk" }),
+  ).toBeVisible();
+  await page
+    .locator("nav")
+    .getByRole("button", { name: "Audit log", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Audit aktivitas" }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Audit log" })).toBeVisible();
+  await expect((await authenticatedGet(page, "/api/audit")).status()).toBe(200);
+  await expectResponsiveShell(page);
+  expect(consoleErrors).toEqual([]);
+  await page.screenshot({
+    path: testInfo.outputPath("kitchen-owner.png"),
+    fullPage: true,
+  });
+});
+
 test("OP-UAT-02 transfer customer ke admin ke driver memberi poin", async ({
   page,
 }, testInfo) => {
   const consoleErrors = captureConsoleErrors(page);
 
   await signIn(page, "customer@warkost.local");
-  const firstProduct = page.locator("article.product").first();
+  const firstProduct = page.locator("article.product").filter({
+    hasText: "Nasi Goreng Warkost",
+  });
   await expect(firstProduct).toBeVisible();
   await firstProduct.getByRole("button", { name: /^Tambah / }).click();
   await page.getByRole("button", { name: /^Keranjang · 1 ·/ }).click();
@@ -263,15 +312,30 @@ test("OP-UAT-02 transfer customer ke admin ke driver memberi poin", async ({
   await adminOrder.getByRole("button", { name: "Tandai lunas" }).click();
   await expect(adminOrder.getByText("PAID", { exact: true })).toBeVisible();
 
-  for (const status of ["CONFIRMED", "PREPARING", "READY"]) {
-    await adminOrder
-      .getByRole("button", { name: `Lanjutkan ke ${status}` })
-      .click();
-    await expect(adminOrder.locator(".badge")).toHaveText(status);
-  }
-  await adminOrder.locator("select").selectOption({ label: "Driver Warkost" });
-  await adminOrder.getByRole("button", { name: "Tugaskan driver" }).click();
-  await expect(adminOrder.locator(".badge")).toHaveText("ASSIGNED");
+  await adminOrder
+    .getByRole("button", { name: "Lanjutkan ke CONFIRMED" })
+    .click();
+  await expect(adminOrder.locator(".badge").first()).toHaveText("CONFIRMED");
+
+  await signOut(page);
+  await signIn(page, "kitchen@warkost.local");
+  const kitchenOrder = orderCard(page, orderId);
+  await expect(kitchenOrder).toHaveCount(1);
+  await kitchenOrder.getByRole("button", { name: "Mulai masak" }).click();
+  await expect(kitchenOrder.locator(".badge").first()).toHaveText("PREPARING");
+  await kitchenOrder.getByRole("button", { name: "Makanan siap" }).click();
+  await expect(kitchenOrder.locator(".badge").first()).toHaveText("READY");
+
+  await signOut(page);
+  await signIn(page, "admin@warkost.local");
+  const readyAdminOrder = orderCard(page, orderId);
+  await readyAdminOrder.locator("select").selectOption({ index: 1 });
+  await readyAdminOrder
+    .getByRole("button", { name: "Tugaskan driver" })
+    .click();
+  await expect(readyAdminOrder.locator(".badge").first()).toHaveText(
+    "ASSIGNED",
+  );
   await page.screenshot({
     path: testInfo.outputPath(`admin-assigned-${orderId}.png`),
     fullPage: true,

@@ -10,10 +10,10 @@ process.env.DATABASE_PATH = path.join(
 const { db } = await import("../lib/db.mjs");
 const { saveSettings, getSettings } = await import("../lib/settings.mjs");
 const { listCatalog } = await import("../lib/catalog.mjs");
-const { createOrder, changeStatus, acceptDelivery } =
+const { createOrder, changeStatus, acceptDelivery, updateStationStatus } =
   await import("../lib/domain.mjs");
 const database = db();
-for (const role of ["ADMIN", "DRIVER", "CUSTOMER"])
+for (const role of ["ADMIN", "DRIVER", "CUSTOMER", "KITCHEN"])
   database
     .prepare("INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,?)")
     .run(role, role + "@test.local", "x", role);
@@ -31,6 +31,7 @@ database
 const admin = { id: 1, role: "ADMIN" },
   driver = { id: 2, role: "DRIVER" },
   customer = { id: 3, role: "CUSTOMER" };
+const kitchen = { id: 4, role: "KITCHEN" };
 test("pengaturan hanya admin, brand dan poin dihitung dari konfigurasi", async () => {
   await assert.rejects(getSettings(customer), /Akses/);
   await assert.rejects(
@@ -44,8 +45,9 @@ test("pengaturan hanya admin, brand dan poin dihitung dari konfigurasi", async (
     method: "CASH",
     items: [{ productId: 1, quantity: 1 }],
   });
-  for (const status of ["CONFIRMED", "PREPARING", "READY"])
-    await changeStatus(admin, order.id, status);
+  await changeStatus(admin, order.id, "CONFIRMED");
+  await updateStationStatus(kitchen, order.id, "PREPARING");
+  await updateStationStatus(kitchen, order.id, "READY");
   await changeStatus(admin, order.id, "ASSIGNED", driver.id);
   await acceptDelivery(driver, order.id);
   for (const status of ["PICKED_UP", "ON_DELIVERY", "DELIVERED"])

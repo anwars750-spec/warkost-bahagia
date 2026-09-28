@@ -49,7 +49,9 @@ const login = async (email) => {
 };
 const customer = await login("customer@warkost.local"),
   admin = await login("admin@warkost.local"),
-  driver = await login("driver@warkost.local");
+  driver = await login("driver@warkost.local"),
+  kitchen = await login("kitchen@warkost.local"),
+  owner = await login("owner@warkost.local");
 const temporary = await login("customer@warkost.local");
 assert.equal(
   (await call("me", undefined, temporary)).value.user.role,
@@ -66,6 +68,9 @@ for (let attempt = 0; attempt < 13; attempt++) {
   assert.equal(result.status, attempt < 12 ? 401 : 429);
 }
 assert.equal((await call("inventory", undefined, customer)).status, 403);
+assert.equal((await call("stock", undefined, kitchen)).status, 403);
+assert.equal((await call("audit", undefined, admin)).status, 403);
+assert.equal((await call("audit", undefined, owner)).status, 200);
 assert.equal((await call("customers", undefined, customer)).status, 403);
 const customersBefore = await call(
   "customers?q=customer%40warkost.local",
@@ -121,6 +126,36 @@ assert.equal(
 const inv = await call("inventory", undefined, admin);
 assert.equal(inv.status, 200);
 assert.ok(inv.value.products.length > 0);
+assert.equal(
+  (
+    await call(
+      "stock",
+      { productId: 1, quantity: -1, reason: "Koreksi smoke" },
+      admin,
+    )
+  ).status,
+  403,
+);
+assert.equal(
+  (
+    await call(
+      "stock",
+      { productId: 1, quantity: 1, reason: "Stok smoke" },
+      admin,
+    )
+  ).status,
+  200,
+);
+assert.equal(
+  (
+    await call(
+      "stock",
+      { productId: 1, quantity: -1, reason: "Koreksi owner" },
+      owner,
+    )
+  ).status,
+  200,
+);
 const png = await sharp({
   create: { width: 120, height: 90, channels: 3, background: "#b66330" },
 })
@@ -176,6 +211,7 @@ const updated = await call(
     price: first.price,
     categoryId: first.category_id,
     imageUrl: image.url,
+    prepStation: first.prep_station,
     active: true,
   },
   admin,
@@ -200,6 +236,10 @@ const newDriver = await call(
   admin,
 );
 assert.equal(newDriver.status, 201, JSON.stringify(newDriver.value));
+const primaryDriver = (
+  await call("drivers", undefined, admin)
+).value.drivers.find((item) => item.email === "driver@warkost.local");
+assert.ok(primaryDriver);
 assert.equal(
   (
     await call(
@@ -294,14 +334,30 @@ assert.equal(
 );
 const detail = await call("order-items?id=" + id, undefined, customer);
 assert.equal(detail.value.items[0].quantity, 2);
-for (const status of ["CONFIRMED", "PREPARING", "READY", "ASSIGNED"]) {
-  const r = await call(
-    "status",
-    { orderId: id, status, ...(status === "ASSIGNED" ? { driverId: 2 } : {}) },
-    admin,
+assert.equal(
+  (await call("status", { orderId: id, status: "CONFIRMED" }, admin)).status,
+  200,
+);
+assert.equal(
+  (await call("station-status", { orderId: id, status: "PREPARING" }, admin))
+    .status,
+  403,
+);
+for (const status of ["PREPARING", "READY"])
+  assert.equal(
+    (await call("station-status", { orderId: id, status }, kitchen)).status,
+    200,
   );
-  assert.equal(r.status, 200, JSON.stringify(r.value));
-}
+assert.equal(
+  (
+    await call(
+      "status",
+      { orderId: id, status: "ASSIGNED", driverId: primaryDriver.id },
+      admin,
+    )
+  ).status,
+  200,
+);
 assert.equal((await call("accept", { orderId: id }, driver)).status, 200);
 for (const status of ["PICKED_UP", "ON_DELIVERY", "DELIVERED"])
   assert.equal(
@@ -461,6 +517,7 @@ assert.equal(
         id: hidden.id,
         categoryId: hidden.category_id,
         imageUrl: hidden.image_url,
+        prepStation: hidden.prep_station,
         active: false,
       },
       customer,
@@ -473,6 +530,6 @@ assert.equal(
   403,
 );
 console.log(
-  "HTTP PASS: login tiga role, RBAC, checkout, admin, driver, delivered, loyalty once; order #" +
+  "HTTP PASS: login lima role, RBAC, stok, kitchen, owner audit, driver, delivered, loyalty once; order #" +
     id,
 );

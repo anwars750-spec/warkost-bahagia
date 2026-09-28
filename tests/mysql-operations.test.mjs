@@ -12,13 +12,13 @@ import {
 
 test("migration MySQL memiliki urutan dan checksum stabil", () => {
   const migrations = loadMysqlMigrations();
-  assert.equal(migrations.length, 9);
+  assert.equal(migrations.length, 10);
   assert.equal(migrations[0].version, "001_mysql.sql");
-  assert.equal(migrations.at(-1).version, "009_order_idempotency.sql");
+  assert.equal(migrations.at(-1).version, "010_kitchen_owner_operations.sql");
   assert.ok(
     migrations.every(({ checksum }) => /^[0-9a-f]{64}$/.test(checksum)),
   );
-  assert.equal(new Set(migrations.map(({ checksum }) => checksum)).size, 9);
+  assert.equal(new Set(migrations.map(({ checksum }) => checksum)).size, 10);
 });
 
 test("DATABASE_URL MySQL diparsing tanpa kehilangan karakter kredensial", () => {

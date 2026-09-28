@@ -8,13 +8,13 @@ process.env.DATABASE_PATH = path.join(
   "data.db",
 );
 const { db } = await import("../lib/db.mjs");
-const { createOrder, changeStatus, acceptDelivery } =
+const { createOrder, changeStatus, acceptDelivery, updateStationStatus } =
   await import("../lib/domain.mjs");
 const { verifyPayment } = await import("../lib/payments.mjs");
 const { listNotifications, readNotification } =
   await import("../lib/notifications.mjs");
 const database = db();
-for (const role of ["ADMIN", "DRIVER", "CUSTOMER"])
+for (const role of ["ADMIN", "DRIVER", "CUSTOMER", "KITCHEN"])
   database
     .prepare("INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,?)")
     .run(role, role + "@notif.test", "x", role);
@@ -32,6 +32,7 @@ database
 const admin = { id: 1, role: "ADMIN" },
   driver = { id: 2, role: "DRIVER" },
   customer = { id: 3, role: "CUSTOMER" };
+const kitchen = { id: 4, role: "KITCHEN" };
 test("notifikasi terikat status, role, pembacaan dan duplikasi", async () => {
   const order = await createOrder(customer, {
     addressId: 1,
@@ -44,8 +45,9 @@ test("notifikasi terikat status, role, pembacaan dan duplikasi", async () => {
   assert.equal((await listNotifications(customer)).unread, 1);
   await readNotification(customer, first.id);
   assert.equal((await listNotifications(customer)).unread, 0);
-  for (const status of ["CONFIRMED", "PREPARING", "READY"])
-    await changeStatus(admin, order.id, status);
+  await changeStatus(admin, order.id, "CONFIRMED");
+  await updateStationStatus(kitchen, order.id, "PREPARING");
+  await updateStationStatus(kitchen, order.id, "READY");
   await changeStatus(admin, order.id, "ASSIGNED", driver.id);
   assert.equal((await listNotifications(driver)).unread, 1);
   await acceptDelivery(driver, order.id);

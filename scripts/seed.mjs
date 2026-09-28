@@ -19,6 +19,8 @@ async function seed() {
   );
   for (const [email, name, role] of [
     ["admin@warkost.local", "Admin Warkost", "ADMIN"],
+    ["kitchen@warkost.local", "Kitchen Warkost", "KITCHEN"],
+    ["owner@warkost.local", "Owner Warkost", "OWNER"],
     ["driver@warkost.local", "Driver Warkost", "DRIVER"],
     ["customer@warkost.local", "Pelanggan Demo", "CUSTOMER"],
   ])
@@ -38,22 +40,36 @@ async function seed() {
       drink = (
         await store.get("SELECT id FROM categories WHERE name=?", "Minuman")
       ).id;
-    for (const [name, description, price, category] of [
+    for (const [name, description, price, category, station] of [
       [
         "Nasi Goreng Warkost",
         "Nasi goreng hangat dengan telur dan kerupuk",
         25000,
         food,
+        "KITCHEN",
       ],
-      ["Mie Ayam Bahagia", "Mie ayam gurih dengan sayuran segar", 22000, food],
-      ["Kopi Susu Rumah", "Espresso, susu, dan gula aren", 18000, drink],
+      [
+        "Mie Ayam Bahagia",
+        "Mie ayam gurih dengan sayuran segar",
+        22000,
+        food,
+        "KITCHEN",
+      ],
+      [
+        "Kopi Susu Rumah",
+        "Espresso, susu, dan gula aren",
+        18000,
+        drink,
+        "CASHIER",
+      ],
     ])
       await store.run(
-        "INSERT INTO products(name,description,price,category_id) VALUES(?,?,?,?)",
+        "INSERT INTO products(name,description,price,category_id,prep_station,stock_quantity) VALUES(?,?,?,?,?,50)",
         name,
         description,
         price,
         category,
+        station,
       );
   }
   const customer = await store.get(
@@ -73,7 +89,7 @@ async function seed() {
 try {
   await seed();
   console.log(
-    "Seed siap: admin@warkost.local, driver@warkost.local, customer@warkost.local",
+    "Seed siap: owner, admin, kitchen, driver, dan customer @warkost.local",
   );
 } finally {
   await store.close();
