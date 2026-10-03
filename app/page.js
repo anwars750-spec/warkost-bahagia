@@ -35,6 +35,77 @@ const demoProductBadges = [
   ["●", "Populer", "popular"],
   ["♛", "Rekomendasi", "recommended"],
 ];
+const ORDER_STAGES = [
+  { key: "received", label: "Diterima" },
+  { key: "preparing", label: "Diproses" },
+  { key: "delivery", label: "Diantar" },
+  { key: "delivered", label: "Sampai" },
+];
+const orderStage = (status) => {
+  if (["PENDING", "CONFIRMED"].includes(status)) return 0;
+  if (["PREPARING", "READY"].includes(status)) return 1;
+  if (["ASSIGNED", "PICKED_UP", "ON_DELIVERY"].includes(status)) return 2;
+  if (status === "DELIVERED") return 3;
+  return -1;
+};
+const orderStatusMeta = (status) => {
+  const statuses = {
+    PENDING: ["Pesanan Diterima", "pending"],
+    CONFIRMED: ["Pesanan Dikonfirmasi", "pending"],
+    PREPARING: ["Dalam Proses", "process"],
+    READY: ["Siap Diantar", "process"],
+    ASSIGNED: ["Driver Ditugaskan", "delivery"],
+    PICKED_UP: ["Pesanan Diambil", "delivery"],
+    ON_DELIVERY: ["Dalam Pengantaran", "delivery"],
+    DELIVERED: ["Selesai", "done"],
+    CANCELLED: ["Dibatalkan", "cancelled"],
+  };
+  const [label, tone] = statuses[status] || [
+    String(status || "Pesanan").replaceAll("_", " "),
+    "pending",
+  ];
+  return { label, tone };
+};
+const orderHeadline = (status) => {
+  if (["PENDING", "CONFIRMED"].includes(status))
+    return "Pesanan sudah kami terima";
+  if (["PREPARING", "READY"].includes(status))
+    return "Pesanan sedang diproses oleh dapur";
+  if (["ASSIGNED", "PICKED_UP", "ON_DELIVERY"].includes(status))
+    return "Pesanan sedang menuju alamatmu";
+  if (status === "DELIVERED") return "Pesanan telah selesai diantar";
+  if (status === "CANCELLED") return "Pesanan dibatalkan";
+  return "Status pesanan diperbarui";
+};
+const formatDateTime = (value) => {
+  if (!value) return "";
+  const parsed = new Date(String(value).replace(" ", "T") + "Z");
+  if (Number.isNaN(parsed.getTime())) return String(value);
+  return parsed.toLocaleString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+const notificationCategory = (message) => {
+  const normalized = String(message || "").toLowerCase();
+  if (/promo|voucher|diskon|poin/.test(normalized)) return "promo";
+  if (/pesanan|driver|dapur|pengantaran|pembayaran/.test(normalized))
+    return "order";
+  return "system";
+};
+const notificationTitle = (message) => {
+  const category = notificationCategory(message);
+  if (category === "promo") return /poin/i.test(message)
+    ? "Poin Warkost"
+    : "Promo Warkost";
+  if (category === "order") return /driver|pengantaran/i.test(message)
+    ? "Info Pengantaran"
+    : "Status Pesanan";
+  return "Informasi Akun";
+};
 async function api(route, body, signal) {
   const response = await fetch("/api/" + route, {
     method: body ? "POST" : "GET",
@@ -97,7 +168,13 @@ export default function App() {
     [productSearch, setProductSearch] = useState(""),
     [promoIndex, setPromoIndex] = useState(0),
     [overlay, setOverlay] = useState(null),
-    [orderFilter, setOrderFilter] = useState("all");
+    [supportTopic, setSupportTopic] = useState(null),
+    [orderFilter, setOrderFilter] = useState("all"),
+    [notificationFilter, setNotificationFilter] = useState("all"),
+    [lastCreatedOrderId, setLastCreatedOrderId] = useState(null),
+    [focusedOrderId, setFocusedOrderId] = useState(null),
+    [supportOrderId, setSupportOrderId] = useState(null),
+    [checkoutAddressId, setCheckoutAddressId] = useState("");
   async function loadCustomers(query = "", before = null, signal) {
     const page = await api(
       "customers?q=" +
@@ -232,6 +309,14 @@ export default function App() {
       if (pollController.current === controller) pollController.current = null;
     };
   }, [user?.id, user?.role]);
+  useEffect(() => {
+    if (!overlay) return;
+    const close = (event) => {
+      if (event.key === "Escape") setOverlay(null);
+    };
+    document.addEventListener("keydown", close);
+    return () => document.removeEventListener("keydown", close);
+  }, [overlay]);
   async function run(fn) {
     setError("");
     setMessage("");
@@ -286,15 +371,86 @@ export default function App() {
   const visibleOrders =
     role !== "CUSTOMER" || orderFilter === "all"
       ? orders
-      : orders.filter((order) =>
-          orderFilter === "history"
-            ? ["DELIVERED", "CANCELLED"].includes(order.status)
-            : !["DELIVERED", "CANCELLED"].includes(order.status),
-        );
+      : orders.filter((order) => {
+          if (orderFilter === "process")
+            return !["DELIVERED", "CANCELLED"].includes(order.status);
+          if (orderFilter === "completed") return order.status === "DELIVERED";
+          if (orderFilter === "cancelled") return order.status === "CANCELLED";
+          return true;
+        });
+  const customerOrderCounts = {
+    all: orders.length,
+    process: orders.filter(
+      (order) => !["DELIVERED", "CANCELLED"].includes(order.status),
+    ).length,
+    completed: orders.filter((order) => order.status === "DELIVERED").length,
+    cancelled: orders.filter((order) => order.status === "CANCELLED").length,
+  };
+  const selectedCheckoutAddress =
+    account.addresses.find(
+      (address) => String(address.id) === String(checkoutAddressId),
+    ) || account.addresses[0];
+  const focusedOrder = orders.find(
+    (order) => order.id === (focusedOrderId || lastCreatedOrderId),
+  );
+  const activeCustomerOrder = orders.find(
+    (order) => !["DELIVERED", "CANCELLED"].includes(order.status),
+  );
+  const supportOrder =
+    orders.find((order) => String(order.id) === String(supportOrderId)) ||
+    activeCustomerOrder;
+  const supportDriverAssigned = Boolean(supportOrder?.driver_id);
+  const supportDriverContactEnabled = Boolean(
+    supportOrder?.driver_whatsapp &&
+      ["PICKED_UP", "ON_DELIVERY"].includes(supportOrder.status),
+  );
+  const filteredNotifications = alerts.notifications.filter(
+    (notification) =>
+      notificationFilter === "all" ||
+      notificationCategory(notification.message) === notificationFilter,
+  );
+  const customerBatchView =
+    role === "CUSTOMER" &&
+    ["cart", "orders", "order-success", "notifications"].includes(view);
   function goToCustomerOrders(filter = "all") {
-    setOrderFilter(filter);
+    setOrderFilter(
+      filter === "tracking"
+        ? "process"
+        : filter === "history"
+          ? "completed"
+          : filter,
+    );
     setOverlay(null);
     setView("orders");
+  }
+  function openCustomerTracking(orderId) {
+    setFocusedOrderId(orderId);
+    setOverlay(null);
+    setView("order-success");
+  }
+  function openCustomerSupport(orderId = null, topic = null) {
+    setSupportOrderId(orderId);
+    setSupportTopic(topic);
+    setOverlay("support");
+  }
+  function reorderItems(items) {
+    const additions = {};
+    for (const item of items || []) {
+      const product = menu.products.find((candidate) => candidate.name === item.name);
+      if (product) additions[product.id] = (additions[product.id] || 0) + item.quantity;
+    }
+    if (!Object.keys(additions).length) {
+      setError("Menu dari pesanan ini sudah tidak tersedia.");
+      return;
+    }
+    setCart((current) => {
+      const next = { ...current };
+      for (const [id, quantity] of Object.entries(additions))
+        next[id] = (next[id] || 0) + quantity;
+      return next;
+    });
+    setView("menu");
+    setMessage("Menu dari pesanan sebelumnya sudah ditambahkan ke keranjang.");
   }
   function logout() {
     setOverlay(null);
@@ -330,21 +486,13 @@ export default function App() {
     );
   }
   function openCustomerHelp() {
-    setOverlay(null);
-    setView("menu");
-    window.setTimeout(
-      () =>
-        document
-          .getElementById("customer-help")
-          ?.scrollIntoView({ behavior: "smooth", block: "center" }),
-      0,
-    );
+    openCustomerSupport(null);
   }
   return (
     <>
       <header
         className={`top ${
-          role === "CUSTOMER" && view === "menu" ? "customer-home-header" : ""
+          role === "CUSTOMER" ? "customer-home-header customer-app-header" : ""
         }`}
       >
         <button
@@ -373,16 +521,12 @@ export default function App() {
         </button>
         <nav
           className={role === "CUSTOMER" ? "customer-desktop-nav" : ""}
-          aria-label={
-            role === "CUSTOMER" && view === "menu"
-              ? "Navigasi pelanggan utama"
-              : undefined
-          }
+          aria-label={role === "CUSTOMER" ? "Navigasi pelanggan utama" : undefined}
         >
-          {role === "CUSTOMER" && view === "menu" ? (
+          {role === "CUSTOMER" ? (
             <>
               <button
-                className="home-nav-item"
+                className={`home-nav-item ${overlay === "notifications" ? "active" : ""}`}
                 aria-label="Buka notifikasi"
                 onClick={() => setOverlay("notifications")}
               >
@@ -393,7 +537,7 @@ export default function App() {
                 <span className="nav-label">Notifikasi</span>
               </button>
               <button
-                className="home-nav-item"
+                className={`home-nav-item ${overlay === "cart" || view === "cart" ? "active" : ""}`}
                 aria-label="Keranjang"
                 onClick={() => setOverlay("cart")}
               >
@@ -406,7 +550,7 @@ export default function App() {
                 <span className="nav-label">Keranjang</span>
               </button>
               <button
-                className="home-nav-item"
+                className={`home-nav-item ${overlay === "account" || view === "account" ? "active" : ""}`}
                 aria-label="Akun"
                 onClick={() => setOverlay("account")}
               >
@@ -425,12 +569,6 @@ export default function App() {
                 </span>
                 <span className="nav-label">Bantuan</span>
               </button>
-            </>
-          ) : role === "CUSTOMER" ? (
-            <>
-              <button onClick={() => setView("menu")}>Menu</button>
-              <button onClick={() => goToCustomerOrders("all")}>Pesanan</button>
-              <button onClick={() => setOverlay("account")}>Akun</button>
             </>
           ) : role ? (
             <>
@@ -494,7 +632,7 @@ export default function App() {
               )}
             </>
           ) : null}
-          {role && !(role === "CUSTOMER" && view === "menu") && (
+          {role && role !== "CUSTOMER" && (
             <button
               className="icon-nav-button"
               aria-label="Buka notifikasi"
@@ -511,7 +649,7 @@ export default function App() {
               )}
             </button>
           )}
-          {role && !(role === "CUSTOMER" && view === "menu") ? (
+          {role && role !== "CUSTOMER" ? (
             <button onClick={logout}>Keluar</button>
           ) : !role ? (
             <button onClick={() => setView("auth")}>Masuk</button>
@@ -519,13 +657,17 @@ export default function App() {
         </nav>
       </header>
       <main
-        className={
+        className={[
+          role === "CUSTOMER" ? "customer-app-main" : "",
           (!role || role === "CUSTOMER") && view === "menu"
             ? "customer-home-main"
-            : ""
-        }
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
       >
-        {!((!role || role === "CUSTOMER") && view === "menu") && (
+        {!((!role || role === "CUSTOMER") && view === "menu") &&
+          !customerBatchView && (
           <div className="heading">
             <div>
               <span className="eyebrow">
@@ -824,7 +966,7 @@ export default function App() {
                           src={p.image_url || demoProductImage(p.name)}
                           alt={p.name}
                           fill
-                          sizes="(max-width: 620px) 100vw, (max-width: 850px) 50vw, 33vw"
+                          sizes="(max-width: 620px) 50vw, (max-width: 850px) 50vw, 33vw"
                           unoptimized={Boolean(p.image_url)}
                         />
                         {badge && (
@@ -923,27 +1065,24 @@ export default function App() {
           </>
         )}
         {role === "CUSTOMER" && view === "cart" && (
-          <section className="panel">
-            <h2>Keranjang</h2>
-            {menu.products
-              .filter((p) => cart[p.id] > 0)
-              .map((p) => (
-                <div className="line" key={p.id}>
-                  <span>
-                    {p.name} · {cart[p.id]} × {money(p.price)}
-                  </span>
-                  <div className="qty">
-                    <button onClick={() => step(p.id, -1)}>−</button>
-                    <button onClick={() => step(p.id, 1)}>+</button>
-                  </div>
-                </div>
-              ))}
-            <div className="line">
-              <strong>Total</strong>
-              <strong>{money(total)}</strong>
+          <section className="customer-checkout" aria-labelledby="checkout-title">
+            <div className="customer-page-title checkout-title-block">
+              <button className="back-link" type="button" onClick={() => setView("menu")}>
+                <ArrowIcon /> Kembali ke menu
+              </button>
+              <h1 id="checkout-title">Checkout Pesanan</h1>
+              <p>Lengkapi detail pesananmu. Total akhir dan ongkir tetap dihitung aman oleh server.</p>
             </div>
-            {count > 0 && (
+            {!count ? (
+              <div className="panel empty-state checkout-empty">
+                <CartIcon />
+                <h2>Keranjangmu masih kosong</h2>
+                <p>Pilih menu favoritmu terlebih dahulu.</p>
+                <button className="primary" onClick={() => setView("menu")}>Pilih Menu</button>
+              </div>
+            ) : (
               <form
+                className="checkout-form"
                 onSubmit={(e) => {
                   e.preventDefault();
                   const f = new FormData(e.currentTarget);
@@ -953,65 +1092,146 @@ export default function App() {
                       method: f.get("method"),
                       items: menu.products
                         .filter((p) => cart[p.id] > 0)
-                        .map((p) => ({
-                          productId: p.id,
-                          quantity: cart[p.id],
-                        })),
+                        .map((p) => ({ productId: p.id, quantity: cart[p.id] })),
                     };
                     const signature = JSON.stringify(payload);
                     if (checkoutAttempt.current?.signature !== signature)
-                      checkoutAttempt.current = {
-                        signature,
-                        key: crypto.randomUUID(),
-                      };
+                      checkoutAttempt.current = { signature, key: crypto.randomUUID() };
                     const result = await api("checkout", {
                       ...payload,
                       idempotencyKey: checkoutAttempt.current.key,
                     });
                     checkoutAttempt.current = null;
+                    setLastCreatedOrderId(result.id);
+                    setFocusedOrderId(result.id);
                     setCart({});
-                    setView("orders");
-                    setMessage(
-                      `Pesanan #${result.id} berhasil dibuat · ongkir ${money(result.deliveryFee)}${
-                        result.driverDelayNotice
-                          ? " · Mohon maaf, pesanan mungkin lebih lama karena semua driver sedang bertugas."
-                          : ""
-                      }`,
-                    );
+                    setView("order-success");
                   });
                 }}
               >
-                <label>
-                  Alamat pengantaran
-                  <select name="address" required>
-                    {account.addresses.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.label} · {a.detail}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {!account.addresses.length && (
-                  <p>Tambahkan alamat di halaman Akun terlebih dahulu.</p>
-                )}
-                <label>
-                  Metode pembayaran
-                  <select name="method">
-                    <option value="CASH">Tunai saat diterima</option>
-                    <option value="BANK_TRANSFER">
-                      Transfer bank · verifikasi admin
-                    </option>
-                  </select>
-                </label>
-                <button
-                  className="primary"
-                  disabled={busy || !account.addresses.length}
-                >
-                  Buat pesanan · {money(total)}
-                </button>
+                <div className="checkout-stack">
+                  <section className="checkout-card cart-checkout-card">
+                    <div className="checkout-card-heading">
+                      <span className="section-icon"><CartIcon /></span>
+                      <h2>Keranjang Anda</h2>
+                      <button className="outline-action" type="button" onClick={() => setView("menu")}>+ Tambah Menu</button>
+                    </div>
+                    <div className="checkout-items">
+                      {menu.products.filter((p) => cart[p.id] > 0).map((p) => (
+                        <div className="checkout-item" key={p.id}>
+                          <Image src={p.image_url || demoProductImage(p.name)} alt="" width={86} height={68} unoptimized={Boolean(p.image_url)} />
+                          <span className="checkout-item-copy">
+                            <strong>{p.name}</strong>
+                            <small>{cart[p.id]} × {money(p.price)}</small>
+                          </span>
+                          <div className="qty checkout-qty" aria-label={`Jumlah ${p.name}`}>
+                            <button type="button" aria-label={`Kurangi ${p.name}`} onClick={() => step(p.id, -1)}>−</button>
+                            <span>{cart[p.id]}</span>
+                            <button type="button" aria-label={`Tambah ${p.name}`} onClick={() => step(p.id, 1)}>+</button>
+                          </div>
+                          <strong className="checkout-item-total">{money(p.price * cart[p.id])}</strong>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="checkout-subtotal"><span>Subtotal</span><strong>{money(total)}</strong></div>
+                  </section>
+
+                  <section className="checkout-card loyalty-checkout-card">
+                    <div className="checkout-card-heading">
+                      <span className="section-icon"><StarIcon /></span>
+                      <h2>Poin Loyalty</h2>
+                    </div>
+                    <div className="loyalty-summary">
+                      <StarIcon />
+                      <p>Poin Anda saat ini: <strong>{account.loyalty} poin</strong><small>Kumpulkan poin dari setiap pembelian dan tukarkan sesuai reward yang tersedia.</small></p>
+                    </div>
+                  </section>
+
+                  <section className="checkout-card voucher-checkout-card">
+                    <div className="checkout-card-heading">
+                      <span className="section-icon"><TicketIcon /></span>
+                      <h2>Voucher</h2>
+                    </div>
+                    <div className="voucher-empty-state">
+                      <TicketIcon />
+                      <span><strong>Belum ada voucher dipilih</strong><small>Checkout hanya akan memakai voucher yang sudah diklaim dan eligible.</small></span>
+                      <button type="button" disabled title="Voucher Center akan tersedia pada sesi logic terpisah">Lihat & Klaim Voucher</button>
+                    </div>
+                  </section>
+
+                  <section className="checkout-card delivery-checkout-card">
+                    <div className="checkout-card-heading">
+                      <span className="section-icon"><LocationIcon /></span>
+                      <h2>Pengiriman</h2>
+                    </div>
+                    <label className="checkout-select-label">
+                      Alamat pengantaran
+                      <select
+                        name="address"
+                        required
+                        value={selectedCheckoutAddress?.id || ""}
+                        onChange={(event) => setCheckoutAddressId(event.target.value)}
+                      >
+                        {account.addresses.map((address) => (
+                          <option key={address.id} value={address.id}>{address.label} · {address.detail}</option>
+                        ))}
+                      </select>
+                    </label>
+                    {selectedCheckoutAddress ? (
+                      <div className="delivery-summary">
+                        <LocationIcon />
+                        <span><strong>{selectedCheckoutAddress.label}</strong><small>{selectedCheckoutAddress.detail}</small></span>
+                      </div>
+                    ) : (
+                      <p className="checkout-warning">Tambahkan alamat di halaman Akun terlebih dahulu.</p>
+                    )}
+                    <div className="delivery-rules">
+                      <TruckIcon />
+                      <span><strong>Jarak dan ongkir dihitung otomatis</strong><small>Gratis hingga 5 km. Di atasnya mengikuti konfigurasi pengiriman dan radius layanan maksimal 15 km.</small></span>
+                    </div>
+                  </section>
+
+                  <section className="checkout-card payment-method-card">
+                    <div className="checkout-card-heading">
+                      <span className="section-icon"><WalletIcon /></span>
+                      <h2>Metode Pembayaran</h2>
+                    </div>
+                    <label className="checkout-select-label sr-label">
+                      Metode pembayaran
+                      <select name="method">
+                        <option value="CASH">Tunai saat diterima</option>
+                        <option value="BANK_TRANSFER">Transfer bank · verifikasi admin</option>
+                      </select>
+                    </label>
+                  </section>
+                </div>
+
+                <aside className="checkout-summary-card">
+                  <div className="checkout-card-heading">
+                    <span className="section-icon"><WalletIcon /></span>
+                    <h2>Rincian Pembayaran</h2>
+                  </div>
+                  <div className="payment-line"><span>Subtotal</span><strong>{money(total)}</strong></div>
+                  <div className="payment-line"><span>Ongkir</span><strong className="pending-value">Dihitung server</strong></div>
+                  <div className="payment-line"><span>Voucher</span><strong>{money(0)}</strong></div>
+                  <div className="payment-total"><span>Total menu</span><strong>{money(total)}</strong></div>
+                  <p className="server-calculation-note">Total akhir termasuk ongkir akan ditampilkan setelah server memvalidasi alamat.</p>
+                  <button className="primary checkout-submit" disabled={busy || !account.addresses.length}>
+                    {busy ? "Membuat Pesanan…" : "Buat Pesanan"}<ArrowIcon />
+                  </button>
+                  <div className="checkout-trust"><ShieldIcon /><span>Pesananmu diproses dengan aman menggunakan kalkulasi existing.</span></div>
+                </aside>
               </form>
             )}
           </section>
+        )}
+        {role === "CUSTOMER" && view === "order-success" && (
+          <CustomerTracking
+            order={focusedOrder}
+            justCreated={Boolean(lastCreatedOrderId && focusedOrder?.id === lastCreatedOrderId)}
+            onBack={() => goToCustomerOrders("all")}
+            onSupport={openCustomerSupport}
+          />
         )}
         {role === "CUSTOMER" && view === "account" && (
           <>
@@ -1834,7 +2054,7 @@ export default function App() {
               {!printJobs.length && <p>Belum ada print job.</p>}
             </section>
           )}
-        {role && view === "notifications" && (
+        {role && role !== "CUSTOMER" && view === "notifications" && (
           <section className="panel narrow">
             <h2>Kabar terbaru</h2>
             {alerts.notifications.length ? (
@@ -1864,34 +2084,32 @@ export default function App() {
         {role && view === "orders" && (
           <>
             {role === "CUSTOMER" && (
-              <div className="customer-order-tabs" aria-label="Filter pesanan">
-                <button
-                  className={orderFilter === "all" ? "active" : ""}
-                  onClick={() => setOrderFilter("all")}
-                >
-                  Pesanan
+              <section className="customer-orders-heading">
+                <div className="customer-page-title">
+                  <span className="eyebrow">PESANAN WARKOST</span>
+                  <h1>Pesanan</h1>
+                  <p>Lihat dan pantau semua pesanan Anda.</p>
+                </div>
+                <button className="orders-refresh" onClick={() => run(async () => {})} disabled={busy}>
+                  {busy ? "Memperbarui…" : "Perbarui status"}
                 </button>
-                <button
-                  className={orderFilter === "tracking" ? "active" : ""}
-                  onClick={() => setOrderFilter("tracking")}
-                >
-                  Tracking
-                </button>
-                <button
-                  className={orderFilter === "history" ? "active" : ""}
-                  onClick={() => setOrderFilter("history")}
-                >
-                  Riwayat
-                </button>
-              </div>
+                <div className="customer-order-tabs" aria-label="Filter pesanan">
+                  {[
+                    ["all", "Semua"],
+                    ["process", "Dalam Proses"],
+                    ["completed", "Selesai"],
+                    ["cancelled", "Dibatalkan"],
+                  ].map(([key, label]) => (
+                    <button key={key} className={orderFilter === key ? "active" : ""} onClick={() => setOrderFilter(key)}>
+                      {label} <span>{customerOrderCounts[key]}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
             )}
-            <button
-              className="refresh"
-              onClick={() => run(async () => {})}
-              disabled={busy}
-            >
-              Perbarui status
-            </button>
+            {role !== "CUSTOMER" && (
+              <button className="refresh" onClick={() => run(async () => {})} disabled={busy}>Perbarui status</button>
+            )}
             {["ADMIN", "OWNER"].includes(role) && dashboard && (
               <div className="stats">
                 {[
@@ -1955,7 +2173,7 @@ export default function App() {
                 ))}
               </div>
             )}
-            <div className="order-list">
+            <div className={role === "CUSTOMER" ? "order-list customer-order-list" : "order-list"}>
               {visibleOrders.map((o) => (
                 <Order
                   key={o.id}
@@ -1963,6 +2181,9 @@ export default function App() {
                   role={role}
                   drivers={drivers}
                   busy={busy}
+                  onTrack={openCustomerTracking}
+                  onReorder={reorderItems}
+                  onSupport={openCustomerSupport}
                   action={(route, body) =>
                     run(async () => {
                       await api(route, body);
@@ -1976,11 +2197,13 @@ export default function App() {
               <div className="panel empty-state">
                 <ReceiptIcon />
                 <h2>
-                  {orderFilter === "history"
-                    ? "Belum ada riwayat pesanan"
-                    : orderFilter === "tracking"
+                  {orderFilter === "completed"
+                    ? "Belum ada pesanan selesai"
+                    : orderFilter === "process"
                       ? "Tidak ada pesanan yang sedang berjalan"
-                      : "Belum ada pesanan"}
+                      : orderFilter === "cancelled"
+                        ? "Belum ada pesanan dibatalkan"
+                        : "Belum ada pesanan"}
                 </h2>
                 <p>Pesananmu akan tampil di sini.</p>
               </div>
@@ -2040,17 +2263,17 @@ export default function App() {
       {role === "CUSTOMER" && (
         <nav className="mobile-customer-nav" aria-label="Navigasi pelanggan">
           <button
-            className={overlay === "notifications" ? "active" : ""}
-            aria-label="Notifikasi"
-            onClick={() => setOverlay("notifications")}
+            className={view === "menu" && !overlay ? "active" : ""}
+            aria-label="Menu"
+            onClick={() => {
+              setOverlay(null);
+              setView("menu");
+            }}
           >
             <span className="mobile-nav-icon">
-              <BellIcon />
-              {alerts.unread > 0 && (
-                <span className="mobile-nav-count">{alerts.unread}</span>
-              )}
+              <FoodIcon />
             </span>
-            Notifikasi
+            Menu
           </button>
           <button
             className={overlay === "cart" ? "active" : ""}
@@ -2075,7 +2298,11 @@ export default function App() {
             </span>
             Akun
           </button>
-          <button aria-label="Bantuan" onClick={openCustomerHelp}>
+          <button
+            className={overlay === "support" ? "active" : ""}
+            aria-label="Bantuan"
+            onClick={openCustomerHelp}
+          >
             <span className="mobile-nav-icon">
               <HelpIcon />
             </span>
@@ -2091,7 +2318,7 @@ export default function App() {
           }}
         >
           <section
-            className="quick-sheet"
+            className={`quick-sheet ${overlay === "notifications" ? "notification-sheet" : ""} ${overlay === "support" ? "support-sheet" : ""}`}
             role="dialog"
             aria-modal="true"
             aria-label={
@@ -2099,20 +2326,36 @@ export default function App() {
                 ? "Ringkasan keranjang"
                 : overlay === "notifications"
                   ? "Notifikasi terbaru"
-                  : "Menu akun"
+                  : overlay === "support"
+                    ? "Customer Support"
+                    : "Menu akun"
             }
           >
             <div className="sheet-handle" aria-hidden="true" />
             <div className="sheet-heading">
               <div>
-                <span className="eyebrow">AKSES CEPAT</span>
+                <span className="eyebrow">
+                  {overlay === "notifications"
+                    ? "INFORMASI TERBARU"
+                    : overlay === "support"
+                      ? "BANTUAN WARKOST"
+                      : "AKSES CEPAT"}
+                </span>
                 <h2>
                   {overlay === "cart"
                     ? "Keranjangmu"
                     : overlay === "notifications"
-                      ? "Notifikasi terbaru"
-                      : "Akun saya"}
+                      ? "Notifikasi"
+                      : overlay === "support"
+                        ? "Customer Support"
+                        : "Akun saya"}
                 </h2>
+                {overlay === "notifications" && (
+                  <p>Informasi terbaru seputar pesanan, promo, dan akun Anda.</p>
+                )}
+                {overlay === "support" && (
+                  <p>Bantuan internal dengan konteks pesananmu.</p>
+                )}
               </div>
               <button
                 className="sheet-close"
@@ -2177,31 +2420,212 @@ export default function App() {
               </div>
             )}
             {overlay === "notifications" && (
-              <div className="quick-notifications">
-                {alerts.notifications.slice(0, 3).map((notification) => (
-                  <div
-                    className={
-                      notification.read_at ? "quick-note" : "quick-note unread"
-                    }
-                    key={notification.id}
-                  >
-                    <BellIcon />
-                    <span>
-                      <strong>{notification.message}</strong>
-                      <small>{notification.created_at}</small>
-                    </span>
+              <div className="notification-center">
+                <div className="notification-filters" aria-label="Filter notifikasi">
+                  {[
+                    ["all", "Semua"],
+                    ["order", "Pesanan"],
+                    ["promo", "Promo"],
+                    ["system", "Sistem"],
+                  ].map(([key, label]) => {
+                    const amount = key === "all"
+                      ? alerts.notifications.length
+                      : alerts.notifications.filter((notification) => notificationCategory(notification.message) === key).length;
+                    return (
+                      <button key={key} className={notificationFilter === key ? "active" : ""} onClick={() => setNotificationFilter(key)}>
+                        {label} <span>{amount}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="notification-list">
+                  {filteredNotifications.map((notification) => {
+                    const category = notificationCategory(notification.message);
+                    return (
+                      <article className={notification.read_at ? "notification-item" : "notification-item unread"} key={notification.id}>
+                        <span className={`notification-icon ${category}`}>
+                          {category === "order" ? <ReceiptIcon /> : category === "promo" ? <TicketIcon /> : <BellIcon />}
+                        </span>
+                        <span className="notification-copy">
+                          <strong>{notificationTitle(notification.message)}</strong>
+                          <span>{notification.message}</span>
+                        </span>
+                        <span className="notification-meta">
+                          <small>{formatDateTime(notification.created_at)}</small>
+                          {!notification.read_at && <span className="unread-dot" aria-label="Belum dibaca" />}
+                          {!notification.read_at && (
+                            <button disabled={busy} onClick={() => run(() => api("notification-read", { id: notification.id }))}>
+                              Tandai dibaca
+                            </button>
+                          )}
+                        </span>
+                      </article>
+                    );
+                  })}
+                </div>
+                {!filteredNotifications.length && (
+                  <div className="notification-empty"><BellIcon /><h3>Belum ada notifikasi</h3><p>Informasi terbaru akan tampil di sini.</p></div>
+                )}
+              </div>
+            )}
+            {overlay === "support" && (
+              <div className="customer-support-content">
+                {supportOrder ? (
+                  <section className="support-order-context" aria-label="Konteks pesanan">
+                    <span className="section-icon"><ReceiptIcon /></span>
+                    <div>
+                      <small>PESANAN TERHUBUNG</small>
+                      <strong>WB{String(supportOrder.id).padStart(6, "0")}</strong>
+                      <span>{orderStatusMeta(supportOrder.status).label} · {money(supportOrder.total)}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => openCustomerTracking(supportOrder.id)}
+                    >
+                      Lihat status
+                    </button>
+                  </section>
+                ) : (
+                  <div className="support-intro">
+                    <span className="section-icon"><HelpIcon /></span>
+                    <div>
+                      <strong>Ada yang bisa kami bantu?</strong>
+                      <span>Pilih bantuan agar tim Warkost memahami kebutuhanmu.</span>
+                    </div>
                   </div>
-                ))}
-                {!alerts.notifications.length && <p>Belum ada notifikasi.</p>}
-                <button
-                  className="sheet-secondary"
-                  onClick={() => {
-                    setOverlay(null);
-                    setView("notifications");
-                  }}
-                >
-                  Lihat semua notifikasi
-                </button>
+                )}
+                {!supportTopic ? (
+                  <>
+                    <div className="support-topics" aria-label="Topik bantuan">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          supportOrder
+                            ? openCustomerTracking(supportOrder.id)
+                            : goToCustomerOrders("all")
+                        }
+                      >
+                        <ReceiptIcon /><span><strong>Status pesanan</strong><small>Cek proses dan estimasi pesanan</small></span><ArrowIcon />
+                      </button>
+                      <button type="button" onClick={() => setSupportTopic("payment")}>
+                        <WalletIcon /><span><strong>Pembayaran</strong><small>Bantuan pembayaran atau tagihan</small></span><ArrowIcon />
+                      </button>
+                      <button type="button" onClick={() => setSupportTopic("delivery")}>
+                        <TruckIcon /><span><strong>Pengantaran</strong><small>Alamat, keterlambatan, atau driver</small></span><ArrowIcon />
+                      </button>
+                    </div>
+                    <button
+                      className="primary support-admin-action"
+                      type="button"
+                      onClick={() => setSupportTopic("admin")}
+                    >
+                      <ChatIcon /> Hubungi Admin
+                    </button>
+                  </>
+                ) : (
+                  <section
+                    className="support-topic-detail"
+                    aria-label={
+                      supportTopic === "payment"
+                        ? "Bantuan pembayaran"
+                        : supportTopic === "delivery"
+                          ? "Bantuan pengantaran"
+                          : supportTopic === "driver"
+                            ? "Customer dan Driver"
+                            : "Bantuan Admin"
+                    }
+                  >
+                    <button
+                      className="support-back"
+                      type="button"
+                      onClick={() => setSupportTopic(null)}
+                    >
+                      <ArrowIcon /> Kembali ke topik bantuan
+                    </button>
+                    {supportTopic === "payment" && (
+                      <>
+                        <div className="support-detail-heading"><WalletIcon /><div><strong>Bantuan pembayaran</strong><span>Informasi pembayaran dari data pesanan yang tersedia.</span></div></div>
+                        {supportOrder ? (
+                          <div className="support-fact-list">
+                            <div><span>Nomor pesanan</span><strong>WB{String(supportOrder.id).padStart(6, "0")}</strong></div>
+                            <div><span>Status pembayaran</span><strong>{supportOrder.payment_status || "Belum tersedia"}</strong></div>
+                            <div><span>Total</span><strong>{money(supportOrder.total)}</strong></div>
+                          </div>
+                        ) : (
+                          <p className="support-empty-copy">Belum ada pesanan aktif. Buka daftar Pesanan untuk memilih transaksi yang memerlukan bantuan.</p>
+                        )}
+                        <button className="button-link support-wide-action" type="button" onClick={() => goToCustomerOrders("all")}><ReceiptIcon /> Buka Pesanan</button>
+                      </>
+                    )}
+                    {supportTopic === "delivery" && (
+                      <>
+                        <div className="support-detail-heading"><TruckIcon /><div><strong>Bantuan pengantaran</strong><span>Status driver mengikuti data pengantaran pesanan.</span></div></div>
+                        {supportOrder ? (
+                          <div className="support-fact-list">
+                            <div><span>Nomor pesanan</span><strong>WB{String(supportOrder.id).padStart(6, "0")}</strong></div>
+                            <div><span>Status pesanan</span><strong>{orderStatusMeta(supportOrder.status).label}</strong></div>
+                            <div><span>Driver</span><strong>{supportDriverAssigned ? "Sudah ditugaskan" : "Belum ditugaskan"}</strong></div>
+                          </div>
+                        ) : (
+                          <p className="support-empty-copy">Belum ada pesanan aktif untuk bantuan pengantaran.</p>
+                        )}
+                        <button
+                          className="primary support-wide-action"
+                          type="button"
+                          disabled={!supportDriverContactEnabled}
+                          onClick={() => setSupportTopic("driver")}
+                        >
+                          <ChatIcon /> Hubungi Driver
+                        </button>
+                        {!supportDriverContactEnabled && (
+                          <small className="support-disabled-note">
+                            {supportDriverAssigned
+                              ? "Driver belum memulai fase pengantaran yang dapat dihubungi."
+                              : "Driver belum ditugaskan untuk pesanan ini."}
+                          </small>
+                        )}
+                      </>
+                    )}
+                    {supportTopic === "driver" && (
+                      <>
+                        <div className="support-detail-heading"><ChatIcon /><div><strong>Customer ↔ Driver</strong><span>Konteks pengantaran terhubung ke pesanan aktif.</span></div></div>
+                        <div className="support-fact-list">
+                          <div><span>Nomor pesanan</span><strong>WB{String(supportOrder.id).padStart(6, "0")}</strong></div>
+                          <div><span>Status</span><strong>{orderStatusMeta(supportOrder.status).label}</strong></div>
+                          <div><span>Alamat</span><strong>{supportOrder.address_label || "Alamat pengantaran"}</strong></div>
+                        </div>
+                        <p className="support-empty-copy">Gunakan jalur ini hanya untuk koordinasi pengantaran pesanan dengan driver yang ditugaskan.</p>
+                      </>
+                    )}
+                    {supportTopic === "admin" && (
+                      <>
+                        <div className="support-detail-heading"><ChatIcon /><div><strong>Customer Support Admin</strong><span>Bantuan internal Warkost dengan konteks pesanan.</span></div></div>
+                        {supportOrder ? (
+                          <div className="support-fact-list">
+                            <div><span>Nomor pesanan</span><strong>WB{String(supportOrder.id).padStart(6, "0")}</strong></div>
+                            <div><span>Status pesanan</span><strong>{orderStatusMeta(supportOrder.status).label}</strong></div>
+                            <div><span>Status pembayaran</span><strong>{supportOrder.payment_status || "Belum tersedia"}</strong></div>
+                            <div><span>Total</span><strong>{money(supportOrder.total)}</strong></div>
+                          </div>
+                        ) : (
+                          <p className="support-empty-copy">Sampaikan kebutuhan umum melalui pusat bantuan. Pilih pesanan terlebih dahulu bila bantuan terkait transaksi tertentu.</p>
+                        )}
+                      </>
+                    )}
+                  </section>
+                )}
+                <div className="support-fallback">
+                  <strong>Kontak umum</strong>
+                  <p>Untuk kebutuhan umum di luar pesanan, WhatsApp tetap tersedia sebagai fallback.</p>
+                  <a
+                    className="button-link"
+                    href={whatsappLink(settings.businessWhatsApp, "Halo Warkost Bahagia, saya membutuhkan bantuan umum.")}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ChatIcon /> WhatsApp umum
+                  </a>
+                </div>
               </div>
             )}
             {overlay === "account" && (
@@ -2393,10 +2817,149 @@ function LogoutIcon() {
     </SvgIcon>
   );
 }
-function Order({ order: o, role, drivers, busy, action }) {
+function StarIcon() {
+  return (
+    <SvgIcon>
+      <path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z" />
+    </SvgIcon>
+  );
+}
+function TicketIcon() {
+  return (
+    <SvgIcon>
+      <path d="M3 7a2 2 0 0 0 0 4v6h18v-6a2 2 0 0 0 0-4V5H3v2Z" />
+      <path d="M13 5v12M8 9h.01M8 13h.01" />
+    </SvgIcon>
+  );
+}
+function WalletIcon() {
+  return (
+    <SvgIcon>
+      <path d="M4 6h15a2 2 0 0 1 2 2v10H4a2 2 0 0 1-2-2V6a3 3 0 0 1 3-3h13" />
+      <path d="M16 11h5v4h-5a2 2 0 0 1 0-4Z" />
+    </SvgIcon>
+  );
+}
+function CheckIcon() {
+  return (
+    <SvgIcon>
+      <path d="m5 12 4 4L19 6" />
+    </SvgIcon>
+  );
+}
+function OrderProgress({ status, compact = false }) {
+  const activeStage = orderStage(status);
+  if (status === "CANCELLED") return null;
+  return (
+    <div className={`order-progress ${compact ? "compact" : ""}`} aria-label={`Progress pesanan: ${orderStatusMeta(status).label}`}>
+      {ORDER_STAGES.map((stage, index) => (
+        <div className={`progress-step ${index <= activeStage ? "complete" : ""} ${index === activeStage ? "current" : ""}`} key={stage.key}>
+          <span>{index < activeStage ? <CheckIcon /> : index + 1}</span>
+          <small>{stage.label}</small>
+        </div>
+      ))}
+    </div>
+  );
+}
+function CustomerTracking({ order, justCreated, onBack, onSupport }) {
+  const [details, setDetails] = useState(null);
+  const [detailError, setDetailError] = useState("");
+  useEffect(() => {
+    if (!order?.id) return;
+    let active = true;
+    api("order-items?id=" + order.id)
+      .then((result) => active && setDetails(result))
+      .catch((error) => active && setDetailError(error.message));
+    return () => {
+      active = false;
+    };
+  }, [order?.id]);
+  if (!order)
+    return (
+      <section className="tracking-loading panel" aria-live="polite">
+        <h2>Memuat status pesanan…</h2>
+        <p>Data pesanan sedang disinkronkan.</p>
+      </section>
+    );
+  const status = orderStatusMeta(order.status);
+  return (
+    <section className="customer-tracking" aria-labelledby="tracking-title">
+      <div className="customer-page-title tracking-page-title">
+        <button className="back-link" type="button" onClick={onBack}><ArrowIcon /> Kembali ke Pesanan</button>
+        <h1 id="tracking-title">{justCreated ? "Pesanan Berhasil Dibuat!" : "Lacak Pesanan"}</h1>
+        <p>{justCreated ? "Terima kasih sudah memesan di Warkost Bahagia." : "Pantau progres pesananmu secara real time."}</p>
+      </div>
+      <div className="tracking-layout">
+        <div className="tracking-main">
+          {justCreated && (
+            <section className="success-order-banner" role="status">
+              <span><CheckIcon /></span>
+              <div><strong>Pesanan #{order.id} berhasil dibuat</strong><small>Pesanan sedang diproses dan akan segera diantar.</small></div>
+            </section>
+          )}
+          <section className="tracking-card tracking-order-number">
+            <span className="section-icon"><ReceiptIcon /></span>
+            <div><small>Nomor Pesanan</small><strong>WB{String(order.id).padStart(6, "0")}</strong></div>
+            <time>{formatDateTime(order.created_at)}</time>
+          </section>
+          <section className="tracking-card delivery-status-card">
+            <div className="tracking-card-heading">
+              <span className="section-icon"><TruckIcon /></span>
+              <div><small>Status Pengantaran</small><h2>{orderHeadline(order.status)}</h2></div>
+              <span className={`order-status-pill ${status.tone}`}>{status.label}</span>
+            </div>
+            <OrderProgress status={order.status} />
+            {order.driver_delay_notice === 1 && (
+              <div className="driver-delay-notice">
+                <strong>Mohon maaf, driver sedang penuh.</strong>
+                <span>Pesanan tetap diproses, namun waktu pengantaran mungkin lebih lama dari biasanya.</span>
+              </div>
+            )}
+            <div className="contact-actions">
+              <button className="primary" type="button" onClick={() => onSupport(order.id, "admin")}><ChatIcon /> Hubungi Admin</button>
+              {order.driver_whatsapp && ["PICKED_UP", "ON_DELIVERY"].includes(order.status) ? (
+                <button className="button-link" type="button" onClick={() => onSupport(order.id, "delivery")}><PhoneIcon /> Hubungi Driver</button>
+              ) : (
+                <button type="button" disabled><PhoneIcon /> Hubungi Driver <small>{order.driver_id ? "Belum memasuki fase pengantaran" : "Driver belum ditugaskan"}</small></button>
+              )}
+            </div>
+          </section>
+          <section className="tracking-card tracking-info-card">
+            <div className="tracking-card-heading"><span className="section-icon"><LocationIcon /></span><div><small>Alamat Pengiriman</small><h2>{order.address_label || "Alamat"}</h2></div></div>
+            <p>{order.address}</p>
+            <small>{(Number(order.distance_meters) / 1000).toFixed(1)} km dari Warkost</small>
+          </section>
+          <section className="tracking-card tracking-info-card">
+            <div className="tracking-card-heading"><span className="section-icon"><WalletIcon /></span><div><small>Metode Pembayaran</small><h2>{order.method === "BANK_TRANSFER" ? "Transfer bank" : "Tunai saat diterima"}</h2></div></div>
+            <span className={`payment-status ${String(order.payment_status || "").toLowerCase()}`}>{order.payment_status}</span>
+          </section>
+        </div>
+        <aside className="tracking-card tracking-summary">
+          <div className="checkout-card-heading"><span className="section-icon"><CartIcon /></span><h2>Ringkasan Pesanan</h2></div>
+          {details?.items.map((item, index) => (
+            <div className="tracking-item" key={`${item.name}-${index}`}>
+              <Image src={demoProductImage(item.name)} alt="" width={72} height={56} />
+              <span><strong>{item.name}</strong><small>{item.quantity} × {money(item.price)}</small></span>
+              <strong>{money(item.quantity * item.price)}</strong>
+            </div>
+          ))}
+          {!details && !detailError && <p>Memuat detail menu…</p>}
+          {detailError && <p role="alert">{detailError}</p>}
+          <div className="tracking-totals">
+            <div><span>Subtotal</span><strong>{money(order.subtotal)}</strong></div>
+            <div><span>Ongkir</span><strong>{money(order.delivery_fee)}</strong></div>
+            <div className="grand-total"><span>Total Pembayaran</span><strong>{money(order.total)}</strong></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  );
+}
+function Order({ order: o, role, drivers, busy, action, onTrack, onReorder, onSupport }) {
   const [driver, setDriver] = useState("");
   const [details, setDetails] = useState(null);
   const [detailError, setDetailError] = useState("");
+  const [expanded, setExpanded] = useState(false);
   const adminNext = {
     PENDING: "CONFIRMED",
   };
@@ -2405,6 +2968,60 @@ function Order({ order: o, role, drivers, busy, action }) {
     PICKED_UP: "ON_DELIVERY",
     ON_DELIVERY: "DELIVERED",
   };
+  useEffect(() => {
+    if (role !== "CUSTOMER") return;
+    let active = true;
+    api("order-items?id=" + o.id)
+      .then((result) => active && setDetails(result))
+      .catch((error) => active && setDetailError(error.message));
+    return () => {
+      active = false;
+    };
+  }, [o.id, role]);
+  if (role === "CUSTOMER") {
+    const status = orderStatusMeta(o.status);
+    const active = !["DELIVERED", "CANCELLED"].includes(o.status);
+    return (
+      <article className="panel order customer-order-card">
+        <span className="badge sr-only">{o.status.replaceAll("_", " ")}</span>
+        <div className="customer-order-meta">
+          <span className={`order-status-pill ${status.tone}`}>{status.label}</span>
+          <time>{formatDateTime(o.created_at)}</time>
+          <strong>#{o.id} · WB{String(o.id).padStart(6, "0")}</strong>
+        </div>
+        <div className="customer-order-content">
+          <div className="order-item-preview">
+            {(details?.items || []).slice(0, 3).map((item, index) => (
+              <Image key={`${item.name}-${index}`} src={demoProductImage(item.name)} alt="" width={86} height={70} />
+            ))}
+            {!details && <span className="order-preview-placeholder"><CartIcon /></span>}
+            {details && <small>{details.items.reduce((sum, item) => sum + item.quantity, 0)} menu</small>}
+          </div>
+          <div className="order-summary-copy">
+            <h2>{orderHeadline(o.status)}</h2>
+            <p>{active ? "Pantau perkembangan pesananmu di bawah ini." : o.status === "DELIVERED" ? "Terima kasih sudah memesan di Warkost Bahagia." : "Pesanan ini tidak dilanjutkan."}</p>
+            <strong>{money(o.total)}</strong>
+          </div>
+          <OrderProgress status={o.status} compact />
+        </div>
+        {o.driver_delay_notice === 1 && <div className="driver-delay-notice compact"><strong>Pengantaran mungkin lebih lama</strong><span>Semua driver sedang bertugas.</span></div>}
+        <div className="customer-order-actions">
+          <button aria-label="Lihat item & riwayat" onClick={() => setExpanded((current) => !current)}>{expanded ? "Tutup Detail" : "Lihat Detail"}</button>
+          {active && <button className="primary" onClick={() => onTrack?.(o.id)}><TruckIcon /> Lacak Pesanan</button>}
+          {o.status === "DELIVERED" && <button className="primary" disabled={!details} onClick={() => onReorder?.(details?.items)}><HistoryIcon /> Pesan Lagi</button>}
+        </div>
+        {detailError && <p role="alert">{detailError}</p>}
+        {expanded && details && (
+          <div className="order-details customer-order-details">
+            {details.items.map((item, index) => <div className="line" key={`${item.name}-${index}`}><span>{item.quantity} × {item.name}</span><strong>{money(item.quantity * item.price)}</strong></div>)}
+            <small>Riwayat status</small>
+            {details.events.map((event, index) => <p key={index}>{formatDateTime(event.created_at)} · {event.next_status.replaceAll("_", " ")}</p>)}
+            <button className="button-link order-support-action" type="button" onClick={() => onSupport?.(o.id, "admin")}><ChatIcon /> Hubungi Admin</button>
+          </div>
+        )}
+      </article>
+    );
+  }
   return (
     <article className="panel order">
       <div className="order-head">
@@ -2421,48 +3038,6 @@ function Order({ order: o, role, drivers, busy, action }) {
         <strong>{money(o.total)}</strong>
         <span>{o.payment_status || ""}</span>
       </div>
-      {role === "CUSTOMER" && (
-        <div className="order-details">
-          <small>
-            Subtotal {money(o.subtotal)} · Ongkir {money(o.delivery_fee)} ·{" "}
-            {(Number(o.distance_meters) / 1000).toFixed(1)} km
-          </small>
-          {o.driver_delay_notice === 1 && (
-            <p>
-              Mohon maaf, pesanan dapat lebih lama karena driver sedang
-              bertugas.
-            </p>
-          )}
-          <div className="actions">
-            {o.admin_whatsapp && (
-              <a
-                className="button-link"
-                href={whatsappLink(
-                  o.admin_whatsapp,
-                  `Halo Admin Warkost, saya perlu bantuan untuk pesanan #${o.id}.`,
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Chat Admin via WhatsApp
-              </a>
-            )}
-            {o.driver_whatsapp && (
-              <a
-                className="button-link"
-                href={whatsappLink(
-                  o.driver_whatsapp,
-                  `Halo Driver Warkost, saya ingin membantu konfirmasi lokasi pesanan #${o.id}.`,
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Chat Driver untuk lokasi
-              </a>
-            )}
-          </div>
-        </div>
-      )}
       {(o.kitchen_status || o.cashier_status) && (
         <div className="station-statuses">
           {o.kitchen_status && (

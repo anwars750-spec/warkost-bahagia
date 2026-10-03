@@ -252,7 +252,7 @@ test("customer homepage mengikuti desain dan cart tetap bekerja", async ({
       exact: true,
     });
     await expect(bottomNav.getByRole("button")).toHaveCount(4);
-    for (const name of ["Notifikasi", "Keranjang", "Akun", "Bantuan"])
+    for (const name of ["Menu", "Keranjang", "Akun", "Bantuan"])
       await expect(
         bottomNav.getByRole("button", { name, exact: true }),
       ).toBeVisible();
@@ -281,6 +281,24 @@ test("customer homepage mengikuti desain dan cart tetap bekerja", async ({
   ).toBeVisible();
   await search.clear();
   await expect(page.locator("article.customer-product")).toHaveCount(3);
+  if (mobile) {
+    const productGrid = page.locator(".customer-products");
+    const cards = productGrid.locator("article.customer-product");
+    const [firstCard, secondCard, thirdCard] = await Promise.all([
+      cards.nth(0).boundingBox(),
+      cards.nth(1).boundingBox(),
+      cards.nth(2).boundingBox(),
+    ]);
+    expect(firstCard.width).toBeGreaterThan(130);
+    expect(firstCard.width).toBeLessThan(190);
+    expect(Math.abs(firstCard.y - secondCard.y)).toBeLessThan(2);
+    expect(thirdCard.y).toBeGreaterThan(firstCard.y + firstCard.height);
+    expect(
+      await productGrid.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth + 1,
+      ),
+    ).toBe(true);
+  }
 
   const categoryFilters = page.getByLabel("Kategori menu");
   for (const name of ["Semua", "Makanan", "Minuman"])
@@ -306,16 +324,17 @@ test("customer homepage mengikuti desain dan cart tetap bekerja", async ({
   await cartDialog.getByRole("button", { name: "Tutup" }).click();
   await expect(cartDialog).toHaveCount(0);
 
-  if (mobile)
-    await page
-      .getByRole("navigation", { name: "Navigasi pelanggan", exact: true })
-      .getByRole("button", { name: "Notifikasi", exact: true })
-      .click();
-  else await page.getByRole("button", { name: "Buka notifikasi" }).click();
+  await page.getByRole("button", { name: "Buka notifikasi" }).click();
   const notificationDialog = page.getByRole("dialog", {
     name: "Notifikasi terbaru",
   });
   await expect(notificationDialog).toBeVisible();
+  if (mobile) {
+    const notificationBox = await notificationDialog.boundingBox();
+    const viewportHeight = page.viewportSize().height;
+    expect(notificationBox.height).toBeGreaterThanOrEqual(viewportHeight * 0.65);
+    expect(notificationBox.height).toBeLessThanOrEqual(viewportHeight * 0.76);
+  }
   await notificationDialog.getByRole("button", { name: "Tutup" }).click();
   await expect(notificationDialog).toHaveCount(0);
 
@@ -333,12 +352,37 @@ test("customer homepage mengikuti desain dan cart tetap bekerja", async ({
     ).toBeVisible();
   await accountDialog.getByRole("button", { name: "Tutup" }).click();
 
-  await headerNav.getByRole("button", { name: "Bantuan" }).click();
-  const help = page.locator("#customer-help");
-  await expect(help).toBeVisible();
-  await expect(help.getByRole("link", { name: "Chat" })).toBeVisible();
-  await expect(help.getByRole("link", { name: "Telepon" })).toBeVisible();
+  if (mobile)
+    await page
+      .getByRole("navigation", { name: "Navigasi pelanggan", exact: true })
+      .getByRole("button", { name: "Bantuan", exact: true })
+      .click();
+  else await headerNav.getByRole("button", { name: "Bantuan" }).click();
+  const helpDialog = page.getByRole("dialog", { name: "Customer Support" });
+  await expect(helpDialog).toBeVisible();
+  await expect(helpDialog.getByLabel("Topik bantuan")).toBeVisible();
+  await expect(helpDialog.getByText("WhatsApp umum")).toBeVisible();
+  await helpDialog.getByRole("button", { name: "Hubungi Admin" }).click();
+  await expect(helpDialog.getByLabel("Bantuan Admin")).toBeVisible();
+  await expect(helpDialog.getByRole("link", { name: "WhatsApp umum" })).toBeVisible();
+  await helpDialog.getByRole("button", { name: "Tutup" }).click();
   await expectResponsiveShell(page);
+  if (mobile) {
+    await page.setViewportSize({ width: 360, height: 800 });
+    await expectResponsiveShell(page);
+    const bottomNav = page.getByRole("navigation", {
+      name: "Navigasi pelanggan",
+      exact: true,
+    });
+    const navBox = await bottomNav.boundingBox();
+    expect(navBox.y + navBox.height).toBeLessThanOrEqual(801);
+    const narrowGrid = page.locator(".customer-products");
+    expect(
+      await narrowGrid.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth + 1,
+      ),
+    ).toBe(true);
+  }
   expect(consoleErrors).toEqual([]);
 
   await page.evaluate(() => {
@@ -350,6 +394,113 @@ test("customer homepage mengikuti desain dan cart tetap bekerja", async ({
     path: testInfo.outputPath("customer-ui-polish.png"),
     fullPage: false,
   });
+});
+
+test("customer Batch A checkout tracking notifikasi dan pesanan responsif", async ({
+  page,
+}, testInfo) => {
+  const consoleErrors = await login(page, "customer@warkost.local");
+  const product = page.locator("article.product").filter({
+    hasText: "Nasi Goreng Warkost",
+  });
+  await product.getByRole("button", { name: /^Tambah / }).click();
+  await goToCheckout(page);
+
+  await expect(
+    page.getByRole("heading", { name: "Checkout Pesanan" }),
+  ).toBeVisible();
+  for (const heading of [
+    "Keranjang Anda",
+    "Poin Loyalty",
+    "Voucher",
+    "Pengiriman",
+    "Metode Pembayaran",
+    "Rincian Pembayaran",
+  ])
+    await expect(page.getByRole("heading", { name: heading })).toBeVisible();
+  await expect(page.getByText("Dihitung server", { exact: true })).toBeVisible();
+  await expectResponsiveShell(page);
+  await page.screenshot({
+    path: testInfo.outputPath("batch-a-checkout.png"),
+    fullPage: true,
+  });
+
+  await page.getByRole("button", { name: "Buat Pesanan", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Pesanan Berhasil Dibuat!" }),
+  ).toBeVisible();
+  await expect(page.getByRole("status")).toContainText(
+    /Pesanan #\d+ berhasil dibuat/,
+  );
+  await expect(page.getByText("Status Pengantaran")).toBeVisible();
+  await expect(page.getByText("Ringkasan Pesanan")).toBeVisible();
+  const adminSupport = page.getByRole("button", { name: "Hubungi Admin" });
+  await expect(adminSupport).toBeVisible();
+  await adminSupport.click();
+  const supportDialog = page.getByRole("dialog", { name: "Customer Support" });
+  await expect(supportDialog).toBeVisible();
+  await expect(supportDialog.getByLabel("Konteks pesanan")).toContainText(
+    /WB\d{6}/,
+  );
+  await expect(supportDialog.getByLabel("Bantuan Admin")).toContainText(
+    /Status pembayaran|Belum tersedia/,
+  );
+  await expect(supportDialog.getByText("WhatsApp umum")).toBeVisible();
+  await supportDialog.getByRole("button", { name: "Kembali ke topik bantuan" }).click();
+  await supportDialog.getByRole("button", { name: "Pembayaran" }).click();
+  await expect(supportDialog.getByLabel("Bantuan pembayaran")).toContainText(
+    /Status pembayaran|Belum tersedia/,
+  );
+  await supportDialog.getByRole("button", { name: "Kembali ke topik bantuan" }).click();
+  await supportDialog.getByRole("button", { name: "Pengantaran" }).click();
+  await expect(supportDialog.getByLabel("Bantuan pengantaran")).toContainText(
+    /Driver/,
+  );
+  await expect(supportDialog.getByRole("button", { name: "Hubungi Driver" })).toBeDisabled();
+  await supportDialog.getByRole("button", { name: "Kembali ke topik bantuan" }).click();
+  await supportDialog.getByRole("button", { name: "Status pesanan" }).click();
+  await expect(supportDialog).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: /Hubungi Driver/ }),
+  ).toBeDisabled();
+  await expectResponsiveShell(page);
+  await page.screenshot({
+    path: testInfo.outputPath("batch-a-tracking.png"),
+    fullPage: true,
+  });
+
+  await page
+    .getByRole("button", { name: "Kembali ke Pesanan" })
+    .click();
+  await expect(page.getByRole("heading", { name: "Pesanan" })).toBeVisible();
+  const filters = page.getByLabel("Filter pesanan");
+  for (const name of [/Semua/, /Dalam Proses/, /Selesai/, /Dibatalkan/])
+    await expect(filters.getByRole("button", { name })).toBeVisible();
+  const firstOrderCard = page.locator("article.customer-order-card").first();
+  await expect(firstOrderCard).toBeVisible();
+  await firstOrderCard.getByRole("button", { name: "Lihat item & riwayat" }).click();
+  await firstOrderCard.getByRole("button", { name: "Hubungi Admin" }).click();
+  const detailSupportDialog = page.getByRole("dialog", { name: "Customer Support" });
+  await expect(detailSupportDialog.getByLabel("Bantuan Admin")).toBeVisible();
+  await detailSupportDialog.getByRole("button", { name: "Tutup" }).click();
+
+  await page
+    .getByRole("navigation", { name: "Navigasi pelanggan utama" })
+    .getByRole("button", { name: "Buka notifikasi" })
+    .click();
+  const notificationDialog = page.getByRole("dialog", {
+    name: "Notifikasi terbaru",
+  });
+  await expect(notificationDialog.getByRole("heading", { name: "Notifikasi" })).toBeVisible();
+  const notificationFilters = notificationDialog.getByLabel("Filter notifikasi");
+  for (const name of [/Semua/, /Pesanan/, /Promo/, /Sistem/])
+    await expect(notificationFilters.getByRole("button", { name })).toBeVisible();
+  await expectResponsiveShell(page);
+  await page.screenshot({
+    path: testInfo.outputPath("batch-a-orders-notifications.png"),
+    fullPage: false,
+  });
+  expect(consoleErrors).toEqual([]);
 });
 
 test("admin dapat membuka area operasional utama", async ({
@@ -491,7 +642,7 @@ test("OP-UAT-02 transfer customer ke admin ke driver memberi poin", async ({
   await firstProduct.getByRole("button", { name: /^Tambah / }).click();
   await goToCheckout(page);
   await page.getByLabel("Metode pembayaran").selectOption("BANK_TRANSFER");
-  await page.getByRole("button", { name: /^Buat pesanan ·/ }).click();
+  await page.getByRole("button", { name: "Buat Pesanan", exact: true }).click();
 
   const checkoutMessage = page.getByRole("status");
   await expect(checkoutMessage).toContainText(/Pesanan #\d+ berhasil dibuat/);
@@ -608,16 +759,10 @@ test("OP-UAT-02 transfer customer ke admin ke driver memberi poin", async ({
   await expect(orderCard(page, orderId).locator(".badge")).toHaveText(
     "DELIVERED",
   );
-  if (page.viewportSize().width <= 620)
-    await page
-      .getByRole("navigation", { name: "Navigasi pelanggan", exact: true })
-      .getByRole("button", { name: "Notifikasi", exact: true })
-      .click();
-  else
-    await page
-      .locator("nav")
-      .getByRole("button", { name: /notifikasi/i })
-      .click();
+  await page
+    .getByRole("navigation", { name: "Navigasi pelanggan utama" })
+    .getByRole("button", { name: "Buka notifikasi" })
+    .click();
   await expect(
     page.getByText(`Pesanan #${orderId} telah diterima`, { exact: true }),
   ).toBeVisible();

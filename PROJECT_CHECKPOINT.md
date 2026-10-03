@@ -57,3 +57,64 @@
 ## Next-action gate
 
 Do not open another milestone from this checkpoint without a new explicit scope. Use `cac62b9e79fccb7d552196509de44112fe14590f` as the verified functional baseline for the approved Customer Homepage implementation.
+---
+
+## Customer UI Completion — ACCEPTED
+
+Date: 2026-10-03
+
+Status: **COMPLETED / MANUAL UAT ACCEPTED**
+
+### Scope accepted
+
+- Customer Homepage Desktop
+- Customer Homepage Mobile
+- 2-column responsive product grid on mobile
+- Mobile bottom navigation:
+  - Menu
+  - Keranjang
+  - Akun
+  - Bantuan
+- Checkout UI
+- Post-checkout / Order Success
+- Order Tracking
+- Notification Desktop
+- Notification Mobile
+- Pesanan Desktop
+- Pesanan Mobile
+- Cart Sheet
+- Account Sheet
+- Customer Support UI
+- Customer Support interaction
+- Hubungi Admin opens internal Customer Support
+- WhatsApp retained only as general/fallback contact
+- Hubungi Driver remains dependent on driver assignment/delivery phase
+- Responsive mobile polish
+
+### Verification
+
+- Production build: PASS
+- Unit tests: 48/48 PASS
+- Manual Desktop UAT: PASS
+- Manual Mobile UAT: PASS
+- Customer Mobile Final Fix: ACCEPTED
+
+### Known deferred functional work
+
+The following are NOT part of this completed UI milestone and remain for Customer Functional Completion:
+
+- QRIS payment integration
+- Shipping fee/radius final logic
+- Voucher claim/redeem
+- Loyalty earn/redeem
+- Owner-configurable loyalty rewards
+- Birthday voucher automation
+- OTP email delivery
+- Maps API integration
+- Final payment status automation
+
+### Next milestone
+
+**CUSTOMER FUNCTIONAL COMPLETION**
+
+Do not redesign Customer UI unless a functional implementation requires a minimal compatibility change.
