@@ -5,7 +5,9 @@
 - Branch: `session/2a-customer-ui-polish`
 - Accepted Customer UI baseline: `42fc282cad623492413b33db849f5765c7a4e50d`
 - Shipping core implementation commit: `f2007d5d02376981c8d7d402cba048ca651e398a`
-- Milestone: Customer Functional Completion #1 — Shipping / Ongkir Core
+- Shipping core checkpoint: `b1c5c27b4f3f016a48fea7a80dab543da9b597e1`
+- Voucher lifecycle implementation: `24f51b147b47028875b049435f991145a415e93f`
+- Milestone: Customer Functional Completion #2 — Voucher Claim & Redeem
 - Status: **COMPLETED / AUTOMATED VERIFIED**
 - Verification date: 2026-10-03
 
@@ -104,7 +106,6 @@ Status: **COMPLETED / MANUAL UAT ACCEPTED**
 The following are NOT part of this completed UI milestone and remain for Customer Functional Completion:
 
 - QRIS payment integration
-- Voucher claim/redeem
 - Loyalty earn/redeem
 - Owner-configurable loyalty rewards
 - Birthday voucher automation
@@ -165,3 +166,43 @@ Status: **COMPLETED / AUTOMATED VERIFIED**
 
 - Customer UI Desktop/Mobile remains the accepted `42fc282` baseline.
 - No voucher, loyalty, birthday voucher, QRIS/payment gateway, OTP, Maps API, Manager/RBAC, Kasir removal, Admin redesign, Kitchen/Driver redesign, dependency upgrade, or deployment work.
+
+---
+
+## Customer Functional Completion #2 — Voucher Claim & Redeem
+
+Date: 2026-10-03
+
+Status: **COMPLETED / AUTOMATED VERIFIED**
+
+### Source-control baseline
+
+- Parent checkpoint: `b1c5c27b4f3f016a48fea7a80dab543da9b597e1`
+- Implementation commit: `24f51b147b47028875b049435f991145a415e93f`
+- Customer UI and Shipping/Ongkir Core remain locked.
+
+### Scope completed
+
+- Added customer voucher states: `AVAILABLE`, `CLAIMED`, `USED`, `EXPIRED`, and `UNAVAILABLE`.
+- Claim ownership is bound server-side to the authenticated customer; duplicate claim is idempotent and cannot create a second row.
+- Checkout accepts only a claimed, unused, active, in-period, in-quota voucher owned by that customer.
+- Percent and fixed discounts, minimum order, maximum discount, and global quota are calculated and validated server-side.
+- Final total is recalculated server-side as `subtotal - voucher_discount + delivery_fee`; client-supplied discount and total are not trusted.
+- Voucher redemption, order creation, global `used_count`, and per-customer claim state commit in one transaction.
+- Checkout idempotency prevents double redemption; a failed pre-commit order rolls back voucher usage.
+- Voucher + Loyalty Reward stacking is blocked by the v1.0 contract without implementing the Loyalty engine.
+- Checkout UI reuses the accepted layout and exposes claim, select, eligibility feedback, actual discount, and final total without redesign.
+- Added MySQL migration `013_voucher_claims.sql` and equivalent SQLite runtime upgrade/schema support.
+
+### Verification
+
+- Targeted voucher lifecycle retest: **10/10 PASS**.
+- Targeted voucher/promo/shipping/MySQL-operations set: **20/20 PASS**.
+- Full unit suite: **58/58 PASS**.
+- Production build: **PASS**.
+- Ownership, unclaimed rejection, minimum order, expired/inactive rejection, percent/fixed calculation, maximum cap, manipulated client discount, used-voucher rejection, double submit, shipping fee inclusion, quota consistency, non-stacking, and pre-commit rollback: **PASS**.
+
+### Guardrails preserved
+
+- No Loyalty earn/redeem engine, Owner Loyalty Rules, birthday voucher, QRIS/payment gateway, Maps API, OTP, Manager/RBAC, Kasir removal, Admin/Kitchen/Driver redesign, dependency upgrade, or deployment.
+- No Customer UI redesign and no Shipping/Ongkir formula change.
