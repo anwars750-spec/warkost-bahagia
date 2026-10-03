@@ -82,6 +82,39 @@ async function seed() {
       admin.id,
     );
   }
+  if (
+    !(await store.get(
+      "SELECT id FROM promotions WHERE title=?",
+      "Voucher Hemat 10%",
+    ))
+  ) {
+    const startsAt = new Date(Date.now() - 86400000)
+        .toISOString()
+        .slice(0, 19)
+        .replace("T", " "),
+      endsAt = new Date(Date.now() + 30 * 86400000)
+        .toISOString()
+        .slice(0, 19)
+        .replace("T", " ");
+    await store.run(
+      "INSERT INTO promotions(title,description,badge,terms,cta_label,starts_at,ends_at,active,voucher_type,discount_value,minimum_order,max_discount,quota,one_per_customer,created_by,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)",
+      "Voucher Hemat 10%",
+      "Klaim voucher dan hemat 10% untuk satu kali pesanan.",
+      "VOUCHER CUSTOMER",
+      "Minimum belanja Rp30.000, maksimal diskon Rp15.000, satu kali per customer.",
+      "Klaim Voucher",
+      startsAt,
+      endsAt,
+      1,
+      "PERCENT",
+      10,
+      30000,
+      15000,
+      100,
+      admin.id,
+      admin.id,
+    );
+  }
   for (const name of ["Makanan", "Minuman"])
     await store.run("INSERT OR IGNORE INTO categories(name) VALUES(?)", name);
   if ((await store.get("SELECT COUNT(*) n FROM products")).n === 0) {

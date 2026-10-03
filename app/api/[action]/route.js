@@ -50,6 +50,11 @@ import {
 import { listPrintJobs, retryPrintJob } from "../../../lib/printer.mjs";
 import { driverContactIsVisible } from "../../../lib/delivery.mjs";
 import { listPromotions, savePromotion } from "../../../lib/promotions.mjs";
+import {
+  claimVoucher,
+  listCustomerVouchers,
+  quoteVoucher,
+} from "../../../lib/vouchers.mjs";
 export const runtime = "nodejs";
 const out = (data, status = 200) =>
   NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
@@ -97,6 +102,8 @@ export async function GET(request, { params }) {
     if (action === "settings") return out(await getSettings(user));
     if (action === "promotions")
       return out({ promotions: await listPromotions(user) });
+    if (action === "vouchers")
+      return out({ vouchers: await listCustomerVouchers(user) });
     if (action === "print-jobs")
       return out({ jobs: await listPrintJobs(user) });
     if (action === "delivery-capacity") {
@@ -283,7 +290,8 @@ export async function GET(request, { params }) {
         "SELECT * FROM loyalty_transactions WHERE user_id=? ORDER BY id DESC LIMIT 50",
         user.id,
       );
-      return out({ addresses, loyalty, transactions });
+      const vouchers = await listCustomerVouchers(user);
+      return out({ addresses, loyalty, transactions, vouchers });
     }
     if (action === "drivers") {
       required(user, ["ADMIN", "OWNER"]);
@@ -481,6 +489,15 @@ export async function POST(request, { params }) {
         201,
       );
     }
+    if (action === "voucher-claim")
+      return out(await claimVoucher(user, integer(body.promotionId)));
+    if (action === "voucher-quote")
+      return out(
+        await quoteVoucher(user, {
+          promotionId: integer(body.promotionId),
+          items: body.items,
+        }),
+      );
     if (action === "status")
       return out(
         await changeStatus(

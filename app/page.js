@@ -135,6 +135,7 @@ export default function App() {
       addresses: [],
       loyalty: 0,
       transactions: [],
+      vouchers: [],
     }),
     [drivers, setDrivers] = useState([]),
     [customers, setCustomers] = useState([]),
@@ -180,7 +181,11 @@ export default function App() {
     [checkoutAddressId, setCheckoutAddressId] = useState(""),
     [deliveryQuote, setDeliveryQuote] = useState(null),
     [deliveryQuoteBusy, setDeliveryQuoteBusy] = useState(false),
-    [deliveryQuoteError, setDeliveryQuoteError] = useState("");
+    [deliveryQuoteError, setDeliveryQuoteError] = useState(""),
+    [selectedVoucherId, setSelectedVoucherId] = useState(null),
+    [voucherQuote, setVoucherQuote] = useState(null),
+    [voucherQuoteBusy, setVoucherQuoteBusy] = useState(false),
+    [voucherQuoteError, setVoucherQuoteError] = useState("");
   async function loadCustomers(query = "", before = null, signal) {
     const page = await api(
       "customers?q=" +
@@ -351,6 +356,10 @@ export default function App() {
   }
   const count = Object.values(cart).reduce((s, n) => s + n, 0),
     total = menu.products.reduce((s, p) => s + p.price * (cart[p.id] || 0), 0);
+  const checkoutItems = menu.products
+    .filter((product) => cart[product.id] > 0)
+    .map((product) => ({ productId: product.id, quantity: cart[product.id] }));
+  const checkoutItemsSignature = JSON.stringify(checkoutItems);
   function step(id, n) {
     setCart((old) => ({ ...old, [id]: Math.max(0, (old[id] || 0) + n) }));
   }
@@ -397,7 +406,7 @@ export default function App() {
       (address) => String(address.id) === String(checkoutAddressId),
     ) || account.addresses[0];
   const checkoutFinalTotal =
-    total +
+    total - Number(voucherQuote?.voucher_discount || 0) +
     (deliveryQuote?.available ? Number(deliveryQuote.delivery_fee || 0) : 0);
   useEffect(() => {
     if (
@@ -428,6 +437,32 @@ export default function App() {
       });
     return () => controller.abort();
   }, [role, view, selectedCheckoutAddress?.id]);
+  useEffect(() => {
+    if (role !== "CUSTOMER" || view !== "cart" || !selectedVoucherId) {
+      setVoucherQuote(null);
+      setVoucherQuoteError("");
+      setVoucherQuoteBusy(false);
+      return;
+    }
+    const controller = new AbortController();
+    setVoucherQuote(null);
+    setVoucherQuoteError("");
+    setVoucherQuoteBusy(true);
+    api(
+      "voucher-quote",
+      { promotionId: selectedVoucherId, items: checkoutItems },
+      controller.signal,
+    )
+      .then(setVoucherQuote)
+      .catch((quoteError) => {
+        if (quoteError.name !== "AbortError")
+          setVoucherQuoteError(quoteError.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setVoucherQuoteBusy(false);
+      });
+    return () => controller.abort();
+  }, [role, view, selectedVoucherId, checkoutItemsSignature]);
   const focusedOrder = orders.find(
     (order) => order.id === (focusedOrderId || lastCreatedOrderId),
   );
@@ -1136,9 +1171,8 @@ export default function App() {
                     const payload = {
                       addressId: Number(f.get("address")),
                       method: f.get("method"),
-                      items: menu.products
-                        .filter((p) => cart[p.id] > 0)
-                        .map((p) => ({ productId: p.id, quantity: cart[p.id] })),
+                      promotionId: selectedVoucherId,
+                      items: checkoutItems,
                     };
                     const signature = JSON.stringify(payload);
                     if (checkoutAttempt.current?.signature !== signature)
@@ -1151,6 +1185,8 @@ export default function App() {
                     setLastCreatedOrderId(result.id);
                     setFocusedOrderId(result.id);
                     setCart({});
+                    setSelectedVoucherId(null);
+                    setVoucherQuote(null);
                     setView("order-success");
                   });
                 }}
@@ -1198,11 +1234,42 @@ export default function App() {
                       <span className="section-icon"><TicketIcon /></span>
                       <h2>Voucher</h2>
                     </div>
-                    <div className="voucher-empty-state">
-                      <TicketIcon />
-                      <span><strong>Belum ada voucher dipilih</strong><small>Checkout hanya akan memakai voucher yang sudah diklaim dan eligible.</small></span>
-                      <button type="button" disabled title="Voucher Center akan tersedia pada sesi logic terpisah">Lihat & Klaim Voucher</button>
+                    <div className="voucher-list">
+                      {(account.vouchers || []).map((voucher) => {
+                        const selected = Number(selectedVoucherId) === voucher.id;
+                        const selectable = voucher.state === "CLAIMED";
+                        return (
+                          <article className={`voucher-option ${selected ? "selected" : ""}`} key={voucher.id}>
+                            <TicketIcon />
+                            <span>
+                              <strong>{voucher.title}</strong>
+                              <small>{voucher.terms}</small>
+                              <small>Minimum {money(voucher.minimum_order)} · {voucher.voucher_type === "PERCENT" ? `${voucher.discount_value}%` : money(voucher.discount_value)}{voucher.max_discount ? ` · maks. ${money(voucher.max_discount)}` : ""}</small>
+                            </span>
+                            {voucher.state === "AVAILABLE" ? (
+                              <button type="button" disabled={busy} onClick={() => run(async () => {
+                                await api("voucher-claim", { promotionId: voucher.id });
+                                setSelectedVoucherId(voucher.id);
+                                setMessage("Voucher berhasil diklaim.");
+                              })}>Klaim</button>
+                            ) : selectable ? (
+                              <button type="button" className={selected ? "primary" : ""} onClick={() => setSelectedVoucherId(selected ? null : voucher.id)}>{selected ? "Dipilih" : "Pakai"}</button>
+                            ) : (
+                              <span className="voucher-state">{voucher.state}</span>
+                            )}
+                          </article>
+                        );
+                      })}
+                      {!account.vouchers?.length && (
+                        <div className="voucher-empty-state">
+                          <TicketIcon />
+                          <span><strong>Belum ada voucher tersedia</strong><small>Voucher aktif yang dapat diklaim akan tampil di sini.</small></span>
+                        </div>
+                      )}
                     </div>
+                    {voucherQuoteBusy && <p className="voucher-feedback">Memvalidasi voucher…</p>}
+                    {voucherQuoteError && <p className="voucher-feedback error" role="alert">{voucherQuoteError}</p>}
+                    {voucherQuote && <p className="voucher-feedback success">Voucher valid · hemat {money(voucherQuote.voucher_discount)}</p>}
                   </section>
 
                   <section className="checkout-card delivery-checkout-card">
@@ -1286,10 +1353,10 @@ export default function App() {
                   </div>
                   <div className="payment-line"><span>Subtotal</span><strong>{money(total)}</strong></div>
                   <div className="payment-line"><span>Ongkir</span><strong className={deliveryQuote?.available ? "" : "pending-value"}>{deliveryQuoteBusy ? "Menghitung…" : deliveryQuote?.available ? (deliveryQuote.free_delivery ? "GRATIS" : money(deliveryQuote.delivery_fee)) : deliveryQuote ? "Di luar jangkauan" : "Belum dihitung"}</strong></div>
-                  <div className="payment-line"><span>Voucher</span><strong>{money(0)}</strong></div>
+                  <div className="payment-line"><span>Voucher</span><strong>{voucherQuote?.voucher_discount ? `−${money(voucherQuote.voucher_discount)}` : money(0)}</strong></div>
                   <div className="payment-total"><span>Total akhir</span><strong>{deliveryQuote?.available ? money(checkoutFinalTotal) : "—"}</strong></div>
                   <p className="server-calculation-note">{deliveryQuote?.message || deliveryQuoteError || "Total akhir ditampilkan setelah server memvalidasi alamat."}</p>
-                  <button className="primary checkout-submit" disabled={busy || deliveryQuoteBusy || !account.addresses.length || !deliveryQuote?.available}>
+                  <button className="primary checkout-submit" disabled={busy || deliveryQuoteBusy || voucherQuoteBusy || Boolean(selectedVoucherId && !voucherQuote) || !account.addresses.length || !deliveryQuote?.available}>
                     {busy ? "Membuat Pesanan…" : deliveryQuoteBusy ? "Menghitung Ongkir…" : deliveryQuote && !deliveryQuote.available ? "Alamat Di Luar Jangkauan" : "Buat Pesanan"}<ArrowIcon />
                   </button>
                   <div className="checkout-trust"><ShieldIcon /><span>Pesananmu diproses dengan aman menggunakan kalkulasi existing.</span></div>
@@ -3354,6 +3421,11 @@ function PromotionEditor({ promotion, busy, onSave }) {
           startsAt: new Date(form.get("startsAt")).toISOString(),
           endsAt: new Date(form.get("endsAt")).toISOString(),
           active: form.get("active") === "on",
+          voucherType: form.get("voucherType") || null,
+          discountValue: Number(form.get("discountValue") || 0),
+          minimumOrder: Number(form.get("minimumOrder") || 0),
+          maxDiscount: form.get("maxDiscount"),
+          quota: form.get("quota"),
         });
       }}
     >
@@ -3445,6 +3517,34 @@ function PromotionEditor({ promotion, busy, onSave }) {
           />
         </label>
       </div>
+      <div className="columns compact-columns">
+        <label>
+          Tipe voucher (opsional)
+          <select name="voucherType" defaultValue={promotion?.voucher_type || ""}>
+            <option value="">Campaign tanpa voucher</option>
+            <option value="PERCENT">Persen</option>
+            <option value="FIXED">Nominal tetap</option>
+          </select>
+        </label>
+        <label>
+          Nilai diskon
+          <input name="discountValue" type="number" min="0" defaultValue={promotion?.discount_value || 0} />
+        </label>
+      </div>
+      <div className="columns compact-columns">
+        <label>
+          Minimum belanja
+          <input name="minimumOrder" type="number" min="0" defaultValue={promotion?.minimum_order || 0} />
+        </label>
+        <label>
+          Maksimum diskon (opsional)
+          <input name="maxDiscount" type="number" min="0" defaultValue={promotion?.max_discount ?? ""} />
+        </label>
+      </div>
+      <label>
+        Kuota penggunaan global (opsional)
+        <input name="quota" type="number" min="0" defaultValue={promotion?.quota ?? ""} />
+      </label>
       <label className="checkbox">
         <input
           name="active"

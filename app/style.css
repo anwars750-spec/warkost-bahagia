@@ -687,6 +687,53 @@ footer {
 .voucher-empty-state button {
   flex: 0 0 auto;
 }
+.voucher-list {
+  display: grid;
+  gap: 9px;
+  margin-top: 12px;
+}
+.voucher-option {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 13px;
+  border: 1px solid #eadfd6;
+  border-radius: 13px;
+  background: #fffaf6;
+}
+.voucher-option.selected {
+  border-color: #b65b3c;
+  box-shadow: 0 0 0 2px rgba(182, 91, 60, 0.1);
+}
+.voucher-option > .ui-icon {
+  color: #c8443f;
+}
+.voucher-option > span:not(.voucher-state) {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.voucher-option small {
+  color: #756960;
+  line-height: 1.35;
+}
+.voucher-state {
+  color: #85776f;
+  font-size: 11px;
+  font-weight: 800;
+}
+.voucher-feedback {
+  margin: 9px 2px 0;
+  color: #756960;
+  font-size: 12px;
+}
+.voucher-feedback.success {
+  color: #247044;
+}
+.voucher-feedback.error {
+  color: #a23d2b;
+}
 .checkout-select-label {
   margin-top: 12px;
 }
@@ -1118,7 +1165,10 @@ footer {
 }
 .customer-order-content {
   display: grid;
-  grid-template-columns: minmax(210px, 0.72fr) minmax(230px, 1fr) minmax(340px, 1.3fr);
+  grid-template-columns: minmax(210px, 0.72fr) minmax(230px, 1fr) minmax(
+      340px,
+      1.3fr
+    );
   align-items: center;
   gap: 22px;
 }
@@ -1410,6 +1460,14 @@ footer {
   .voucher-empty-state button {
     width: 100%;
   }
+  .voucher-option {
+    grid-template-columns: 22px minmax(0, 1fr);
+  }
+  .voucher-option > button,
+  .voucher-option > .voucher-state {
+    grid-column: 2;
+    justify-self: start;
+  }
   .checkout-summary-card {
     padding-bottom: 92px;
   }
@@ -1545,7 +1603,8 @@ footer {
     width: 100%;
     height: 100dvh;
     max-height: none;
-    padding: max(18px, env(safe-area-inset-top)) 16px calc(92px + env(safe-area-inset-bottom));
+    padding: max(18px, env(safe-area-inset-top)) 16px
+      calc(92px + env(safe-area-inset-bottom));
     border-radius: 0;
   }
   .notification-sheet .sheet-handle {
@@ -3034,7 +3093,8 @@ footer {
     width: 100%;
     height: 100dvh;
     max-height: none;
-    padding: max(18px, env(safe-area-inset-top)) 16px calc(92px + env(safe-area-inset-bottom));
+    padding: max(18px, env(safe-area-inset-top)) 16px
+      calc(92px + env(safe-area-inset-bottom));
     border-radius: 0;
   }
   .notification-sheet .sheet-handle {
