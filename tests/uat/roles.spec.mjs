@@ -31,9 +31,14 @@ async function signIn(page, email) {
   await form.getByLabel("Email").fill(email);
   await form.getByLabel("Password").fill(password);
   await form.getByRole("button", { name: "Masuk", exact: true }).click();
-  await expect(
-    page.locator("nav").getByRole("button", { name: "Keluar" }),
-  ).toBeVisible();
+  if (email === "customer@warkost.local" && page.viewportSize().width <= 620)
+    await expect(
+      page.getByRole("navigation", { name: "Navigasi pelanggan" }),
+    ).toBeVisible();
+  else
+    await expect(
+      page.locator("nav").getByRole("button", { name: "Keluar" }),
+    ).toBeVisible();
   await expect(
     page.getByRole("img", { name: "Warkost Bahagia" }),
   ).toBeVisible();
@@ -46,10 +51,20 @@ async function login(page, email) {
 }
 
 async function signOut(page) {
-  await page
+  const desktopLogout = page
     .locator("nav")
-    .getByRole("button", { name: "Keluar", exact: true })
-    .click();
+    .getByRole("button", { name: "Keluar", exact: true });
+  if (await desktopLogout.isVisible()) await desktopLogout.click();
+  else {
+    await page
+      .getByRole("navigation", { name: "Navigasi pelanggan" })
+      .getByRole("button", { name: "Akun", exact: true })
+      .click();
+    await page
+      .getByRole("dialog", { name: "Menu akun" })
+      .getByRole("button", { name: "Keluar", exact: true })
+      .click();
+  }
   await expect(
     page.locator("nav").getByRole("button", { name: "Masuk", exact: true }),
   ).toBeVisible();
@@ -80,6 +95,50 @@ async function expectResponsiveShell(page) {
   }));
   expect(dimensions.text).toBeGreaterThan(100);
   expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport + 1);
+}
+
+async function openCustomerAccountMenu(page) {
+  if (page.viewportSize().width <= 620) {
+    await page
+      .getByRole("navigation", { name: "Navigasi pelanggan" })
+      .getByRole("button", { name: "Akun", exact: true })
+      .click();
+  } else {
+    await page
+      .locator("nav")
+      .getByRole("button", { name: "Akun", exact: true })
+      .click();
+  }
+  return page.getByRole("dialog", { name: "Menu akun" });
+}
+
+async function goToCustomerOrders(page) {
+  const accountDialog = await openCustomerAccountMenu(page);
+  await accountDialog
+    .getByRole("button", { name: "Pesanan", exact: true })
+    .click();
+}
+
+async function goToCustomerAccount(page) {
+  const accountDialog = await openCustomerAccountMenu(page);
+  await accountDialog
+    .getByRole("button", { name: "Pengaturan Akun", exact: true })
+    .click();
+}
+
+async function goToCheckout(page) {
+  if (page.viewportSize().width <= 620) {
+    await page
+      .getByRole("navigation", { name: "Navigasi pelanggan" })
+      .getByRole("button", { name: "Keranjang", exact: true })
+      .click();
+  } else {
+    await page.getByRole("button", { name: /Buka keranjang, 1 item/ }).click();
+  }
+  await page
+    .getByRole("dialog", { name: "Ringkasan keranjang" })
+    .getByRole("button", { name: "Lanjut ke checkout" })
+    .click();
 }
 
 test("OP-UAT-01 login gagal tidak membuat sesi", async ({ page }, testInfo) => {
@@ -128,17 +187,11 @@ test("customer dapat membuka menu, pesanan, dan akun", async ({
   await expect(promo.getByRole("button", { name: "Pilih Menu" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Keranjang/ })).toBeVisible();
 
-  await page
-    .locator("nav")
-    .getByRole("button", { name: "Pesanan", exact: true })
-    .click();
+  await goToCustomerOrders(page);
   await expect(
     page.getByRole("heading", { name: "Pesanan saya", level: 1 }),
   ).toBeVisible();
-  await page
-    .locator("nav")
-    .getByRole("button", { name: "Akun", exact: true })
-    .click();
+  await goToCustomerAccount(page);
   await expect(page.getByRole("heading", { name: "Akun saya" })).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Alamat pengantaran" }),
@@ -148,6 +201,100 @@ test("customer dapat membuka menu, pesanan, dan akun", async ({
   expect(consoleErrors).toEqual([]);
   await page.screenshot({
     path: testInfo.outputPath("customer.png"),
+    fullPage: true,
+  });
+});
+
+test("customer UI polish responsif dan quick drawer dapat ditutup", async ({
+  page,
+}, testInfo) => {
+  const consoleErrors = await login(page, "customer@warkost.local");
+  const mobile = page.viewportSize().width <= 620;
+
+  const logo = page.getByRole("img", { name: "Warkost Bahagia" });
+  await expect(logo).toBeVisible();
+  const logoBox = await logo.boundingBox();
+  expect(logoBox.width / logoBox.height).toBeGreaterThan(1.6);
+
+  const mainHeading = page.getByRole("heading", {
+    name: "Mau makan apa hari ini?",
+  });
+  const headingSize = await mainHeading.evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).fontSize),
+  );
+  expect(headingSize).toBeGreaterThanOrEqual(27);
+  expect(headingSize).toBeLessThanOrEqual(44);
+
+  const promo = page.getByRole("region", { name: "Promo berlangsung" });
+  await expect(promo.locator("img")).toBeVisible();
+  await expect(promo.locator("img")).toHaveAttribute("src", /promo-warkost/);
+
+  const productImages = page.locator("article.product .food-visual img");
+  await expect(productImages).toHaveCount(3);
+  for (const image of await productImages.all()) {
+    expect(
+      await image.evaluate((element) => element.naturalWidth),
+    ).toBeGreaterThan(0);
+  }
+
+  const firstProduct = page.locator("article.product").filter({
+    hasText: "Nasi Goreng Warkost",
+  });
+  await firstProduct.getByRole("button", { name: /^Tambah / }).click();
+  if (mobile)
+    await page
+      .getByRole("navigation", { name: "Navigasi pelanggan" })
+      .getByRole("button", { name: "Keranjang", exact: true })
+      .click();
+  else
+    await page.getByRole("button", { name: /Buka keranjang, 1 item/ }).click();
+
+  const cartDialog = page.getByRole("dialog", { name: "Ringkasan keranjang" });
+  await expect(cartDialog).toBeVisible();
+  await expect(cartDialog).toContainText("Nasi Goreng Warkost");
+  await cartDialog.getByRole("button", { name: "Tutup" }).click();
+  await expect(cartDialog).toHaveCount(0);
+
+  if (mobile)
+    await page
+      .getByRole("navigation", { name: "Navigasi pelanggan" })
+      .getByRole("button", { name: "Notifikasi", exact: true })
+      .click();
+  else await page.getByRole("button", { name: "Buka notifikasi" }).click();
+  const notificationDialog = page.getByRole("dialog", {
+    name: "Notifikasi terbaru",
+  });
+  await expect(notificationDialog).toBeVisible();
+  await notificationDialog.getByRole("button", { name: "Tutup" }).click();
+  await expect(notificationDialog).toHaveCount(0);
+
+  const accountDialog = await openCustomerAccountMenu(page);
+  await expect(accountDialog).toBeVisible();
+  await accountDialog
+    .getByRole("button", { name: "Pengaturan Akun", exact: true })
+    .click();
+  await expect(page.getByRole("heading", { name: "Akun saya" })).toBeVisible();
+  const accountOverview = page.getByRole("region", { name: "Menu akun" });
+  await expect(
+    accountOverview.getByRole("button", { name: "Pesanan", exact: true }),
+  ).toBeVisible();
+  await expect(
+    accountOverview.getByRole("button", { name: "Riwayat", exact: true }),
+  ).toBeVisible();
+  await expect(
+    accountOverview.getByRole("button", { name: "Tracking", exact: true }),
+  ).toBeVisible();
+  await expect(
+    accountOverview.getByRole("button", {
+      name: "Pengaturan Akun",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expectResponsiveShell(page);
+  expect(consoleErrors).toEqual([]);
+
+  await page.screenshot({
+    path: testInfo.outputPath("customer-ui-polish.png"),
     fullPage: true,
   });
 });
@@ -219,7 +366,7 @@ test("driver dapat membuka tugas dan notifikasi", async ({
 
   await page
     .locator("nav")
-    .getByRole("button", { name: /Notifikasi/ })
+    .getByRole("button", { name: /notifikasi/i })
     .click();
   await expect(page.getByRole("heading", { name: "Notifikasi" })).toBeVisible();
   await expect(
@@ -289,7 +436,7 @@ test("OP-UAT-02 transfer customer ke admin ke driver memberi poin", async ({
   });
   await expect(firstProduct).toBeVisible();
   await firstProduct.getByRole("button", { name: /^Tambah / }).click();
-  await page.getByRole("button", { name: /^Keranjang · 1 ·/ }).click();
+  await goToCheckout(page);
   await page.getByLabel("Metode pembayaran").selectOption("BANK_TRANSFER");
   await page.getByRole("button", { name: /^Buat pesanan ·/ }).click();
 
@@ -364,7 +511,7 @@ test("OP-UAT-02 transfer customer ke admin ke driver memberi poin", async ({
   await signIn(page, "driver@warkost.local");
   await page
     .locator("nav")
-    .getByRole("button", { name: /Notifikasi/ })
+    .getByRole("button", { name: /notifikasi/i })
     .click();
   await expect(
     page.getByText(`Pengantaran pesanan #${orderId} ditugaskan kepada Anda`, {
@@ -404,24 +551,28 @@ test("OP-UAT-02 transfer customer ke admin ke driver memberi poin", async ({
 
   await signOut(page);
   await signIn(page, "customer@warkost.local");
-  await page
-    .locator("nav")
-    .getByRole("button", { name: "Pesanan", exact: true })
-    .click();
+  await goToCustomerOrders(page);
   await expect(orderCard(page, orderId).locator(".badge")).toHaveText(
     "DELIVERED",
   );
-  await page
-    .locator("nav")
-    .getByRole("button", { name: /Notifikasi/ })
-    .click();
+  if (page.viewportSize().width <= 620)
+    await page
+      .getByRole("navigation", { name: "Navigasi pelanggan" })
+      .getByRole("button", { name: "Notifikasi", exact: true })
+      .click();
+  else
+    await page
+      .locator("nav")
+      .getByRole("button", { name: /notifikasi/i })
+      .click();
   await expect(
     page.getByText(`Pesanan #${orderId} telah diterima`, { exact: true }),
   ).toBeVisible();
-  await page
-    .locator("nav")
-    .getByRole("button", { name: "Akun", exact: true })
-    .click();
+  const notificationDialog = page.getByRole("dialog", {
+    name: "Notifikasi terbaru",
+  });
+  await notificationDialog.getByRole("button", { name: "Tutup" }).click();
+  await goToCustomerAccount(page);
   const loyaltyEntry = page.locator(".line").filter({
     hasText: `Pesanan #${orderId}`,
   });

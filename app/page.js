@@ -22,6 +22,14 @@ const promoDate = (value) =>
     month: "short",
     year: "numeric",
   });
+const demoProductImage = (name) => {
+  const normalized = String(name || "").toLowerCase();
+  if (normalized.includes("nasi goreng"))
+    return "/demo/nasi-goreng-warkost.webp";
+  if (normalized.includes("mie ayam")) return "/demo/mie-ayam-bahagia.webp";
+  if (normalized.includes("kopi susu")) return "/demo/kopi-susu-rumah.webp";
+  return "/demo/promo-warkost.webp";
+};
 async function api(route, body, signal) {
   const response = await fetch("/api/" + route, {
     method: body ? "POST" : "GET",
@@ -80,7 +88,9 @@ export default function App() {
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
     [editingAddress, setEditingAddress] = useState(null),
-    [selectedCategory, setSelectedCategory] = useState(0);
+    [selectedCategory, setSelectedCategory] = useState(0),
+    [overlay, setOverlay] = useState(null),
+    [orderFilter, setOrderFilter] = useState("all");
   async function loadCustomers(query = "", before = null, signal) {
     const page = await api(
       "customers?q=" +
@@ -247,29 +257,85 @@ export default function App() {
     setCart((old) => ({ ...old, [id]: Math.max(0, (old[id] || 0) + n) }));
   }
   const role = user?.role;
+  const visibleOrders =
+    role !== "CUSTOMER" || orderFilter === "all"
+      ? orders
+      : orders.filter((order) =>
+          orderFilter === "history"
+            ? ["DELIVERED", "CANCELLED"].includes(order.status)
+            : !["DELIVERED", "CANCELLED"].includes(order.status),
+        );
+  function goToCustomerOrders(filter = "all") {
+    setOrderFilter(filter);
+    setOverlay(null);
+    setView("orders");
+  }
+  function logout() {
+    setOverlay(null);
+    run(async () => {
+      pollController.current?.abort();
+      refreshController.current?.abort();
+      await api("logout", {});
+      setUser(null);
+      setView("menu");
+    });
+  }
+  function useDeviceLocation(event) {
+    const form = event.currentTarget.form;
+    if (!navigator.geolocation) {
+      setError("Lokasi perangkat tidak didukung browser ini");
+      return;
+    }
+    setError("");
+    setMessage("Meminta izin lokasi perangkat…");
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        form.elements.latitude.value = coords.latitude.toFixed(6);
+        form.elements.longitude.value = coords.longitude.toFixed(6);
+        setMessage("Titik lokasi berhasil diisi");
+      },
+      () => {
+        setMessage("");
+        setError(
+          "Lokasi belum dapat diambil. Izinkan lokasi atau isi titik secara manual.",
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }
   return (
     <>
       <header className="top">
-        <div className="brand">
+        <button
+          className="brand brand-button"
+          type="button"
+          aria-label="Buka menu utama"
+          onClick={() => {
+            if (!role || role === "CUSTOMER") {
+              setOverlay(null);
+              setView("menu");
+            }
+          }}
+        >
           <Image
             className="brand-logo"
-            src="/warkost-bahagia-logo-transparent.png"
+            src="/warkost-bahagia-logo.jpg"
             alt="Warkost Bahagia"
-            width={1672}
-            height={941}
+            width={1536}
+            height={864}
             priority
           />
-          <div>
+          <span className="brand-copy">
             <strong>{menu.brand}</strong>
             <small>Pesanan hangat, sampai dengan aman.</small>
-          </div>
-        </div>
-        <nav>
+          </span>
+        </button>
+        <nav className={role === "CUSTOMER" ? "customer-desktop-nav" : ""}>
           {role === "CUSTOMER" ? (
             <>
               <button onClick={() => setView("menu")}>Menu</button>
-              <button onClick={() => setView("orders")}>Pesanan</button>
-              <button onClick={() => setView("account")}>Akun</button>
+              <button onClick={() => goToCustomerOrders("all")}>Pesanan</button>
+              <button onClick={() => setOverlay("account")}>Akun</button>
             </>
           ) : role ? (
             <>
@@ -334,24 +400,24 @@ export default function App() {
             </>
           ) : null}
           {role && (
-            <button onClick={() => setView("notifications")}>
-              Notifikasi{alerts.unread > 0 ? ` · ${alerts.unread}` : ""}
+            <button
+              className="icon-nav-button"
+              aria-label="Buka notifikasi"
+              onClick={() =>
+                role === "CUSTOMER"
+                  ? setOverlay("notifications")
+                  : setView("notifications")
+              }
+            >
+              <BellIcon />
+              <span>Notifikasi</span>
+              {alerts.unread > 0 && (
+                <span className="notification-count">{alerts.unread}</span>
+              )}
             </button>
           )}
           {role ? (
-            <button
-              onClick={() =>
-                run(async () => {
-                  pollController.current?.abort();
-                  refreshController.current?.abort();
-                  await api("logout", {});
-                  setUser(null);
-                  setView("menu");
-                })
-              }
-            >
-              Keluar
-            </button>
+            <button onClick={logout}>Keluar</button>
           ) : (
             <button onClick={() => setView("auth")}>Masuk</button>
           )}
@@ -404,7 +470,10 @@ export default function App() {
             </h1>
           </div>
           {role === "CUSTOMER" && view === "menu" && (
-            <button className="primary" onClick={() => setView("cart")}>
+            <button
+              className="primary heading-cart-button"
+              onClick={() => setOverlay("cart")}
+            >
               Keranjang · {count} · {money(total)}
             </button>
           )}
@@ -479,15 +548,20 @@ export default function App() {
                         <Image
                           className="promo-image"
                           src={promo.image_url}
-                          alt=""
+                          alt={`Visual ${promo.title}`}
                           width={720}
                           height={360}
                           unoptimized
                         />
                       ) : (
-                        <div className="promo-mark" aria-hidden="true">
-                          WB
-                        </div>
+                        <Image
+                          className="promo-image"
+                          src="/demo/promo-warkost.webp"
+                          alt="Nasi goreng, mie ayam, dan kopi susu Warkost"
+                          width={1440}
+                          height={960}
+                          sizes="(max-width: 620px) 100vw, 42vw"
+                        />
                       )}
                       <div className="promo-copy">
                         <span className="promo-badge">{promo.badge}</span>
@@ -540,11 +614,13 @@ export default function App() {
                 .map((p) => (
                   <article className="product" key={p.id}>
                     <div className="food-visual">
-                      {p.image_url ? (
-                        <img src={p.image_url} alt={p.name} />
-                      ) : (
-                        <span>✦</span>
-                      )}
+                      <Image
+                        src={p.image_url || demoProductImage(p.name)}
+                        alt={p.name}
+                        fill
+                        sizes="(max-width: 620px) 100vw, (max-width: 850px) 50vw, 33vw"
+                        unoptimized={Boolean(p.image_url)}
+                      />
                     </div>
                     <div className="product-body">
                       <small>
@@ -678,190 +754,253 @@ export default function App() {
           </section>
         )}
         {role === "CUSTOMER" && view === "account" && (
-          <div className="columns">
-            <section className="panel">
-              <h2>Alamat pengantaran</h2>
-              {account.addresses.map((a) => (
-                <div className="line" key={a.id}>
-                  <span>
-                    <strong>{a.label}</strong>
-                    <br />
-                    {a.detail}
-                  </span>
-                  <span className="actions">
-                    <button onClick={() => setEditingAddress(a.id)}>
-                      Ubah
-                    </button>
-                    <button
-                      disabled={busy}
-                      onClick={() =>
-                        run(() => api("address-remove", { id: a.id }))
-                      }
-                    >
-                      Hapus
-                    </button>
-                  </span>
-                </div>
-              ))}
-              <form
-                key={editingAddress || "new"}
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const f = new FormData(e.currentTarget);
-                  run(async () => {
-                    await api(editingAddress ? "address-replace" : "address", {
-                      ...(editingAddress ? { id: editingAddress } : {}),
-                      label: f.get("label"),
-                      detail: f.get("detail"),
-                      latitude: Number(f.get("latitude")),
-                      longitude: Number(f.get("longitude")),
+          <>
+            <section className="account-overview" aria-label="Menu akun">
+              <div>
+                <span className="eyebrow">AKUN PELANGGAN</span>
+                <h2>{user.name}</h2>
+                <p>Kelola pesanan, lokasi pengantaran, dan profilmu.</p>
+              </div>
+              <div className="account-shortcuts">
+                <button onClick={() => goToCustomerOrders("all")}>
+                  <ReceiptIcon />
+                  <span>Pesanan</span>
+                </button>
+                <button onClick={() => goToCustomerOrders("history")}>
+                  <HistoryIcon />
+                  <span>Riwayat</span>
+                </button>
+                <button onClick={() => goToCustomerOrders("tracking")}>
+                  <LocationIcon />
+                  <span>Tracking</span>
+                </button>
+                <button
+                  onClick={() =>
+                    document
+                      .getElementById("account-settings")
+                      ?.scrollIntoView({ behavior: "smooth" })
+                  }
+                >
+                  <UserIcon />
+                  <span>Pengaturan Akun</span>
+                </button>
+                <button onClick={logout}>
+                  <LogoutIcon />
+                  <span>Keluar</span>
+                </button>
+              </div>
+            </section>
+            <div className="columns account-columns">
+              <section className="panel" id="account-address">
+                <h2>Alamat pengantaran</h2>
+                {account.addresses.map((a) => (
+                  <div className="line" key={a.id}>
+                    <span>
+                      <strong>{a.label}</strong>
+                      <br />
+                      {a.detail}
+                    </span>
+                    <span className="actions">
+                      <button onClick={() => setEditingAddress(a.id)}>
+                        Ubah
+                      </button>
+                      <button
+                        disabled={busy}
+                        onClick={() =>
+                          run(() => api("address-remove", { id: a.id }))
+                        }
+                      >
+                        Hapus
+                      </button>
+                    </span>
+                  </div>
+                ))}
+                <form
+                  key={editingAddress || "new"}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const f = new FormData(e.currentTarget);
+                    run(async () => {
+                      await api(
+                        editingAddress ? "address-replace" : "address",
+                        {
+                          ...(editingAddress ? { id: editingAddress } : {}),
+                          label: f.get("label"),
+                          detail: f.get("detail"),
+                          latitude: Number(f.get("latitude")),
+                          longitude: Number(f.get("longitude")),
+                        },
+                      );
+                      setEditingAddress(null);
+                      e.target.reset();
                     });
-                    setEditingAddress(null);
-                    e.target.reset();
-                  });
-                }}
-              >
-                <h2>{editingAddress ? "Ubah alamat" : "Tambah alamat"}</h2>
-                <label>
-                  Label
-                  <input
-                    name="label"
-                    defaultValue={
-                      account.addresses.find((a) => a.id === editingAddress)
-                        ?.label || ""
-                    }
-                    placeholder="Rumah / Kantor"
-                    required
-                    minLength="2"
-                  />
-                </label>
-                <label>
-                  Alamat lengkap
-                  <textarea
-                    name="detail"
-                    defaultValue={
-                      account.addresses.find((a) => a.id === editingAddress)
-                        ?.detail || ""
-                    }
-                    minLength="10"
-                    required
-                  />
-                </label>
-                <div className="columns compact-columns">
+                  }}
+                >
+                  <h2>{editingAddress ? "Ubah alamat" : "Tambah alamat"}</h2>
                   <label>
-                    Latitude pin lokasi
+                    Label
                     <input
-                      name="latitude"
-                      type="number"
-                      step="any"
-                      min="-90"
-                      max="90"
+                      name="label"
                       defaultValue={
                         account.addresses.find((a) => a.id === editingAddress)
-                          ?.latitude ?? ""
+                          ?.label || ""
                       }
+                      placeholder="Rumah / Kantor"
                       required
+                      minLength="2"
                     />
                   </label>
                   <label>
-                    Longitude pin lokasi
-                    <input
-                      name="longitude"
-                      type="number"
-                      step="any"
-                      min="-180"
-                      max="180"
+                    Alamat lengkap
+                    <textarea
+                      name="detail"
                       defaultValue={
                         account.addresses.find((a) => a.id === editingAddress)
-                          ?.longitude ?? ""
+                          ?.detail || ""
                       }
+                      minLength="10"
                       required
                     />
                   </label>
-                </div>
-                <small>
-                  Ongkir dihitung server: gratis hingga 5 km, Rp2.500 per km
-                  berikutnya, maksimal 15 km.
-                </small>
-                <div className="actions">
-                  <button className="primary" disabled={busy}>
-                    Simpan alamat
-                  </button>
-                  {editingAddress && (
+                  <div className="location-card">
+                    <div className="location-card-heading">
+                      <LocationIcon />
+                      <div>
+                        <strong>Titik lokasi pengantaran</strong>
+                        <small>
+                          Dipakai hanya untuk menghitung jarak dan ongkir.
+                        </small>
+                      </div>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => setEditingAddress(null)}
+                      className="location-button"
+                      onClick={useDeviceLocation}
                     >
-                      Batal
+                      Gunakan lokasi perangkat
                     </button>
-                  )}
-                </div>
-              </form>
-            </section>
-            <section className="panel">
-              <h2>Profil</h2>
-              <p>
-                {user.name} · {user.email}
-              </p>
-              <form
-                key={user.name}
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const f = new FormData(e.currentTarget);
-                  run(async () => {
-                    const response = await api("profile", {
-                      name: f.get("name"),
-                      currentPassword: f.get("currentPassword"),
-                      newPassword: f.get("newPassword"),
+                    <details className="coordinate-details" open>
+                      <summary>Atur titik secara manual</summary>
+                      <div className="columns compact-columns">
+                        <label>
+                          Latitude
+                          <input
+                            name="latitude"
+                            type="number"
+                            step="any"
+                            min="-90"
+                            max="90"
+                            defaultValue={
+                              account.addresses.find(
+                                (a) => a.id === editingAddress,
+                              )?.latitude ?? ""
+                            }
+                            required
+                          />
+                        </label>
+                        <label>
+                          Longitude
+                          <input
+                            name="longitude"
+                            type="number"
+                            step="any"
+                            min="-180"
+                            max="180"
+                            defaultValue={
+                              account.addresses.find(
+                                (a) => a.id === editingAddress,
+                              )?.longitude ?? ""
+                            }
+                            required
+                          />
+                        </label>
+                      </div>
+                    </details>
+                    <small>
+                      Gratis ongkir hingga 5 km, lalu Rp2.500/km dengan batas
+                      pengantaran 15 km.
+                    </small>
+                  </div>
+                  <div className="actions">
+                    <button className="primary" disabled={busy}>
+                      Simpan alamat
+                    </button>
+                    {editingAddress && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingAddress(null)}
+                      >
+                        Batal
+                      </button>
+                    )}
+                  </div>
+                </form>
+              </section>
+              <section className="panel" id="account-settings">
+                <h2>Profil</h2>
+                <p>
+                  {user.name} · {user.email}
+                </p>
+                <form
+                  key={user.name}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const f = new FormData(e.currentTarget);
+                    run(async () => {
+                      const response = await api("profile", {
+                        name: f.get("name"),
+                        currentPassword: f.get("currentPassword"),
+                        newPassword: f.get("newPassword"),
+                      });
+                      setUser(response.user);
+                      setMessage("Profil diperbarui");
+                      e.target.reset();
                     });
-                    setUser(response.user);
-                    setMessage("Profil diperbarui");
-                    e.target.reset();
-                  });
-                }}
-              >
-                <label>
-                  Nama
-                  <input
-                    name="name"
-                    defaultValue={user.name}
-                    required
-                    minLength="2"
-                  />
-                </label>
-                <label>
-                  Password saat ini (jika mengganti password)
-                  <input
-                    name="currentPassword"
-                    type="password"
-                    autoComplete="current-password"
-                  />
-                </label>
-                <label>
-                  Password baru (opsional, minimal 12 karakter)
-                  <input
-                    name="newPassword"
-                    type="password"
-                    autoComplete="new-password"
-                  />
-                </label>
-                <button className="primary" disabled={busy}>
-                  Simpan profil
-                </button>
-              </form>
-            </section>
-            <section className="panel">
-              <h2>Poin loyalitas</h2>
-              <div className="big-number">{account.loyalty} poin</div>
-              <p>Poin diberikan saat pesanan selesai dikirim.</p>
-              {account.transactions.map((t) => (
-                <div className="line" key={t.id}>
-                  <span>Pesanan #{t.order_id}</span>
-                  <strong>+{t.amount}</strong>
-                </div>
-              ))}
-            </section>
-          </div>
+                  }}
+                >
+                  <label>
+                    Nama
+                    <input
+                      name="name"
+                      defaultValue={user.name}
+                      required
+                      minLength="2"
+                    />
+                  </label>
+                  <label>
+                    Password saat ini (jika mengganti password)
+                    <input
+                      name="currentPassword"
+                      type="password"
+                      autoComplete="current-password"
+                    />
+                  </label>
+                  <label>
+                    Password baru (opsional, minimal 12 karakter)
+                    <input
+                      name="newPassword"
+                      type="password"
+                      autoComplete="new-password"
+                    />
+                  </label>
+                  <button className="primary" disabled={busy}>
+                    Simpan profil
+                  </button>
+                </form>
+              </section>
+              <section className="panel">
+                <h2>Poin loyalitas</h2>
+                <div className="big-number">{account.loyalty} poin</div>
+                <p>Poin diberikan saat pesanan selesai dikirim.</p>
+                {account.transactions.map((t) => (
+                  <div className="line" key={t.id}>
+                    <span>Pesanan #{t.order_id}</span>
+                    <strong>+{t.amount}</strong>
+                  </div>
+                ))}
+              </section>
+            </div>
+          </>
         )}
         {["ADMIN", "OWNER"].includes(role) && view === "reports" && (
           <section className="panel">
@@ -1464,6 +1603,28 @@ export default function App() {
         )}
         {role && view === "orders" && (
           <>
+            {role === "CUSTOMER" && (
+              <div className="customer-order-tabs" aria-label="Filter pesanan">
+                <button
+                  className={orderFilter === "all" ? "active" : ""}
+                  onClick={() => setOrderFilter("all")}
+                >
+                  Pesanan
+                </button>
+                <button
+                  className={orderFilter === "tracking" ? "active" : ""}
+                  onClick={() => setOrderFilter("tracking")}
+                >
+                  Tracking
+                </button>
+                <button
+                  className={orderFilter === "history" ? "active" : ""}
+                  onClick={() => setOrderFilter("history")}
+                >
+                  Riwayat
+                </button>
+              </div>
+            )}
             <button
               className="refresh"
               onClick={() => run(async () => {})}
@@ -1535,7 +1696,7 @@ export default function App() {
               </div>
             )}
             <div className="order-list">
-              {orders.map((o) => (
+              {visibleOrders.map((o) => (
                 <Order
                   key={o.id}
                   order={o}
@@ -1551,7 +1712,19 @@ export default function App() {
                 />
               ))}
             </div>
-            {!orders.length && <div className="panel">Belum ada pesanan.</div>}
+            {!visibleOrders.length && (
+              <div className="panel empty-state">
+                <ReceiptIcon />
+                <h2>
+                  {orderFilter === "history"
+                    ? "Belum ada riwayat pesanan"
+                    : orderFilter === "tracking"
+                      ? "Tidak ada pesanan yang sedang berjalan"
+                      : "Belum ada pesanan"}
+                </h2>
+                <p>Pesananmu akan tampil di sini.</p>
+              </div>
+            )}
             {nextOrderCursor && (
               <button
                 className="refresh"
@@ -1582,10 +1755,291 @@ export default function App() {
           </>
         )}
       </main>
+      {role === "CUSTOMER" && view === "menu" && count > 0 && (
+        <button
+          className="floating-cart"
+          aria-label={`Buka keranjang, ${count} item, total ${money(total)}`}
+          onClick={() => setOverlay("cart")}
+        >
+          <span className="floating-cart-icon">
+            <CartIcon />
+            <span>{count}</span>
+          </span>
+          <span>
+            <small>Keranjang</small>
+            <strong>{money(total)}</strong>
+          </span>
+        </button>
+      )}
+      {role === "CUSTOMER" && (
+        <nav className="mobile-customer-nav" aria-label="Navigasi pelanggan">
+          <button
+            className={overlay === "notifications" ? "active" : ""}
+            aria-label="Notifikasi"
+            onClick={() => setOverlay("notifications")}
+          >
+            <span className="mobile-nav-icon">
+              <BellIcon />
+              {alerts.unread > 0 && (
+                <span className="mobile-nav-count">{alerts.unread}</span>
+              )}
+            </span>
+            Notifikasi
+          </button>
+          <button
+            className={overlay === "cart" ? "active" : ""}
+            aria-label="Keranjang"
+            onClick={() => setOverlay("cart")}
+          >
+            <span className="mobile-nav-icon">
+              <CartIcon />
+              {count > 0 && <span className="mobile-nav-count">{count}</span>}
+            </span>
+            Keranjang
+          </button>
+          <button
+            className={
+              overlay === "account" || view === "account" ? "active" : ""
+            }
+            aria-label="Akun"
+            onClick={() => setOverlay("account")}
+          >
+            <span className="mobile-nav-icon">
+              <UserIcon />
+            </span>
+            Akun
+          </button>
+        </nav>
+      )}
+      {role === "CUSTOMER" && overlay && (
+        <div
+          className="sheet-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setOverlay(null);
+          }}
+        >
+          <section
+            className="quick-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label={
+              overlay === "cart"
+                ? "Ringkasan keranjang"
+                : overlay === "notifications"
+                  ? "Notifikasi terbaru"
+                  : "Menu akun"
+            }
+          >
+            <div className="sheet-handle" aria-hidden="true" />
+            <div className="sheet-heading">
+              <div>
+                <span className="eyebrow">AKSES CEPAT</span>
+                <h2>
+                  {overlay === "cart"
+                    ? "Keranjangmu"
+                    : overlay === "notifications"
+                      ? "Notifikasi terbaru"
+                      : "Akun saya"}
+                </h2>
+              </div>
+              <button
+                className="sheet-close"
+                aria-label="Tutup"
+                onClick={() => setOverlay(null)}
+              >
+                ×
+              </button>
+            </div>
+            {overlay === "cart" && (
+              <div className="quick-cart-content">
+                {menu.products
+                  .filter((product) => cart[product.id] > 0)
+                  .map((product) => (
+                    <div className="quick-cart-row" key={product.id}>
+                      <Image
+                        src={
+                          product.image_url || demoProductImage(product.name)
+                        }
+                        alt=""
+                        width={62}
+                        height={62}
+                        unoptimized={Boolean(product.image_url)}
+                      />
+                      <span>
+                        <strong>{product.name}</strong>
+                        <small>
+                          {cart[product.id]} × {money(product.price)}
+                        </small>
+                      </span>
+                      <div className="qty compact-qty">
+                        <button
+                          aria-label={`Kurangi ${product.name} dari keranjang`}
+                          onClick={() => step(product.id, -1)}
+                        >
+                          −
+                        </button>
+                        <button
+                          aria-label={`Tambah ${product.name} dari keranjang`}
+                          onClick={() => step(product.id, 1)}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                {!count && <p>Keranjangmu masih kosong.</p>}
+                <div className="sheet-total">
+                  <span>Total sementara</span>
+                  <strong>{money(total)}</strong>
+                </div>
+                <button
+                  className="primary sheet-primary"
+                  disabled={!count}
+                  onClick={() => {
+                    setOverlay(null);
+                    setView("cart");
+                  }}
+                >
+                  Lanjut ke checkout
+                </button>
+              </div>
+            )}
+            {overlay === "notifications" && (
+              <div className="quick-notifications">
+                {alerts.notifications.slice(0, 3).map((notification) => (
+                  <div
+                    className={
+                      notification.read_at ? "quick-note" : "quick-note unread"
+                    }
+                    key={notification.id}
+                  >
+                    <BellIcon />
+                    <span>
+                      <strong>{notification.message}</strong>
+                      <small>{notification.created_at}</small>
+                    </span>
+                  </div>
+                ))}
+                {!alerts.notifications.length && <p>Belum ada notifikasi.</p>}
+                <button
+                  className="sheet-secondary"
+                  onClick={() => {
+                    setOverlay(null);
+                    setView("notifications");
+                  }}
+                >
+                  Lihat semua notifikasi
+                </button>
+              </div>
+            )}
+            {overlay === "account" && (
+              <div className="quick-account-menu">
+                <button onClick={() => goToCustomerOrders("all")}>
+                  <ReceiptIcon />
+                  <span>Pesanan</span>
+                </button>
+                <button onClick={() => goToCustomerOrders("history")}>
+                  <HistoryIcon />
+                  <span>Riwayat</span>
+                </button>
+                <button onClick={() => goToCustomerOrders("tracking")}>
+                  <LocationIcon />
+                  <span>Tracking</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setOverlay(null);
+                    setView("account");
+                  }}
+                >
+                  <UserIcon />
+                  <span>Pengaturan Akun</span>
+                </button>
+                <button className="danger-text" onClick={logout}>
+                  <LogoutIcon />
+                  <span>Keluar</span>
+                </button>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
       <footer>
         Warkost Bahagia · Dibuat untuk operasional yang lebih rapi
       </footer>
     </>
+  );
+}
+function SvgIcon({ children, className = "ui-icon" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
+}
+function BellIcon() {
+  return (
+    <SvgIcon>
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+      <path d="M10 21h4" />
+    </SvgIcon>
+  );
+}
+function CartIcon() {
+  return (
+    <SvgIcon>
+      <path d="M3 4h2l2.4 10.4a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 1.9-1.4L21 8H6" />
+      <circle cx="10" cy="20" r="1" />
+      <circle cx="18" cy="20" r="1" />
+    </SvgIcon>
+  );
+}
+function UserIcon() {
+  return (
+    <SvgIcon>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
+    </SvgIcon>
+  );
+}
+function ReceiptIcon() {
+  return (
+    <SvgIcon>
+      <path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" />
+      <path d="M9 8h6M9 12h6" />
+    </SvgIcon>
+  );
+}
+function HistoryIcon() {
+  return (
+    <SvgIcon>
+      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+      <path d="M3 3v5h5M12 7v5l3 2" />
+    </SvgIcon>
+  );
+}
+function LocationIcon() {
+  return (
+    <SvgIcon>
+      <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </SvgIcon>
+  );
+}
+function LogoutIcon() {
+  return (
+    <SvgIcon>
+      <path d="M10 17l5-5-5-5M15 12H3M21 19V5a2 2 0 0 0-2-2h-6" />
+    </SvgIcon>
   );
 }
 function Order({ order: o, role, drivers, busy, action }) {
