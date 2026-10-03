@@ -31,9 +31,9 @@ async function signIn(page, email) {
   await form.getByLabel("Email").fill(email);
   await form.getByLabel("Password").fill(password);
   await form.getByRole("button", { name: "Masuk", exact: true }).click();
-  if (email === "customer@warkost.local" && page.viewportSize().width <= 620)
+  if (email === "customer@warkost.local")
     await expect(
-      page.getByRole("navigation", { name: "Navigasi pelanggan" }),
+      page.getByRole("navigation", { name: "Navigasi pelanggan utama" }),
     ).toBeVisible();
   else
     await expect(
@@ -56,10 +56,18 @@ async function signOut(page) {
     .getByRole("button", { name: "Keluar", exact: true });
   if (await desktopLogout.isVisible()) await desktopLogout.click();
   else {
-    await page
-      .getByRole("navigation", { name: "Navigasi pelanggan" })
-      .getByRole("button", { name: "Akun", exact: true })
-      .click();
+    const headerAccount = page
+      .locator("header")
+      .getByRole("button", { name: "Akun", exact: true });
+    if (await headerAccount.isVisible()) await headerAccount.click();
+    else
+      await page
+        .getByRole("navigation", {
+          name: "Navigasi pelanggan",
+          exact: true,
+        })
+        .getByRole("button", { name: "Akun", exact: true })
+        .click();
     await page
       .getByRole("dialog", { name: "Menu akun" })
       .getByRole("button", { name: "Keluar", exact: true })
@@ -100,12 +108,12 @@ async function expectResponsiveShell(page) {
 async function openCustomerAccountMenu(page) {
   if (page.viewportSize().width <= 620) {
     await page
-      .getByRole("navigation", { name: "Navigasi pelanggan" })
+      .getByRole("navigation", { name: "Navigasi pelanggan", exact: true })
       .getByRole("button", { name: "Akun", exact: true })
       .click();
   } else {
     await page
-      .locator("nav")
+      .locator("header")
       .getByRole("button", { name: "Akun", exact: true })
       .click();
   }
@@ -129,7 +137,7 @@ async function goToCustomerAccount(page) {
 async function goToCheckout(page) {
   if (page.viewportSize().width <= 620) {
     await page
-      .getByRole("navigation", { name: "Navigasi pelanggan" })
+      .getByRole("navigation", { name: "Navigasi pelanggan", exact: true })
       .getByRole("button", { name: "Keranjang", exact: true })
       .click();
   } else {
@@ -185,7 +193,11 @@ test("customer dapat membuka menu, pesanan, dan akun", async ({
   await expect(promo).toBeVisible();
   await expect(promo).toContainText("Gratis Ongkir 5 KM");
   await expect(promo.getByRole("button", { name: "Pilih Menu" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Keranjang/ })).toBeVisible();
+  await expect(
+    page
+      .getByRole("navigation", { name: "Navigasi pelanggan utama" })
+      .getByRole("button", { name: "Keranjang", exact: true }),
+  ).toBeVisible();
 
   await goToCustomerOrders(page);
   await expect(
@@ -205,7 +217,7 @@ test("customer dapat membuka menu, pesanan, dan akun", async ({
   });
 });
 
-test("customer UI polish responsif dan quick drawer dapat ditutup", async ({
+test("customer homepage mengikuti desain dan cart tetap bekerja", async ({
   page,
 }, testInfo) => {
   const consoleErrors = await login(page, "customer@warkost.local");
@@ -214,7 +226,7 @@ test("customer UI polish responsif dan quick drawer dapat ditutup", async ({
   const logo = page.getByRole("img", { name: "Warkost Bahagia" });
   await expect(logo).toBeVisible();
   const logoBox = await logo.boundingBox();
-  expect(logoBox.width / logoBox.height).toBeGreaterThan(1.6);
+  expect(logoBox.width / logoBox.height).toBeGreaterThan(1.2);
 
   const mainHeading = page.getByRole("heading", {
     name: "Mau makan apa hari ini?",
@@ -222,8 +234,29 @@ test("customer UI polish responsif dan quick drawer dapat ditutup", async ({
   const headingSize = await mainHeading.evaluate((element) =>
     Number.parseFloat(getComputedStyle(element).fontSize),
   );
-  expect(headingSize).toBeGreaterThanOrEqual(27);
-  expect(headingSize).toBeLessThanOrEqual(44);
+  expect(headingSize).toBeGreaterThanOrEqual(mobile ? 28 : 46);
+  expect(headingSize).toBeLessThanOrEqual(mobile ? 38 : 70);
+  await expect(page.getByText("Lebih hemat, tetap nikmat.")).toBeVisible();
+
+  const headerNav = page.getByRole("navigation", {
+    name: "Navigasi pelanggan utama",
+  });
+  for (const name of ["Buka notifikasi", "Keranjang", "Akun", "Bantuan"])
+    await expect(
+      headerNav.getByRole("button", { name, exact: true }),
+    ).toBeVisible();
+
+  if (mobile) {
+    const bottomNav = page.getByRole("navigation", {
+      name: "Navigasi pelanggan",
+      exact: true,
+    });
+    await expect(bottomNav.getByRole("button")).toHaveCount(4);
+    for (const name of ["Notifikasi", "Keranjang", "Akun", "Bantuan"])
+      await expect(
+        bottomNav.getByRole("button", { name, exact: true }),
+      ).toBeVisible();
+  }
 
   const promo = page.getByRole("region", { name: "Promo berlangsung" });
   await expect(promo.locator("img")).toBeVisible();
@@ -237,13 +270,31 @@ test("customer UI polish responsif dan quick drawer dapat ditutup", async ({
     ).toBeGreaterThan(0);
   }
 
+  const search = page.getByRole("searchbox", {
+    name: "Cari makanan atau minuman",
+  });
+  await expect(search).toBeVisible();
+  await search.fill("kopi");
+  await expect(page.locator("article.customer-product")).toHaveCount(1);
+  await expect(
+    page.getByText("Kopi Susu Rumah", { exact: true }),
+  ).toBeVisible();
+  await search.clear();
+  await expect(page.locator("article.customer-product")).toHaveCount(3);
+
+  const categoryFilters = page.getByLabel("Kategori menu");
+  for (const name of ["Semua", "Makanan", "Minuman"])
+    await expect(
+      categoryFilters.getByRole("button", { name, exact: true }),
+    ).toBeVisible();
+
   const firstProduct = page.locator("article.product").filter({
     hasText: "Nasi Goreng Warkost",
   });
   await firstProduct.getByRole("button", { name: /^Tambah / }).click();
   if (mobile)
     await page
-      .getByRole("navigation", { name: "Navigasi pelanggan" })
+      .getByRole("navigation", { name: "Navigasi pelanggan", exact: true })
       .getByRole("button", { name: "Keranjang", exact: true })
       .click();
   else
@@ -257,7 +308,7 @@ test("customer UI polish responsif dan quick drawer dapat ditutup", async ({
 
   if (mobile)
     await page
-      .getByRole("navigation", { name: "Navigasi pelanggan" })
+      .getByRole("navigation", { name: "Navigasi pelanggan", exact: true })
       .getByRole("button", { name: "Notifikasi", exact: true })
       .click();
   else await page.getByRole("button", { name: "Buka notifikasi" }).click();
@@ -270,32 +321,34 @@ test("customer UI polish responsif dan quick drawer dapat ditutup", async ({
 
   const accountDialog = await openCustomerAccountMenu(page);
   await expect(accountDialog).toBeVisible();
-  await accountDialog
-    .getByRole("button", { name: "Pengaturan Akun", exact: true })
-    .click();
-  await expect(page.getByRole("heading", { name: "Akun saya" })).toBeVisible();
-  const accountOverview = page.getByRole("region", { name: "Menu akun" });
-  await expect(
-    accountOverview.getByRole("button", { name: "Pesanan", exact: true }),
-  ).toBeVisible();
-  await expect(
-    accountOverview.getByRole("button", { name: "Riwayat", exact: true }),
-  ).toBeVisible();
-  await expect(
-    accountOverview.getByRole("button", { name: "Tracking", exact: true }),
-  ).toBeVisible();
-  await expect(
-    accountOverview.getByRole("button", {
-      name: "Pengaturan Akun",
-      exact: true,
-    }),
-  ).toBeVisible();
+  for (const name of [
+    "Pesanan",
+    "Riwayat",
+    "Tracking",
+    "Pengaturan Akun",
+    "Keluar",
+  ])
+    await expect(
+      accountDialog.getByRole("button", { name, exact: true }),
+    ).toBeVisible();
+  await accountDialog.getByRole("button", { name: "Tutup" }).click();
+
+  await headerNav.getByRole("button", { name: "Bantuan" }).click();
+  const help = page.locator("#customer-help");
+  await expect(help).toBeVisible();
+  await expect(help.getByRole("link", { name: "Chat" })).toBeVisible();
+  await expect(help.getByRole("link", { name: "Telepon" })).toBeVisible();
   await expectResponsiveShell(page);
   expect(consoleErrors).toEqual([]);
 
+  await page.evaluate(() => {
+    document.documentElement.style.scrollBehavior = "auto";
+    window.scrollTo(0, 0);
+  });
+  await page.waitForTimeout(300);
   await page.screenshot({
     path: testInfo.outputPath("customer-ui-polish.png"),
-    fullPage: true,
+    fullPage: false,
   });
 });
 
@@ -557,7 +610,7 @@ test("OP-UAT-02 transfer customer ke admin ke driver memberi poin", async ({
   );
   if (page.viewportSize().width <= 620)
     await page
-      .getByRole("navigation", { name: "Navigasi pelanggan" })
+      .getByRole("navigation", { name: "Navigasi pelanggan", exact: true })
       .getByRole("button", { name: "Notifikasi", exact: true })
       .click();
   else

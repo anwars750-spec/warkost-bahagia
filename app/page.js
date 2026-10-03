@@ -30,6 +30,11 @@ const demoProductImage = (name) => {
   if (normalized.includes("kopi susu")) return "/demo/kopi-susu-rumah.webp";
   return "/demo/promo-warkost.webp";
 };
+const demoProductBadges = [
+  ["★", "Best Seller", "best-seller"],
+  ["●", "Populer", "popular"],
+  ["♛", "Rekomendasi", "recommended"],
+];
 async function api(route, body, signal) {
   const response = await fetch("/api/" + route, {
     method: body ? "POST" : "GET",
@@ -89,6 +94,8 @@ export default function App() {
     [busy, setBusy] = useState(false),
     [editingAddress, setEditingAddress] = useState(null),
     [selectedCategory, setSelectedCategory] = useState(0),
+    [productSearch, setProductSearch] = useState(""),
+    [promoIndex, setPromoIndex] = useState(0),
     [overlay, setOverlay] = useState(null),
     [orderFilter, setOrderFilter] = useState("all");
   async function loadCustomers(query = "", before = null, signal) {
@@ -257,6 +264,25 @@ export default function App() {
     setCart((old) => ({ ...old, [id]: Math.max(0, (old[id] || 0) + n) }));
   }
   const role = user?.role;
+  const activePromotions = menu.promotions || [];
+  const activePromo = activePromotions.length
+    ? activePromotions[promoIndex % activePromotions.length]
+    : null;
+  const filteredMenuProducts = menu.products.filter((product) => {
+    const categoryMatches =
+      !selectedCategory || product.category_id === selectedCategory;
+    const search = productSearch.trim().toLowerCase();
+    const searchMatches =
+      !search ||
+      `${product.name} ${product.description || ""}`
+        .toLowerCase()
+        .includes(search);
+    return categoryMatches && searchMatches;
+  });
+  const cartProductNames = menu.products
+    .filter((product) => cart[product.id] > 0)
+    .map((product) => product.name)
+    .join(", ");
   const visibleOrders =
     role !== "CUSTOMER" || orderFilter === "all"
       ? orders
@@ -303,9 +329,24 @@ export default function App() {
       { enableHighAccuracy: true, timeout: 10000 },
     );
   }
+  function openCustomerHelp() {
+    setOverlay(null);
+    setView("menu");
+    window.setTimeout(
+      () =>
+        document
+          .getElementById("customer-help")
+          ?.scrollIntoView({ behavior: "smooth", block: "center" }),
+      0,
+    );
+  }
   return (
     <>
-      <header className="top">
+      <header
+        className={`top ${
+          role === "CUSTOMER" && view === "menu" ? "customer-home-header" : ""
+        }`}
+      >
         <button
           className="brand brand-button"
           type="button"
@@ -330,8 +371,62 @@ export default function App() {
             <small>Pesanan hangat, sampai dengan aman.</small>
           </span>
         </button>
-        <nav className={role === "CUSTOMER" ? "customer-desktop-nav" : ""}>
-          {role === "CUSTOMER" ? (
+        <nav
+          className={role === "CUSTOMER" ? "customer-desktop-nav" : ""}
+          aria-label={
+            role === "CUSTOMER" && view === "menu"
+              ? "Navigasi pelanggan utama"
+              : undefined
+          }
+        >
+          {role === "CUSTOMER" && view === "menu" ? (
+            <>
+              <button
+                className="home-nav-item"
+                aria-label="Buka notifikasi"
+                onClick={() => setOverlay("notifications")}
+              >
+                <span className="home-nav-icon">
+                  <BellIcon />
+                  {alerts.unread > 0 && <span className="nav-alert-dot" />}
+                </span>
+                <span className="nav-label">Notifikasi</span>
+              </button>
+              <button
+                className="home-nav-item"
+                aria-label="Keranjang"
+                onClick={() => setOverlay("cart")}
+              >
+                <span className="home-nav-icon">
+                  <CartIcon />
+                  {count > 0 && (
+                    <span className="home-cart-count">{count}</span>
+                  )}
+                </span>
+                <span className="nav-label">Keranjang</span>
+              </button>
+              <button
+                className="home-nav-item"
+                aria-label="Akun"
+                onClick={() => setOverlay("account")}
+              >
+                <span className="home-nav-icon">
+                  <UserIcon />
+                </span>
+                <span className="nav-label">Akun</span>
+              </button>
+              <button
+                className="home-nav-item"
+                aria-label="Bantuan"
+                onClick={openCustomerHelp}
+              >
+                <span className="home-nav-icon">
+                  <HelpIcon />
+                </span>
+                <span className="nav-label">Bantuan</span>
+              </button>
+            </>
+          ) : role === "CUSTOMER" ? (
             <>
               <button onClick={() => setView("menu")}>Menu</button>
               <button onClick={() => goToCustomerOrders("all")}>Pesanan</button>
@@ -399,7 +494,7 @@ export default function App() {
               )}
             </>
           ) : null}
-          {role && (
+          {role && !(role === "CUSTOMER" && view === "menu") && (
             <button
               className="icon-nav-button"
               aria-label="Buka notifikasi"
@@ -416,68 +511,77 @@ export default function App() {
               )}
             </button>
           )}
-          {role ? (
+          {role && !(role === "CUSTOMER" && view === "menu") ? (
             <button onClick={logout}>Keluar</button>
-          ) : (
+          ) : !role ? (
             <button onClick={() => setView("auth")}>Masuk</button>
-          )}
+          ) : null}
         </nav>
       </header>
-      <main>
-        <div className="heading">
-          <div>
-            <span className="eyebrow">
-              {role === "ADMIN"
-                ? "PUSAT OPERASIONAL"
-                : role === "KITCHEN"
-                  ? "STASIUN DAPUR"
-                  : role === "OWNER"
-                    ? "KONTROL OWNER"
-                    : role === "DRIVER"
-                      ? "PENGANTARAN"
-                      : "DAPUR WARKOST"}
-            </span>
-            <h1>
-              {view === "notifications"
-                ? "Notifikasi"
-                : view === "promotions" && role === "ADMIN"
-                  ? "Kelola promo"
-                  : view === "customers" && role === "ADMIN"
-                    ? "Kelola pelanggan"
-                    : view === "reports" && role === "ADMIN"
-                      ? "Laporan harian"
-                      : view === "reports" && role === "OWNER"
+      <main
+        className={
+          (!role || role === "CUSTOMER") && view === "menu"
+            ? "customer-home-main"
+            : ""
+        }
+      >
+        {!((!role || role === "CUSTOMER") && view === "menu") && (
+          <div className="heading">
+            <div>
+              <span className="eyebrow">
+                {role === "ADMIN"
+                  ? "PUSAT OPERASIONAL"
+                  : role === "KITCHEN"
+                    ? "STASIUN DAPUR"
+                    : role === "OWNER"
+                      ? "KONTROL OWNER"
+                      : role === "DRIVER"
+                        ? "PENGANTARAN"
+                        : "DAPUR WARKOST"}
+              </span>
+              <h1>
+                {view === "notifications"
+                  ? "Notifikasi"
+                  : view === "promotions" && role === "ADMIN"
+                    ? "Kelola promo"
+                    : view === "customers" && role === "ADMIN"
+                      ? "Kelola pelanggan"
+                      : view === "reports" && role === "ADMIN"
                         ? "Laporan harian"
-                        : view === "stock" && ["ADMIN", "OWNER"].includes(role)
-                          ? "Kontrol stok"
-                          : view === "audit" && role === "OWNER"
-                            ? "Audit aktivitas"
-                            : role === "KITCHEN"
-                              ? "Antrean makanan"
-                              : role === "OWNER"
-                                ? "Ringkasan usaha"
-                                : role === "ADMIN"
-                                  ? "Pantau pesanan hari ini"
-                                  : role === "DRIVER"
-                                    ? "Tugas pengantaran"
-                                    : view === "menu"
-                                      ? "Mau makan apa hari ini?"
-                                      : view === "orders"
-                                        ? "Pesanan saya"
-                                        : view === "account"
-                                          ? "Akun saya"
-                                          : "Selamat datang"}
-            </h1>
+                        : view === "reports" && role === "OWNER"
+                          ? "Laporan harian"
+                          : view === "stock" &&
+                              ["ADMIN", "OWNER"].includes(role)
+                            ? "Kontrol stok"
+                            : view === "audit" && role === "OWNER"
+                              ? "Audit aktivitas"
+                              : role === "KITCHEN"
+                                ? "Antrean makanan"
+                                : role === "OWNER"
+                                  ? "Ringkasan usaha"
+                                  : role === "ADMIN"
+                                    ? "Pantau pesanan hari ini"
+                                    : role === "DRIVER"
+                                      ? "Tugas pengantaran"
+                                      : view === "menu"
+                                        ? "Mau makan apa hari ini?"
+                                        : view === "orders"
+                                          ? "Pesanan saya"
+                                          : view === "account"
+                                            ? "Akun saya"
+                                            : "Selamat datang"}
+              </h1>
+            </div>
+            {role === "CUSTOMER" && view === "menu" && (
+              <button
+                className="primary heading-cart-button"
+                onClick={() => setOverlay("cart")}
+              >
+                Keranjang · {count} · {money(total)}
+              </button>
+            )}
           </div>
-          {role === "CUSTOMER" && view === "menu" && (
-            <button
-              className="primary heading-cart-button"
-              onClick={() => setOverlay("cart")}
-            >
-              Keranjang · {count} · {money(total)}
-            </button>
-          )}
-        </div>
+        )}
         {error && (
           <div role="alert" className="alert">
             {error}
@@ -532,25 +636,74 @@ export default function App() {
         ) : null}
         {(!role || role === "CUSTOMER") && view === "menu" && (
           <>
-            {menu.promotions?.length > 0 && (
-              <section className="promo-section" aria-label="Promo berlangsung">
-                <div className="promo-heading">
-                  <div>
-                    <span className="eyebrow">PROMO BERLANGSUNG</span>
-                    <h2>Lebih hemat, tetap nikmat.</h2>
-                  </div>
-                  <small>{menu.promotions.length} promo aktif</small>
+            <section
+              className={`customer-hero ${activePromo ? "" : "no-promo"}`}
+            >
+              <div className="customer-hero-copy">
+                <span className="eyebrow">DAPUR WARKOST</span>
+                <h1>Mau makan apa hari ini?</h1>
+                <p className="hero-lead">Lebih hemat, tetap nikmat.</p>
+                <div className="hero-benefits" aria-label="Keunggulan layanan">
+                  <span>
+                    <TruckIcon />
+                    <strong>
+                      Gratis Ongkir
+                      <br />5 KM
+                    </strong>
+                  </span>
+                  <span>
+                    <FoodIcon />
+                    <strong>
+                      Menu Lezat
+                      <br />
+                      dan Fresh
+                    </strong>
+                  </span>
+                  <span>
+                    <ShieldIcon />
+                    <strong>
+                      Pesanan Aman
+                      <br />
+                      dan Terpercaya
+                    </strong>
+                  </span>
                 </div>
-                <div className="promo-grid">
-                  {menu.promotions.map((promo) => (
-                    <article className="promo-card" key={promo.id}>
-                      {promo.image_url ? (
+              </div>
+              {activePromo && (
+                <section
+                  className="promo-section home-promo"
+                  aria-label="Promo berlangsung"
+                >
+                  <article className="promo-card" key={activePromo.id}>
+                    <div className="promo-copy">
+                      <span className="promo-badge">{activePromo.badge}</span>
+                      <h2>{activePromo.title}</h2>
+                      <p>{activePromo.description}</p>
+                      <small className="promo-period">
+                        {promoDate(activePromo.starts_at)} –{" "}
+                        {promoDate(activePromo.ends_at)}
+                      </small>
+                      <small className="promo-terms">{activePromo.terms}</small>
+                      <button
+                        className="primary"
+                        onClick={() =>
+                          document
+                            .getElementById("menu-grid")
+                            ?.scrollIntoView({ behavior: "smooth" })
+                        }
+                      >
+                        {activePromo.cta_label}
+                        <ArrowIcon />
+                      </button>
+                    </div>
+                    <div className="promo-media">
+                      {activePromo.image_url ? (
                         <Image
                           className="promo-image"
-                          src={promo.image_url}
-                          alt={`Visual ${promo.title}`}
-                          width={720}
-                          height={360}
+                          src={activePromo.image_url}
+                          alt={`Visual ${activePromo.title}`}
+                          fill
+                          sizes="(max-width: 620px) 58vw, 43vw"
                           unoptimized
                         />
                       ) : (
@@ -558,108 +711,215 @@ export default function App() {
                           className="promo-image"
                           src="/demo/promo-warkost.webp"
                           alt="Nasi goreng, mie ayam, dan kopi susu Warkost"
-                          width={1440}
-                          height={960}
-                          sizes="(max-width: 620px) 100vw, 42vw"
+                          fill
+                          sizes="(max-width: 620px) 58vw, 43vw"
+                          priority
                         />
                       )}
-                      <div className="promo-copy">
-                        <span className="promo-badge">{promo.badge}</span>
-                        <h2>{promo.title}</h2>
-                        <p>{promo.description}</p>
-                        <small>
-                          {promoDate(promo.starts_at)}–
-                          {promoDate(promo.ends_at)}
-                        </small>
-                        <small>{promo.terms}</small>
-                        <button
-                          className="primary"
-                          onClick={() =>
-                            document
-                              .getElementById("menu-grid")
-                              ?.scrollIntoView({ behavior: "smooth" })
-                          }
-                        >
-                          {promo.cta_label}
-                        </button>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </section>
-            )}
-            <div className="filters">
-              <button
-                className={!selectedCategory ? "active" : ""}
-                onClick={() => setSelectedCategory(0)}
-              >
-                Semua
-              </button>
-              {menu.categories.map((c) => (
-                <button
-                  key={c.id}
-                  className={selectedCategory === c.id ? "active" : ""}
-                  onClick={() => setSelectedCategory(c.id)}
-                >
-                  {c.name}
-                </button>
-              ))}
-            </div>
-            <div className="grid" id="menu-grid">
-              {menu.products
-                .filter(
-                  (p) =>
-                    !selectedCategory || p.category_id === selectedCategory,
-                )
-                .map((p) => (
-                  <article className="product" key={p.id}>
-                    <div className="food-visual">
-                      <Image
-                        src={p.image_url || demoProductImage(p.name)}
-                        alt={p.name}
-                        fill
-                        sizes="(max-width: 620px) 100vw, (max-width: 850px) 50vw, 33vw"
-                        unoptimized={Boolean(p.image_url)}
-                      />
-                    </div>
-                    <div className="product-body">
-                      <small>
-                        {
-                          menu.categories.find((c) => c.id === p.category_id)
-                            ?.name
-                        }
-                      </small>
-                      <h2>{p.name}</h2>
-                      <p>{p.description}</p>
-                      <div className="product-foot">
-                        <strong>{money(p.price)}</strong>
-                        {role === "CUSTOMER" ? (
-                          <div className="qty">
+                      <div
+                        className="promo-controls"
+                        aria-label="Kontrol promo"
+                      >
+                        {activePromotions.length > 1 && (
+                          <button
+                            aria-label="Promo sebelumnya"
+                            onClick={() =>
+                              setPromoIndex(
+                                (promoIndex - 1 + activePromotions.length) %
+                                  activePromotions.length,
+                              )
+                            }
+                          >
+                            ←
+                          </button>
+                        )}
+                        <span className="promo-dots">
+                          {activePromotions.map((promo, index) => (
                             <button
-                              onClick={() => step(p.id, -1)}
-                              aria-label={"Kurangi " + p.name}
-                            >
-                              −
-                            </button>
-                            <span>{cart[p.id] || 0}</span>
-                            <button
-                              onClick={() => step(p.id, 1)}
-                              aria-label={"Tambah " + p.name}
-                            >
-                              +
-                            </button>
-                          </div>
-                        ) : (
-                          <button onClick={() => setView("auth")}>
-                            Masuk untuk pesan
+                              key={promo.id}
+                              aria-label={`Tampilkan promo ${index + 1}`}
+                              className={index === promoIndex ? "active" : ""}
+                              onClick={() => setPromoIndex(index)}
+                            />
+                          ))}
+                        </span>
+                        {activePromotions.length > 1 && (
+                          <button
+                            aria-label="Promo berikutnya"
+                            onClick={() =>
+                              setPromoIndex(
+                                (promoIndex + 1) % activePromotions.length,
+                              )
+                            }
+                          >
+                            →
                           </button>
                         )}
                       </div>
                     </div>
                   </article>
-                ))}
-            </div>
-            {!menu.products.length && <p>Menu belum tersedia.</p>}
+                </section>
+              )}
+            </section>
+            <section className="customer-catalog" aria-labelledby="menu-title">
+              <div className="catalog-tools">
+                <label className="menu-search">
+                  <SearchIcon />
+                  <span className="sr-only">Cari makanan atau minuman</span>
+                  <input
+                    type="search"
+                    value={productSearch}
+                    onChange={(event) => setProductSearch(event.target.value)}
+                    placeholder="Cari makanan atau minuman..."
+                  />
+                </label>
+                <div className="filters" aria-label="Kategori menu">
+                  <button
+                    className={!selectedCategory ? "active" : ""}
+                    onClick={() => setSelectedCategory(0)}
+                  >
+                    <FoodIcon />
+                    Semua
+                  </button>
+                  {menu.categories.map((category) => (
+                    <button
+                      key={category.id}
+                      className={
+                        selectedCategory === category.id ? "active" : ""
+                      }
+                      onClick={() => setSelectedCategory(category.id)}
+                    >
+                      {category.name.toLowerCase().includes("minum") ? (
+                        <DrinkIcon />
+                      ) : (
+                        <BowlIcon />
+                      )}
+                      {category.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="catalog-heading">
+                <div>
+                  <h2 id="menu-title">Menu Pilihan</h2>
+                  <p>Menu favorit yang paling banyak dipesan.</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedCategory(0);
+                    setProductSearch("");
+                  }}
+                >
+                  Lihat Semua
+                  <ArrowIcon />
+                </button>
+              </div>
+              <div className="grid customer-products" id="menu-grid">
+                {filteredMenuProducts.map((p, index) => {
+                  const badge = demoProductBadges[index];
+                  return (
+                    <article className="product customer-product" key={p.id}>
+                      <div className="food-visual">
+                        <Image
+                          src={p.image_url || demoProductImage(p.name)}
+                          alt={p.name}
+                          fill
+                          sizes="(max-width: 620px) 100vw, (max-width: 850px) 50vw, 33vw"
+                          unoptimized={Boolean(p.image_url)}
+                        />
+                        {badge && (
+                          <span className={`product-badge ${badge[2]}`}>
+                            <b>{badge[0]}</b> {badge[1]}
+                          </span>
+                        )}
+                      </div>
+                      <div className="product-body">
+                        <small>
+                          {
+                            menu.categories.find((c) => c.id === p.category_id)
+                              ?.name
+                          }
+                        </small>
+                        <h2>{p.name}</h2>
+                        <p>{p.description}</p>
+                        <div className="product-foot">
+                          <strong>{money(p.price)}</strong>
+                          {role === "CUSTOMER" ? (
+                            <div
+                              className={`qty ${cart[p.id] ? "" : "is-empty"}`}
+                            >
+                              <button
+                                onClick={() => step(p.id, -1)}
+                                aria-label={"Kurangi " + p.name}
+                              >
+                                −
+                              </button>
+                              <span>{cart[p.id] || 0}</span>
+                              <button
+                                onClick={() => step(p.id, 1)}
+                                aria-label={"Tambah " + p.name}
+                              >
+                                +
+                              </button>
+                            </div>
+                          ) : (
+                            <button onClick={() => setView("auth")}>
+                              Masuk untuk pesan
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+              {!filteredMenuProducts.length && (
+                <div className="menu-empty">
+                  <p>Menu yang kamu cari belum tersedia.</p>
+                  <button
+                    onClick={() => {
+                      setSelectedCategory(0);
+                      setProductSearch("");
+                    }}
+                  >
+                    Tampilkan semua menu
+                  </button>
+                </div>
+              )}
+            </section>
+            {role === "CUSTOMER" && (
+              <section className="customer-help" id="customer-help">
+                <span className="help-illustration">
+                  <HelpIcon />
+                </span>
+                <div>
+                  <h2>Butuh bantuan?</h2>
+                  <p>
+                    Kami siap membantu pesanan, pembayaran, atau pertanyaan
+                    lainnya.
+                  </p>
+                </div>
+                <div className="help-actions">
+                  <a
+                    href={whatsappLink(
+                      settings.businessWhatsApp,
+                      "Halo Warkost Bahagia, saya butuh bantuan.",
+                    )}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ChatIcon />
+                    Chat
+                  </a>
+                  <a
+                    href={`tel:+${String(settings.businessWhatsApp).replace(/\D/g, "")}`}
+                  >
+                    <PhoneIcon />
+                    Telepon
+                  </a>
+                </div>
+              </section>
+            )}
           </>
         )}
         {role === "CUSTOMER" && view === "cart" && (
@@ -1757,7 +2017,7 @@ export default function App() {
       </main>
       {role === "CUSTOMER" && view === "menu" && count > 0 && (
         <button
-          className="floating-cart"
+          className="floating-cart customer-floating-cart"
           aria-label={`Buka keranjang, ${count} item, total ${money(total)}`}
           onClick={() => setOverlay("cart")}
         >
@@ -1765,9 +2025,15 @@ export default function App() {
             <CartIcon />
             <span>{count}</span>
           </span>
-          <span>
-            <small>Keranjang</small>
-            <strong>{money(total)}</strong>
+          <span className="floating-cart-summary">
+            <strong>
+              {count} item · {money(total)}
+            </strong>
+            <small>{cartProductNames}</small>
+          </span>
+          <span className="floating-cart-cta">
+            Lihat Keranjang
+            <ArrowIcon />
           </span>
         </button>
       )}
@@ -1808,6 +2074,12 @@ export default function App() {
               <UserIcon />
             </span>
             Akun
+          </button>
+          <button aria-label="Bantuan" onClick={openCustomerHelp}>
+            <span className="mobile-nav-icon">
+              <HelpIcon />
+            </span>
+            Bantuan
           </button>
         </nav>
       )}
@@ -2008,6 +2280,85 @@ function UserIcon() {
     <SvgIcon>
       <circle cx="12" cy="8" r="4" />
       <path d="M4 21a8 8 0 0 1 16 0" />
+    </SvgIcon>
+  );
+}
+function HelpIcon() {
+  return (
+    <SvgIcon>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.7 9a2.5 2.5 0 1 1 3.7 2.2c-.9.5-1.4 1-1.4 2.1" />
+      <path d="M12 17h.01" />
+    </SvgIcon>
+  );
+}
+function SearchIcon() {
+  return (
+    <SvgIcon>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-4-4" />
+    </SvgIcon>
+  );
+}
+function ArrowIcon() {
+  return (
+    <SvgIcon>
+      <path d="m9 18 6-6-6-6" />
+    </SvgIcon>
+  );
+}
+function TruckIcon() {
+  return (
+    <SvgIcon>
+      <path d="M3 6h10v10H3zM13 10h4l3 3v3h-7z" />
+      <circle cx="7" cy="18" r="2" />
+      <circle cx="17" cy="18" r="2" />
+    </SvgIcon>
+  );
+}
+function FoodIcon() {
+  return (
+    <SvgIcon>
+      <path d="M6 3v8M3 3v5c0 2 1 3 3 3s3-1 3-3V3M6 11v10" />
+      <path d="M15 3v18M15 3c4 1 5 5 5 8h-5" />
+    </SvgIcon>
+  );
+}
+function BowlIcon() {
+  return (
+    <SvgIcon>
+      <path d="M4 11h16a8 8 0 0 1-16 0ZM7 19h10" />
+      <path d="M8 7c0-2 2-2 2-4M13 7c0-2 2-2 2-4" />
+    </SvgIcon>
+  );
+}
+function DrinkIcon() {
+  return (
+    <SvgIcon>
+      <path d="M7 8h10l-1 13H8L7 8ZM9 4h8M15 4l-2 5" />
+    </SvgIcon>
+  );
+}
+function ShieldIcon() {
+  return (
+    <SvgIcon>
+      <path d="M12 3 5 6v5c0 5 3 8 7 10 4-2 7-5 7-10V6l-7-3Z" />
+      <path d="m9 12 2 2 4-4" />
+    </SvgIcon>
+  );
+}
+function ChatIcon() {
+  return (
+    <SvgIcon>
+      <path d="M21 12a8 8 0 0 1-9 8 9 9 0 0 1-4-1l-5 2 2-5a8 8 0 1 1 16-4Z" />
+      <path d="M8 12h.01M12 12h.01M16 12h.01" />
+    </SvgIcon>
+  );
+}
+function PhoneIcon() {
+  return (
+    <SvgIcon>
+      <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2.1Z" />
     </SvgIcon>
   );
 }
