@@ -704,6 +704,40 @@ footer {
 .checkout-warning {
   color: #a23d2b;
 }
+.delivery-quote-state {
+  display: grid;
+  gap: 3px;
+  margin-top: 10px;
+  padding: 11px 13px;
+  border: 1px solid #e6ddd4;
+  border-radius: 12px;
+  color: #6d5d54;
+  background: #faf7f3;
+  font-size: 12px;
+}
+.delivery-quote-state strong {
+  color: #4e342a;
+  font-size: 13px;
+}
+.delivery-quote-state.free {
+  border-color: #cce4c4;
+  background: #f1faee;
+}
+.delivery-quote-state.free strong {
+  color: #2f772c;
+}
+.delivery-quote-state.paid {
+  border-color: #ead4af;
+  background: #fff8e9;
+}
+.delivery-quote-state.unavailable {
+  border-color: #efc2bb;
+  color: #8d332a;
+  background: #fff1ef;
+}
+.delivery-quote-state.unavailable strong {
+  color: #9b2e24;
+}
 .sr-label {
   margin-top: 10px;
 }

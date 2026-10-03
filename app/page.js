@@ -153,6 +153,9 @@ export default function App() {
       businessWhatsApp: "6281546407856",
       businessLatitude: -6.9217,
       businessLongitude: 106.9272,
+      deliveryFreeKm: 5,
+      deliveryFeePerKm: 2500,
+      deliveryMaxKm: 15,
       printerSimulation: true,
       adminPrinter: "LAN 80mm Admin (simulasi)",
       kitchenPrinter: "LAN 80mm Kitchen (simulasi)",
@@ -174,7 +177,10 @@ export default function App() {
     [lastCreatedOrderId, setLastCreatedOrderId] = useState(null),
     [focusedOrderId, setFocusedOrderId] = useState(null),
     [supportOrderId, setSupportOrderId] = useState(null),
-    [checkoutAddressId, setCheckoutAddressId] = useState("");
+    [checkoutAddressId, setCheckoutAddressId] = useState(""),
+    [deliveryQuote, setDeliveryQuote] = useState(null),
+    [deliveryQuoteBusy, setDeliveryQuoteBusy] = useState(false),
+    [deliveryQuoteError, setDeliveryQuoteError] = useState("");
   async function loadCustomers(query = "", before = null, signal) {
     const page = await api(
       "customers?q=" +
@@ -390,6 +396,38 @@ export default function App() {
     account.addresses.find(
       (address) => String(address.id) === String(checkoutAddressId),
     ) || account.addresses[0];
+  const checkoutFinalTotal =
+    total +
+    (deliveryQuote?.available ? Number(deliveryQuote.delivery_fee || 0) : 0);
+  useEffect(() => {
+    if (
+      role !== "CUSTOMER" ||
+      view !== "cart" ||
+      !selectedCheckoutAddress?.id
+    ) {
+      setDeliveryQuote(null);
+      setDeliveryQuoteError("");
+      setDeliveryQuoteBusy(false);
+      return;
+    }
+    const controller = new AbortController();
+    setDeliveryQuote(null);
+    setDeliveryQuoteError("");
+    setDeliveryQuoteBusy(true);
+    api(
+      "delivery/quote",
+      { addressId: selectedCheckoutAddress.id },
+      controller.signal,
+    )
+      .then(setDeliveryQuote)
+      .catch((error) => {
+        if (error.name !== "AbortError") setDeliveryQuoteError(error.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setDeliveryQuoteBusy(false);
+      });
+    return () => controller.abort();
+  }, [role, view, selectedCheckoutAddress?.id]);
   const focusedOrder = orders.find(
     (order) => order.id === (focusedOrderId || lastCreatedOrderId),
   );
@@ -1085,6 +1123,14 @@ export default function App() {
                 className="checkout-form"
                 onSubmit={(e) => {
                   e.preventDefault();
+                  if (!deliveryQuote?.available) {
+                    setError(
+                      deliveryQuote?.message ||
+                        deliveryQuoteError ||
+                        "Ongkir belum dapat diverifikasi.",
+                    );
+                    return;
+                  }
                   const f = new FormData(e.currentTarget);
                   run(async () => {
                     const payload = {
@@ -1170,7 +1216,11 @@ export default function App() {
                         name="address"
                         required
                         value={selectedCheckoutAddress?.id || ""}
-                        onChange={(event) => setCheckoutAddressId(event.target.value)}
+                        onChange={(event) => {
+                          setDeliveryQuote(null);
+                          setDeliveryQuoteError("");
+                          setCheckoutAddressId(event.target.value);
+                        }}
                       >
                         {account.addresses.map((address) => (
                           <option key={address.id} value={address.id}>{address.label} · {address.detail}</option>
@@ -1187,8 +1237,31 @@ export default function App() {
                     )}
                     <div className="delivery-rules">
                       <TruckIcon />
-                      <span><strong>Jarak dan ongkir dihitung otomatis</strong><small>Gratis hingga 5 km. Di atasnya mengikuti konfigurasi pengiriman dan radius layanan maksimal 15 km.</small></span>
+                      <span><strong>Jarak dan ongkir dihitung otomatis</strong><small>Gratis hingga {deliveryQuote?.free_radius_km ?? 5} km. Di atasnya mengikuti konfigurasi pengiriman dan radius layanan maksimal {deliveryQuote?.max_radius_km ?? 15} km.</small></span>
                     </div>
+                    {deliveryQuoteBusy && (
+                      <div className="delivery-quote-state" role="status">
+                        Menghitung jarak dan ongkir…
+                      </div>
+                    )}
+                    {deliveryQuoteError && (
+                      <div className="delivery-quote-state unavailable" role="alert">
+                        {deliveryQuoteError}
+                      </div>
+                    )}
+                    {deliveryQuote && (
+                      <div
+                        className={`delivery-quote-state ${deliveryQuote.available ? (deliveryQuote.free_delivery ? "free" : "paid") : "unavailable"}`}
+                        role={deliveryQuote.available ? "status" : "alert"}
+                      >
+                        <strong>
+                          {deliveryQuote.available
+                            ? `${Number(deliveryQuote.distance_km).toFixed(1)} km · ${deliveryQuote.free_delivery ? "GRATIS ONGKIR" : money(deliveryQuote.delivery_fee)}`
+                            : "Area belum terjangkau"}
+                        </strong>
+                        <span>{deliveryQuote.message}</span>
+                      </div>
+                    )}
                   </section>
 
                   <section className="checkout-card payment-method-card">
@@ -1212,12 +1285,12 @@ export default function App() {
                     <h2>Rincian Pembayaran</h2>
                   </div>
                   <div className="payment-line"><span>Subtotal</span><strong>{money(total)}</strong></div>
-                  <div className="payment-line"><span>Ongkir</span><strong className="pending-value">Dihitung server</strong></div>
+                  <div className="payment-line"><span>Ongkir</span><strong className={deliveryQuote?.available ? "" : "pending-value"}>{deliveryQuoteBusy ? "Menghitung…" : deliveryQuote?.available ? (deliveryQuote.free_delivery ? "GRATIS" : money(deliveryQuote.delivery_fee)) : deliveryQuote ? "Di luar jangkauan" : "Belum dihitung"}</strong></div>
                   <div className="payment-line"><span>Voucher</span><strong>{money(0)}</strong></div>
-                  <div className="payment-total"><span>Total menu</span><strong>{money(total)}</strong></div>
-                  <p className="server-calculation-note">Total akhir termasuk ongkir akan ditampilkan setelah server memvalidasi alamat.</p>
-                  <button className="primary checkout-submit" disabled={busy || !account.addresses.length}>
-                    {busy ? "Membuat Pesanan…" : "Buat Pesanan"}<ArrowIcon />
+                  <div className="payment-total"><span>Total akhir</span><strong>{deliveryQuote?.available ? money(checkoutFinalTotal) : "—"}</strong></div>
+                  <p className="server-calculation-note">{deliveryQuote?.message || deliveryQuoteError || "Total akhir ditampilkan setelah server memvalidasi alamat."}</p>
+                  <button className="primary checkout-submit" disabled={busy || deliveryQuoteBusy || !account.addresses.length || !deliveryQuote?.available}>
+                    {busy ? "Membuat Pesanan…" : deliveryQuoteBusy ? "Menghitung Ongkir…" : deliveryQuote && !deliveryQuote.available ? "Alamat Di Luar Jangkauan" : "Buat Pesanan"}<ArrowIcon />
                   </button>
                   <div className="checkout-trust"><ShieldIcon /><span>Pesananmu diproses dengan aman menggunakan kalkulasi existing.</span></div>
                 </aside>
@@ -1397,8 +1470,8 @@ export default function App() {
                       </div>
                     </details>
                     <small>
-                      Gratis ongkir hingga 5 km, lalu Rp2.500/km dengan batas
-                      pengantaran 15 km.
+                      Gratis ongkir hingga 5 km. Biaya berikutnya mengikuti
+                      konfigurasi pengiriman dengan batas 15 km.
                     </small>
                   </div>
                   <div className="actions">
@@ -1565,7 +1638,10 @@ export default function App() {
               key={
                 settings.brandName +
                 settings.rupiahPerPoint +
-                settings.businessWhatsApp
+                settings.businessWhatsApp +
+                settings.deliveryFreeKm +
+                settings.deliveryFeePerKm +
+                settings.deliveryMaxKm
               }
               onSubmit={(e) => {
                 e.preventDefault();
@@ -1577,6 +1653,9 @@ export default function App() {
                     businessWhatsApp: f.get("businessWhatsApp"),
                     businessLatitude: Number(f.get("businessLatitude")),
                     businessLongitude: Number(f.get("businessLongitude")),
+                    deliveryFreeKm: Number(f.get("deliveryFreeKm")),
+                    deliveryFeePerKm: Number(f.get("deliveryFeePerKm")),
+                    deliveryMaxKm: Number(f.get("deliveryMaxKm")),
                     printerSimulation: f.get("printerSimulation") === "on",
                     adminPrinter: f.get("adminPrinter"),
                     kitchenPrinter: f.get("kitchenPrinter"),
@@ -1634,6 +1713,41 @@ export default function App() {
                   />
                 </label>
               </div>
+              <div className="columns compact-columns">
+                <label>
+                  Radius gratis (km)
+                  <input
+                    name="deliveryFreeKm"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    defaultValue={settings.deliveryFreeKm}
+                    required
+                  />
+                </label>
+                <label>
+                  Biaya per km tambahan
+                  <input
+                    name="deliveryFeePerKm"
+                    type="number"
+                    min="0"
+                    step="1"
+                    defaultValue={settings.deliveryFeePerKm}
+                    required
+                  />
+                </label>
+                <label>
+                  Radius maksimal (km)
+                  <input
+                    name="deliveryMaxKm"
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    defaultValue={settings.deliveryMaxKm}
+                    required
+                  />
+                </label>
+              </div>
               <label>
                 Profil printer Admin
                 <input
@@ -1659,8 +1773,9 @@ export default function App() {
                 Mode simulasi printer sampai hardware LAN terpasang
               </label>
               <p>
-                Aturan delivery terkunci: gratis 5 km · Rp2.500/km berikutnya ·
-                batas 15 km.
+                Ongkir setelah radius gratis dihitung per kilometer tambahan
+                yang mulai terpakai. Radius gratis tidak boleh melebihi radius
+                maksimal.
               </p>
               <button className="primary" disabled={busy}>
                 Simpan pengaturan

@@ -38,7 +38,31 @@ test("pengaturan hanya admin, brand dan poin dihitung dari konfigurasi", async (
     saveSettings(admin, { brandName: "X", rupiahPerPoint: 1 }),
     /tidak valid/,
   );
-  await saveSettings(admin, { brandName: "Kafe Test", rupiahPerPoint: 5000 });
+  await saveSettings(admin, {
+    brandName: "Kafe Test",
+    rupiahPerPoint: 5000,
+    deliveryFreeKm: 5,
+    deliveryFeePerKm: 3000,
+    deliveryMaxKm: 15,
+  });
+  assert.deepEqual(
+    (({ deliveryFreeKm, deliveryFeePerKm, deliveryMaxKm }) => ({
+      deliveryFreeKm,
+      deliveryFeePerKm,
+      deliveryMaxKm,
+    }))(await getSettings(admin)),
+    { deliveryFreeKm: 5, deliveryFeePerKm: 3000, deliveryMaxKm: 15 },
+  );
+  await assert.rejects(
+    saveSettings(admin, {
+      brandName: "Kafe Test",
+      rupiahPerPoint: 5000,
+      deliveryFreeKm: 16,
+      deliveryFeePerKm: 3000,
+      deliveryMaxKm: 15,
+    }),
+    /Konfigurasi ongkir tidak valid/,
+  );
   assert.equal((await listCatalog()).brand, "Kafe Test");
   const order = await createOrder(customer, {
     addressId: 1,
