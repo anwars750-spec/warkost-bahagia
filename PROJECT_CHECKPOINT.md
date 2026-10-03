@@ -3,62 +3,57 @@
 ## Active baseline
 
 - Branch: `session/2a-customer-ui-polish`
-- Source baseline: `9ec4df6f46d71a3b8aca55a97b5001f79434dadf`
-- Verified implementation commit: `224b0b3925279d89596828b417477fbcdcf3ef35`
-- Milestone: Session #2A — Customer UI/UX Polish
+- Source checkpoint: `032db5a71466e89bffe703775ae42e03b0411c51`
+- Verified implementation commit: `cac62b9e79fccb7d552196509de44112fe14590f`
+- Milestone: Customer UI Implementation — Homepage Only
 - Status: **COMPLETED / VERIFIED**
 - Verification date: 2026-10-03
 
 ## Scope completed
 
-- Customer header uses the complete Warkost logo with preserved aspect ratio and tighter brand spacing.
-- Customer typography and heading scale are cleaner and responsive on desktop and mobile.
-- Existing promotion scheduling and active-period logic is unchanged; the customer banner now has a branded local food visual instead of the `WB` placeholder.
-- Products without uploaded media receive local demo visuals for Kopi Susu Rumah, Mie Ayam Bahagia, and Nasi Goreng Warkost.
-- Product cards, image ratios, price/category hierarchy, and quantity controls are responsive.
-- Customer cart is available through a desktop floating action and a mobile bottom action, with a quick cart drawer before checkout.
-- Customer notifications use a bell icon and quick drawer.
-- Mobile customer navigation contains Notifikasi, Keranjang, and Akun.
-- Account navigation exposes Pesanan, Riwayat, Tracking, Pengaturan Akun, and Keluar without removing existing functions.
-- Address UI presents device location as an optional friendly action while retaining existing latitude/longitude data and backend behavior.
-- Admin, Kitchen, Driver, Owner, RBAC, pricing, checkout, loyalty, and backend flows were not redesigned or expanded.
+- Customer homepage desktop and mobile were aligned to the two approved design references.
+- Customer header now exposes Notifikasi, Keranjang with item badge, Akun, and Bantuan while preserving the existing drawers and account flow.
+- Brand logo, name, and tagline remain readable without mobile overlap.
+- Active promotions use the existing server-side period logic and display through a responsive hero carousel.
+- Homepage includes responsive heading, service benefits, menu search, Semua/Makanan/Minuman filters, and a Menu Pilihan section.
+- Product cards use existing local demo assets, visual badges, responsive descriptions, price hierarchy, and existing quantity/cart state.
+- Customer help exposes the configured WhatsApp chat and telephone actions.
+- Mobile bottom navigation contains Notifikasi, Keranjang, Akun, and Bantuan.
+- A floating cart summary appears above the mobile bottom navigation and retains the existing quick-cart drawer.
+- Checkout, notification page, order page, account settings, address UI, customer session, pricing, promotion filtering, and backend behavior were not changed.
 
 ## Final verification
 
-- Targeted customer UI browser test: **2/2 PASS**
+- Production build: **PASS**
+- Full unit suite: **48/48 PASS**
+- Targeted customer homepage browser test: **2/2 PASS**
   - Desktop Chromium: 1440 × 900
   - Mobile Chromium: 390 × 844
-- Full cross-role HTTP/browser UAT: **14/14 PASS**
-- Full unit suite: **48/48 PASS**
-- Production build: **PASS**
-- Fresh SQLite demo database, production readiness health check, storage, and backup checks: **PASS**
-- Promotion active-window and expired/scheduled exclusion tests: **PASS**
-- Cart and BANK_TRANSFER checkout regression through Admin, Kitchen, Driver, and Customer delivery flow: **PASS**
+- Fresh SQLite demo database and readiness health check: **PASS**
+- Logo/header, promo CTA, search, category filters, product images, quantity control, cart badge, cart drawer, help actions, and mobile bottom navigation: **PASS**
 - Desktop and mobile horizontal overflow check: **PASS**
-- Browser console/page errors in successful flows: **NONE**
+- Browser console/page errors in targeted successful flows: **NONE**
 - Critical/High application bugs remaining in session scope: **NONE**
-- MySQL/recovery suites were not rerun because this session changed only presentation-layer code and browser tests. The verified source baseline MySQL result remains run `36441861037`.
+- Cross-role UAT and database recovery suites were not rerun because this session changed only customer homepage presentation and targeted browser coverage. Their VERIFIED source-checkpoint results remain unchanged.
 
-## Primary files changed
+## Primary files changed in this session
 
 - `app/page.js`
 - `app/style.css`
 - `tests/uat/roles.spec.mjs`
-- `public/demo/kopi-susu-rumah.webp`
-- `public/demo/mie-ayam-bahagia.webp`
-- `public/demo/nasi-goreng-warkost.webp`
-- `public/demo/promo-warkost.webp`
+- `PROJECT_CHECKPOINT.md`
 
 ## Guardrails preserved
 
+- No Checkout, Notifikasi page, Pesanan page, Pengaturan Akun, or Alamat redesign.
 - No Manager role or RBAC change.
 - No role removal or Kasir change.
 - No loyalty redesign or birthday voucher.
 - No Google Maps API or API key.
 - No pricing/checkout engine change.
 - No backend refactor or dependency upgrade.
-- No Admin/Kitchen flow redesign.
+- No merge to `main`.
 
 ## Next-action gate
 
-Do not open another milestone from this checkpoint without a new explicit scope. Use `224b0b3925279d89596828b417477fbcdcf3ef35` as the verified functional baseline for Session #2A Customer UI/UX Polish.
+Do not open another milestone from this checkpoint without a new explicit scope. Use `cac62b9e79fccb7d552196509de44112fe14590f` as the verified functional baseline for the approved Customer Homepage implementation.
