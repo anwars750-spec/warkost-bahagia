@@ -3,10 +3,10 @@
 ## Active baseline
 
 - Branch: `session/2a-customer-ui-polish`
-- Source checkpoint: `032db5a71466e89bffe703775ae42e03b0411c51`
-- Verified implementation commit: `cac62b9e79fccb7d552196509de44112fe14590f`
-- Milestone: Customer UI Implementation — Homepage Only
-- Status: **COMPLETED / VERIFIED**
+- Accepted Customer UI baseline: `42fc282cad623492413b33db849f5765c7a4e50d`
+- Shipping core implementation commit: `f2007d5d02376981c8d7d402cba048ca651e398a`
+- Milestone: Customer Functional Completion #1 — Shipping / Ongkir Core
+- Status: **COMPLETED / AUTOMATED VERIFIED**
 - Verification date: 2026-10-03
 
 ## Scope completed
@@ -104,7 +104,6 @@ Status: **COMPLETED / MANUAL UAT ACCEPTED**
 The following are NOT part of this completed UI milestone and remain for Customer Functional Completion:
 
 - QRIS payment integration
-- Shipping fee/radius final logic
 - Voucher claim/redeem
 - Loyalty earn/redeem
 - Owner-configurable loyalty rewards
@@ -118,3 +117,51 @@ The following are NOT part of this completed UI milestone and remain for Custome
 **CUSTOMER FUNCTIONAL COMPLETION**
 
 Do not redesign Customer UI unless a functional implementation requires a minimal compatibility change.
+
+---
+
+## Customer Functional Completion #1 — Shipping / Ongkir Core
+
+Date: 2026-10-03
+
+Status: **COMPLETED / AUTOMATED VERIFIED**
+
+### Clean source-control baseline
+
+- Accepted Customer UI parent: `42fc282cad623492413b33db849f5765c7a4e50d`
+- Clean shipping implementation: `f2007d5d02376981c8d7d402cba048ca651e398a`
+- The shipping commit contains only Shipping/Ongkir Core implementation and related tests.
+
+### Final delivery rule
+
+- `0–5 km`: gratis ongkir.
+- `>5–15 km`: `ceil(distance_km - free_radius_km) × delivery_fee_per_km`.
+- `>15 km`: quote unavailable; checkout blocked and create-order rejected server-side.
+- Default demo configuration remains 5 km free radius, Rp2.500 per started additional kilometer, and 15 km maximum radius.
+- Quote and create-order use the same Haversine/config foundation; create-order always recalculates distance, delivery fee, and final total server-side.
+
+### Scope completed
+
+- Added `POST /api/delivery/quote` using the saved customer address coordinates.
+- Checkout displays actual distance, free/paid delivery status, server-calculated fee, and final total.
+- Out-of-radius and invalid quotes disable checkout without creating an order.
+- Delivery configuration is validated and no longer returned/saved as hardcoded values by the settings API.
+- Invalid coordinates, negative configuration, and free radius greater than max radius are rejected.
+- Client-supplied distance, delivery fee, and total are not trusted.
+
+### Verification
+
+- Reconciliation targeted shipping/settings tests: **6/6 PASS**.
+- Original shipping full unit suite: **49/49 PASS**.
+- Original shipping production build: **PASS**, including dynamic route `/api/delivery/quote`.
+- Reconstructed shipping files were byte-equivalent to the previously passing `be29d22` implementation, so build was not repeated during source-control reconciliation.
+- Boundary coverage: 0 m, 5.000 m, 5.001 m, 15.000 m, and 15.001 m.
+- Invalid latitude/longitude: rejected.
+- Manipulated client delivery fee: ignored; persisted order values come from server calculation.
+- Invalid `free_radius > max_radius`: rejected.
+- Out-of-radius create-order inserts no order.
+
+### Guardrails preserved
+
+- Customer UI Desktop/Mobile remains the accepted `42fc282` baseline.
+- No voucher, loyalty, birthday voucher, QRIS/payment gateway, OTP, Maps API, Manager/RBAC, Kasir removal, Admin redesign, Kitchen/Driver redesign, dependency upgrade, or deployment work.
