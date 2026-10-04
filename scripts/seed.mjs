@@ -1,6 +1,7 @@
 import * as store from "../lib/store.mjs";
 import { hashPassword } from "../lib/auth.mjs";
 const demo = process.env.SEED_DEMO_PASSWORD;
+const resetLocalUat = process.env.RESET_LOCAL_UAT_FIXTURE === "true";
 if (process.env.NODE_ENV === "production")
   throw Error("Seed demo tidak boleh dijalankan di production");
 if (!demo || demo.length < 10)
@@ -47,6 +48,15 @@ async function seed() {
       email,
       hashPassword(demo),
       role,
+    );
+  if (resetLocalUat)
+    await store.run(
+      "UPDATE users SET name=?,password_hash=?,role='CUSTOMER',active=1,phone=?,birth_date=?,terms_accepted_at=COALESCE(terms_accepted_at,CURRENT_TIMESTAMP) WHERE email=?",
+      "Pelanggan Demo",
+      hashPassword(demo),
+      "6281234567890",
+      "1996-09-18",
+      "customer@warkost.local",
     );
   await store.run(
     "UPDATE users SET phone=? WHERE role='DRIVER' AND phone IS NULL",
@@ -130,16 +140,32 @@ async function seed() {
       admin.id,
     );
   }
+  if (resetLocalUat) {
+    const startsAt = new Date(Date.now() - 86400000)
+        .toISOString()
+        .slice(0, 19)
+        .replace("T", " "),
+      endsAt = new Date(Date.now() + 30 * 86400000)
+        .toISOString()
+        .slice(0, 19)
+        .replace("T", " ");
+    await store.run(
+      "UPDATE promotions SET starts_at=?,ends_at=?,active=1,updated_at=CURRENT_TIMESTAMP WHERE title IN (?,?)",
+      startsAt,
+      endsAt,
+      "Gratis Ongkir 5 KM",
+      "Voucher Hemat 10%",
+    );
+  }
   for (const name of ["Makanan", "Minuman"])
     await store.run("INSERT OR IGNORE INTO categories(name) VALUES(?)", name);
-  if ((await store.get("SELECT COUNT(*) n FROM products")).n === 0) {
-    const food = (
-        await store.get("SELECT id FROM categories WHERE name=?", "Makanan")
-      ).id,
-      drink = (
-        await store.get("SELECT id FROM categories WHERE name=?", "Minuman")
-      ).id;
-    for (const [name, description, price, category, station] of [
+  const food = (
+      await store.get("SELECT id FROM categories WHERE name=?", "Makanan")
+    ).id,
+    drink = (
+      await store.get("SELECT id FROM categories WHERE name=?", "Minuman")
+    ).id;
+  for (const [name, description, price, category, station] of [
       [
         "Nasi Goreng Warkost",
         "Nasi goreng hangat dengan telur dan kerupuk",
@@ -161,7 +187,8 @@ async function seed() {
         drink,
         "CASHIER",
       ],
-    ])
+    ]) {
+    if (!(await store.get("SELECT id FROM products WHERE name=?", name)))
       await store.run(
         "INSERT INTO products(name,description,price,category_id,prep_station,stock_quantity) VALUES(?,?,?,?,?,50)",
         name,
@@ -171,20 +198,47 @@ async function seed() {
         station,
       );
   }
+  if (resetLocalUat) {
+    await store.run(
+      "UPDATE categories SET active=1 WHERE name IN ('Makanan','Minuman')",
+    );
+    await store.run(
+      "UPDATE products SET active=1 WHERE name IN ('Nasi Goreng Warkost','Mie Ayam Bahagia','Kopi Susu Rumah')",
+    );
+  }
   const customer = await store.get(
     "SELECT id FROM users WHERE email='customer@warkost.local'",
+  );
+  await store.run(
+    "INSERT OR IGNORE INTO loyalty_accounts(user_id) VALUES(?)",
+    customer.id,
   );
   if (
     !(await store.get("SELECT id FROM addresses WHERE user_id=?", customer.id))
   )
     await store.run(
-      "INSERT INTO addresses(user_id,label,detail,latitude,longitude) VALUES(?,?,?,?,?)",
+      "INSERT INTO addresses(user_id,label,detail,latitude,longitude,is_default) VALUES(?,?,?,?,?,1)",
       customer.id,
       "Rumah",
       "Jl. Ahmad Yani No. 12, Sukabumi",
       -6.9217,
       106.9272,
     );
+  if (resetLocalUat) {
+    await store.run(
+      "UPDATE addresses SET is_default=0 WHERE user_id=? AND active=1",
+      customer.id,
+    );
+    const defaultAddress = await store.get(
+      "SELECT id FROM addresses WHERE user_id=? AND active=1 ORDER BY id DESC LIMIT 1",
+      customer.id,
+    );
+    if (defaultAddress)
+      await store.run(
+        "UPDATE addresses SET is_default=1 WHERE id=?",
+        defaultAddress.id,
+      );
+  }
 }
 
 try {

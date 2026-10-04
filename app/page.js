@@ -167,6 +167,11 @@ export default function App() {
     [cart, setCart] = useState({}),
     [view, setView] = useState("menu"),
     [mode, setMode] = useState("login"),
+    [passwordVisibility, setPasswordVisibility] = useState({
+      login: false,
+      register: false,
+      confirmation: false,
+    }),
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
@@ -352,11 +357,11 @@ export default function App() {
       setBusy(false);
     }
   }
-  function submitAuth(e) {
+  function submitAuth(e, action = mode) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     run(async () => {
-      const data = await api(mode, {
+      const data = await api(action, {
         name: form.get("name"),
         identifier: form.get("identifier"),
         email: form.get("email"),
@@ -369,6 +374,12 @@ export default function App() {
       setUser(data.user);
       setView(data.user.role === "CUSTOMER" ? "menu" : "orders");
     });
+  }
+  function togglePassword(field) {
+    setPasswordVisibility((current) => ({
+      ...current,
+      [field]: !current[field],
+    }));
   }
   const count = Object.values(cart).reduce((s, n) => s + n, 0),
     total = menu.products.reduce((s, p) => s + p.price * (cart[p.id] || 0), 0);
@@ -617,7 +628,7 @@ export default function App() {
       <header
         className={`top ${
           role === "CUSTOMER" ? "customer-home-header customer-app-header" : ""
-        }`}
+        } ${!role && view === "auth" ? "auth-header" : ""}`}
       >
         <button
           className="brand brand-button"
@@ -777,7 +788,46 @@ export default function App() {
           {role && role !== "CUSTOMER" ? (
             <button onClick={logout}>Keluar</button>
           ) : !role ? (
-            <button onClick={() => setView("auth")}>Masuk</button>
+            <>
+              {view === "auth" && (
+                <>
+                  <button onClick={() => setView("menu")}>Beranda</button>
+                  <button
+                    onClick={() => {
+                      setView("menu");
+                      requestAnimationFrame(() =>
+                        document
+                          .getElementById("menu-grid")
+                          ?.scrollIntoView({ behavior: "smooth" }),
+                      );
+                    }}
+                  >
+                    Menu
+                  </button>
+                  <button
+                    onClick={() => {
+                      setView("menu");
+                      requestAnimationFrame(() =>
+                        document
+                          .getElementById("customer-help")
+                          ?.scrollIntoView({ behavior: "smooth" }),
+                      );
+                    }}
+                  >
+                    Bantuan
+                  </button>
+                </>
+              )}
+              <button
+                className="guest-login-nav"
+                onClick={() => {
+                  setMode("login");
+                  setView("auth");
+                }}
+              >
+                Masuk
+              </button>
+            </>
           ) : null}
         </nav>
       </header>
@@ -862,35 +912,131 @@ export default function App() {
           </div>
         )}
         {!role && view === "auth" ? (
-          <section className="panel narrow">
-            <div className="tabs">
+          <section className="auth-onboarding" aria-label="Onboarding pelanggan Warkost">
+            <div className="auth-mobile-switch" aria-label="Pilih formulir akun">
               <button
                 className={mode === "login" ? "active" : ""}
+                type="button"
                 onClick={() => setMode("login")}
               >
                 Masuk
               </button>
               <button
                 className={mode === "register" ? "active" : ""}
+                type="button"
                 onClick={() => setMode("register")}
               >
-                Daftar pelanggan
+                Daftar
               </button>
             </div>
-            <form onSubmit={submitAuth}>
-              {mode === "register" && (
-                <label>
-                  Nama Lengkap
-                  <input name="name" required minLength="2" />
-                </label>
-              )}
-              {mode === "login" ? (
+
+            <article className="auth-story-card">
+              <div className="auth-story-copy">
+                <span className="auth-story-badge">WARKOST BAHAGIA</span>
+                <h1>Makan Enak Lebih Mudah di Warkost Bahagia</h1>
+                <p>
+                  Pilih menu favorit, nikmati promo, dan tunggu pesanan hangat
+                  sampai di tujuan.
+                </p>
+                <ul className="auth-benefits">
+                  <li><BowlIcon /><span><strong>Pesan Makanan Favorit</strong><small>Menu hangat dari dapur Warkost</small></span></li>
+                  <li><TicketIcon /><span><strong>Banyak Promo &amp; Loyalty</strong><small>Lebih hemat di setiap pesanan</small></span></li>
+                  <li><TruckIcon /><span><strong>Diantar Sampai Tujuan</strong><small>Pengantaran aman dan terpantau</small></span></li>
+                </ul>
+              </div>
+              <div className="auth-story-visual">
+                <Image
+                  src="/demo/promo-warkost.webp"
+                  alt="Menu makanan dan minuman Warkost Bahagia"
+                  fill
+                  sizes="(max-width: 760px) 100vw, 34vw"
+                  priority
+                />
+                <span>Hangat · Lezat · Bahagia</span>
+              </div>
+            </article>
+
+            <article className={`auth-card auth-login-card ${mode === "login" ? "active" : ""}`}>
+              <div className="auth-card-heading">
+                <Image
+                  src="/warkost-bahagia-logo-transparent.png"
+                  alt="Warkost Bahagia"
+                  width={160}
+                  height={90}
+                />
+                <span className="auth-card-kicker">SELAMAT DATANG KEMBALI</span>
+                <h2>Masuk ke Akun</h2>
+                <p>Masuk untuk melanjutkan pesanan dan melihat loyalty.</p>
+              </div>
+              <form onSubmit={(event) => submitAuth(event, "login")}>
                 <label>
                   Email atau Nomor HP
-                  <input name="identifier" required autoComplete="username" />
+                  <input
+                    name="identifier"
+                    required
+                    autoComplete="username"
+                    placeholder="customer@warkost.local"
+                  />
                 </label>
-              ) : (
-                <>
+                <label>
+                  Password
+                  <span className="password-field">
+                    <input
+                      name="password"
+                      type={passwordVisibility.login ? "text" : "password"}
+                      required
+                      autoComplete="current-password"
+                      placeholder="Masukkan password"
+                    />
+                    <button
+                      type="button"
+                      aria-label={passwordVisibility.login ? "Sembunyikan password" : "Tampilkan password"}
+                      onClick={() => togglePassword("login")}
+                    >
+                      {passwordVisibility.login ? "Sembunyikan" : "Lihat"}
+                    </button>
+                  </span>
+                </label>
+                <div className="auth-form-meta">
+                  <span>Sesi aman hingga 7 hari</span>
+                  <button
+                    type="button"
+                    onClick={() => setMessage("Pemulihan password melalui OTP akan tersedia pada milestone berikutnya.")}
+                  >
+                    Lupa password?
+                  </button>
+                </div>
+                <button className="primary auth-submit" disabled={busy}>
+                  {busy ? "Memproses…" : "Masuk"}
+                </button>
+                <button
+                  className="auth-secondary"
+                  type="button"
+                  onClick={() => setMode("register")}
+                >
+                  Belum punya akun? Daftar Akun
+                </button>
+              </form>
+            </article>
+
+            <article className={`auth-card auth-register-card ${mode === "register" ? "active" : ""}`}>
+              <div className="auth-card-heading compact">
+                <Image
+                  src="/warkost-bahagia-logo-transparent.png"
+                  alt="Warkost Bahagia"
+                  width={144}
+                  height={81}
+                />
+                <span className="auth-card-kicker">MULAI PESAN DI WARKOST</span>
+                <h2>Daftar Akun</h2>
+                <p>Lengkapi data berikut untuk membuat akun pelanggan.</p>
+              </div>
+              <form onSubmit={(event) => submitAuth(event, "register")}>
+                <div className="auth-field-grid">
+                  <label>
+                    Nama Lengkap
+                    <input name="name" required minLength="2" autoComplete="name" />
+                  </label>
                   <label>
                     Email
                     <input name="email" type="email" required autoComplete="email" />
@@ -899,46 +1045,73 @@ export default function App() {
                     Nomor HP
                     <input name="phone" type="tel" required autoComplete="tel" placeholder="08xxxxxxxxxx" />
                   </label>
-                </>
-              )}
-              <label>
-                Password
-                <input
-                  name="password"
-                  type="password"
-                  required
-                  minLength={mode === "register" ? 10 : 1}
-                />
-              </label>
-              {mode === "register" && (
-                <>
                   <label>
-                    Konfirmasi Password
+                    Tanggal Lahir
+                    <input name="birthDate" type="date" required max="2099-12-31" />
+                  </label>
+                </div>
+                <label>
+                  Password
+                  <span className="password-field">
                     <input
-                      name="passwordConfirmation"
-                      type="password"
+                      name="password"
+                      type={passwordVisibility.register ? "text" : "password"}
                       required
                       minLength="10"
                       autoComplete="new-password"
                     />
-                  </label>
-                  <label>
-                    Tanggal Lahir
-                    <input name="birthDate" type="date" required max={new Date(Date.now() - 86400000).toISOString().slice(0, 10)} />
-                  </label>
-                  <label className="consent-field">
-                    <input name="consent" type="checkbox" required />
-                    <span>Saya menyetujui Syarat &amp; Ketentuan dan Kebijakan Privasi.</span>
-                  </label>
-                  <p className="auth-note">
-                    Verifikasi email dengan OTP belum diaktifkan. Akun dibuat tanpa menampilkan status verifikasi palsu.
-                  </p>
-                </>
-              )}
-              <button className="primary" disabled={busy}>
-                {mode === "login" ? "Masuk" : "Buat akun"}
-              </button>
-            </form>
+                    <button type="button" onClick={() => togglePassword("register")}>
+                      {passwordVisibility.register ? "Sembunyikan" : "Lihat"}
+                    </button>
+                  </span>
+                </label>
+                <label>
+                  Konfirmasi Password
+                  <span className="password-field">
+                    <input
+                      name="passwordConfirmation"
+                      type={passwordVisibility.confirmation ? "text" : "password"}
+                      required
+                      minLength="10"
+                      autoComplete="new-password"
+                    />
+                    <button type="button" onClick={() => togglePassword("confirmation")}>
+                      {passwordVisibility.confirmation ? "Sembunyikan" : "Lihat"}
+                    </button>
+                  </span>
+                </label>
+                <label className="consent-field auth-consent">
+                  <input name="consent" type="checkbox" required />
+                  <span>Saya menyetujui Syarat &amp; Ketentuan dan Kebijakan Privasi.</span>
+                </label>
+                <p className="auth-note">
+                  OTP email belum aktif. Sistem tidak akan menampilkan verifikasi
+                  atau aktivasi OTP palsu.
+                </p>
+                <button className="primary auth-submit" disabled={busy}>
+                  {busy ? "Memproses…" : "Daftar Akun"}
+                </button>
+                <button
+                  className="auth-secondary"
+                  type="button"
+                  onClick={() => setMode("login")}
+                >
+                  Sudah punya akun? Masuk
+                </button>
+              </form>
+            </article>
+
+            <div className="auth-flow-ready" aria-label="Alur onboarding siap OTP">
+              {[
+                ["Intro", "ready"],
+                ["Login", mode === "login" ? "active" : "ready"],
+                ["Register", mode === "register" ? "active" : "ready"],
+                ["OTP", "future"],
+                ["Selesai", "future"],
+              ].map(([label, state]) => (
+                <span className={state} key={label}>{label}</span>
+              ))}
+            </div>
           </section>
         ) : null}
         {(!role || role === "CUSTOMER") && view === "menu" && (
@@ -1170,7 +1343,12 @@ export default function App() {
                               </button>
                             </div>
                           ) : (
-                            <button onClick={() => setView("auth")}>
+                            <button
+                              onClick={() => {
+                                setMode("login");
+                                setView("auth");
+                              }}
+                            >
                               Masuk untuk pesan
                             </button>
                           )}
@@ -1194,7 +1372,7 @@ export default function App() {
                 </div>
               )}
             </section>
-            {role === "CUSTOMER" && (
+            {(!role || role === "CUSTOMER") && (
               <section className="customer-help" id="customer-help">
                 <span className="help-illustration">
                   <HelpIcon />

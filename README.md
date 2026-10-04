@@ -5,8 +5,8 @@ Next.js 16, React, API/service terpisah. Database development SQLite (`node:sqli
 ## Development SQLite
 
 1. `npm install` dan salin `.env.example` ke `.env.local`; ganti `SESSION_SECRET` (minimal 32 byte acak untuk produksi).
-2. `SEED_DEMO_PASSWORD='password-unik-minimal-10' node scripts/seed.mjs`, lalu `npm run dev`.
-3. Login demo memakai `customer@warkost.local`, `admin@warkost.local`, `kitchen@warkost.local`, `driver@warkost.local`, atau `owner@warkost.local` dengan password seed.
+2. Untuk UAT lokal yang deterministik, jalankan `npm run setup:uat`, lalu `npm run dev`. Perintah local-only ini menyiapkan katalog/promo demo dan akun `customer@warkost.local` dengan password `WarkostLocal#2026`; perintah menolak production, MySQL, dan database di luar folder project.
+3. Untuk seed development multi-role dengan password pilihan sendiri, gunakan `SEED_DEMO_PASSWORD='password-unik-minimal-10' node scripts/seed.mjs`. Tanpa flag fixture eksplisit, seed tidak mengganti password akun yang sudah ada.
 4. `npm test`, `npm run build`; dengan server di port 3000, `SEED_DEMO_PASSWORD='...' node scripts/http-smoke.mjs` menguji lima role sampai poin loyalitas.
 
 ## Production preflight dan health

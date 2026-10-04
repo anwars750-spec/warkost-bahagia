@@ -27,7 +27,7 @@ async function signIn(page, email) {
     .locator("nav")
     .getByRole("button", { name: "Masuk", exact: true })
     .click();
-  const form = page.locator("form");
+  const form = page.locator(".auth-login-card form");
   await form.getByLabel("Email atau Nomor HP").fill(email);
   await form.getByLabel("Password").fill(password);
   await form.getByRole("button", { name: "Masuk", exact: true }).click();
@@ -157,7 +157,7 @@ test("OP-UAT-01 login gagal tidak membuat sesi", async ({ page }, testInfo) => {
     .getByRole("button", { name: "Masuk", exact: true })
     .click();
 
-  const form = page.locator("form");
+  const form = page.locator(".auth-login-card form");
   await form
     .getByLabel("Email atau Nomor HP")
     .fill(`invalid-${testInfo.project.name}@example.test`);
@@ -178,6 +178,38 @@ test("OP-UAT-01 login gagal tidak membuat sesi", async ({ page }, testInfo) => {
   expect(consoleErrors[0]).toContain("401 (Unauthorized)");
   await page.screenshot({
     path: testInfo.outputPath("login-ditolak.png"),
+    fullPage: true,
+  });
+});
+
+test("guest dapat menjelajah storefront dan diarahkan login saat memesan", async ({
+  page,
+}, testInfo) => {
+  const consoleErrors = captureConsoleErrors(page);
+  await page.goto("/");
+
+  await expect(
+    page.getByRole("heading", { name: "Mau makan apa hari ini?" }),
+  ).toBeVisible();
+  await expect(page.getByRole("region", { name: "Promo berlangsung" })).toBeVisible();
+  await expect(page.locator("article.customer-product")).toHaveCount(3);
+  await expect(
+    page.getByRole("searchbox", { name: "Cari makanan atau minuman" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Kategori menu")).toBeVisible();
+
+  await page
+    .locator("article.customer-product")
+    .first()
+    .getByRole("button", { name: "Masuk untuk pesan" })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Masuk ke Akun", exact: true }),
+  ).toBeVisible();
+  await expectResponsiveShell(page);
+  expect(consoleErrors).toEqual([]);
+  await page.screenshot({
+    path: testInfo.outputPath("guest-storefront.png"),
     fullPage: true,
   });
 });
