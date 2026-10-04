@@ -2065,6 +2065,21 @@ footer {
 .account-columns {
   align-items: start;
 }
+.consent-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.consent-field input {
+  width: auto;
+  margin-top: 3px;
+}
+.auth-note {
+  margin: 0;
+  color: #77675d;
+  font-size: 12px;
+  line-height: 1.5;
+}
 .location-card {
   display: grid;
   gap: 13px;
@@ -3094,7 +3109,7 @@ footer {
     right: 0;
     bottom: 0;
     left: 0;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     padding: 7px 9px max(7px, env(safe-area-inset-bottom));
     border-width: 1px 0 0;
     border-radius: 0;
@@ -3465,7 +3480,10 @@ footer {
     font-size: 8px;
   }
   .support-sheet {
-    max-height: 78dvh;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    padding-top: max(12px, env(safe-area-inset-top));
   }
   .customer-support-content {
     gap: 11px;

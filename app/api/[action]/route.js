@@ -4,8 +4,6 @@ import { assertSameOrigin, readJsonBody } from "../../../lib/request.mjs";
 import * as store from "../../../lib/store.mjs";
 import {
   currentUser,
-  hashPassword,
-  checkPassword,
   issueSession,
   revokeSession,
   sessionSecret,
@@ -39,10 +37,16 @@ import {
 } from "../../../lib/notifications.mjs";
 import {
   addAddress,
+  getCustomerAccount,
   replaceAddress,
   removeAddress,
+  setDefaultAddress,
   updateProfile,
 } from "../../../lib/account.mjs";
+import {
+  authenticateCustomer,
+  registerCustomer,
+} from "../../../lib/customer-auth.mjs";
 import {
   adjustStock,
   listStock,
@@ -291,10 +295,7 @@ export async function GET(request, { params }) {
       );
     if (action === "account") {
       required(user, ["CUSTOMER"]);
-      const addresses = await store.all(
-        "SELECT * FROM addresses WHERE user_id=? AND active=1 ORDER BY id DESC",
-        user.id,
-      );
+      const { profile, addresses } = await getCustomerAccount(user);
       const loyalty =
         (
           await store.get(
@@ -308,7 +309,14 @@ export async function GET(request, { params }) {
       );
       const vouchers = await listCustomerVouchers(user);
       const rewards = await listCustomerRewards(user);
-      return out({ addresses, loyalty, transactions, vouchers, rewards });
+      return out({
+        profile,
+        addresses,
+        loyalty,
+        transactions,
+        vouchers,
+        rewards,
+      });
     }
     if (action === "drivers") {
       required(user, ["ADMIN", "OWNER"]);
@@ -377,7 +385,7 @@ export async function POST(request, { params }) {
       if (
         !(await recordAttempt(
           action,
-          String(body.email || "")
+          String(body.identifier || body.email || body.phone || "")
             .trim()
             .toLowerCase()
             .slice(0, 255),
@@ -399,65 +407,20 @@ export async function POST(request, { params }) {
     }
     if (action === "register") {
       sessionSecret();
-      const name = String(body.name || "").trim(),
-        email = String(body.email || "")
-          .trim()
-          .toLowerCase(),
-        password = String(body.password || "");
-      if (
-        name.length < 2 ||
-        name.length > 80 ||
-        !/^\S+@\S+\.\S+$/.test(email) ||
-        password.length < 10 ||
-        password.length > 128
-      )
-        throw new DomainError(
-          "Nama, email, atau password tidak valid (minimal 10 karakter)",
-        );
-      let id;
-      try {
-        id = await store.transaction(async (tx) => {
-          const created = await tx.run(
-            "INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,'CUSTOMER')",
-            name,
-            email,
-            hashPassword(password),
-          );
-          await tx.run(
-            "INSERT INTO loyalty_accounts(user_id) VALUES(?)",
-            created.lastInsertRowid,
-          );
-          return created.lastInsertRowid;
-        });
-      } catch (e) {
-        if (
-          e.code === "ER_DUP_ENTRY" ||
-          /UNIQUE constraint failed: users.email/.test(e.message || "")
-        )
-          throw new DomainError("Email sudah terdaftar");
-        throw e;
-      }
-      const response = out({ user: { id, name, email, role: "CUSTOMER" } });
+      const result = await registerCustomer(body);
+      const response = out(result);
       response.cookies.set(
         "wb_session",
-        await issueSession({ id, role: "CUSTOMER" }),
+        await issueSession(result.user),
         cookieOptions(request),
       );
       return response;
     }
     if (action === "login") {
-      const account = await store.get(
-        "SELECT * FROM users WHERE email=?",
-        String(body.email || "")
-          .trim()
-          .toLowerCase(),
+      const account = await authenticateCustomer(
+        body.identifier || body.email,
+        body.password,
       );
-      if (
-        !account ||
-        account.active !== 1 ||
-        !checkPassword(String(body.password || ""), account.password_hash)
-      )
-        throw new DomainError("Email atau password salah", 401);
       const response = out({
         user: { id: account.id, name: account.name, role: account.role },
       });
@@ -482,6 +445,8 @@ export async function POST(request, { params }) {
     if (action === "address") return out(await addAddress(user, body));
     if (action === "address-replace")
       return out(await replaceAddress(user, integer(body.id), body));
+    if (action === "address-default")
+      return out(await setDefaultAddress(user, integer(body.id)));
     if (action === "address-remove")
       return out(await removeAddress(user, integer(body.id)));
     if (action === "profile") {
@@ -505,9 +470,7 @@ export async function POST(request, { params }) {
           promotionId:
             body.promotionId == null ? null : integer(body.promotionId),
           loyaltyRewardId:
-            body.loyaltyRewardId == null
-              ? null
-              : integer(body.loyaltyRewardId),
+            body.loyaltyRewardId == null ? null : integer(body.loyaltyRewardId),
         }),
         201,
       );

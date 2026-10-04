@@ -132,6 +132,7 @@ export default function App() {
     [nextOrderCursor, setNextOrderCursor] = useState(null),
     [alerts, setAlerts] = useState({ notifications: [], unread: 0 }),
     [account, setAccount] = useState({
+      profile: null,
       addresses: [],
       loyalty: 0,
       transactions: [],
@@ -357,8 +358,13 @@ export default function App() {
     run(async () => {
       const data = await api(mode, {
         name: form.get("name"),
+        identifier: form.get("identifier"),
         email: form.get("email"),
+        phone: form.get("phone"),
         password: form.get("password"),
+        passwordConfirmation: form.get("passwordConfirmation"),
+        birthDate: form.get("birthDate"),
+        consent: form.get("consent") === "on",
       });
       setUser(data.user);
       setView(data.user.role === "CUSTOMER" ? "menu" : "orders");
@@ -539,6 +545,13 @@ export default function App() {
     setOverlay(null);
     setView("order-success");
   }
+  function openAccountSection(sectionId) {
+    setOverlay(null);
+    setView("account");
+    requestAnimationFrame(() =>
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" }),
+    );
+  }
   function openCustomerSupport(orderId = null, topic = null) {
     setSupportOrderId(orderId);
     setSupportTopic(topic);
@@ -590,7 +603,7 @@ export default function App() {
       () => {
         setMessage("");
         setError(
-          "Lokasi belum dapat diambil. Izinkan lokasi atau isi titik secara manual.",
+          "Lokasi belum dapat diambil. Izinkan akses lokasi lalu coba lagi.",
         );
       },
       { enableHighAccuracy: true, timeout: 10000 },
@@ -867,14 +880,27 @@ export default function App() {
             <form onSubmit={submitAuth}>
               {mode === "register" && (
                 <label>
-                  Nama
+                  Nama Lengkap
                   <input name="name" required minLength="2" />
                 </label>
               )}
-              <label>
-                Email
-                <input name="email" type="email" required />
-              </label>
+              {mode === "login" ? (
+                <label>
+                  Email atau Nomor HP
+                  <input name="identifier" required autoComplete="username" />
+                </label>
+              ) : (
+                <>
+                  <label>
+                    Email
+                    <input name="email" type="email" required autoComplete="email" />
+                  </label>
+                  <label>
+                    Nomor HP
+                    <input name="phone" type="tel" required autoComplete="tel" placeholder="08xxxxxxxxxx" />
+                  </label>
+                </>
+              )}
               <label>
                 Password
                 <input
@@ -884,6 +910,31 @@ export default function App() {
                   minLength={mode === "register" ? 10 : 1}
                 />
               </label>
+              {mode === "register" && (
+                <>
+                  <label>
+                    Konfirmasi Password
+                    <input
+                      name="passwordConfirmation"
+                      type="password"
+                      required
+                      minLength="10"
+                      autoComplete="new-password"
+                    />
+                  </label>
+                  <label>
+                    Tanggal Lahir
+                    <input name="birthDate" type="date" required max={new Date(Date.now() - 86400000).toISOString().slice(0, 10)} />
+                  </label>
+                  <label className="consent-field">
+                    <input name="consent" type="checkbox" required />
+                    <span>Saya menyetujui Syarat &amp; Ketentuan dan Kebijakan Privasi.</span>
+                  </label>
+                  <p className="auth-note">
+                    Verifikasi email dengan OTP belum diaktifkan. Akun dibuat tanpa menampilkan status verifikasi palsu.
+                  </p>
+                </>
+              )}
               <button className="primary" disabled={busy}>
                 {mode === "login" ? "Masuk" : "Buat akun"}
               </button>
@@ -1450,7 +1501,7 @@ export default function App() {
               <div className="account-shortcuts">
                 <button onClick={() => goToCustomerOrders("all")}>
                   <ReceiptIcon />
-                  <span>Pesanan</span>
+                  <span>Pesanan Aktif</span>
                 </button>
                 <button onClick={() => goToCustomerOrders("history")}>
                   <HistoryIcon />
@@ -1461,14 +1512,24 @@ export default function App() {
                   <span>Tracking</span>
                 </button>
                 <button
-                  onClick={() =>
-                    document
-                      .getElementById("account-settings")
-                      ?.scrollIntoView({ behavior: "smooth" })
-                  }
+                  onClick={() => openAccountSection("account-loyalty")}
+                >
+                  <TicketIcon />
+                  <span>Voucher &amp; Loyalty</span>
+                </button>
+                <button onClick={() => openAccountSection("account-address")}>
+                  <LocationIcon />
+                  <span>Alamat</span>
+                </button>
+                <button
+                  onClick={() => openAccountSection("account-settings")}
                 >
                   <UserIcon />
                   <span>Pengaturan Akun</span>
+                </button>
+                <button onClick={openCustomerHelp}>
+                  <HelpIcon />
+                  <span>Bantuan</span>
                 </button>
                 <button onClick={logout}>
                   <LogoutIcon />
@@ -1482,11 +1543,22 @@ export default function App() {
                 {account.addresses.map((a) => (
                   <div className="line" key={a.id}>
                     <span>
-                      <strong>{a.label}</strong>
+                      <strong>{a.label}</strong>{" "}
+                      {a.is_default === 1 && <span className="badge">DEFAULT</span>}
                       <br />
                       {a.detail}
                     </span>
                     <span className="actions">
+                      {a.is_default !== 1 && (
+                        <button
+                          disabled={busy}
+                          onClick={() =>
+                            run(() => api("address-default", { id: a.id }))
+                          }
+                        >
+                          Jadikan default
+                        </button>
+                      )}
                       <button onClick={() => setEditingAddress(a.id)}>
                         Ubah
                       </button>
@@ -1513,8 +1585,9 @@ export default function App() {
                           ...(editingAddress ? { id: editingAddress } : {}),
                           label: f.get("label"),
                           detail: f.get("detail"),
-                          latitude: Number(f.get("latitude")),
-                          longitude: Number(f.get("longitude")),
+                          latitude: f.get("latitude"),
+                          longitude: f.get("longitude"),
+                          isDefault: f.get("isDefault") === "on",
                         },
                       );
                       setEditingAddress(null);
@@ -1565,46 +1638,24 @@ export default function App() {
                     >
                       Gunakan lokasi perangkat
                     </button>
-                    <details className="coordinate-details" open>
-                      <summary>Atur titik secara manual</summary>
-                      <div className="columns compact-columns">
-                        <label>
-                          Latitude
-                          <input
-                            name="latitude"
-                            type="number"
-                            step="any"
-                            min="-90"
-                            max="90"
-                            defaultValue={
-                              account.addresses.find(
-                                (a) => a.id === editingAddress,
-                              )?.latitude ?? ""
-                            }
-                            required
-                          />
-                        </label>
-                        <label>
-                          Longitude
-                          <input
-                            name="longitude"
-                            type="number"
-                            step="any"
-                            min="-180"
-                            max="180"
-                            defaultValue={
-                              account.addresses.find(
-                                (a) => a.id === editingAddress,
-                              )?.longitude ?? ""
-                            }
-                            required
-                          />
-                        </label>
-                      </div>
-                    </details>
+                    <input name="latitude" type="hidden" />
+                    <input name="longitude" type="hidden" />
+                    <label className="consent-field">
+                      <input
+                        name="isDefault"
+                        type="checkbox"
+                        defaultChecked={
+                          account.addresses.find((a) => a.id === editingAddress)
+                            ?.is_default === 1
+                        }
+                      />
+                      <span>Jadikan alamat default</span>
+                    </label>
                     <small>
-                      Gratis ongkir hingga 5 km. Biaya berikutnya mengikuti
-                      konfigurasi pengiriman dengan batas 15 km.
+                      Koordinat disimpan untuk ongkir, tetapi tidak ditampilkan
+                      sebagai input teknis. Jika lokasi perangkat tidak dipilih,
+                      titik lama dipertahankan; presisi pin peta akan dilengkapi
+                      pada integrasi Maps berikutnya.
                     </small>
                   </div>
                   <div className="actions">
@@ -1623,18 +1674,19 @@ export default function App() {
                 </form>
               </section>
               <section className="panel" id="account-settings">
-                <h2>Profil</h2>
-                <p>
-                  {user.name} · {user.email}
-                </p>
+                <h2>Pengaturan Akun</h2>
+                <p>Perbarui data profil dan password akunmu dengan aman.</p>
                 <form
-                  key={user.name}
+                  key={(account.profile?.email || user.email) + (account.profile?.birth_date || "")}
                   onSubmit={(e) => {
                     e.preventDefault();
                     const f = new FormData(e.currentTarget);
                     run(async () => {
                       const response = await api("profile", {
                         name: f.get("name"),
+                        email: f.get("email"),
+                        phone: f.get("phone"),
+                        birthDate: f.get("birthDate"),
                         currentPassword: f.get("currentPassword"),
                         newPassword: f.get("newPassword"),
                       });
@@ -1648,9 +1700,36 @@ export default function App() {
                     Nama
                     <input
                       name="name"
-                      defaultValue={user.name}
+                      defaultValue={account.profile?.name || user.name}
                       required
                       minLength="2"
+                    />
+                  </label>
+                  <label>
+                    Email
+                    <input
+                      name="email"
+                      type="email"
+                      defaultValue={account.profile?.email || user.email}
+                      required
+                    />
+                  </label>
+                  <label>
+                    Nomor HP
+                    <input
+                      name="phone"
+                      type="tel"
+                      defaultValue={account.profile?.phone || ""}
+                      required
+                    />
+                  </label>
+                  <label>
+                    Tanggal Lahir
+                    <input
+                      name="birthDate"
+                      type="date"
+                      defaultValue={account.profile?.birth_date || ""}
+                      required
                     />
                   </label>
                   <label>
@@ -1674,7 +1753,7 @@ export default function App() {
                   </button>
                 </form>
               </section>
-              <section className="panel">
+              <section className="panel" id="account-loyalty">
                 <h2>Poin loyalitas</h2>
                 <div className="big-number">{account.loyalty} poin</div>
                 <p>Setiap kelipatan Rp10.000 nilai produk bersih menghasilkan 1 poin setelah pesanan selesai.</p>
@@ -2577,16 +2656,6 @@ export default function App() {
             </span>
             Akun
           </button>
-          <button
-            className={overlay === "support" ? "active" : ""}
-            aria-label="Bantuan"
-            onClick={openCustomerHelp}
-          >
-            <span className="mobile-nav-icon">
-              <HelpIcon />
-            </span>
-            Bantuan
-          </button>
         </nav>
       )}
       {role === "CUSTOMER" && overlay && (
@@ -2606,7 +2675,7 @@ export default function App() {
                 : overlay === "notifications"
                   ? "Notifikasi terbaru"
                   : overlay === "support"
-                    ? "Customer Support"
+                    ? "Bantuan Warkost"
                     : "Menu akun"
             }
           >
@@ -2626,7 +2695,7 @@ export default function App() {
                     : overlay === "notifications"
                       ? "Notifikasi"
                       : overlay === "support"
-                        ? "Customer Support"
+                        ? "Bantuan Warkost"
                         : "Akun saya"}
                 </h2>
                 {overlay === "notifications" && (
@@ -2784,13 +2853,22 @@ export default function App() {
                             : goToCustomerOrders("all")
                         }
                       >
-                        <ReceiptIcon /><span><strong>Status pesanan</strong><small>Cek proses dan estimasi pesanan</small></span><ArrowIcon />
+                        <ReceiptIcon /><span><strong>Pesanan</strong><small>Cek proses dan estimasi pesanan</small></span><ArrowIcon />
                       </button>
                       <button type="button" onClick={() => setSupportTopic("payment")}>
                         <WalletIcon /><span><strong>Pembayaran</strong><small>Bantuan pembayaran atau tagihan</small></span><ArrowIcon />
                       </button>
                       <button type="button" onClick={() => setSupportTopic("delivery")}>
-                        <TruckIcon /><span><strong>Pengantaran</strong><small>Alamat, keterlambatan, atau driver</small></span><ArrowIcon />
+                        <TruckIcon /><span><strong>Pengiriman &amp; Ongkir</strong><small>Alamat, ongkir, keterlambatan, atau driver</small></span><ArrowIcon />
+                      </button>
+                      <button type="button" onClick={() => setSupportTopic("voucher")}>
+                        <TicketIcon /><span><strong>Voucher &amp; Poin</strong><small>Klaim, penggunaan, dan saldo loyalty</small></span><ArrowIcon />
+                      </button>
+                      <button type="button" onClick={() => setSupportTopic("account")}>
+                        <UserIcon /><span><strong>Akun &amp; Alamat</strong><small>Profil, password, dan alamat tersimpan</small></span><ArrowIcon />
+                      </button>
+                      <button type="button" onClick={() => setSupportTopic("faq")}>
+                        <HelpIcon /><span><strong>FAQ</strong><small>Jawaban cepat pertanyaan umum</small></span><ArrowIcon />
                       </button>
                     </div>
                     <button
@@ -2809,8 +2887,14 @@ export default function App() {
                         ? "Bantuan pembayaran"
                         : supportTopic === "delivery"
                           ? "Bantuan pengantaran"
-                          : supportTopic === "driver"
-                            ? "Customer dan Driver"
+                        : supportTopic === "driver"
+                          ? "Customer dan Driver"
+                          : supportTopic === "voucher"
+                            ? "Bantuan voucher dan poin"
+                            : supportTopic === "account"
+                              ? "Bantuan akun dan alamat"
+                              : supportTopic === "faq"
+                                ? "FAQ"
                             : "Bantuan Admin"
                     }
                   >
@@ -2876,6 +2960,30 @@ export default function App() {
                         <p className="support-empty-copy">Gunakan jalur ini hanya untuk koordinasi pengantaran pesanan dengan driver yang ditugaskan.</p>
                       </>
                     )}
+                    {supportTopic === "voucher" && (
+                      <>
+                        <div className="support-detail-heading"><TicketIcon /><div><strong>Voucher &amp; Poin</strong><span>Voucher dan loyalty mengikuti kelayakan akun dan pesananmu.</span></div></div>
+                        <p className="support-empty-copy">Buka Voucher &amp; Loyalty dari Akun untuk melihat voucher yang diklaim, saldo poin, dan reward yang tersedia.</p>
+                        <button className="button-link support-wide-action" type="button" onClick={() => openAccountSection("account-loyalty")}><TicketIcon /> Buka Voucher &amp; Loyalty</button>
+                      </>
+                    )}
+                    {supportTopic === "account" && (
+                      <>
+                        <div className="support-detail-heading"><UserIcon /><div><strong>Akun &amp; Alamat</strong><span>Kelola profil, password, dan alamat tersimpan.</span></div></div>
+                        <p className="support-empty-copy">Data akun hanya dapat diakses oleh sesi pelanggan yang sedang login. Koordinat alamat tidak ditampilkan sebagai input teknis.</p>
+                        <button className="button-link support-wide-action" type="button" onClick={() => openAccountSection("account-settings")}><UserIcon /> Buka Pengaturan Akun</button>
+                      </>
+                    )}
+                    {supportTopic === "faq" && (
+                      <>
+                        <div className="support-detail-heading"><HelpIcon /><div><strong>FAQ</strong><span>Informasi umum layanan Warkost.</span></div></div>
+                        <div className="support-fact-list">
+                          <div><span>Kapan ongkir gratis?</span><strong>Hingga radius 5 km</strong></div>
+                          <div><span>Bisakah voucher dan poin digabung?</span><strong>Tidak pada versi saat ini</strong></div>
+                          <div><span>Kapan driver dapat dihubungi?</span><strong>Saat sudah ditugaskan dan mengantar</strong></div>
+                        </div>
+                      </>
+                    )}
                     {supportTopic === "admin" && (
                       <>
                         <div className="support-detail-heading"><ChatIcon /><div><strong>Customer Support Admin</strong><span>Bantuan internal Warkost dengan konteks pesanan.</span></div></div>
@@ -2911,7 +3019,7 @@ export default function App() {
               <div className="quick-account-menu">
                 <button onClick={() => goToCustomerOrders("all")}>
                   <ReceiptIcon />
-                  <span>Pesanan</span>
+                  <span>Pesanan Aktif</span>
                 </button>
                 <button onClick={() => goToCustomerOrders("history")}>
                   <HistoryIcon />
@@ -2921,14 +3029,23 @@ export default function App() {
                   <LocationIcon />
                   <span>Tracking</span>
                 </button>
+                <button onClick={() => openAccountSection("account-loyalty")}>
+                  <TicketIcon />
+                  <span>Voucher &amp; Loyalty</span>
+                </button>
+                <button onClick={() => openAccountSection("account-address")}>
+                  <LocationIcon />
+                  <span>Alamat</span>
+                </button>
                 <button
-                  onClick={() => {
-                    setOverlay(null);
-                    setView("account");
-                  }}
+                  onClick={() => openAccountSection("account-settings")}
                 >
                   <UserIcon />
                   <span>Pengaturan Akun</span>
+                </button>
+                <button onClick={openCustomerHelp}>
+                  <HelpIcon />
+                  <span>Bantuan</span>
                 </button>
                 <button className="danger-text" onClick={logout}>
                   <LogoutIcon />

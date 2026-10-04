@@ -28,7 +28,7 @@ async function signIn(page, email) {
     .getByRole("button", { name: "Masuk", exact: true })
     .click();
   const form = page.locator("form");
-  await form.getByLabel("Email").fill(email);
+  await form.getByLabel("Email atau Nomor HP").fill(email);
   await form.getByLabel("Password").fill(password);
   await form.getByRole("button", { name: "Masuk", exact: true }).click();
   if (email === "customer@warkost.local")
@@ -159,13 +159,13 @@ test("OP-UAT-01 login gagal tidak membuat sesi", async ({ page }, testInfo) => {
 
   const form = page.locator("form");
   await form
-    .getByLabel("Email")
+    .getByLabel("Email atau Nomor HP")
     .fill(`invalid-${testInfo.project.name}@example.test`);
   await form.getByLabel("Password").fill("password-yang-salah");
   await form.getByRole("button", { name: "Masuk", exact: true }).click();
 
   await expect(page.locator(".alert[role='alert']")).toHaveText(
-    "Email atau password salah",
+    "Email/nomor HP atau password salah",
   );
   await expect(
     page.locator("nav").getByRole("button", { name: "Keluar" }),
@@ -251,8 +251,8 @@ test("customer homepage mengikuti desain dan cart tetap bekerja", async ({
       name: "Navigasi pelanggan",
       exact: true,
     });
-    await expect(bottomNav.getByRole("button")).toHaveCount(4);
-    for (const name of ["Menu", "Keranjang", "Akun", "Bantuan"])
+    await expect(bottomNav.getByRole("button")).toHaveCount(3);
+    for (const name of ["Menu", "Keranjang", "Akun"])
       await expect(
         bottomNav.getByRole("button", { name, exact: true }),
       ).toBeVisible();
@@ -332,7 +332,9 @@ test("customer homepage mengikuti desain dan cart tetap bekerja", async ({
   if (mobile) {
     const notificationBox = await notificationDialog.boundingBox();
     const viewportHeight = page.viewportSize().height;
-    expect(notificationBox.height).toBeGreaterThanOrEqual(viewportHeight * 0.65);
+    expect(notificationBox.height).toBeGreaterThanOrEqual(
+      viewportHeight * 0.65,
+    );
     expect(notificationBox.height).toBeLessThanOrEqual(viewportHeight * 0.76);
   }
   await notificationDialog.getByRole("button", { name: "Tutup" }).click();
@@ -341,10 +343,13 @@ test("customer homepage mengikuti desain dan cart tetap bekerja", async ({
   const accountDialog = await openCustomerAccountMenu(page);
   await expect(accountDialog).toBeVisible();
   for (const name of [
-    "Pesanan",
+    "Pesanan Aktif",
     "Riwayat",
     "Tracking",
+    "Voucher & Loyalty",
+    "Alamat",
     "Pengaturan Akun",
+    "Bantuan",
     "Keluar",
   ])
     await expect(
@@ -352,19 +357,19 @@ test("customer homepage mengikuti desain dan cart tetap bekerja", async ({
     ).toBeVisible();
   await accountDialog.getByRole("button", { name: "Tutup" }).click();
 
-  if (mobile)
-    await page
-      .getByRole("navigation", { name: "Navigasi pelanggan", exact: true })
-      .getByRole("button", { name: "Bantuan", exact: true })
-      .click();
-  else await headerNav.getByRole("button", { name: "Bantuan" }).click();
-  const helpDialog = page.getByRole("dialog", { name: "Customer Support" });
+  if (mobile) {
+    const menu = await openCustomerAccountMenu(page);
+    await menu.getByRole("button", { name: "Bantuan", exact: true }).click();
+  } else await headerNav.getByRole("button", { name: "Bantuan" }).click();
+  const helpDialog = page.getByRole("dialog", { name: "Bantuan Warkost" });
   await expect(helpDialog).toBeVisible();
   await expect(helpDialog.getByLabel("Topik bantuan")).toBeVisible();
   await expect(helpDialog.getByText("WhatsApp umum")).toBeVisible();
   await helpDialog.getByRole("button", { name: "Hubungi Admin" }).click();
   await expect(helpDialog.getByLabel("Bantuan Admin")).toBeVisible();
-  await expect(helpDialog.getByRole("link", { name: "WhatsApp umum" })).toBeVisible();
+  await expect(
+    helpDialog.getByRole("link", { name: "WhatsApp umum" }),
+  ).toBeVisible();
   await helpDialog.getByRole("button", { name: "Tutup" }).click();
   await expectResponsiveShell(page);
   if (mobile) {
@@ -418,7 +423,9 @@ test("customer Batch A checkout tracking notifikasi dan pesanan responsif", asyn
     "Rincian Pembayaran",
   ])
     await expect(page.getByRole("heading", { name: heading })).toBeVisible();
-  await expect(page.getByText("Dihitung server", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Dihitung server", { exact: true }),
+  ).toBeVisible();
   await expectResponsiveShell(page);
   await page.screenshot({
     path: testInfo.outputPath("batch-a-checkout.png"),
@@ -437,7 +444,7 @@ test("customer Batch A checkout tracking notifikasi dan pesanan responsif", asyn
   const adminSupport = page.getByRole("button", { name: "Hubungi Admin" });
   await expect(adminSupport).toBeVisible();
   await adminSupport.click();
-  const supportDialog = page.getByRole("dialog", { name: "Customer Support" });
+  const supportDialog = page.getByRole("dialog", { name: "Bantuan Warkost" });
   await expect(supportDialog).toBeVisible();
   await expect(supportDialog.getByLabel("Konteks pesanan")).toContainText(
     /WB\d{6}/,
@@ -446,19 +453,29 @@ test("customer Batch A checkout tracking notifikasi dan pesanan responsif", asyn
     /Status pembayaran|Belum tersedia/,
   );
   await expect(supportDialog.getByText("WhatsApp umum")).toBeVisible();
-  await supportDialog.getByRole("button", { name: "Kembali ke topik bantuan" }).click();
+  await supportDialog
+    .getByRole("button", { name: "Kembali ke topik bantuan" })
+    .click();
   await supportDialog.getByRole("button", { name: "Pembayaran" }).click();
   await expect(supportDialog.getByLabel("Bantuan pembayaran")).toContainText(
     /Status pembayaran|Belum tersedia/,
   );
-  await supportDialog.getByRole("button", { name: "Kembali ke topik bantuan" }).click();
-  await supportDialog.getByRole("button", { name: "Pengantaran" }).click();
+  await supportDialog
+    .getByRole("button", { name: "Kembali ke topik bantuan" })
+    .click();
+  await supportDialog
+    .getByRole("button", { name: "Pengiriman & Ongkir" })
+    .click();
   await expect(supportDialog.getByLabel("Bantuan pengantaran")).toContainText(
     /Driver/,
   );
-  await expect(supportDialog.getByRole("button", { name: "Hubungi Driver" })).toBeDisabled();
-  await supportDialog.getByRole("button", { name: "Kembali ke topik bantuan" }).click();
-  await supportDialog.getByRole("button", { name: "Status pesanan" }).click();
+  await expect(
+    supportDialog.getByRole("button", { name: "Hubungi Driver" }),
+  ).toBeDisabled();
+  await supportDialog
+    .getByRole("button", { name: "Kembali ke topik bantuan" })
+    .click();
+  await supportDialog.getByRole("button", { name: "Pesanan" }).click();
   await expect(supportDialog).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: /Hubungi Driver/ }),
@@ -469,18 +486,20 @@ test("customer Batch A checkout tracking notifikasi dan pesanan responsif", asyn
     fullPage: true,
   });
 
-  await page
-    .getByRole("button", { name: "Kembali ke Pesanan" })
-    .click();
+  await page.getByRole("button", { name: "Kembali ke Pesanan" }).click();
   await expect(page.getByRole("heading", { name: "Pesanan" })).toBeVisible();
   const filters = page.getByLabel("Filter pesanan");
   for (const name of [/Semua/, /Dalam Proses/, /Selesai/, /Dibatalkan/])
     await expect(filters.getByRole("button", { name })).toBeVisible();
   const firstOrderCard = page.locator("article.customer-order-card").first();
   await expect(firstOrderCard).toBeVisible();
-  await firstOrderCard.getByRole("button", { name: "Lihat item & riwayat" }).click();
+  await firstOrderCard
+    .getByRole("button", { name: "Lihat item & riwayat" })
+    .click();
   await firstOrderCard.getByRole("button", { name: "Hubungi Admin" }).click();
-  const detailSupportDialog = page.getByRole("dialog", { name: "Customer Support" });
+  const detailSupportDialog = page.getByRole("dialog", {
+    name: "Bantuan Warkost",
+  });
   await expect(detailSupportDialog.getByLabel("Bantuan Admin")).toBeVisible();
   await detailSupportDialog.getByRole("button", { name: "Tutup" }).click();
 
@@ -491,10 +510,15 @@ test("customer Batch A checkout tracking notifikasi dan pesanan responsif", asyn
   const notificationDialog = page.getByRole("dialog", {
     name: "Notifikasi terbaru",
   });
-  await expect(notificationDialog.getByRole("heading", { name: "Notifikasi" })).toBeVisible();
-  const notificationFilters = notificationDialog.getByLabel("Filter notifikasi");
+  await expect(
+    notificationDialog.getByRole("heading", { name: "Notifikasi" }),
+  ).toBeVisible();
+  const notificationFilters =
+    notificationDialog.getByLabel("Filter notifikasi");
   for (const name of [/Semua/, /Pesanan/, /Promo/, /Sistem/])
-    await expect(notificationFilters.getByRole("button", { name })).toBeVisible();
+    await expect(
+      notificationFilters.getByRole("button", { name }),
+    ).toBeVisible();
   await expectResponsiveShell(page);
   await page.screenshot({
     path: testInfo.outputPath("batch-a-orders-notifications.png"),

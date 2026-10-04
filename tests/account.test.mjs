@@ -9,17 +9,38 @@ process.env.DATABASE_PATH = path.join(
 );
 process.env.SESSION_SECRET = "account-test-secret-with-over-32-characters";
 const { db } = await import("../lib/db.mjs");
-const { addAddress, replaceAddress, removeAddress, updateProfile } =
-  await import("../lib/account.mjs");
+const {
+  addAddress,
+  getCustomerAccount,
+  replaceAddress,
+  removeAddress,
+  setDefaultAddress,
+  updateProfile,
+} = await import("../lib/account.mjs");
 const { createOrder } = await import("../lib/domain.mjs");
-const { checkPassword, hashPassword, issueSession, currentUser } =
-  await import("../lib/auth.mjs");
+const {
+  checkPassword,
+  hashPassword,
+  issueSession,
+  currentUser,
+  revokeSession,
+} = await import("../lib/auth.mjs");
 const database = db();
 database
   .prepare(
     "INSERT INTO users(name,email,password_hash,role) VALUES('Pelanggan','pelanggan@test.local',?,'CUSTOMER')",
   )
   .run(hashPassword("password-awal-yang-panjang"));
+database
+  .prepare(
+    "UPDATE users SET phone='628111111111',birth_date='1995-05-10',terms_accepted_at=CURRENT_TIMESTAMP WHERE id=1",
+  )
+  .run();
+database
+  .prepare(
+    "INSERT INTO users(name,email,phone,birth_date,password_hash,role) VALUES('Pelanggan B','b@test.local','628222222222','1990-01-01',?,'CUSTOMER')",
+  )
+  .run(hashPassword("password-customer-b-aman"));
 database.prepare("INSERT INTO categories(name) VALUES('Food')").run();
 database
   .prepare(
@@ -45,6 +66,30 @@ test("perubahan alamat mempertahankan histori dan menghalangi checkout alamat no
     latitude: -6.92,
     longitude: 106.93,
   });
+  const second = await addAddress(customer, {
+    label: "Rumah orang tua",
+    detail: "Jalan Kedua Nomor 300",
+  });
+  await setDefaultAddress(customer, second.id);
+  const third = await addAddress(customer, {
+    label: "Kantor cabang",
+    detail: "Jalan Ketiga Nomor 400",
+  });
+  assert.equal(
+    database
+      .prepare(
+        "SELECT COUNT(*) count FROM addresses WHERE user_id=1 AND active=1 AND is_default=1",
+      )
+      .get().count,
+    1,
+  );
+  await assert.rejects(
+    replaceAddress({ id: 2, role: "CUSTOMER" }, second.id, {
+      label: "Diserobot",
+      detail: "Alamat customer lain tidak boleh diubah",
+    }),
+    /tidak ditemukan/,
+  );
   assert.equal(
     database.prepare("SELECT address_id FROM orders WHERE id=?").get(order.id)
       .address_id,
@@ -72,6 +117,15 @@ test("perubahan alamat mempertahankan histori dan menghalangi checkout alamat no
     }),
     /Alamat/,
   );
+  await removeAddress(customer, second.id);
+  assert.equal(
+    database
+      .prepare(
+        "SELECT id FROM addresses WHERE user_id=1 AND active=1 AND is_default=1",
+      )
+      .get().id,
+    third.id,
+  );
   await assert.rejects(
     removeAddress({ id: 99, role: "CUSTOMER" }, address.id),
     /tidak ditemukan/,
@@ -84,6 +138,9 @@ test("ganti password memerlukan password lama dan mencabut sesi lama", async () 
   await assert.rejects(
     updateProfile(customer, {
       name: "Nama Baru",
+      email: "baru@test.local",
+      phone: "0811-3333-4444",
+      birthDate: "1995-05-10",
       newPassword: "password-baru-aman-12",
       currentPassword: "salah",
     }),
@@ -91,10 +148,15 @@ test("ganti password memerlukan password lama dan mencabut sesi lama", async () 
   );
   const result = await updateProfile(customer, {
     name: "Nama Baru",
+    email: "baru@test.local",
+    phone: "0811-3333-4444",
+    birthDate: "1995-05-10",
     newPassword: "password-baru-aman-12",
     currentPassword: "password-awal-yang-panjang",
   });
   assert.equal(result.user.name, "Nama Baru");
+  assert.equal(result.profile.phone, "6281133334444");
+  assert.equal("password_hash" in result.profile, false);
   assert.equal(await currentUser(req), null);
   assert.ok(
     checkPassword(
@@ -111,4 +173,38 @@ test("ganti password memerlukan password lama dan mencabut sesi lama", async () 
       .get().n,
     1,
   );
+});
+
+test("perubahan profil invalid ditolak server", async () => {
+  await assert.rejects(
+    updateProfile(customer, {
+      name: "N",
+      email: "bukan-email",
+      phone: "123",
+      birthDate: "2099-01-01",
+    }),
+    /tidak valid/,
+  );
+});
+
+test("profil dan daftar alamat selalu mengikuti customer login tanpa password", async () => {
+  const own = await getCustomerAccount(customer);
+  const other = await getCustomerAccount({ id: 2, role: "CUSTOMER" });
+  assert.equal(own.profile.email, "baru@test.local");
+  assert.equal(other.profile.email, "b@test.local");
+  assert.equal("password_hash" in own.profile, false);
+  assert.deepEqual(Object.keys(own.profile).sort(), [
+    "birth_date",
+    "email",
+    "name",
+    "phone",
+  ]);
+});
+
+test("logout mencabut sesi aktif", async () => {
+  const token = await issueSession(customer);
+  const request = { cookies: { get: () => ({ value: token }) } };
+  assert.ok(await currentUser(request));
+  await revokeSession(request);
+  assert.equal(await currentUser(request), null);
 });
