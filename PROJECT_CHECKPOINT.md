@@ -7,9 +7,11 @@
 - Shipping core implementation commit: `f2007d5d02376981c8d7d402cba048ca651e398a`
 - Shipping core checkpoint: `b1c5c27b4f3f016a48fea7a80dab543da9b597e1`
 - Voucher lifecycle implementation: `24f51b147b47028875b049435f991145a415e93f`
-- Milestone: Customer Functional Completion #2 — Voucher Claim & Redeem
+- Voucher lifecycle checkpoint: `4ffb05b3e1a2b27fcb7134faef0b64e447dc88b8`
+- Loyalty core implementation: `ff0aeaf66555546849902ba0769be6fc6b0f9048`
+- Milestone: Customer Functional Completion #3 — Loyalty Core
 - Status: **COMPLETED / AUTOMATED VERIFIED**
-- Verification date: 2026-10-03
+- Verification date: 2026-10-04
 
 ## Scope completed
 
@@ -106,8 +108,6 @@ Status: **COMPLETED / MANUAL UAT ACCEPTED**
 The following are NOT part of this completed UI milestone and remain for Customer Functional Completion:
 
 - QRIS payment integration
-- Loyalty earn/redeem
-- Owner-configurable loyalty rewards
 - Birthday voucher automation
 - OTP email delivery
 - Maps API integration
@@ -206,3 +206,45 @@ Status: **COMPLETED / AUTOMATED VERIFIED**
 
 - No Loyalty earn/redeem engine, Owner Loyalty Rules, birthday voucher, QRIS/payment gateway, Maps API, OTP, Manager/RBAC, Kasir removal, Admin/Kitchen/Driver redesign, dependency upgrade, or deployment.
 - No Customer UI redesign and no Shipping/Ongkir formula change.
+
+---
+
+## Customer Functional Completion #3 — Loyalty Core
+
+Date: 2026-10-04
+
+Status: **COMPLETED / AUTOMATED VERIFIED**
+
+### Source-control baseline
+
+- Parent checkpoint: `4ffb05b3e1a2b27fcb7134faef0b64e447dc88b8`
+- Implementation commit: `ff0aeaf66555546849902ba0769be6fc6b0f9048`
+- Customer UI, Shipping/Ongkir Core, and Voucher Claim & Redeem remain locked.
+
+### Final earn and redeem rules
+
+- Earn rate is fixed at Rp10.000 eligible merchandise net per point, using completed multiples (`floor`).
+- Earn base is merchandise subtotal after the applied voucher or loyalty reward discount and excludes delivery fee.
+- Points are credited only after an order is both `DELIVERED` and payment is `PAID`; pending, failed, expired, or cancelled orders earn no points.
+- Completion/payment retries are idempotent per order and cannot award points twice.
+- Owner-configurable rewards support `PERCENT` and `FIXED`, minimum order, optional maximum discount, points required, and active/inactive state.
+- Customers may use one eligible loyalty reward per checkout; reward, balance, discount, and final total are recalculated server-side.
+- Voucher and loyalty reward stacking is rejected.
+- Redemption is atomic with order creation, cannot make the balance negative, and double submit cannot deduct twice.
+- Cancelling an order restores redeemed points exactly once and never awards earned points.
+- Loyalty ledger entries are auditable as `EARN`, `REDEEM`, and `RESTORE`, with order and reward-rule context.
+
+### Verification
+
+- Dedicated Loyalty Core tests: **14/14 PASS**.
+- Targeted loyalty/voucher/delivery/settings/flow/payment/MySQL-operation tests: **39/39 PASS**.
+- Full unit suite: **73/73 PASS**.
+- Production build: **PASS**.
+- Boundary earn values Rp9.999, Rp10.000, Rp19.999, Rp20.000, Rp52.000, and shipping exclusion: **PASS**.
+- Server-side reward validation/calculation, insufficient balance, inactive reward, minimum order, percent/fixed discount, maximum cap, manipulation resistance, non-stacking, double-submit protection, negative-balance prevention, cancellation restore, and net-merchandise earn after redemption: **PASS**.
+
+### Guardrails preserved
+
+- No Customer UI redesign and no Shipping/Ongkir or Voucher lifecycle reimplementation.
+- No QRIS/payment gateway, birthday voucher, OTP, Maps API, Manager/RBAC, Kasir removal, Admin/Kitchen/Driver redesign, Web Push, dependency upgrade, or deployment work.
+- Do not open the next functional milestone without a new explicit scope.
