@@ -19,8 +19,11 @@
 - Batch B Final UAT Polish Round 3 implementation: `c610503e02c377e1e35b20e2e66f4713429edd62`
 - Batch B transparent logo + Checkout Quick Address implementation: `142225de0c9dae246085ea400103b392fc598d50`
 - Batch B final pre-lock checkpoint: `b1495990d8a5f12df44930e49373edca54c634a0`
-- Milestone: Customer UI Batch B
-- Status: **VERIFIED / ACCEPTED / LOCKED**
+- Customer UI Batch B final lock: `75f049c5cd53b5d98b28f58231c13dc2a3f7b251`
+- Customer UI Batch B status: **VERIFIED / ACCEPTED / LOCKED**
+- Customer OTP Email Core implementation: `236028a0708298d8d0a6825efaac19e662bb1668`
+- Current milestone: Customer OTP Email Core
+- Current status: **VERIFIED**
 - Verification date: 2026-10-04
 
 ## Scope completed
@@ -617,3 +620,78 @@ Status: **VERIFIED / ACCEPTED / LOCKED**
 - BTN QRIS production adapter.
 
 Do not start any future milestone without a new explicit scope.
+
+---
+
+## Customer Functional — OTP Email + Forgot Password
+
+Date: 2026-10-04
+
+Status: **VERIFIED**
+
+### Source-control baseline
+
+- Locked Customer UI Batch B parent: `75f049c5cd53b5d98b28f58231c13dc2a3f7b251`.
+- OTP Email Core implementation: `236028a0708298d8d0a6825efaac19e662bb1668`.
+- Customer UI Batch B remains **VERIFIED / ACCEPTED / LOCKED**; only minimal auth-screen compatibility was added.
+- No Git bundle was created in this milestone.
+
+### Targeted audit result
+
+- **PASS:** scrypt password hashing, signed server session, persistent session revocation, customer ownership gates, registration field validation, login by email/phone, local UAT fixture, and database-backed request rate limiting.
+- **PARTIAL:** approved OTP/success visual foundation and `Lupa password?` entry existed, but had no functional backend.
+- **MISSING:** persistent OTP challenge, email transport, registration activation gate, resend/expiry/attempt enforcement, and password-reset lifecycle.
+- **CONFLICT:** registration previously activated the customer and issued a normal session immediately; this was replaced by a pending-account flow.
+
+### Registration OTP and activation
+
+- Valid registration creates a `CUSTOMER` with `active=0` and no normal session.
+- Existing active customers are backfilled as email-verified; pending registration is represented by `active=0` and `email_verified_at=NULL`.
+- A cryptographically generated six-digit OTP is valid for 10 minutes, limited to five attempts, and stored only as a keyed HMAC hash.
+- Successful verification atomically activates the account, records `email_verified_at`, consumes the challenge, creates the loyalty account if needed, and permits the first authenticated session.
+- Duplicate verification is idempotent and cannot create another account, activation, or session.
+- Resend has a server-side 60-second cooldown, invalidates the prior challenge, and starts a fresh expiry window.
+- `REGISTRATION` and `PASSWORD_RESET` challenges are isolated and cannot authorize each other.
+
+### Forgot password and session safety
+
+- Reset request accepts email or phone and always returns the same generic anti-enumeration response.
+- A valid active customer receives the reset OTP at the registered email; invalid/inactive identifiers do not trigger delivery.
+- Successful OTP verification issues a short-lived, one-time reset token whose hash is stored server-side.
+- Password replacement uses the existing scrypt architecture and runs atomically with reset-challenge consumption and revocation of every prior session.
+- Old passwords, expired/consumed OTPs, reused reset tokens, and registration-purpose OTPs are rejected.
+
+### Email transport
+
+- Production transport is provider-neutral SMTP over direct TLS or required STARTTLS; SMTP settings are read only from environment variables.
+- Production refuses the development transport and never silently falls back to the local outbox.
+- Development/test delivery writes email previews to ignored `.uat/otp-outbox.json` (or `OTP_OUTBOX_PATH`) and never returns OTP plaintext through the browser API.
+- `.env.example` documents variable names for `OTP_SECRET`, `EMAIL_TRANSPORT`, and `SMTP_*`; no credential or provider secret is committed.
+- Email content contains Warkost branding, OTP purpose/code, 10-minute expiry, and a security notice; it contains no password, password hash, or session token.
+
+### UI compatibility
+
+- The locked Login/Register layout and Warkost branding remain intact.
+- Registration now continues to the real OTP and success states; forgot password uses the same OTP visual language and password-reset state.
+- Mobile countdown/resend, loading, validation, wrong/expired/attempt-exhausted feedback, and responsive card ordering are connected to server-authoritative behavior.
+- Customer-facing debug stage chips remain absent.
+
+### Verification
+
+- Targeted OTP/Auth/Batch B/rate-limit/SQLite regression: **29/29 PASS**.
+- Targeted MySQL migration contract: **4/4 PASS**.
+- Final OTP transport/security retest after packaging fix: **7/7 PASS**.
+- Full unit suite: **111/111 PASS**.
+- Production build: **PASS**, including `/` and dynamic `/api/[action]`, with no final build warning.
+- Local deterministic UAT customer remains active and can log in without being forced through registration OTP.
+- Guest storefront, protected APIs, Checkout Quick Address, Shipping, Voucher, Loyalty, and QRIS/Payment regression coverage remains **PASS**.
+
+### Production email blocker
+
+- Real production email delivery still requires deployment-provided `OTP_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM` values.
+- These credentials were not available or requested in this milestone. Code/tests/build are verified, but real external inbox delivery cannot be exercised until valid SMTP credentials are configured.
+
+### Guardrails preserved
+
+- No Google Maps, Manager/RBAC, Kasir removal, Birthday Promo, BTN QRIS adapter, Web Push, deployment, dependency upgrade, or unrelated milestone work.
+- No broad Customer UI redesign and no change to locked Shipping/Voucher/Loyalty/Payment business rules.
