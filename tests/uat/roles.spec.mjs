@@ -201,11 +201,30 @@ test("guest dapat menjelajah storefront dan diarahkan login saat memesan", async
   await page
     .locator("article.customer-product")
     .first()
-    .getByRole("button", { name: "Masuk untuk pesan" })
+    .getByRole("button", { name: "Pesan", exact: true })
     .click();
-  await expect(
-    page.getByRole("heading", { name: "Masuk ke Akun", exact: true }),
-  ).toBeVisible();
+  const loginCard = page.locator(".auth-login-card");
+  const registerCard = page.locator(".auth-register-card");
+  await expect(loginCard).toBeVisible();
+  await expect(registerCard).not.toBeVisible();
+  await loginCard
+    .getByRole("button", { name: "Belum punya akun? Daftar Akun" })
+    .click();
+  await expect(registerCard).toBeVisible();
+  await expect(loginCard).not.toBeVisible();
+  await registerCard
+    .getByRole("button", { name: "Sudah punya akun? Masuk" })
+    .click();
+  await expect(loginCard).toBeVisible();
+  await expect(registerCard).not.toBeVisible();
+  await expect(page.locator(".auth-flow-ready")).toHaveCount(0);
+  if (page.viewportSize().width <= 620) {
+    const order = await page.evaluate(() => ({
+      form: Number(getComputedStyle(document.querySelector(".auth-login-card")).order),
+      hero: Number(getComputedStyle(document.querySelector(".auth-story-card")).order),
+    }));
+    expect(order.form).toBeLessThan(order.hero);
+  }
   await expectResponsiveShell(page);
   expect(consoleErrors).toEqual([]);
   await page.screenshot({

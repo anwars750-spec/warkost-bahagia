@@ -406,10 +406,6 @@ export default function App() {
         .includes(search);
     return categoryMatches && searchMatches;
   });
-  const cartProductNames = menu.products
-    .filter((product) => cart[product.id] > 0)
-    .map((product) => product.name)
-    .join(", ");
   const visibleOrders =
     role !== "CUSTOMER" || orderFilter === "all"
       ? orders
@@ -628,7 +624,9 @@ export default function App() {
       <header
         className={`top ${
           role === "CUSTOMER" ? "customer-home-header customer-app-header" : ""
-        } ${!role && view === "auth" ? "auth-header" : ""}`}
+        } ${!role ? "guest-customer-header" : ""} ${
+          !role && view === "auth" ? "auth-header" : ""
+        }`}
       >
         <button
           className="brand brand-button"
@@ -959,10 +957,11 @@ export default function App() {
             <article className={`auth-card auth-login-card ${mode === "login" ? "active" : ""}`}>
               <div className="auth-card-heading">
                 <Image
+                  className="auth-card-logo"
                   src="/warkost-bahagia-logo-transparent.png"
                   alt="Warkost Bahagia"
-                  width={160}
-                  height={90}
+                  width={1672}
+                  height={941}
                 />
                 <span className="auth-card-kicker">SELAMAT DATANG KEMBALI</span>
                 <h2>Masuk ke Akun</h2>
@@ -1022,10 +1021,11 @@ export default function App() {
             <article className={`auth-card auth-register-card ${mode === "register" ? "active" : ""}`}>
               <div className="auth-card-heading compact">
                 <Image
+                  className="auth-card-logo"
                   src="/warkost-bahagia-logo-transparent.png"
                   alt="Warkost Bahagia"
-                  width={144}
-                  height={81}
+                  width={1672}
+                  height={941}
                 />
                 <span className="auth-card-kicker">MULAI PESAN DI WARKOST</span>
                 <h2>Daftar Akun</h2>
@@ -1101,17 +1101,6 @@ export default function App() {
               </form>
             </article>
 
-            <div className="auth-flow-ready" aria-label="Alur onboarding siap OTP">
-              {[
-                ["Intro", "ready"],
-                ["Login", mode === "login" ? "active" : "ready"],
-                ["Register", mode === "register" ? "active" : "ready"],
-                ["OTP", "future"],
-                ["Selesai", "future"],
-              ].map(([label, state]) => (
-                <span className={state} key={label}>{label}</span>
-              ))}
-            </div>
           </section>
         ) : null}
         {(!role || role === "CUSTOMER") && view === "menu" && (
@@ -1344,12 +1333,13 @@ export default function App() {
                             </div>
                           ) : (
                             <button
+                              className="guest-product-cta"
                               onClick={() => {
                                 setMode("login");
                                 setView("auth");
                               }}
                             >
-                              Masuk untuk pesan
+                              Pesan
                             </button>
                           )}
                         </div>
@@ -1675,44 +1665,6 @@ export default function App() {
                 <span className="eyebrow">AKUN PELANGGAN</span>
                 <h2>{user.name}</h2>
                 <p>Kelola pesanan, lokasi pengantaran, dan profilmu.</p>
-              </div>
-              <div className="account-shortcuts">
-                <button onClick={() => goToCustomerOrders("all")}>
-                  <ReceiptIcon />
-                  <span>Pesanan Aktif</span>
-                </button>
-                <button onClick={() => goToCustomerOrders("history")}>
-                  <HistoryIcon />
-                  <span>Riwayat</span>
-                </button>
-                <button onClick={() => goToCustomerOrders("tracking")}>
-                  <LocationIcon />
-                  <span>Tracking</span>
-                </button>
-                <button
-                  onClick={() => openAccountSection("account-loyalty")}
-                >
-                  <TicketIcon />
-                  <span>Voucher &amp; Loyalty</span>
-                </button>
-                <button onClick={() => openAccountSection("account-address")}>
-                  <LocationIcon />
-                  <span>Alamat</span>
-                </button>
-                <button
-                  onClick={() => openAccountSection("account-settings")}
-                >
-                  <UserIcon />
-                  <span>Pengaturan Akun</span>
-                </button>
-                <button onClick={openCustomerHelp}>
-                  <HelpIcon />
-                  <span>Bantuan</span>
-                </button>
-                <button onClick={logout}>
-                  <LogoutIcon />
-                  <span>Keluar</span>
-                </button>
               </div>
             </section>
             <div className="columns account-columns">
@@ -2785,13 +2737,11 @@ export default function App() {
             <span>{count}</span>
           </span>
           <span className="floating-cart-summary">
-            <strong>
-              {count} item · {money(total)}
-            </strong>
-            <small>{cartProductNames}</small>
+            <small>{count} item di keranjang</small>
+            <strong>{money(total)}</strong>
           </span>
           <span className="floating-cart-cta">
-            Lihat Keranjang
+            Buka
             <ArrowIcon />
           </span>
         </button>

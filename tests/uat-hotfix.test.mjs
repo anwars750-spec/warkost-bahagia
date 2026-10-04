@@ -184,24 +184,84 @@ test("onboarding desktop/mobile mempertahankan auth contract dan tanpa OTP palsu
   assert.match(page, /auth-login-card/);
   assert.match(page, /auth-register-card/);
   assert.match(page, /Tampilkan password/);
-  assert.match(page, /\["OTP", "future"\]/);
-  assert.match(page, /\["Selesai", "future"\]/);
+  assert.doesNotMatch(page, /auth-flow-ready/);
+  assert.doesNotMatch(page, /\["Intro", "ready"\]/);
   assert.doesNotMatch(page, /Google Sign-In|Masuk dengan Google|Apple Sign-In|Masuk dengan Apple/);
   assert.doesNotMatch(page, /OTP berhasil|email terverifikasi/i);
   assert.match(
     style,
-    /\.auth-onboarding\s*{[\s\S]*?grid-template-columns:/,
+    /\.auth-onboarding\s*{[\s\S]*?grid-template-columns:\s*minmax\(360px,[\s\S]*?minmax\(390px/,
   );
-  assert.match(
-    style,
-    /@media \(max-width: 760px\)[\s\S]*?\.auth-card\.active\s*{[\s\S]*?display:\s*block/,
-  );
+  assert.match(style, /\.auth-card\s*{[\s\S]*?display:\s*none/);
+  assert.match(style, /\.auth-card\.active\s*{[\s\S]*?display:\s*block/);
+  const mobileAuthCss = style.slice(style.indexOf("@media (max-width: 760px)"));
+  assert.match(mobileAuthCss, /\.auth-mobile-switch\s*{[\s\S]*?order:\s*1/);
+  assert.match(mobileAuthCss, /\.auth-card\s*{[\s\S]*?order:\s*2/);
+  assert.match(mobileAuthCss, /\.auth-story-card\s*{[\s\S]*?order:\s*3/);
 });
 
 test("aksi produk guest mengarahkan bersih ke login", () => {
   const page = fs.readFileSync(path.join(projectRoot, "app", "page.js"), "utf8");
   assert.match(
     page,
-    /setMode\("login"\);[\s\S]*?setView\("auth"\);[\s\S]*?Masuk untuk pesan/,
+    /className="guest-product-cta"[\s\S]*?setMode\("login"\);[\s\S]*?setView\("auth"\);[\s\S]*?Pesan/,
   );
+  assert.doesNotMatch(page, /Masuk untuk pesan/);
+});
+
+test("logo dan header auth mempertahankan proporsi penuh pada desktop/mobile", () => {
+  const page = fs.readFileSync(path.join(projectRoot, "app", "page.js"), "utf8");
+  const style = fs.readFileSync(path.join(projectRoot, "app", "style.css"), "utf8");
+  assert.equal((page.match(/className="auth-card-logo"/g) || []).length, 2);
+  assert.equal((page.match(/width=\{1672\}[\s\S]*?height=\{941\}/g) || []).length, 2);
+  assert.match(
+    style,
+    /\.auth-card-heading \.auth-card-logo\s*{[\s\S]*?aspect-ratio:\s*1672 \/ 941[\s\S]*?object-fit:\s*contain/,
+  );
+  assert.match(
+    style,
+    /@media \(max-width: 760px\)[\s\S]*?\.guest-customer-header \.brand\s*{[\s\S]*?flex:\s*1 1 auto[\s\S]*?\.guest-customer-header nav\s*{[\s\S]*?margin-left:\s*14px/,
+  );
+  assert.match(page, /!role \? "guest-customer-header" : ""/);
+});
+
+test("CTA produk dan ringkasan cart mobile memakai hierarchy compact tanpa overlap", () => {
+  const page = fs.readFileSync(path.join(projectRoot, "app", "page.js"), "utf8");
+  const style = fs.readFileSync(path.join(projectRoot, "app", "style.css"), "utf8");
+  assert.match(page, /<small>\{count\} item di keranjang<\/small>[\s\S]*?<strong>\{money\(total\)\}<\/strong>/);
+  assert.match(page, /<span className="floating-cart-cta">[\s\S]*?Buka[\s\S]*?<ArrowIcon \/>/);
+  assert.match(style, /\.guest-product-cta\s*{[\s\S]*?min-width:\s*68px/);
+  assert.match(
+    style,
+    /@media \(max-width: 620px\)[\s\S]*?\.customer-home-main\s*{[\s\S]*?padding-bottom:\s*calc\(172px \+ env\(safe-area-inset-bottom\)\)/,
+  );
+  assert.match(
+    style,
+    /\.customer-floating-cart\s*{[\s\S]*?bottom:\s*calc\(76px \+ env\(safe-area-inset-bottom\)\)[\s\S]*?min-height:\s*58px/,
+  );
+});
+
+test("menu akun menjadi satu-satunya entry point delapan aksi akun", () => {
+  const page = fs.readFileSync(path.join(projectRoot, "app", "page.js"), "utf8");
+  const overviewStart = page.indexOf('<section className="account-overview"');
+  const columnsStart = page.indexOf('<div className="columns account-columns">', overviewStart);
+  const overview = page.slice(overviewStart, columnsStart);
+  assert.ok(overviewStart >= 0 && columnsStart > overviewStart);
+  assert.doesNotMatch(overview, /<button/);
+  assert.doesNotMatch(page, /account-shortcuts/);
+
+  const menuStart = page.indexOf('<div className="quick-account-menu">');
+  const menuEnd = page.indexOf("</div>\n            )}", menuStart);
+  const menu = page.slice(menuStart, menuEnd);
+  for (const label of [
+    "Pesanan Aktif",
+    "Riwayat",
+    "Tracking",
+    "Voucher &amp; Loyalty",
+    "Alamat",
+    "Pengaturan Akun",
+    "Bantuan",
+    "Keluar",
+  ])
+    assert.equal((menu.match(new RegExp(label, "g")) || []).length, 1, label);
 });
