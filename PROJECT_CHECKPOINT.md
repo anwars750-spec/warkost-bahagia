@@ -18,8 +18,9 @@
 - Batch B voucher UAT correction implementation: `9fabbc126764f010a58e787aedf073a5063dfb28`
 - Batch B Final UAT Polish Round 3 implementation: `c610503e02c377e1e35b20e2e66f4713429edd62`
 - Batch B transparent logo + Checkout Quick Address implementation: `142225de0c9dae246085ea400103b392fc598d50`
-- Milestone: Batch B Transparent Logo + Checkout Quick Address
-- Status: **VERIFIED**
+- Batch B final pre-lock checkpoint: `b1495990d8a5f12df44930e49373edca54c634a0`
+- Milestone: Customer UI Batch B
+- Status: **VERIFIED / ACCEPTED / LOCKED**
 - Verification date: 2026-10-04
 
 ## Scope completed
@@ -574,4 +575,45 @@ Status: **VERIFIED — NOT YET LOCKED**
 
 - Shipping fee and checkout totals remain server-authoritative; client delivery-fee manipulation remains ignored by covered tests.
 - No OTP, Maps API, Birthday Promo, Manager/RBAC, BTN QRIS adapter, broad Customer UI redesign, or unrelated milestone work.
-- Batch B remains not locked/final. Do not create a bundle or start another milestone without explicit scope.
+- At this pre-acceptance checkpoint, Batch B remained unlocked; the subsequent manual UAT acceptance below supersedes that temporary gate.
+
+---
+
+## Customer UI Batch B — Final Acceptance and Lock
+
+Date: 2026-10-04
+
+Status: **VERIFIED / ACCEPTED / LOCKED**
+
+### Accepted baseline
+
+- Final Batch B implementation: `142225de0c9dae246085ea400103b392fc598d50`
+- Final pre-lock checkpoint: `b1495990d8a5f12df44930e49373edca54c634a0`
+- Automated verification and production build: **PASS**.
+- Manual local desktop and mobile UAT: **PASS / ACCEPTED**.
+
+### Manual acceptance coverage
+
+- Guest catalog and active promotion visibility, search/filter discovery, and protected guest actions routing to Login: **ACCEPTED**.
+- Desktop and mobile Login/Register flow, auth navigation, mobile header, local customer login, and final transparent Warkost logo: **ACCEPTED**.
+- Customer product `Pesan` action, mobile cart summary, and Account navigation without duplicate actions: **ACCEPTED**.
+- Account, Saved Addresses, Help Center, Orders/Tracking, and customer ownership protections: **ACCEPTED**.
+- Voucher success auto-dismiss and corrected voucher-quote behavior: **ACCEPTED**.
+- Checkout Quick Address, immediate new-address selection, Shipping/Ongkir recalculation, and preservation of cart/voucher/loyalty checkout state: **ACCEPTED**.
+- No unresolved Critical or High issue remains within Customer UI Batch B scope.
+
+### Lock declaration
+
+- Customer UI Batch B is officially closed and locked at this checkpoint.
+- Customer UI Batch B must not be redesigned, reopened, or broadly refactored unless a future integration requires a minimal compatibility change.
+- Any compatibility change must preserve the accepted desktop/mobile visual language, navigation, customer flows, ownership controls, and locked Shipping/Voucher/Loyalty/Payment behavior.
+
+### Future milestones outside Batch B
+
+- OTP Email functional implementation.
+- Google Maps integration.
+- Manager/RBAC and Kasir removal.
+- Birthday Promo.
+- BTN QRIS production adapter.
+
+Do not start any future milestone without a new explicit scope.
