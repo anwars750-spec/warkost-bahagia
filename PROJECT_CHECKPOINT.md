@@ -15,7 +15,8 @@
 - Customer UI Batch B checkpoint: `ab7854cca9c643cf6185847b606f7c384bea5b13`
 - Batch B UAT hotfix implementation: `a38a115ad068f16021a8d9729b703d4e7c91f199`
 - Batch B final visual polish implementation: `1da678313b3fb18cf4454099c1fe36988e3eaa87`
-- Milestone: Batch B Final Visual Polish — 8 Corrections
+- Batch B voucher UAT correction implementation: `9fabbc126764f010a58e787aedf073a5063dfb28`
+- Milestone: Batch B Final Visual Polish + Voucher UAT
 - Status: **VERIFIED**
 - Verification date: 2026-10-04
 
@@ -454,3 +455,44 @@ Status: **VERIFIED — NOT YET LOCKED**
 - No backend/business-rule, auth-security, OTP, Maps, Manager/RBAC, BTN QRIS, Shipping, Voucher, Loyalty, Payment, Checkout, address ownership, Orders/Tracking, or unrelated screen change.
 - This visual polish is verified but does not mark Batch B as locked/final. Await explicit manual acceptance before any lock or bundle handoff.
 - Do not start Checkout Quick Address or another milestone without an explicit scope.
+
+---
+
+## Batch B Final Visual Polish + Voucher UAT
+
+Date: 2026-10-04
+
+Status: **VERIFIED**
+
+### Recovery result
+
+- Recovery started from a clean working tree with no staged or unstaged changes.
+- The interrupted session had already committed all eight visual corrections in `1da678313b3fb18cf4454099c1fe36988e3eaa87` and its checkpoint in `a80c1baf640c9a2d70a28ecce3c24996ce17ce19`; those changes were preserved and not rebuilt.
+- Each of the eight visual corrections was re-inspected and remained **PASS**.
+
+### Voucher UAT correction
+
+- A successful voucher claim now shows `Voucher berhasil diklaim.` for 2.5 seconds and dismisses automatically.
+- A single managed timer is cleared before subsequent actions and on unmount, preventing stale or repeatedly recreated success feedback.
+- Failure paths continue to show their actual error and never set the success message.
+- Claiming and selecting are now separate actions; a newly claimed voucher is not silently auto-selected.
+
+### `/api/voucher-quote` 422 audit
+
+- The observed 422 was legitimate server validation: the claimed demo voucher requires a Rp30.000 minimum while a common single-item cart can be Rp18.000–Rp25.000.
+- The request payload contained the claimed promotion ID plus the current cart items. The voucher remained selected and the quote effect ran again whenever the item/quantity signature changed; development Strict Mode may also remount effects, but repeated completed invalid requests were avoidable application behavior.
+- The client now checks cart presence, claimed ownership state, minimum subtotal, and voucher/loyalty non-stacking before requesting a quote. Invalid/incomplete state receives local explanatory feedback instead of repeatedly calling the endpoint.
+- Valid voucher quotes and order creation remain server-authoritative. Voucher rules, minimum order, discounts, quota, ownership, shipping totals, and non-stacking were not weakened.
+
+### Verification
+
+- Syntax, dedicated UAT-hotfix contract, and diff validation: **12/12 PASS**.
+- Affected Voucher/Loyalty/QRIS-Payment regression set: **43/43 PASS**.
+- Production build: **PASS** with `/` and all existing API routes compiled.
+- Existing responsive contracts for 360×800, 390×844, and desktop remain **PASS**; no browser executable was available, so no browser download or repeated browser attempt was made.
+- Guest catalog/auth routing and deterministic local customer login remain **PASS** in the affected UAT-hotfix regression.
+
+### Guardrails preserved
+
+- No bundle was created.
+- No Checkout Quick Address, OTP, Maps, Manager/RBAC, Birthday Promo, BTN QRIS adapter, or unrelated milestone work was started.
