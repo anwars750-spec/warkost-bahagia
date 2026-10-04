@@ -1405,6 +1405,7 @@ export default function App() {
                       <select name="method">
                         <option value="CASH">Tunai saat diterima</option>
                         <option value="BANK_TRANSFER">Transfer bank · verifikasi admin</option>
+                        <option value="QRIS">QRIS</option>
                       </select>
                     </label>
                   </section>
@@ -3142,6 +3143,9 @@ function OrderProgress({ status, compact = false }) {
 function CustomerTracking({ order, justCreated, onBack, onSupport }) {
   const [details, setDetails] = useState(null);
   const [detailError, setDetailError] = useState("");
+  const [payment, setPayment] = useState(null);
+  const [paymentError, setPaymentError] = useState("");
+  const [clock, setClock] = useState(Date.now());
   useEffect(() => {
     if (!order?.id) return;
     let active = true;
@@ -3152,6 +3156,35 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
       active = false;
     };
   }, [order?.id]);
+  useEffect(() => {
+    if (!order?.id || order.method !== "QRIS") return;
+    setPayment({
+      order_id: order.id,
+      method: order.method,
+      status: order.payment_status,
+      amount: order.payment_amount,
+      provider_reference: order.provider_reference,
+      transaction_reference: order.transaction_reference,
+      qr_payload: order.qr_payload,
+      payment_url: order.payment_url,
+      expires_at: order.payment_expires_at,
+    });
+  }, [order]);
+  useEffect(() => {
+    if (order?.method !== "QRIS" || payment?.status !== "PENDING") return;
+    let active = true;
+    const refreshPayment = () =>
+      api("payment-status?orderId=" + order.id)
+        .then((result) => active && setPayment(result))
+        .catch((error) => active && setPaymentError(error.message));
+    const poll = setInterval(refreshPayment, 10000);
+    const tick = setInterval(() => setClock(Date.now()), 1000);
+    return () => {
+      active = false;
+      clearInterval(poll);
+      clearInterval(tick);
+    };
+  }, [order?.id, order?.method, payment?.status]);
   if (!order)
     return (
       <section className="tracking-loading panel" aria-live="polite">
@@ -3160,6 +3193,11 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
       </section>
     );
   const status = orderStatusMeta(order.status);
+  const paymentExpiry = payment?.expires_at
+    ? new Date(String(payment.expires_at).replace(" ", "T") + "Z").getTime()
+    : 0;
+  const paymentSeconds = Math.max(0, Math.floor((paymentExpiry - clock) / 1000));
+  const paymentCountdown = `${String(Math.floor(paymentSeconds / 60)).padStart(2, "0")}:${String(paymentSeconds % 60).padStart(2, "0")}`;
   return (
     <section className="customer-tracking" aria-labelledby="tracking-title">
       <div className="customer-page-title tracking-page-title">
@@ -3208,8 +3246,22 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
             <small>{(Number(order.distance_meters) / 1000).toFixed(1)} km dari Warkost</small>
           </section>
           <section className="tracking-card tracking-info-card">
-            <div className="tracking-card-heading"><span className="section-icon"><WalletIcon /></span><div><small>Metode Pembayaran</small><h2>{order.method === "BANK_TRANSFER" ? "Transfer bank" : "Tunai saat diterima"}</h2></div></div>
-            <span className={`payment-status ${String(order.payment_status || "").toLowerCase()}`}>{order.payment_status}</span>
+            <div className="tracking-card-heading"><span className="section-icon"><WalletIcon /></span><div><small>Metode Pembayaran</small><h2>{order.method === "QRIS" ? "QRIS" : order.method === "BANK_TRANSFER" ? "Transfer bank" : "Tunai saat diterima"}</h2></div></div>
+            <span className={`payment-status ${String(payment?.status || order.payment_status || "").toLowerCase()}`}>{payment?.status || order.payment_status}</span>
+            {order.method === "QRIS" && payment && (
+              <div className="qris-payment-panel">
+                <div><span>Total tepat</span><strong>{money(payment.amount)}</strong></div>
+                {payment.status === "PENDING" && <div><span>Sisa waktu</span><strong>{paymentCountdown}</strong></div>}
+                {payment.qr_payload && payment.status === "PENDING" && <code>{payment.qr_payload}</code>}
+                {payment.payment_url && payment.status === "PENDING" && <a className="button-link" href={payment.payment_url} target="_blank" rel="noreferrer">Buka halaman pembayaran</a>}
+                <p>{payment.status === "PAID" ? "Pembayaran berhasil diverifikasi." : payment.status === "FAILED" ? "Pembayaran gagal. Silakan buat pesanan baru untuk mencoba kembali." : payment.status === "EXPIRED" ? "Pembayaran kedaluwarsa. Silakan buat pesanan baru untuk mencoba kembali." : "Menunggu konfirmasi aman dari provider pembayaran."}</p>
+                {payment.status === "PENDING" && <button type="button" onClick={() => {
+                  setPaymentError("");
+                  api("payment-status?orderId=" + order.id).then(setPayment).catch((error) => setPaymentError(error.message));
+                }}>Periksa status pembayaran</button>}
+                {paymentError && <small role="alert">{paymentError}</small>}
+              </div>
+            )}
           </section>
         </div>
         <aside className="tracking-card tracking-summary">
@@ -3425,7 +3477,7 @@ function Order({ order: o, role, drivers, busy, action, onTrack, onReorder, onSu
               </button>
             </>
           )}
-          {["UNPAID", "PENDING"].includes(o.payment_status) && (
+          {o.method !== "QRIS" && ["UNPAID", "PENDING"].includes(o.payment_status) && (
             <>
               <button
                 onClick={() =>

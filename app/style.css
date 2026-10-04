@@ -1056,6 +1056,37 @@ footer {
   color: #18733a;
   background: #dcf4df;
 }
+
+.qris-payment-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+}
+
+.qris-payment-panel > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.qris-payment-panel code {
+  overflow-wrap: anywhere;
+  padding: 12px;
+  border-radius: 12px;
+  background: #fff;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.qris-payment-panel p,
+.qris-payment-panel small {
+  margin: 0;
+}
 .tracking-summary {
   position: sticky;
   top: 112px;

@@ -29,6 +29,7 @@ import { dailyReport } from "../../../lib/reports.mjs";
 import { nonNegativeInteger } from "../../../lib/numbers.mjs";
 import {
   expirePendingPayments,
+  getPaymentStatus,
   verifyPayment,
 } from "../../../lib/payments.mjs";
 import { getSettings, saveSettings } from "../../../lib/settings.mjs";
@@ -231,7 +232,7 @@ export async function GET(request, { params }) {
       let orders;
       if (user.role === "CUSTOMER")
         orders = await store.all(
-          "SELECT o.*,a.label address_label,a.detail address,p.method,p.status payment_status,d.driver_id,d.accepted_at,d.delivered_at,du.phone driver_phone FROM orders o JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id LEFT JOIN users du ON du.id=d.driver_id WHERE o.customer_id=?" +
+          "SELECT o.*,a.label address_label,a.detail address,p.method,p.status payment_status,p.amount payment_amount,p.provider_reference,p.transaction_reference,p.qr_payload,p.payment_url,p.expires_at payment_expires_at,d.driver_id,d.accepted_at,d.delivered_at,du.phone driver_phone FROM orders o JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id LEFT JOIN users du ON du.id=d.driver_id WHERE o.customer_id=?" +
             bound +
             " ORDER BY o.id DESC LIMIT 26",
           user.id,
@@ -254,7 +255,7 @@ export async function GET(request, { params }) {
         );
       else
         orders = await store.all(
-          "SELECT o.*,u.name customer_name,a.detail address,p.status payment_status,d.driver_id,(SELECT status FROM order_stations WHERE order_id=o.id AND station='KITCHEN') kitchen_status,(SELECT status FROM order_stations WHERE order_id=o.id AND station='CASHIER') cashier_status FROM orders o JOIN users u ON u.id=o.customer_id JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id WHERE 1=1" +
+          "SELECT o.*,u.name customer_name,a.detail address,p.method,p.status payment_status,d.driver_id,(SELECT status FROM order_stations WHERE order_id=o.id AND station='KITCHEN') kitchen_status,(SELECT status FROM order_stations WHERE order_id=o.id AND station='CASHIER') cashier_status FROM orders o JOIN users u ON u.id=o.customer_id JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id WHERE 1=1" +
             bound +
             " ORDER BY o.id DESC LIMIT 26",
           ...(before === null ? [] : [before]),
@@ -281,6 +282,13 @@ export async function GET(request, { params }) {
       }
       return out({ orders: page, nextCursor: hasMore ? page.at(-1).id : null });
     }
+    if (action === "payment-status")
+      return out(
+        await getPaymentStatus(
+          user,
+          integer(request.nextUrl.searchParams.get("orderId")),
+        ),
+      );
     if (action === "account") {
       required(user, ["CUSTOMER"]);
       const addresses = await store.all(

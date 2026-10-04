@@ -42,6 +42,15 @@ test("production config menerima URI MySQL dan menolak lokasi backup yang sama",
   ]);
 });
 
+test("production config menolak QRIS simulation mode", () => {
+  assert.ok(
+    validateProductionConfig({
+      ...valid,
+      PAYMENT_PROVIDER_MODE: "simulation",
+    }).some((message) => message.includes("Simulasi QRIS")),
+  );
+});
+
 test("production preflight memeriksa database dan direktori operasional", () => {
   const directory = fs.mkdtempSync(
     path.join(os.tmpdir(), "warkost-preflight-"),
