@@ -209,20 +209,41 @@ test("aksi produk guest mengarahkan bersih ke login", () => {
   assert.doesNotMatch(page, /Masuk untuk pesan/);
 });
 
-test("logo dan header auth mempertahankan proporsi penuh pada desktop/mobile", () => {
+test("logo transparan valid dipakai konsisten pada header dan auth", async () => {
   const page = fs.readFileSync(path.join(projectRoot, "app", "page.js"), "utf8");
   const style = fs.readFileSync(path.join(projectRoot, "app", "style.css"), "utf8");
+  const sharp = (await import("sharp")).default;
+  const logoPath = path.join(
+    projectRoot,
+    "public",
+    "warkost-bahagia-logo-clean.png",
+  );
+  const metadata = await sharp(logoPath).metadata();
+  const { data, info } = await sharp(logoPath)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
   assert.equal((page.match(/className="auth-card-logo"/g) || []).length, 2);
-  assert.equal((page.match(/src="\/warkost-bahagia-logo\.jpg"/g) || []).length, 3);
-  assert.equal((page.match(/width=\{1536\}[\s\S]*?height=\{864\}/g) || []).length, 3);
-  assert.doesNotMatch(page, /warkost-bahagia-logo-transparent\.png/);
+  assert.equal((page.match(/src="\/warkost-bahagia-logo-clean\.png"/g) || []).length, 3);
+  assert.equal((page.match(/width=\{1672\}[\s\S]*?height=\{941\}/g) || []).length, 3);
+  assert.doesNotMatch(page, /src="\/warkost-bahagia-logo\.jpg"/);
+  assert.equal(metadata.hasAlpha, true);
+  assert.equal(metadata.width, 1672);
+  assert.equal(metadata.height, 941);
+  for (const [x, y] of [
+    [0, 0],
+    [info.width - 1, 0],
+    [0, info.height - 1],
+    [info.width - 1, info.height - 1],
+  ])
+    assert.equal(data[(y * info.width + x) * 4 + 3], 0);
   assert.match(
     style,
     /\.auth-header \.brand-logo\s*{[\s\S]*?height:\s*auto[\s\S]*?object-fit:\s*contain[\s\S]*?border-radius:\s*0/,
   );
   assert.match(
     style,
-    /\.auth-card-heading \.auth-card-logo\s*{[\s\S]*?height:\s*auto[\s\S]*?aspect-ratio:\s*16 \/ 9[\s\S]*?object-fit:\s*contain[\s\S]*?clip-path:\s*none/,
+    /\.auth-card-heading \.auth-card-logo\s*{[\s\S]*?height:\s*auto[\s\S]*?aspect-ratio:\s*1672 \/ 941[\s\S]*?object-fit:\s*contain[\s\S]*?clip-path:\s*none/,
   );
   assert.match(
     style,
@@ -241,6 +262,38 @@ test("header auth hanya menampilkan Menu, Bantuan, dan Masuk", () => {
   assert.match(authNavigation, />\s*Menu\s*<\/button>/);
   assert.match(authNavigation, />\s*Bantuan\s*<\/button>/);
   assert.match(page, /className="guest-login-nav"[\s\S]*?>\s*Masuk\s*<\/button>/);
+});
+
+test("checkout quick address menyimpan, memilih, dan memicu ulang quote tanpa mereset state", () => {
+  const page = fs.readFileSync(path.join(projectRoot, "app", "page.js"), "utf8");
+  const style = fs.readFileSync(path.join(projectRoot, "app", "style.css"), "utf8");
+  const handler = page.slice(
+    page.indexOf("async function saveQuickAddress"),
+    page.indexOf("function openCustomerHelp"),
+  );
+  assert.match(page, /\+ Tambah lokasi lain/);
+  assert.match(page, /aria-label="Tambah lokasi pengantaran"/);
+  assert.match(page, /name="quickAddressLabel"/);
+  assert.match(page, /name="quickAddressDetail"/);
+  assert.match(page, /name="quickAddressLatitude" type="hidden"/);
+  assert.match(page, /name="quickAddressLongitude" type="hidden"/);
+  assert.doesNotMatch(page, /quickAddress(?:Latitude|Longitude)" type="number"/);
+  assert.match(handler, /if \(!form \|\| quickAddressAttempt\.current\) return/);
+  assert.match(handler, /await api\("address",/);
+  assert.match(handler, /isDefault:\s*false/);
+  assert.match(handler, /await api\("account"\)/);
+  assert.match(handler, /setCheckoutAddressId\(String\(created\.id\)\)/);
+  assert.match(handler, /showTransientMessage\("Alamat berhasil ditambahkan\."\)/);
+  assert.doesNotMatch(handler, /customerId|setCart|setSelectedVoucherId|setSelectedRewardId/);
+  assert.match(
+    page,
+    /api\([\s\S]*?"delivery\/quote",[\s\S]*?addressId:\s*selectedCheckoutAddress\.id/,
+  );
+  assert.match(style, /\.checkout-quick-address\s*{[\s\S]*?border-radius:\s*15px/);
+  assert.match(
+    style,
+    /@media \(max-width:\s*620px\)[\s\S]*?\.quick-address-fields\s*{[\s\S]*?grid-template-columns:\s*1fr/,
+  );
 });
 
 test("CTA produk dan ringkasan cart mobile memakai hierarchy compact tanpa overlap", () => {

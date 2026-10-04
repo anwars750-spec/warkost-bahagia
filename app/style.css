@@ -112,7 +112,7 @@ button:disabled {
   display: block;
   width: 118px;
   height: auto;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 1672 / 941;
   object-fit: contain;
   flex: 0 0 auto;
   border-radius: 13px;
@@ -736,6 +736,89 @@ footer {
 }
 .checkout-select-label {
   margin-top: 12px;
+}
+.checkout-address-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 9px;
+}
+.quick-address-toggle {
+  padding: 8px 11px;
+  border-color: #d8b8a6;
+  color: #87351f;
+  background: #fffaf5;
+  font-size: 12px;
+  font-weight: 800;
+}
+.checkout-quick-address {
+  display: grid;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 14px;
+  border: 1px solid #e4cdbd;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #fffaf5, #fffdf9);
+}
+.quick-address-heading,
+.quick-address-location {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.quick-address-heading > .ui-icon {
+  width: 31px;
+  height: 31px;
+  flex: 0 0 auto;
+  padding: 6px;
+  border-radius: 10px;
+  color: #fff;
+  background: #8a3b24;
+}
+.quick-address-heading > span {
+  display: grid;
+  gap: 2px;
+}
+.quick-address-heading small,
+.quick-address-location small {
+  color: #776960;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.quick-address-fields {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.55fr) minmax(220px, 1.45fr);
+  gap: 10px;
+}
+.quick-address-fields label {
+  gap: 5px;
+  font-size: 12px;
+}
+.quick-address-fields input,
+.quick-address-fields textarea {
+  border-color: #e2d4ca;
+  border-radius: 11px;
+  background: #fff;
+}
+.quick-address-fields textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+.quick-address-location {
+  align-items: center;
+  flex-wrap: wrap;
+}
+.quick-address-location .location-button {
+  flex: 0 0 auto;
+}
+.quick-address-location small {
+  flex: 1 1 220px;
+}
+.quick-address-buttons {
+  display: flex;
+  gap: 8px;
+}
+.quick-address-buttons button {
+  min-height: 40px;
 }
 .delivery-summary,
 .delivery-rules {
@@ -1502,6 +1585,30 @@ footer {
   .checkout-summary-card {
     padding-bottom: 92px;
   }
+  .checkout-address-actions {
+    justify-content: stretch;
+  }
+  .quick-address-toggle {
+    width: 100%;
+  }
+  .checkout-quick-address {
+    padding: 12px;
+    border-radius: 14px;
+  }
+  .quick-address-fields {
+    grid-template-columns: 1fr;
+  }
+  .quick-address-location {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .quick-address-location .location-button,
+  .quick-address-buttons button {
+    width: 100%;
+  }
+  .quick-address-buttons {
+    flex-direction: column;
+  }
   .checkout-submit {
     position: fixed;
     right: 10px;
@@ -2072,7 +2179,7 @@ footer {
   width: 142px;
   max-width: 32vw;
   height: auto;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 1672 / 941;
   object-fit: contain;
   object-position: center;
   border-radius: 0;
@@ -2229,7 +2336,7 @@ footer {
   width: 190px;
   max-width: min(70%, 190px);
   height: auto;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 1672 / 941;
   margin: 0 auto 8px;
   object-fit: contain;
   object-position: center;
@@ -2365,7 +2472,7 @@ footer {
   .guest-customer-header .brand-logo {
     width: 74px;
     height: auto;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 1672 / 941;
     object-fit: contain;
   }
   .auth-header .brand-logo {

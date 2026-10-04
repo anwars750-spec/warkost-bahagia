@@ -17,7 +17,7 @@ const {
   setDefaultAddress,
   updateProfile,
 } = await import("../lib/account.mjs");
-const { createOrder } = await import("../lib/domain.mjs");
+const { createOrder, quoteDelivery } = await import("../lib/domain.mjs");
 const {
   checkPassword,
   hashPassword,
@@ -199,6 +199,55 @@ test("profil dan daftar alamat selalu mengikuti customer login tanpa password", 
     "name",
     "phone",
   ]);
+});
+
+test("quick address checkout tetap milik customer, non-default, dan memakai quote server", async () => {
+  await assert.rejects(
+    addAddress(null, {
+      label: "Guest",
+      detail: "Alamat guest tidak boleh disimpan",
+    }),
+    /Silakan masuk terlebih dahulu/,
+  );
+  const defaultBefore = database
+    .prepare(
+      "SELECT id FROM addresses WHERE user_id=1 AND active=1 AND is_default=1",
+    )
+    .get().id;
+  const quick = await addAddress(customer, {
+    label: "Lokasi checkout",
+    detail: "Jalan Quick Address Nomor 10",
+    latitude: -6.8677,
+    longitude: 106.9272,
+    isDefault: false,
+  });
+  const refreshed = await getCustomerAccount(customer);
+  assert.ok(refreshed.addresses.some((address) => address.id === quick.id));
+  assert.equal(
+    database
+      .prepare(
+        "SELECT id FROM addresses WHERE user_id=1 AND active=1 AND is_default=1",
+      )
+      .get().id,
+    defaultBefore,
+  );
+  await assert.rejects(
+    replaceAddress({ id: 2, role: "CUSTOMER" }, quick.id, {
+      label: "Bukan milik saya",
+      detail: "Alamat customer lain tidak boleh diubah",
+    }),
+    /tidak ditemukan/,
+  );
+  const quote = await quoteDelivery(customer, quick.id);
+  assert.equal(quote.available, true);
+  const order = await createOrder(customer, {
+    addressId: quick.id,
+    method: "CASH",
+    deliveryFee: 1,
+    items: [{ productId: 1, quantity: 1 }],
+  });
+  assert.equal(order.deliveryFee, quote.delivery_fee);
+  assert.equal(order.total, order.subtotal + quote.delivery_fee);
 });
 
 test("logout mencabut sesi aktif", async () => {

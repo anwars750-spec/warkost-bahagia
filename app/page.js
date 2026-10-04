@@ -120,6 +120,7 @@ async function api(route, body, signal) {
 }
 export default function App() {
   const checkoutAttempt = useRef(null);
+  const quickAddressAttempt = useRef(false);
   const pollController = useRef(null);
   const refreshController = useRef(null);
   const messageTimer = useRef(null);
@@ -191,6 +192,8 @@ export default function App() {
     [deliveryQuote, setDeliveryQuote] = useState(null),
     [deliveryQuoteBusy, setDeliveryQuoteBusy] = useState(false),
     [deliveryQuoteError, setDeliveryQuoteError] = useState(""),
+    [quickAddressOpen, setQuickAddressOpen] = useState(false),
+    [quickAddressBusy, setQuickAddressBusy] = useState(false),
     [selectedVoucherId, setSelectedVoucherId] = useState(null),
     [voucherQuote, setVoucherQuote] = useState(null),
     [voucherQuoteBusy, setVoucherQuoteBusy] = useState(false),
@@ -660,6 +663,16 @@ export default function App() {
   }
   function useDeviceLocation(event) {
     const form = event.currentTarget.form;
+    const latitudeField =
+      event.currentTarget.dataset.latitudeField || "latitude";
+    const longitudeField =
+      event.currentTarget.dataset.longitudeField || "longitude";
+    const latitudeInput = form?.elements.namedItem(latitudeField);
+    const longitudeInput = form?.elements.namedItem(longitudeField);
+    if (!latitudeInput || !longitudeInput) {
+      setError("Form titik lokasi tidak tersedia");
+      return;
+    }
     if (!navigator.geolocation) {
       setError("Lokasi perangkat tidak didukung browser ini");
       return;
@@ -668,8 +681,8 @@ export default function App() {
     setMessage("Meminta izin lokasi perangkat…");
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
-        form.elements.latitude.value = coords.latitude.toFixed(6);
-        form.elements.longitude.value = coords.longitude.toFixed(6);
+        latitudeInput.value = coords.latitude.toFixed(6);
+        longitudeInput.value = coords.longitude.toFixed(6);
         setMessage("Titik lokasi berhasil diisi");
       },
       () => {
@@ -680,6 +693,45 @@ export default function App() {
       },
       { enableHighAccuracy: true, timeout: 10000 },
     );
+  }
+  async function saveQuickAddress(event) {
+    const form = event.currentTarget.form;
+    if (!form || quickAddressAttempt.current) return;
+    const fields = form.elements;
+    const label = String(
+      fields.namedItem("quickAddressLabel")?.value || "",
+    ).trim();
+    const detail = String(
+      fields.namedItem("quickAddressDetail")?.value || "",
+    ).trim();
+    if (label.length < 2 || detail.length < 10) {
+      setError("Lengkapi label dan alamat pengantaran dengan benar.");
+      return;
+    }
+    quickAddressAttempt.current = true;
+    setQuickAddressBusy(true);
+    setError("");
+    try {
+      const created = await api("address", {
+        label,
+        detail,
+        latitude: fields.namedItem("quickAddressLatitude")?.value,
+        longitude: fields.namedItem("quickAddressLongitude")?.value,
+        isDefault: false,
+      });
+      const refreshedAccount = await api("account");
+      setAccount(refreshedAccount);
+      setCheckoutAddressId(String(created.id));
+      setDeliveryQuote(null);
+      setDeliveryQuoteError("");
+      setQuickAddressOpen(false);
+      showTransientMessage("Alamat berhasil ditambahkan.");
+    } catch (saveError) {
+      setError(saveError.message);
+    } finally {
+      quickAddressAttempt.current = false;
+      setQuickAddressBusy(false);
+    }
   }
   function openCustomerHelp() {
     openCustomerSupport(null);
@@ -706,10 +758,10 @@ export default function App() {
         >
           <Image
             className="brand-logo"
-            src="/warkost-bahagia-logo.jpg"
+            src="/warkost-bahagia-logo-clean.png"
             alt="Warkost Bahagia"
-            width={1536}
-            height={864}
+            width={1672}
+            height={941}
             priority
           />
           <span className="brand-copy">
@@ -1022,10 +1074,10 @@ export default function App() {
               <div className="auth-card-heading">
                 <Image
                   className="auth-card-logo"
-                  src="/warkost-bahagia-logo.jpg"
+                  src="/warkost-bahagia-logo-clean.png"
                   alt="Warkost Bahagia"
-                  width={1536}
-                  height={864}
+                  width={1672}
+                  height={941}
                 />
                 <span className="auth-card-kicker">SELAMAT DATANG KEMBALI</span>
                 <h2>Masuk ke Akun</h2>
@@ -1086,10 +1138,10 @@ export default function App() {
               <div className="auth-card-heading compact">
                 <Image
                   className="auth-card-logo"
-                  src="/warkost-bahagia-logo.jpg"
+                  src="/warkost-bahagia-logo-clean.png"
                   alt="Warkost Bahagia"
-                  width={1536}
-                  height={864}
+                  width={1672}
+                  height={941}
                 />
                 <span className="auth-card-kicker">MULAI PESAN DI WARKOST</span>
                 <h2>Daftar Akun</h2>
@@ -1640,13 +1692,93 @@ export default function App() {
                         ))}
                       </select>
                     </label>
+                    <div className="checkout-address-actions">
+                      <button
+                        type="button"
+                        className="quick-address-toggle"
+                        aria-expanded={quickAddressOpen}
+                        onClick={() => setQuickAddressOpen((open) => !open)}
+                      >
+                        {quickAddressOpen ? "Tutup form alamat" : "+ Tambah lokasi lain"}
+                      </button>
+                    </div>
+                    {quickAddressOpen && (
+                      <div
+                        className="checkout-quick-address"
+                        aria-label="Tambah lokasi pengantaran"
+                      >
+                        <div className="quick-address-heading">
+                          <LocationIcon />
+                          <span>
+                            <strong>Lokasi pengantaran baru</strong>
+                            <small>
+                              Alamat disimpan ke akun dan langsung dipakai untuk checkout ini.
+                            </small>
+                          </span>
+                        </div>
+                        <div className="quick-address-fields">
+                          <label>
+                            Label alamat
+                            <input
+                              name="quickAddressLabel"
+                              placeholder="Rumah / Kantor / Lainnya"
+                              minLength="2"
+                              disabled={quickAddressBusy}
+                            />
+                          </label>
+                          <label>
+                            Alamat lengkap
+                            <textarea
+                              name="quickAddressDetail"
+                              placeholder="Nama jalan, nomor, patokan, RT/RW"
+                              minLength="10"
+                              disabled={quickAddressBusy}
+                            />
+                          </label>
+                        </div>
+                        <div className="quick-address-location">
+                          <button
+                            type="button"
+                            className="location-button"
+                            data-latitude-field="quickAddressLatitude"
+                            data-longitude-field="quickAddressLongitude"
+                            onClick={useDeviceLocation}
+                            disabled={quickAddressBusy}
+                          >
+                            Gunakan lokasi perangkat
+                          </button>
+                          <input name="quickAddressLatitude" type="hidden" />
+                          <input name="quickAddressLongitude" type="hidden" />
+                          <small>
+                            Titik lokasi dipakai untuk kalkulasi ongkir. Input koordinat teknis tidak ditampilkan.
+                          </small>
+                        </div>
+                        <div className="quick-address-buttons">
+                          <button
+                            type="button"
+                            className="primary"
+                            disabled={quickAddressBusy}
+                            onClick={saveQuickAddress}
+                          >
+                            {quickAddressBusy ? "Menyimpan…" : "Simpan dan gunakan alamat"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={quickAddressBusy}
+                            onClick={() => setQuickAddressOpen(false)}
+                          >
+                            Batal
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     {selectedCheckoutAddress ? (
                       <div className="delivery-summary">
                         <LocationIcon />
                         <span><strong>{selectedCheckoutAddress.label}</strong><small>{selectedCheckoutAddress.detail}</small></span>
                       </div>
                     ) : (
-                      <p className="checkout-warning">Tambahkan alamat di halaman Akun terlebih dahulu.</p>
+                      <p className="checkout-warning">Tambahkan lokasi pengantaran untuk melanjutkan checkout.</p>
                     )}
                     <div className="delivery-rules">
                       <TruckIcon />
