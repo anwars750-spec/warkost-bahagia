@@ -9,8 +9,10 @@
 - Voucher lifecycle implementation: `24f51b147b47028875b049435f991145a415e93f`
 - Voucher lifecycle checkpoint: `4ffb05b3e1a2b27fcb7134faef0b64e447dc88b8`
 - Loyalty core implementation: `ff0aeaf66555546849902ba0769be6fc6b0f9048`
-- Milestone: Customer Functional Completion #3 — Loyalty Core
-- Status: **COMPLETED / AUTOMATED VERIFIED**
+- Loyalty core checkpoint: `f61c9f0943a21f05aa0c69675082f54d067e829e`
+- QRIS/Payment provider-neutral implementation: `e0ac1dd4514e642c48e9dbaa8592d346dc609bdd`
+- Milestone: Customer Functional Completion #4 — QRIS / Payment Core
+- Status: **PROVIDER-NEUTRAL VERIFIED / PRODUCTION PROVIDER BLOCKED**
 - Verification date: 2026-10-04
 
 ## Scope completed
@@ -107,7 +109,7 @@ Status: **COMPLETED / MANUAL UAT ACCEPTED**
 
 The following are NOT part of this completed UI milestone and remain for Customer Functional Completion:
 
-- QRIS payment integration
+- Production QRIS provider adapter and credentials
 - Birthday voucher automation
 - OTP email delivery
 - Maps API integration
@@ -248,3 +250,57 @@ Status: **COMPLETED / AUTOMATED VERIFIED**
 - No Customer UI redesign and no Shipping/Ongkir or Voucher lifecycle reimplementation.
 - No QRIS/payment gateway, birthday voucher, OTP, Maps API, Manager/RBAC, Kasir removal, Admin/Kitchen/Driver redesign, Web Push, dependency upgrade, or deployment work.
 - Do not open the next functional milestone without a new explicit scope.
+
+---
+
+## Customer Functional Completion #4 — QRIS / Payment Core
+
+Date: 2026-10-04
+
+Status: **PROVIDER-NEUTRAL VERIFIED / PRODUCTION PROVIDER BLOCKED**
+
+### Source-control baseline
+
+- Parent checkpoint: `f61c9f0943a21f05aa0c69675082f54d067e829e`
+- Implementation commit: `e0ac1dd4514e642c48e9dbaa8592d346dc609bdd`
+- Customer UI, Shipping/Ongkir, Voucher Claim & Redeem, and Loyalty Core remain locked.
+
+### Provider audit result
+
+- The repository did not contain a real QRIS provider integration, production credentials, or an official provider webhook contract.
+- A provider-neutral payment lifecycle and adapter boundary were implemented without inventing or naming a production vendor.
+- Local QRIS simulation is available only when explicitly enabled for local/test use.
+- Production configuration rejects simulation mode, and customer/API requests cannot mark QRIS as paid.
+
+### Scope completed
+
+- Added QRIS as a payment method with server-calculated payment amount, unique transaction/provider references, QR/payment payload fields, server expiry, and customer-safe payment status retrieval.
+- Added trusted webhook processing with signature verification, event-id uniqueness, transaction locking, and idempotent terminal processing.
+- Added stock reservations for pending QRIS; `PAID` commits stock and fulfillment exactly once, while `FAILED`/`EXPIRED` release reservations exactly once.
+- Active QRIS reservations are respected by other order flows, preventing reserved stock from being consumed by a concurrent non-QRIS confirmation.
+- Checkout replay, duplicate webhook, refresh, and repeated terminal callbacks do not create duplicate orders, stock movements, fulfillment, print jobs, or critical notifications.
+- QRIS amount always uses server total: `subtotal - voucher_discount OR loyalty_discount + delivery_fee`.
+- Failed/expired payments restore consumed voucher or loyalty redemption exactly once and do not earn loyalty points.
+- Late `PAID` after `expires_at` is rejected, including when the expiry worker has not yet changed the stored status.
+- Added provider-neutral webhook route `/api/payment/webhook` and MySQL migration `015_qris_payment_core.sql` with equivalent SQLite runtime upgrade support.
+- Locked checkout/tracking UI received only minimal QRIS method, amount, countdown, status refresh, and terminal-state compatibility changes.
+
+### Verification
+
+- Dedicated QRIS/payment lifecycle tests: **7/7 PASS**.
+- Targeted payment plus locked-core regression set: **53/53 PASS** before the final reservation/late-payment hardening; both final hardening cases then passed in the dedicated QRIS suite.
+- Full unit suite after final hardening: **81/81 PASS**.
+- Production build after final hardening: **PASS**, including dynamic route `/api/payment/webhook`.
+- Server-total integrity, manipulated client amount, pending creation, trusted paid callback, stock commit/release, duplicate callbacks, fulfillment idempotency, invalid webhook, provider reference, expiry, refresh, checkout replay, voucher, loyalty, shipping, non-stacking, and no loyalty earn on failed/expired payment: **PASS**.
+
+### External production blocker
+
+- A real QRIS provider has not been selected or integrated, and no provider credentials or official webhook-signature specification are available in this environment.
+- Production cannot generate or accept a real QRIS payment until a provider is selected and its adapter, secure environment credentials, endpoint configuration, and official callback verification are supplied.
+- No secrets were requested, generated, or hardcoded.
+
+### Guardrails preserved
+
+- No redesign or reimplementation of Customer UI, Shipping, Voucher, or Loyalty.
+- No birthday promo, OTP, Maps API, Manager/RBAC, Kasir removal, Admin/Kitchen/Driver redesign, Web Push, deployment, dependency upgrade, or unrelated refactor.
+- Stop at the external provider boundary; do not start another milestone without explicit scope.
