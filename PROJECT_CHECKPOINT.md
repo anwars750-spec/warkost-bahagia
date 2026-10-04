@@ -22,8 +22,8 @@
 - Customer UI Batch B final lock: `75f049c5cd53b5d98b28f58231c13dc2a3f7b251`
 - Customer UI Batch B status: **VERIFIED / ACCEPTED / LOCKED**
 - Customer OTP Email Core implementation: `236028a0708298d8d0a6825efaac19e662bb1668`
-- Current milestone: Customer OTP Email Core
-- Current status: **VERIFIED**
+- Current milestone: Customer OTP Email Core — completed and locked
+- Current status: **VERIFIED / ACCEPTED / LOCKED**
 - Verification date: 2026-10-04
 
 ## Scope completed
@@ -627,14 +627,16 @@ Do not start any future milestone without a new explicit scope.
 
 Date: 2026-10-04
 
-Status: **VERIFIED**
+Manual acceptance date: 2026-10-05
+
+Status: **VERIFIED / ACCEPTED / LOCKED**
 
 ### Source-control baseline
 
 - Locked Customer UI Batch B parent: `75f049c5cd53b5d98b28f58231c13dc2a3f7b251`.
 - OTP Email Core implementation: `236028a0708298d8d0a6825efaac19e662bb1668`.
+- Automated verification checkpoint before manual acceptance: `a4e9d68c6cf515d6cda7907b767b196e58f1b519`.
 - Customer UI Batch B remains **VERIFIED / ACCEPTED / LOCKED**; only minimal auth-screen compatibility was added.
-- No Git bundle was created in this milestone.
 
 ### Targeted audit result
 
@@ -686,10 +688,28 @@ Status: **VERIFIED**
 - Local deterministic UAT customer remains active and can log in without being forced through registration OTP.
 - Guest storefront, protected APIs, Checkout Quick Address, Shipping, Voucher, Loyalty, and QRIS/Payment regression coverage remains **PASS**.
 
-### Production email blocker
+### Manual UAT acceptance
+
+- User manual Registration OTP UAT: **PASS** — new customer registration succeeded, the OTP verification screen appeared, and the OTP from the local development outbox verified successfully.
+- Account activation UAT: **PASS** — the verified customer became `ACTIVE` and could continue into the normal customer flow.
+- Forgot Password OTP UAT: **PASS** — the reset OTP verified successfully and the password update completed.
+- Post-reset authentication: **PASS** — the old password was rejected and the new password was accepted.
+- OTP expiry, resend cooldown, attempt limit, challenge-purpose separation, consumed-code replay protection, and resend invalidation remain **VERIFIED** by automated security coverage.
+- Password reset session revocation is implemented and **VERIFIED**.
+- Automated OTP/Auth verification, the full **111/111** unit suite, and production build all passed before manual acceptance.
+- No unresolved Critical/High issue remains in Customer OTP Email Core scope.
+
+### Production email configuration requirement
 
 - Real production email delivery still requires deployment-provided `OTP_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM` values.
-- These credentials were not available or requested in this milestone. Code/tests/build are verified, but real external inbox delivery cannot be exercised until valid SMTP credentials are configured.
+- The development outbox is restricted to local/test environments. Production refuses the development transport and never silently falls back to it.
+- This is an external production/deployment configuration requirement, not an unresolved OTP core implementation defect.
+
+### Acceptance lock
+
+- Customer OTP Email Core is officially **VERIFIED / ACCEPTED / LOCKED** following automated verification, production build, and successful user manual UAT.
+- This locked core must not be redesigned, reimplemented, or reopened except for minimal production SMTP configuration compatibility or a verified integration defect.
+- Google Maps, Manager/RBAC and Kasir removal, Birthday Promo, BTN QRIS production adapter, and every other future milestone remain outside this lock scope.
 
 ### Guardrails preserved
 
