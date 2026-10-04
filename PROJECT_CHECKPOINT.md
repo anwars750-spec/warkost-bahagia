@@ -16,7 +16,8 @@
 - Batch B UAT hotfix implementation: `a38a115ad068f16021a8d9729b703d4e7c91f199`
 - Batch B final visual polish implementation: `1da678313b3fb18cf4454099c1fe36988e3eaa87`
 - Batch B voucher UAT correction implementation: `9fabbc126764f010a58e787aedf073a5063dfb28`
-- Milestone: Batch B Final Visual Polish + Voucher UAT
+- Batch B Final UAT Polish Round 3 implementation: `c610503e02c377e1e35b20e2e66f4713429edd62`
+- Milestone: Batch B Final UAT Polish Round 3
 - Status: **VERIFIED**
 - Verification date: 2026-10-04
 
@@ -496,3 +497,36 @@ Status: **VERIFIED**
 
 - No bundle was created.
 - No Checkout Quick Address, OTP, Maps, Manager/RBAC, Birthday Promo, BTN QRIS adapter, or unrelated milestone work was started.
+
+---
+
+## Batch B Final UAT Polish Round 3
+
+Date: 2026-10-04
+
+Status: **VERIFIED — NOT YET LOCKED**
+
+### Source-control baseline
+
+- Parent checkpoint: `f680b439d6c7e80a6c88c95866ce4f340cc8f939`
+- Implementation commit: `c610503e02c377e1e35b20e2e66f4713429edd62`
+- No Git bundle was created in this session.
+
+### Corrections completed
+
+1. Removed the redundant `Beranda` action from the customer auth header. Desktop auth navigation is now `Menu | Bantuan | Masuk`; mobile retains its compact auth header without a redundant Beranda action.
+2. Replaced the unreliable transparent PNG used by Login/Register cards with the existing complete 1536×864 Warkost JPG asset. The PNG exposed metadata but failed full pixel decoding with a libpng read error, which made its rendered result unreliable.
+3. Added auth-specific logo sizing for the header and both form states, with intrinsic 16:9 proportion, automatic height, centered `object-fit: contain`, no border-radius mask, no clip path, and visible heading overflow. Mobile uses constrained responsive widths without changing the artwork.
+
+### Targeted verification
+
+- Guest/auth/local-login and touched visual contract suite: **13/13 PASS**.
+- Desktop contract: Menu, Bantuan, and Masuk remain; Beranda is absent; Login and Register use the full decodable logo asset with contain sizing: **PASS**.
+- Mobile 360×800 and 390×844 source/CSS contract: no Beranda, full contain logo, responsive width, existing form-before-hero order preserved: **PASS**.
+- Local customer login, guest catalog, protected-action Login routing, cart summary, account navigation cleanup, voucher auto-dismiss, and voucher quote guard remain **PASS** in the same targeted suite.
+- No browser executable was available and none was downloaded. The previous production build remains the latest build result; no broad build or unrelated suite was rerun for these two presentation-only corrections.
+
+### Guardrails preserved
+
+- No auth logic, OTP, Checkout, Shipping, Voucher, Loyalty, Payment, account ownership, Saved Addresses, Orders/Tracking, or unrelated UI was changed.
+- Batch B is not marked locked/final. Do not start Checkout Quick Address or another milestone without explicit scope.
