@@ -280,7 +280,7 @@ test("voucher dan Loyalty Reward diblokir oleh contract v1.0", async () => {
   await assert.rejects(
     createOrder(
       customerA,
-      orderInput(customerA, promotionId, { loyaltyPoints: 10 }),
+      orderInput(customerA, promotionId, { loyaltyRewardId: 999 }),
     ),
     /tidak dapat digunakan bersamaan/,
   );

@@ -60,9 +60,10 @@ test("notifikasi terikat status, role, pembacaan dan duplikasi", async () => {
   );
   assert.equal((await listNotifications(customer)).notifications.length, count);
   await verifyPayment(admin, order.id, "PAID");
-  assert.match(
-    (await listNotifications(customer)).notifications[0].message,
-    /Pembayaran/,
+  const messages = (await listNotifications(customer)).notifications.map(
+    (notification) => notification.message,
   );
+  assert.ok(messages.some((message) => /Pembayaran/.test(message)));
+  assert.ok(messages.some((message) => /mendapatkan 2 poin/.test(message)));
   await assert.rejects(readNotification(customer, 0), /tidak valid/);
 });

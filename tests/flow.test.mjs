@@ -14,6 +14,7 @@ const { hashPassword, checkPassword, issueSession, sessionSecret } =
   await import("../lib/auth.mjs");
 const { createOrder, changeStatus, acceptDelivery, updateStationStatus } =
   await import("../lib/domain.mjs");
+const { verifyPayment } = await import("../lib/payments.mjs");
 const database = db();
 const insert = database.prepare(
   "INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,?)",
@@ -91,6 +92,7 @@ test("order sampai delivered, poin tepat sekali, otorisasi dan status tervalidas
     /tidak diizinkan/,
   );
   await changeStatus(people.ADMIN, o.id, "CONFIRMED");
+  await verifyPayment(people.ADMIN, o.id, "PAID");
   await updateStationStatus(people.KITCHEN, o.id, "PREPARING");
   await updateStationStatus(people.KITCHEN, o.id, "READY");
   await changeStatus(people.ADMIN, o.id, "ASSIGNED", people.DRIVER.id);

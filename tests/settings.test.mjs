@@ -12,6 +12,7 @@ const { saveSettings, getSettings } = await import("../lib/settings.mjs");
 const { listCatalog } = await import("../lib/catalog.mjs");
 const { createOrder, changeStatus, acceptDelivery, updateStationStatus } =
   await import("../lib/domain.mjs");
+const { verifyPayment } = await import("../lib/payments.mjs");
 const database = db();
 for (const role of ["ADMIN", "DRIVER", "CUSTOMER", "KITCHEN"])
   database
@@ -32,7 +33,7 @@ const admin = { id: 1, role: "ADMIN" },
   driver = { id: 2, role: "DRIVER" },
   customer = { id: 3, role: "CUSTOMER" };
 const kitchen = { id: 4, role: "KITCHEN" };
-test("pengaturan hanya admin, brand dan poin dihitung dari konfigurasi", async () => {
+test("pengaturan hanya admin, brand tersimpan dan earn rate tetap Rp10.000", async () => {
   await assert.rejects(getSettings(customer), /Akses/);
   await assert.rejects(
     saveSettings(admin, { brandName: "X", rupiahPerPoint: 1 }),
@@ -70,6 +71,7 @@ test("pengaturan hanya admin, brand dan poin dihitung dari konfigurasi", async (
     items: [{ productId: 1, quantity: 1 }],
   });
   await changeStatus(admin, order.id, "CONFIRMED");
+  await verifyPayment(admin, order.id, "PAID");
   await updateStationStatus(kitchen, order.id, "PREPARING");
   await updateStationStatus(kitchen, order.id, "READY");
   await changeStatus(admin, order.id, "ASSIGNED", driver.id);
@@ -80,7 +82,7 @@ test("pengaturan hanya admin, brand dan poin dihitung dari konfigurasi", async (
     database
       .prepare("SELECT balance FROM loyalty_accounts WHERE user_id=?")
       .get(customer.id).balance,
-    4,
+    2,
   );
   assert.equal(
     database

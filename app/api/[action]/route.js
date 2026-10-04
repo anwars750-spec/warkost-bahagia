@@ -55,6 +55,12 @@ import {
   listCustomerVouchers,
   quoteVoucher,
 } from "../../../lib/vouchers.mjs";
+import {
+  listCustomerRewards,
+  listRewardRules,
+  quoteLoyaltyReward,
+  saveRewardRule,
+} from "../../../lib/loyalty.mjs";
 export const runtime = "nodejs";
 const out = (data, status = 200) =>
   NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
@@ -104,6 +110,8 @@ export async function GET(request, { params }) {
       return out({ promotions: await listPromotions(user) });
     if (action === "vouchers")
       return out({ vouchers: await listCustomerVouchers(user) });
+    if (action === "loyalty-rewards")
+      return out({ rewards: await listRewardRules(user) });
     if (action === "print-jobs")
       return out({ jobs: await listPrintJobs(user) });
     if (action === "delivery-capacity") {
@@ -291,7 +299,8 @@ export async function GET(request, { params }) {
         user.id,
       );
       const vouchers = await listCustomerVouchers(user);
-      return out({ addresses, loyalty, transactions, vouchers });
+      const rewards = await listCustomerRewards(user);
+      return out({ addresses, loyalty, transactions, vouchers, rewards });
     }
     if (action === "drivers") {
       required(user, ["ADMIN", "OWNER"]);
@@ -485,6 +494,12 @@ export async function POST(request, { params }) {
         await createOrder(user, {
           ...body,
           addressId: integer(body.addressId),
+          promotionId:
+            body.promotionId == null ? null : integer(body.promotionId),
+          loyaltyRewardId:
+            body.loyaltyRewardId == null
+              ? null
+              : integer(body.loyaltyRewardId),
         }),
         201,
       );
@@ -495,6 +510,13 @@ export async function POST(request, { params }) {
       return out(
         await quoteVoucher(user, {
           promotionId: integer(body.promotionId),
+          items: body.items,
+        }),
+      );
+    if (action === "loyalty-quote")
+      return out(
+        await quoteLoyaltyReward(user, {
+          rewardRuleId: integer(body.rewardRuleId),
           items: body.items,
         }),
       );
@@ -533,6 +555,8 @@ export async function POST(request, { params }) {
       return out(await setCustomerActive(user, integer(body.id), body.active));
     if (action === "product") return out(await saveProduct(user, body));
     if (action === "promotion") return out(await savePromotion(user, body));
+    if (action === "loyalty-reward")
+      return out(await saveRewardRule(user, body));
     if (action === "category") return out(await saveCategory(user, body));
     throw new DomainError("Endpoint tidak ditemukan", 404);
   } catch (e) {

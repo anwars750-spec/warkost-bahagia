@@ -430,14 +430,20 @@ assert.ok(
     (n) => n.message.includes("telah diterima"),
   ),
 );
-const account = await call("account", undefined, customer);
-assert.equal(
-  account.value.loyalty,
-  accountBaseline.loyalty + Math.floor(created.value.total / 10000),
-);
 assert.equal(
   (await call("payment", { orderId: id, status: "PAID" }, admin)).status,
   200,
+);
+const paidAccount = await call("account", undefined, customer);
+assert.equal(
+  paidAccount.value.loyalty,
+  accountBaseline.loyalty +
+    Math.floor(
+      (created.value.subtotal -
+        (created.value.voucherDiscount || 0) -
+        (created.value.loyaltyDiscount || 0)) /
+        10000,
+    ),
 );
 assert.equal(
   (await call("dashboard", undefined, admin)).value.today.revenue,

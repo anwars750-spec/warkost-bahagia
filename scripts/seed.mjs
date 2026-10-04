@@ -54,6 +54,20 @@ async function seed() {
   const admin = await store.get(
     "SELECT id FROM users WHERE email='admin@warkost.local'",
   );
+  const owner = await store.get(
+    "SELECT id FROM users WHERE email='owner@warkost.local'",
+  );
+  for (const rule of [
+    ["Hemat 30%", 20, "PERCENT", 30, 30000, 20000],
+    ["Potongan Rp10.000", 15, "FIXED", 10000, 25000, null],
+  ])
+    await store.run(
+      "INSERT OR IGNORE INTO loyalty_reward_rules(name,points_required,reward_type,reward_value,minimum_order,maximum_discount,active,created_by,updated_by) SELECT ?,?,?,?,?,?,1,?,? WHERE NOT EXISTS (SELECT 1 FROM loyalty_reward_rules WHERE name=?)",
+      ...rule,
+      owner.id,
+      owner.id,
+      rule[0],
+    );
   if (
     !(await store.get(
       "SELECT id FROM promotions WHERE title=?",

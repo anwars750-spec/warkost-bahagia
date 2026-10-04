@@ -136,6 +136,7 @@ export default function App() {
       loyalty: 0,
       transactions: [],
       vouchers: [],
+      rewards: [],
     }),
     [drivers, setDrivers] = useState([]),
     [customers, setCustomers] = useState([]),
@@ -148,6 +149,7 @@ export default function App() {
     [report, setReport] = useState(null),
     [printJobs, setPrintJobs] = useState([]),
     [promotions, setPromotions] = useState([]),
+    [loyaltyRules, setLoyaltyRules] = useState([]),
     [settings, setSettings] = useState({
       brandName: "Warkost Bahagia",
       rupiahPerPoint: 10000,
@@ -185,7 +187,11 @@ export default function App() {
     [selectedVoucherId, setSelectedVoucherId] = useState(null),
     [voucherQuote, setVoucherQuote] = useState(null),
     [voucherQuoteBusy, setVoucherQuoteBusy] = useState(false),
-    [voucherQuoteError, setVoucherQuoteError] = useState("");
+    [voucherQuoteError, setVoucherQuoteError] = useState(""),
+    [selectedRewardId, setSelectedRewardId] = useState(null),
+    [loyaltyQuote, setLoyaltyQuote] = useState(null),
+    [loyaltyQuoteBusy, setLoyaltyQuoteBusy] = useState(false),
+    [loyaltyQuoteError, setLoyaltyQuoteError] = useState("");
   async function loadCustomers(query = "", before = null, signal) {
     const page = await api(
       "customers?q=" +
@@ -257,8 +263,12 @@ export default function App() {
               (await api("promotions", undefined, signal)).promotions,
             );
           }
-          if (me.user.role === "OWNER")
+          if (me.user.role === "OWNER") {
             setAudit(await api("audit", undefined, signal));
+            setLoyaltyRules(
+              (await api("loyalty-rewards", undefined, signal)).rewards,
+            );
+          }
         }
         if (["ADMIN", "KITCHEN", "OWNER"].includes(me.user.role))
           setPrintJobs((await api("print-jobs", undefined, signal)).jobs);
@@ -406,7 +416,9 @@ export default function App() {
       (address) => String(address.id) === String(checkoutAddressId),
     ) || account.addresses[0];
   const checkoutFinalTotal =
-    total - Number(voucherQuote?.voucher_discount || 0) +
+    total -
+    Number(voucherQuote?.voucher_discount || 0) -
+    Number(loyaltyQuote?.loyalty_discount || 0) +
     (deliveryQuote?.available ? Number(deliveryQuote.delivery_fee || 0) : 0);
   useEffect(() => {
     if (
@@ -463,6 +475,32 @@ export default function App() {
       });
     return () => controller.abort();
   }, [role, view, selectedVoucherId, checkoutItemsSignature]);
+  useEffect(() => {
+    if (role !== "CUSTOMER" || view !== "cart" || !selectedRewardId) {
+      setLoyaltyQuote(null);
+      setLoyaltyQuoteError("");
+      setLoyaltyQuoteBusy(false);
+      return;
+    }
+    const controller = new AbortController();
+    setLoyaltyQuote(null);
+    setLoyaltyQuoteError("");
+    setLoyaltyQuoteBusy(true);
+    api(
+      "loyalty-quote",
+      { rewardRuleId: selectedRewardId, items: checkoutItems },
+      controller.signal,
+    )
+      .then(setLoyaltyQuote)
+      .catch((quoteError) => {
+        if (quoteError.name !== "AbortError")
+          setLoyaltyQuoteError(quoteError.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoyaltyQuoteBusy(false);
+      });
+    return () => controller.abort();
+  }, [role, view, selectedRewardId, checkoutItemsSignature]);
   const focusedOrder = orders.find(
     (order) => order.id === (focusedOrderId || lastCreatedOrderId),
   );
@@ -683,6 +721,7 @@ export default function App() {
               )}
               {role === "OWNER" && (
                 <>
+                  <button onClick={() => setView("loyalty-rules")}>Loyalty</button>
                   <button onClick={() => setView("stock")}>Stok</button>
                   <button onClick={() => setView("audit")}>Audit log</button>
                   <button onClick={() => setView("printing")}>Printer</button>
@@ -770,6 +809,8 @@ export default function App() {
                             ? "Kontrol stok"
                             : view === "audit" && role === "OWNER"
                               ? "Audit aktivitas"
+                              : view === "loyalty-rules" && role === "OWNER"
+                                ? "Aturan Loyalty Reward"
                               : role === "KITCHEN"
                                 ? "Antrean makanan"
                                 : role === "OWNER"
@@ -1172,6 +1213,7 @@ export default function App() {
                       addressId: Number(f.get("address")),
                       method: f.get("method"),
                       promotionId: selectedVoucherId,
+                      loyaltyRewardId: selectedRewardId,
                       items: checkoutItems,
                     };
                     const signature = JSON.stringify(payload);
@@ -1187,6 +1229,8 @@ export default function App() {
                     setCart({});
                     setSelectedVoucherId(null);
                     setVoucherQuote(null);
+                    setSelectedRewardId(null);
+                    setLoyaltyQuote(null);
                     setView("order-success");
                   });
                 }}
@@ -1227,6 +1271,26 @@ export default function App() {
                       <StarIcon />
                       <p>Poin Anda saat ini: <strong>{account.loyalty} poin</strong><small>Kumpulkan poin dari setiap pembelian dan tukarkan sesuai reward yang tersedia.</small></p>
                     </div>
+                    <div className="voucher-list loyalty-reward-list">
+                      {(account.rewards || []).map((reward) => {
+                        const selected = Number(selectedRewardId) === reward.id;
+                        const unavailable = !reward.eligible_balance || Boolean(selectedVoucherId);
+                        return (
+                          <article className={`voucher-option ${selected ? "selected" : ""}`} key={reward.id}>
+                            <StarIcon />
+                            <span>
+                              <strong>{reward.name}</strong>
+                              <small>{reward.points_required} poin · minimum {money(reward.minimum_order)}</small>
+                              <small>{reward.reward_type === "PERCENT" ? `${reward.reward_value}% diskon` : `${money(reward.reward_value)} diskon`}{reward.maximum_discount ? ` · maks. ${money(reward.maximum_discount)}` : ""}</small>
+                            </span>
+                            <button type="button" className={selected ? "primary" : ""} disabled={unavailable} title={selectedVoucherId ? "Tidak dapat digabung dengan voucher" : reward.ineligible_reason || ""} onClick={() => setSelectedRewardId(selected ? null : reward.id)}>{selected ? "Dipilih" : unavailable ? reward.ineligible_reason || "Voucher dipilih" : "Pakai"}</button>
+                          </article>
+                        );
+                      })}
+                    </div>
+                    {loyaltyQuoteBusy && <p className="voucher-feedback">Memvalidasi Loyalty Reward…</p>}
+                    {loyaltyQuoteError && <p className="voucher-feedback error" role="alert">{loyaltyQuoteError}</p>}
+                    {loyaltyQuote && <p className="voucher-feedback success">Reward valid · {loyaltyQuote.points_redeemed} poin · hemat {money(loyaltyQuote.loyalty_discount)}</p>}
                   </section>
 
                   <section className="checkout-card voucher-checkout-card">
@@ -1247,13 +1311,13 @@ export default function App() {
                               <small>Minimum {money(voucher.minimum_order)} · {voucher.voucher_type === "PERCENT" ? `${voucher.discount_value}%` : money(voucher.discount_value)}{voucher.max_discount ? ` · maks. ${money(voucher.max_discount)}` : ""}</small>
                             </span>
                             {voucher.state === "AVAILABLE" ? (
-                              <button type="button" disabled={busy} onClick={() => run(async () => {
+                              <button type="button" disabled={busy || Boolean(selectedRewardId)} onClick={() => run(async () => {
                                 await api("voucher-claim", { promotionId: voucher.id });
                                 setSelectedVoucherId(voucher.id);
                                 setMessage("Voucher berhasil diklaim.");
                               })}>Klaim</button>
                             ) : selectable ? (
-                              <button type="button" className={selected ? "primary" : ""} onClick={() => setSelectedVoucherId(selected ? null : voucher.id)}>{selected ? "Dipilih" : "Pakai"}</button>
+                              <button type="button" disabled={Boolean(selectedRewardId)} className={selected ? "primary" : ""} onClick={() => setSelectedVoucherId(selected ? null : voucher.id)}>{selected ? "Dipilih" : "Pakai"}</button>
                             ) : (
                               <span className="voucher-state">{voucher.state}</span>
                             )}
@@ -1354,9 +1418,10 @@ export default function App() {
                   <div className="payment-line"><span>Subtotal</span><strong>{money(total)}</strong></div>
                   <div className="payment-line"><span>Ongkir</span><strong className={deliveryQuote?.available ? "" : "pending-value"}>{deliveryQuoteBusy ? "Menghitung…" : deliveryQuote?.available ? (deliveryQuote.free_delivery ? "GRATIS" : money(deliveryQuote.delivery_fee)) : deliveryQuote ? "Di luar jangkauan" : "Belum dihitung"}</strong></div>
                   <div className="payment-line"><span>Voucher</span><strong>{voucherQuote?.voucher_discount ? `−${money(voucherQuote.voucher_discount)}` : money(0)}</strong></div>
+                  <div className="payment-line"><span>Loyalty Reward</span><strong>{loyaltyQuote?.loyalty_discount ? `−${money(loyaltyQuote.loyalty_discount)}` : money(0)}</strong></div>
                   <div className="payment-total"><span>Total akhir</span><strong>{deliveryQuote?.available ? money(checkoutFinalTotal) : "—"}</strong></div>
                   <p className="server-calculation-note">{deliveryQuote?.message || deliveryQuoteError || "Total akhir ditampilkan setelah server memvalidasi alamat."}</p>
-                  <button className="primary checkout-submit" disabled={busy || deliveryQuoteBusy || voucherQuoteBusy || Boolean(selectedVoucherId && !voucherQuote) || !account.addresses.length || !deliveryQuote?.available}>
+                  <button className="primary checkout-submit" disabled={busy || deliveryQuoteBusy || voucherQuoteBusy || loyaltyQuoteBusy || Boolean(selectedVoucherId && !voucherQuote) || Boolean(selectedRewardId && !loyaltyQuote) || !account.addresses.length || !deliveryQuote?.available}>
                     {busy ? "Membuat Pesanan…" : deliveryQuoteBusy ? "Menghitung Ongkir…" : deliveryQuote && !deliveryQuote.available ? "Alamat Di Luar Jangkauan" : "Buat Pesanan"}<ArrowIcon />
                   </button>
                   <div className="checkout-trust"><ShieldIcon /><span>Pesananmu diproses dengan aman menggunakan kalkulasi existing.</span></div>
@@ -1611,11 +1676,17 @@ export default function App() {
               <section className="panel">
                 <h2>Poin loyalitas</h2>
                 <div className="big-number">{account.loyalty} poin</div>
-                <p>Poin diberikan saat pesanan selesai dikirim.</p>
+                <p>Setiap kelipatan Rp10.000 nilai produk bersih menghasilkan 1 poin setelah pesanan selesai.</p>
+                {(account.rewards || []).map((reward) => (
+                  <div className="line" key={reward.id}>
+                    <span><strong>{reward.name}</strong><br />{reward.points_required} poin · {reward.reward_type === "PERCENT" ? `${reward.reward_value}%` : money(reward.reward_value)}</span>
+                    <span className="badge">{reward.eligible_balance ? "TERSEDIA" : reward.ineligible_reason}</span>
+                  </div>
+                ))}
                 {account.transactions.map((t) => (
                   <div className="line" key={t.id}>
-                    <span>Pesanan #{t.order_id}</span>
-                    <strong>+{t.amount}</strong>
+                    <span>Pesanan #{t.order_id} · {t.kind}</span>
+                    <strong>{t.amount > 0 ? "+" : ""}{t.amount}</strong>
                   </div>
                 ))}
               </section>
@@ -1716,7 +1787,7 @@ export default function App() {
                 run(() =>
                   api("settings", {
                     brandName: f.get("brandName"),
-                    rupiahPerPoint: Number(f.get("rupiahPerPoint")),
+                    rupiahPerPoint: 10000,
                     businessWhatsApp: f.get("businessWhatsApp"),
                     businessLatitude: Number(f.get("businessLatitude")),
                     businessLongitude: Number(f.get("businessLongitude")),
@@ -1740,13 +1811,12 @@ export default function App() {
                 />
               </label>
               <label>
-                Rupiah per 1 poin
+                Nilai produk per 1 poin (tetap)
                 <input
                   name="rupiahPerPoint"
                   type="number"
-                  min="1000"
-                  max="100000"
-                  defaultValue={settings.rupiahPerPoint}
+                  value="10000"
+                  readOnly
                   required
                 />
               </label>
@@ -2089,6 +2159,32 @@ export default function App() {
               categories={inventory.categories}
               busy={busy}
               onSave={saveProductWithImage}
+            />
+          </section>
+        )}
+        {role === "OWNER" && view === "loyalty-rules" && (
+          <section className="panel">
+            <h2>Loyalty Reward</h2>
+            <p>Atur reward penukaran poin. Perolehan poin tetap 1 poin per kelipatan Rp10.000 nilai produk bersih.</p>
+            {loyaltyRules.map((rule) => (
+              <LoyaltyRuleEditor
+                key={rule.id}
+                rule={rule}
+                busy={busy}
+                onSave={(body) => run(async () => {
+                  await api("loyalty-reward", body);
+                  setMessage("Aturan Loyalty Reward diperbarui");
+                })}
+              />
+            ))}
+            {!loyaltyRules.length && <p>Belum ada Loyalty Reward.</p>}
+            <h2>Tambah reward</h2>
+            <LoyaltyRuleEditor
+              busy={busy}
+              onSave={(body) => run(async () => {
+                await api("loyalty-reward", body);
+                setMessage("Loyalty Reward dibuat");
+              })}
             />
           </section>
         )}
@@ -3399,6 +3495,39 @@ function Order({ order: o, role, drivers, busy, action, onTrack, onReorder, onSu
         </div>
       )}
     </article>
+  );
+}
+
+function LoyaltyRuleEditor({ rule, busy, onSave }) {
+  return (
+    <form className="promo-editor" onSubmit={(event) => {
+      event.preventDefault();
+      const form = new FormData(event.currentTarget);
+      onSave({
+        ...(rule ? { id: rule.id } : {}),
+        name: form.get("name"),
+        pointsRequired: Number(form.get("pointsRequired")),
+        rewardType: form.get("rewardType"),
+        rewardValue: Number(form.get("rewardValue")),
+        minimumOrder: Number(form.get("minimumOrder")),
+        maximumDiscount: form.get("maximumDiscount"),
+        active: form.get("active") === "on",
+      });
+    }}>
+      {rule && <div className="line"><strong>{rule.name}</strong><span className="badge">{rule.active ? "ACTIVE" : "INACTIVE"}</span></div>}
+      <label>Nama reward<input name="name" minLength="2" maxLength="100" defaultValue={rule?.name || ""} required /></label>
+      <div className="columns compact-columns">
+        <label>Poin dibutuhkan<input name="pointsRequired" type="number" min="1" defaultValue={rule?.points_required || 1} required /></label>
+        <label>Tipe reward<select name="rewardType" defaultValue={rule?.reward_type || "PERCENT"}><option value="PERCENT">Persen</option><option value="FIXED">Nominal tetap</option></select></label>
+      </div>
+      <div className="columns compact-columns">
+        <label>Nilai reward<input name="rewardValue" type="number" min="1" defaultValue={rule?.reward_value || 1} required /></label>
+        <label>Minimum belanja<input name="minimumOrder" type="number" min="0" defaultValue={rule?.minimum_order || 0} required /></label>
+      </div>
+      <label>Maksimum diskon (opsional)<input name="maximumDiscount" type="number" min="0" defaultValue={rule?.maximum_discount ?? ""} /></label>
+      <label className="checkbox"><input name="active" type="checkbox" defaultChecked={rule ? rule.active : true} />Aktifkan reward</label>
+      <button className="primary" disabled={busy}>{rule ? "Simpan reward" : "Buat reward"}</button>
+    </form>
   );
 }
 
