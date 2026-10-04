@@ -122,6 +122,7 @@ export default function App() {
   const checkoutAttempt = useRef(null);
   const pollController = useRef(null);
   const refreshController = useRef(null);
+  const messageTimer = useRef(null);
   const [user, setUser] = useState(null),
     [menu, setMenu] = useState({
       products: [],
@@ -294,6 +295,12 @@ export default function App() {
   useEffect(() => {
     refresh().catch((e) => setError(e.message));
   }, []);
+  useEffect(
+    () => () => {
+      if (messageTimer.current) clearTimeout(messageTimer.current);
+    },
+    [],
+  );
   useEffect(() => {
     if (!user) return;
     let running = false;
@@ -346,6 +353,10 @@ export default function App() {
   }, [overlay]);
   async function run(fn) {
     setError("");
+    if (messageTimer.current) {
+      clearTimeout(messageTimer.current);
+      messageTimer.current = null;
+    }
     setMessage("");
     setBusy(true);
     try {
@@ -380,6 +391,14 @@ export default function App() {
       ...current,
       [field]: !current[field],
     }));
+  }
+  function showTransientMessage(text, duration = 2500) {
+    if (messageTimer.current) clearTimeout(messageTimer.current);
+    setMessage(text);
+    messageTimer.current = setTimeout(() => {
+      setMessage((current) => (current === text ? "" : current));
+      messageTimer.current = null;
+    }, duration);
   }
   const count = Object.values(cart).reduce((s, n) => s + n, 0),
     total = menu.products.reduce((s, p) => s + p.price * (cart[p.id] || 0), 0);
@@ -433,6 +452,12 @@ export default function App() {
     Number(voucherQuote?.voucher_discount || 0) -
     Number(loyaltyQuote?.loyalty_discount || 0) +
     (deliveryQuote?.available ? Number(deliveryQuote.delivery_fee || 0) : 0);
+  const selectedVoucher = account.vouchers.find(
+    (voucher) => Number(voucher.id) === Number(selectedVoucherId),
+  );
+  const selectedVoucherMinimumOrder = Number(
+    selectedVoucher?.minimum_order || 0,
+  );
   useEffect(() => {
     if (
       role !== "CUSTOMER" ||
@@ -463,9 +488,39 @@ export default function App() {
     return () => controller.abort();
   }, [role, view, selectedCheckoutAddress?.id]);
   useEffect(() => {
-    if (role !== "CUSTOMER" || view !== "cart" || !selectedVoucherId) {
+    if (
+      role !== "CUSTOMER" ||
+      view !== "cart" ||
+      !selectedVoucherId
+    ) {
       setVoucherQuote(null);
       setVoucherQuoteError("");
+      setVoucherQuoteBusy(false);
+      return;
+    }
+    if (selectedRewardId) {
+      setVoucherQuote(null);
+      setVoucherQuoteError("Voucher tidak dapat digabung dengan Loyalty Reward.");
+      setVoucherQuoteBusy(false);
+      return;
+    }
+    if (!checkoutItems.length) {
+      setVoucherQuote(null);
+      setVoucherQuoteError("Tambahkan produk sebelum memakai voucher.");
+      setVoucherQuoteBusy(false);
+      return;
+    }
+    if (!selectedVoucher || selectedVoucher.state !== "CLAIMED") {
+      setVoucherQuote(null);
+      setVoucherQuoteError("Voucher belum siap digunakan.");
+      setVoucherQuoteBusy(false);
+      return;
+    }
+    if (total < selectedVoucherMinimumOrder) {
+      setVoucherQuote(null);
+      setVoucherQuoteError(
+        `Minimum belanja voucher adalah ${money(selectedVoucherMinimumOrder)}`,
+      );
       setVoucherQuoteBusy(false);
       return;
     }
@@ -487,7 +542,17 @@ export default function App() {
         if (!controller.signal.aborted) setVoucherQuoteBusy(false);
       });
     return () => controller.abort();
-  }, [role, view, selectedVoucherId, checkoutItemsSignature]);
+  }, [
+    role,
+    view,
+    selectedVoucherId,
+    selectedRewardId,
+    selectedVoucher?.state,
+    selectedVoucherMinimumOrder,
+    checkoutItems.length,
+    checkoutItemsSignature,
+    total,
+  ]);
   useEffect(() => {
     if (role !== "CUSTOMER" || view !== "cart" || !selectedRewardId) {
       setLoyaltyQuote(null);
@@ -1532,8 +1597,7 @@ export default function App() {
                             {voucher.state === "AVAILABLE" ? (
                               <button type="button" disabled={busy || Boolean(selectedRewardId)} onClick={() => run(async () => {
                                 await api("voucher-claim", { promotionId: voucher.id });
-                                setSelectedVoucherId(voucher.id);
-                                setMessage("Voucher berhasil diklaim.");
+                                showTransientMessage("Voucher berhasil diklaim.");
                               })}>Klaim</button>
                             ) : selectable ? (
                               <button type="button" disabled={Boolean(selectedRewardId)} className={selected ? "primary" : ""} onClick={() => setSelectedVoucherId(selected ? null : voucher.id)}>{selected ? "Dipilih" : "Pakai"}</button>

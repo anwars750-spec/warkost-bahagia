@@ -164,6 +164,14 @@ test("minimum order, expired, dan inactive voucher ditolak", async () => {
   const minimum = addVoucher({ minimum: 30000 });
   await claimVoucher(customerA, minimum);
   await assert.rejects(
+    quoteVoucher(customerA, {
+      promotionId: minimum,
+      items: [{ productId: 1, quantity: 1 }],
+    }),
+    (error) =>
+      error.status === 422 && /Minimum belanja/.test(error.message),
+  );
+  await assert.rejects(
     createOrder(
       customerA,
       orderInput(customerA, minimum, {

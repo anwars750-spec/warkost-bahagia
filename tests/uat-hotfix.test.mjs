@@ -265,3 +265,27 @@ test("menu akun menjadi satu-satunya entry point delapan aksi akun", () => {
   ])
     assert.equal((menu.match(new RegExp(label, "g")) || []).length, 1, label);
 });
+
+test("voucher success auto-dismiss dan quote hanya dipanggil untuk state valid", () => {
+  const page = fs.readFileSync(path.join(projectRoot, "app", "page.js"), "utf8");
+  assert.match(
+    page,
+    /function showTransientMessage\(text, duration = 2500\)[\s\S]*?setTimeout\([\s\S]*?setMessage\(\(current\) => \(current === text \? "" : current\)\)[\s\S]*?duration/,
+  );
+  assert.match(
+    page,
+    /await api\("voucher-claim", \{ promotionId: voucher\.id \}\);[\s\S]*?showTransientMessage\("Voucher berhasil diklaim\."\)/,
+  );
+  assert.doesNotMatch(
+    page,
+    /await api\("voucher-claim", \{ promotionId: voucher\.id \}\);[\s\S]{0,160}?setSelectedVoucherId\(voucher\.id\)/,
+  );
+  assert.match(
+    page,
+    /if \(!checkoutItems\.length\)[\s\S]*?if \(!selectedVoucher \|\| selectedVoucher\.state !== "CLAIMED"\)[\s\S]*?if \(total < selectedVoucherMinimumOrder\)[\s\S]*?const controller = new AbortController\(\)/,
+  );
+  assert.match(
+    page,
+    /Minimum belanja voucher adalah \$\{money\(selectedVoucherMinimumOrder\)\}/,
+  );
+});
