@@ -17,7 +17,8 @@
 - Batch B final visual polish implementation: `1da678313b3fb18cf4454099c1fe36988e3eaa87`
 - Batch B voucher UAT correction implementation: `9fabbc126764f010a58e787aedf073a5063dfb28`
 - Batch B Final UAT Polish Round 3 implementation: `c610503e02c377e1e35b20e2e66f4713429edd62`
-- Milestone: Batch B Final UAT Polish Round 3
+- Batch B transparent logo + Checkout Quick Address implementation: `142225de0c9dae246085ea400103b392fc598d50`
+- Milestone: Batch B Transparent Logo + Checkout Quick Address
 - Status: **VERIFIED**
 - Verification date: 2026-10-04
 
@@ -455,7 +456,7 @@ Status: **VERIFIED — NOT YET LOCKED**
 
 - No backend/business-rule, auth-security, OTP, Maps, Manager/RBAC, BTN QRIS, Shipping, Voucher, Loyalty, Payment, Checkout, address ownership, Orders/Tracking, or unrelated screen change.
 - This visual polish is verified but does not mark Batch B as locked/final. Await explicit manual acceptance before any lock or bundle handoff.
-- Do not start Checkout Quick Address or another milestone without an explicit scope.
+- At this checkpoint, Checkout Quick Address remained gated; it was opened later by an explicit dedicated scope.
 
 ---
 
@@ -529,4 +530,48 @@ Status: **VERIFIED — NOT YET LOCKED**
 ### Guardrails preserved
 
 - No auth logic, OTP, Checkout, Shipping, Voucher, Loyalty, Payment, account ownership, Saved Addresses, Orders/Tracking, or unrelated UI was changed.
-- Batch B is not marked locked/final. Do not start Checkout Quick Address or another milestone without explicit scope.
+- Batch B was not marked locked/final at this checkpoint; Checkout Quick Address was subsequently opened by an explicit dedicated scope.
+
+---
+
+## Batch B Transparent Logo + Checkout Quick Address
+
+Date: 2026-10-04
+
+Status: **VERIFIED — NOT YET LOCKED**
+
+### Source-control baseline
+
+- Parent checkpoint: `ac8e64f882168ac4a059054c13950e66067d98d4`
+- Implementation commit: `142225de0c9dae246085ea400103b392fc598d50`
+- No Git bundle was created in this session.
+
+### Transparent Warkost logo
+
+- The black rectangle belonged to the JPG pixels, not the UI container. The previous transparent PNG exposed metadata but failed full pixel decoding with a libpng read error.
+- Added `public/warkost-bahagia-logo-clean.png`, a valid 1672×941 RGBA asset generated from the approved logo with the complete lettering and dark outline retained while only the outer rectangular background was removed.
+- All customer header and Login/Register logo usages now share this transparent asset. Desktop/mobile rendering uses intrinsic proportion, automatic height, centered `object-fit: contain`, and no mask, clipping, or black fallback asset.
+- Pixel verification confirms a valid alpha channel with transparent corners and opaque logo content.
+
+### Checkout Quick Address
+
+- Checkout now provides an inline `+ Tambah lokasi lain` card; customers enter a label and complete address, with optional device-location capture through hidden coordinate fields.
+- Save reuses the existing authenticated `address` endpoint. No customer ID is accepted from the client, so the address remains bound to the authenticated customer by the server.
+- After creation, the account address list refreshes, the returned address ID is immediately selected for the current checkout, and the existing delivery quote effect recalculates distance and fee from server-stored coordinates.
+- Existing default address remains unchanged when one already exists. The existing deterministic rule still makes the first address default when the customer previously had none.
+- Cart, payment selection DOM, voucher selection, loyalty selection, subtotal, and checkout state are not reset. A synchronous submission guard plus disabled save state prevents accidental double submission.
+- Success shows `Alamat berhasil ditambahkan.` and keeps the customer in Checkout. API/validation errors remain visible without clearing checkout state.
+
+### Verification
+
+- Targeted transparent-logo, Quick Address, guest/auth, and account tests: **20/20 PASS**.
+- Address/Checkout/Shipping plus locked Voucher/Loyalty/QRIS-Payment affected regression: **46/46 PASS**.
+- Full unit suite: **104/104 PASS**.
+- Production build: **PASS** with `/` and all existing API routes compiled.
+- No browser executable was downloaded or retried; responsive behavior is covered by the existing mobile/desktop CSS contracts and targeted source assertions.
+
+### Guardrails preserved
+
+- Shipping fee and checkout totals remain server-authoritative; client delivery-fee manipulation remains ignored by covered tests.
+- No OTP, Maps API, Birthday Promo, Manager/RBAC, BTN QRIS adapter, broad Customer UI redesign, or unrelated milestone work.
+- Batch B remains not locked/final. Do not create a bundle or start another milestone without explicit scope.
