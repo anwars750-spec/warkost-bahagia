@@ -304,3 +304,57 @@ Status: **PROVIDER-NEUTRAL VERIFIED / PRODUCTION PROVIDER BLOCKED**
 - No redesign or reimplementation of Customer UI, Shipping, Voucher, or Loyalty.
 - No birthday promo, OTP, Maps API, Manager/RBAC, Kasir removal, Admin/Kitchen/Driver redesign, Web Push, deployment, dependency upgrade, or unrelated refactor.
 - Stop at the external provider boundary; do not start another milestone without explicit scope.
+
+---
+
+## Customer UI Batch B Finalization
+
+Date: 2026-10-04
+
+Status: **COMPLETED / AUTOMATED VERIFIED**
+
+### Source-control baseline
+
+- Parent checkpoint: `a7ec5f8202870be9227f59fc14a09c7526cc3922`
+- Implementation commit: `a038abf3dd92416f3aa1835dfb144ae182d40031`
+- Customer UI, Shipping/Ongkir, Voucher, Loyalty, and QRIS/Payment Core remain locked.
+
+### Targeted audit result
+
+- Account/profile: **PARTIAL → PASS**. Existing secure password/session foundation was retained; own-profile response, email/phone/birth-date editing, server validation, and safe public fields were completed.
+- Saved addresses: **PARTIAL → PASS**. Existing ownership/versioned-history/checkout foundation was retained; deterministic default-address behavior and non-technical coordinate UI were completed.
+- Help Center: **PARTIAL → PASS**. Existing internal support/order context and driver gating were retained; required topics, desktop title/drawer contract, and mobile Account-only full-height access were completed.
+- Login/Register: **PARTIAL → PASS**. Existing scrypt/session/rate-limit foundation was retained; email-or-phone login, complete registration fields, password confirmation, consent, and birth-date persistence were completed.
+- Google/Apple customer login: **PASS** (not exposed).
+- OTP backend/provider: **DEFERRED BY SCOPE**; no fake OTP success path was introduced.
+
+### Scope completed
+
+- Customer profile returns only `name`, `email`, `phone`, and `birth_date`; password hashes and internal identifiers are not included in the account payload.
+- Profile changes and password changes are validated server-side; a password change revokes prior sessions and issues only the new current session.
+- Login accepts customer email or normalized Indonesian phone number; registration enforces all required fields, password confirmation, consent, and a valid past birth date.
+- Saved addresses support add, history-preserving edit, delete, multiple records, and one deterministic default per customer. The first address becomes default; deleting the default promotes the newest remaining active address.
+- Address CRUD/default operations enforce authenticated-customer ownership. Raw latitude/longitude fields are hidden from customer forms while stored coordinates and checkout delivery calculations remain intact.
+- Help Center includes Pesanan, Pembayaran, Voucher & Poin, Pengiriman & Ongkir, Akun & Alamat, and FAQ; active order context remains customer-scoped, Admin support remains internal, and Driver contact remains gated by assignment plus delivery phase.
+- Desktop Help remains a 460px right drawer. Mobile Help is removed from bottom navigation and opens from Akun as a full-height support experience.
+
+### OTP boundary
+
+- No email provider, OTP generation, delivery, verification backend, resend backend, or password-reset OTP was implemented.
+- Registration explicitly reports `emailVerification: NOT_CONFIGURED`; it does not claim that an email or OTP was verified.
+- Future OTP integration point: gate session issuance/account activation after `registerCustomer` persists the pending account, then activate only after a dedicated verified OTP transaction.
+
+### Verification
+
+- Targeted Batch B plus locked checkout/support tests: **20/20 PASS**.
+- Targeted regression fixes for MySQL migration ordering, SQLite legacy upgrade, and driver phone uniqueness: **6/6 PASS**.
+- Final dedicated Batch B contract test: **5/5 PASS**.
+- Full unit suite after fixes: **89/89 PASS**.
+- Production build: **PASS**.
+- Responsive source contracts for desktop drawer width, mobile full-height Help, three-item mobile navigation, Account→Bantuan access, required topics, and no raw coordinate input: **PASS**.
+- Live browser visual UAT was not rerun because no existing Chromium/browser executable was available; no browser download or Cloud Browser localhost retry was attempted.
+
+### Guardrails preserved
+
+- No Customer Homepage/Checkout redesign, OTP Email implementation, Google Maps API, birthday promo, Manager/RBAC, Kasir removal, BTN adapter, Admin/Kitchen/Driver redesign, deployment, dependency upgrade, or unrelated refactor.
+- Do not start OTP Email, Maps, or another milestone without explicit scope.
