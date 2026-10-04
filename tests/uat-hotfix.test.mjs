@@ -164,7 +164,7 @@ test("customer inactive ditolak dan response login tidak mengekspos hash", async
   assert.doesNotMatch(routeSource, /password_hash:\s*account\.password_hash/);
 });
 
-test("onboarding desktop/mobile mempertahankan auth contract dan tanpa OTP palsu", () => {
+test("onboarding desktop/mobile mempertahankan auth contract dan OTP nyata", () => {
   const page = fs.readFileSync(path.join(projectRoot, "app", "page.js"), "utf8");
   const style = fs.readFileSync(
     path.join(projectRoot, "app", "style.css"),
@@ -187,7 +187,8 @@ test("onboarding desktop/mobile mempertahankan auth contract dan tanpa OTP palsu
   assert.doesNotMatch(page, /auth-flow-ready/);
   assert.doesNotMatch(page, /\["Intro", "ready"\]/);
   assert.doesNotMatch(page, /Google Sign-In|Masuk dengan Google|Apple Sign-In|Masuk dengan Apple/);
-  assert.doesNotMatch(page, /OTP berhasil|email terverifikasi/i);
+  assert.match(page, /name="code"/);
+  assert.match(page, /password-reset-request/);
   assert.match(
     style,
     /\.auth-onboarding\s*{[\s\S]*?grid-template-columns:\s*minmax\(360px,[\s\S]*?minmax\(390px/,
@@ -223,9 +224,9 @@ test("logo transparan valid dipakai konsisten pada header dan auth", async () =>
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
-  assert.equal((page.match(/className="auth-card-logo"/g) || []).length, 2);
-  assert.equal((page.match(/src="\/warkost-bahagia-logo-clean\.png"/g) || []).length, 3);
-  assert.equal((page.match(/width=\{1672\}[\s\S]*?height=\{941\}/g) || []).length, 3);
+  assert.ok((page.match(/className="auth-card-logo"/g) || []).length >= 6);
+  assert.ok((page.match(/src="\/warkost-bahagia-logo-clean\.png"/g) || []).length >= 7);
+  assert.ok((page.match(/width=\{1672\}[\s\S]*?height=\{941\}/g) || []).length >= 7);
   assert.doesNotMatch(page, /src="\/warkost-bahagia-logo\.jpg"/);
   assert.equal(metadata.hasAlpha, true);
   assert.equal(metadata.width, 1672);

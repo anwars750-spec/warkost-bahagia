@@ -2211,6 +2211,9 @@ footer {
 .auth-mobile-switch {
   display: none;
 }
+.auth-flow-back {
+  display: none;
+}
 .auth-story-card,
 .auth-card {
   min-width: 0;
@@ -2225,7 +2228,11 @@ footer {
   grid-template-rows: minmax(0, 1fr) 280px;
   color: #fffaf3;
   background:
-    radial-gradient(circle at 15% 12%, rgba(246, 191, 119, 0.2), transparent 38%),
+    radial-gradient(
+      circle at 15% 12%,
+      rgba(246, 191, 119, 0.2),
+      transparent 38%
+    ),
     linear-gradient(145deg, #4f2419, #813823 58%, #a6512e);
 }
 .auth-story-copy {
@@ -2296,7 +2303,11 @@ footer {
   position: absolute;
   inset: 0;
   content: "";
-  background: linear-gradient(180deg, rgba(79, 36, 25, 0.18), rgba(33, 16, 12, 0.5));
+  background: linear-gradient(
+    180deg,
+    rgba(79, 36, 25, 0.18),
+    rgba(33, 16, 12, 0.5)
+  );
 }
 .auth-story-visual img {
   object-fit: cover;
@@ -2436,6 +2447,30 @@ footer {
 .auth-consent input {
   min-height: 0;
 }
+.otp-code-input {
+  text-align: center;
+  font-size: 24px !important;
+  font-weight: 800;
+  letter-spacing: 0.36em;
+}
+.auth-success-mark {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin: 4px auto 12px;
+  color: #fff;
+  border-radius: 50%;
+  background: #397a4a;
+  box-shadow: 0 10px 22px rgba(57, 122, 74, 0.22);
+  font-size: 25px;
+  font-weight: 900;
+}
+.auth-success-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
 
 @keyframes auth-card-enter {
   from {
@@ -2513,6 +2548,18 @@ footer {
     border: 1px solid #eadccf;
     border-radius: 16px;
     background: #fffaf4;
+  }
+  .auth-flow-back {
+    order: 1;
+    display: flex;
+  }
+  .auth-flow-back button {
+    padding: 7px 2px;
+    border: 0;
+    color: #733421;
+    background: transparent;
+    font-size: 12px;
+    font-weight: 800;
   }
   .auth-mobile-switch button {
     border: 0;

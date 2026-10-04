@@ -10,11 +10,18 @@ process.env.DATABASE_PATH = path.join(
 );
 process.env.SESSION_SECRET =
   "customer-batch-b-test-secret-more-than-32-characters";
+process.env.OTP_SECRET = "customer-batch-b-otp-secret-more-than-32-characters";
+process.env.EMAIL_TRANSPORT = "development";
+process.env.OTP_OUTBOX_PATH = path.join(
+  path.dirname(process.env.DATABASE_PATH),
+  "otp-outbox.json",
+);
 
 const { db } = await import("../lib/db.mjs");
 const { checkPassword } = await import("../lib/auth.mjs");
 const { authenticateCustomer, registerCustomer, validateRegistration } =
   await import("../lib/customer-auth.mjs");
+const { verifyRegistrationOtp } = await import("../lib/otp.mjs");
 
 const database = db();
 const validRegistration = {
@@ -27,20 +34,27 @@ const validRegistration = {
   consent: true,
 };
 
-test("registrasi menyimpan profil wajib, consent, dan password hash tanpa OTP palsu", async () => {
+test("registrasi menyimpan profil wajib sebagai pending dan mengaktifkan melalui OTP", async () => {
   const result = await registerCustomer(validRegistration);
-  assert.equal(result.emailVerification, "NOT_CONFIGURED");
-  assert.equal("emailVerified" in result, false);
+  assert.equal(result.pending, true);
+  assert.equal("otp" in result, false);
   const stored = database
     .prepare(
-      "SELECT name,email,phone,birth_date,password_hash,terms_accepted_at FROM users WHERE id=?",
+      "SELECT id,name,email,phone,birth_date,password_hash,terms_accepted_at,active,email_verified_at FROM users WHERE email=?",
     )
-    .get(result.user.id);
+    .get(validRegistration.email);
   assert.equal(stored.phone, "6281234567890");
   assert.equal(stored.birth_date, "1996-08-17");
+  assert.equal(stored.active, 0);
+  assert.equal(stored.email_verified_at, null);
   assert.ok(stored.terms_accepted_at);
   assert.notEqual(stored.password_hash, validRegistration.password);
   assert.ok(checkPassword(validRegistration.password, stored.password_hash));
+  const outbox = JSON.parse(
+    fs.readFileSync(process.env.OTP_OUTBOX_PATH, "utf8"),
+  );
+  const code = outbox.at(-1).text.match(/\b\d{6}\b/)[0];
+  await verifyRegistrationOtp({ challengeId: result.challengeId, code });
 });
 
 test("login menerima email atau nomor HP dengan password server-side", async () => {
@@ -96,7 +110,7 @@ test("registrasi duplicate email/phone tidak membuat akun kedua", async () => {
   );
 });
 
-test("kontrak UI tidak mengekspos social login, OTP sukses palsu, atau input koordinat mentah", () => {
+test("kontrak UI tidak mengekspos social login atau input koordinat mentah dan memakai OTP nyata", () => {
   const page = fs.readFileSync(
     new URL("../app/page.js", import.meta.url),
     "utf8",
@@ -105,7 +119,8 @@ test("kontrak UI tidak mengekspos social login, OTP sukses palsu, atau input koo
     page,
     /Google Sign-In|Masuk dengan Google|Apple Sign-In|Masuk dengan Apple/,
   );
-  assert.doesNotMatch(page, /OTP berhasil|email terverifikasi/i);
+  assert.match(page, /name="code"/);
+  assert.match(page, /password-reset-request/);
   assert.doesNotMatch(page, /name="latitude"\s+type="number"/);
   assert.doesNotMatch(page, /name="longitude"\s+type="number"/);
   assert.match(page, /name="latitude" type="hidden"/);
@@ -127,5 +142,8 @@ test("kontrak UI tidak mengekspos social login, OTP sukses palsu, atau input koo
   );
   assert.match(style, /\.quick-sheet\s*{[\s\S]*?width:\s*min\(460px, 100%\)/);
   assert.match(style, /\.support-sheet\s*{[\s\S]*?height:\s*100dvh/);
-  assert.match(style, /\.mobile-customer-nav\s*{[\s\S]*?grid-template-columns:\s*repeat\(3, 1fr\)/);
+  assert.match(
+    style,
+    /\.mobile-customer-nav\s*{[\s\S]*?grid-template-columns:\s*repeat\(3, 1fr\)/,
+  );
 });

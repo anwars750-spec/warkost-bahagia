@@ -173,7 +173,11 @@ export default function App() {
       login: false,
       register: false,
       confirmation: false,
+      reset: false,
+      resetConfirmation: false,
     }),
+    [otpFlow, setOtpFlow] = useState(null),
+    [authClock, setAuthClock] = useState(Date.now()),
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
@@ -305,6 +309,11 @@ export default function App() {
     [],
   );
   useEffect(() => {
+    if (!otpFlow || view !== "auth") return;
+    const timer = setInterval(() => setAuthClock(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [otpFlow, view]);
+  useEffect(() => {
     if (!user) return;
     let running = false;
     const controller = new AbortController();
@@ -354,7 +363,7 @@ export default function App() {
     document.addEventListener("keydown", close);
     return () => document.removeEventListener("keydown", close);
   }, [overlay]);
-  async function run(fn) {
+  async function run(fn, refreshAfter = true) {
     setError("");
     if (messageTimer.current) {
       clearTimeout(messageTimer.current);
@@ -364,7 +373,7 @@ export default function App() {
     setBusy(true);
     try {
       await fn();
-      await refresh();
+      if (refreshAfter) await refresh();
     } catch (e) {
       setError(e.message);
     } finally {
@@ -385,9 +394,107 @@ export default function App() {
         birthDate: form.get("birthDate"),
         consent: form.get("consent") === "on",
       });
+      if (action === "register") {
+        setOtpFlow({
+          purpose: "REGISTRATION",
+          challengeId: data.challengeId,
+          destination: data.destination,
+          resendAt: Date.now() + data.resendAfterSeconds * 1000,
+        });
+        setMode("registration-otp");
+        showTransientMessage(data.message);
+        return;
+      }
       setUser(data.user);
       setView(data.user.role === "CUSTOMER" ? "menu" : "orders");
-    });
+    }, action !== "register");
+  }
+  function submitForgotPassword(e) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    run(async () => {
+      const data = await api("password-reset-request", {
+        identifier: form.get("identifier"),
+      });
+      setOtpFlow({
+        purpose: "PASSWORD_RESET",
+        challengeId: data.challengeId,
+        destination: data.destination,
+        resendAt: Date.now() + data.resendAfterSeconds * 1000,
+      });
+      setMode("password-reset-otp");
+      showTransientMessage(data.message);
+    }, false);
+  }
+  function submitOtp(e) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    run(async () => {
+      const data = await api("otp-verify", {
+        challengeId: otpFlow?.challengeId,
+        purpose: otpFlow?.purpose,
+        code: form.get("code"),
+      });
+      if (otpFlow?.purpose === "REGISTRATION") {
+        if (data.user) {
+          setOtpFlow((current) => ({ ...current, completedUser: data.user }));
+          setMode("registration-success");
+        } else {
+          setOtpFlow(null);
+          setMode("login");
+          showTransientMessage("Akun sudah aktif. Silakan masuk.");
+        }
+        return;
+      }
+      setOtpFlow((current) => ({
+        ...current,
+        resetToken: data.resetToken,
+      }));
+      setMode("password-reset-new");
+    }, false);
+  }
+  function submitNewPassword(e) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    run(async () => {
+      const data = await api("password-reset", {
+        resetToken: otpFlow?.resetToken,
+        password: form.get("password"),
+        passwordConfirmation: form.get("passwordConfirmation"),
+      });
+      setOtpFlow(null);
+      setMode("password-reset-success");
+      showTransientMessage(data.message);
+    }, false);
+  }
+  function resendCurrentOtp() {
+    run(async () => {
+      const data = await api("otp-resend", {
+        challengeId: otpFlow?.challengeId,
+        purpose: otpFlow?.purpose,
+      });
+      setOtpFlow((current) => ({
+        ...current,
+        challengeId: data.challengeId,
+        destination: data.destination,
+        resendAt: Date.now() + data.resendAfterSeconds * 1000,
+      }));
+      showTransientMessage(data.message);
+    }, false);
+  }
+  async function continueAfterRegistration() {
+    setBusy(true);
+    setError("");
+    try {
+      setView("menu");
+      await refresh();
+      setOtpFlow(null);
+      setMode("login");
+    } catch (continueError) {
+      setError(continueError.message);
+    } finally {
+      setBusy(false);
+    }
   }
   function togglePassword(field) {
     setPasswordVisibility((current) => ({
@@ -403,6 +510,9 @@ export default function App() {
       messageTimer.current = null;
     }, duration);
   }
+  const otpResendRemaining = otpFlow
+    ? Math.max(0, Math.ceil((otpFlow.resendAt - authClock) / 1000))
+    : 0;
   const count = Object.values(cart).reduce((s, n) => s + n, 0),
     total = menu.products.reduce((s, p) => s + p.price * (cart[p.id] || 0), 0);
   const checkoutItems = menu.products
@@ -1027,22 +1137,30 @@ export default function App() {
         )}
         {!role && view === "auth" ? (
           <section className="auth-onboarding" aria-label="Onboarding pelanggan Warkost">
-            <div className="auth-mobile-switch" aria-label="Pilih formulir akun">
-              <button
-                className={mode === "login" ? "active" : ""}
-                type="button"
-                onClick={() => setMode("login")}
-              >
-                Masuk
-              </button>
-              <button
-                className={mode === "register" ? "active" : ""}
-                type="button"
-                onClick={() => setMode("register")}
-              >
-                Daftar
-              </button>
-            </div>
+            {["login", "register"].includes(mode) ? (
+              <div className="auth-mobile-switch" aria-label="Pilih formulir akun">
+                <button
+                  className={mode === "login" ? "active" : ""}
+                  type="button"
+                  onClick={() => setMode("login")}
+                >
+                  Masuk
+                </button>
+                <button
+                  className={mode === "register" ? "active" : ""}
+                  type="button"
+                  onClick={() => setMode("register")}
+                >
+                  Daftar
+                </button>
+              </div>
+            ) : (
+              <div className="auth-flow-back">
+                <button type="button" onClick={() => { setOtpFlow(null); setMode("login"); }}>
+                  ← Kembali ke Masuk
+                </button>
+              </div>
+            )}
 
             <article className="auth-story-card">
               <div className="auth-story-copy">
@@ -1116,7 +1234,7 @@ export default function App() {
                   <span>Sesi aman hingga 7 hari</span>
                   <button
                     type="button"
-                    onClick={() => setMessage("Pemulihan password melalui OTP akan tersedia pada milestone berikutnya.")}
+                    onClick={() => setMode("password-reset-request")}
                   >
                     Lupa password?
                   </button>
@@ -1201,8 +1319,8 @@ export default function App() {
                   <span>Saya menyetujui Syarat &amp; Ketentuan dan Kebijakan Privasi.</span>
                 </label>
                 <p className="auth-note">
-                  OTP email belum aktif. Sistem tidak akan menampilkan verifikasi
-                  atau aktivasi OTP palsu.
+                  Setelah mendaftar, kode OTP akan dikirim ke email untuk
+                  mengaktifkan akun.
                 </p>
                 <button className="primary auth-submit" disabled={busy}>
                   {busy ? "Memproses…" : "Daftar Akun"}
@@ -1215,6 +1333,87 @@ export default function App() {
                   Sudah punya akun? Masuk
                 </button>
               </form>
+            </article>
+
+            <article className={`auth-card auth-recovery-card ${mode === "password-reset-request" ? "active" : ""}`}>
+              <div className="auth-card-heading compact">
+                <Image className="auth-card-logo" src="/warkost-bahagia-logo-clean.png" alt="Warkost Bahagia" width={1672} height={941} />
+                <span className="auth-card-kicker">PEMULIHAN AKUN</span>
+                <h2>Lupa Password</h2>
+                <p>Masukkan email atau nomor HP akun Warkost Anda.</p>
+              </div>
+              <form onSubmit={submitForgotPassword}>
+                <label>
+                  Email atau Nomor HP
+                  <input name="identifier" required autoComplete="username" placeholder="Email atau nomor HP" />
+                </label>
+                <p className="auth-note">Jika akun ditemukan, kode akan dikirim ke email yang terdaftar.</p>
+                <button className="primary auth-submit" disabled={busy}>{busy ? "Mengirim…" : "Kirim Kode OTP"}</button>
+                <button className="auth-secondary" type="button" onClick={() => setMode("login")}>Kembali ke Masuk</button>
+              </form>
+            </article>
+
+            <article className={`auth-card auth-otp-card ${["registration-otp", "password-reset-otp"].includes(mode) ? "active" : ""}`}>
+              <div className="auth-card-heading compact">
+                <Image className="auth-card-logo" src="/warkost-bahagia-logo-clean.png" alt="Warkost Bahagia" width={1672} height={941} />
+                <span className="auth-card-kicker">VERIFIKASI EMAIL</span>
+                <h2>Masukkan Kode OTP</h2>
+                <p>Kode 6 digit telah dikirim ke {otpFlow?.destination || "email Anda"}.</p>
+              </div>
+              <form onSubmit={submitOtp}>
+                <label>
+                  Kode OTP
+                  <input className="otp-code-input" name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" minLength="6" maxLength="6" required autoFocus placeholder="000000" />
+                </label>
+                <p className="auth-note">Kode berlaku 10 menit dan maksimal 5 percobaan.</p>
+                <button className="primary auth-submit" disabled={busy}>{busy ? "Memverifikasi…" : "Verifikasi Kode"}</button>
+                <button className="auth-secondary" type="button" disabled={busy || otpResendRemaining > 0} onClick={resendCurrentOtp}>
+                  {otpResendRemaining > 0 ? `Kirim ulang dalam ${otpResendRemaining} detik` : "Kirim Ulang Kode"}
+                </button>
+              </form>
+            </article>
+
+            <article className={`auth-card auth-reset-card ${mode === "password-reset-new" ? "active" : ""}`}>
+              <div className="auth-card-heading compact">
+                <Image className="auth-card-logo" src="/warkost-bahagia-logo-clean.png" alt="Warkost Bahagia" width={1672} height={941} />
+                <span className="auth-card-kicker">PASSWORD BARU</span>
+                <h2>Atur Ulang Password</h2>
+                <p>Gunakan password baru yang aman, minimal 10 karakter.</p>
+              </div>
+              <form onSubmit={submitNewPassword}>
+                <label>
+                  Password Baru
+                  <span className="password-field">
+                    <input name="password" type={passwordVisibility.reset ? "text" : "password"} required minLength="10" autoComplete="new-password" />
+                    <button type="button" onClick={() => togglePassword("reset")}>{passwordVisibility.reset ? "Sembunyikan" : "Lihat"}</button>
+                  </span>
+                </label>
+                <label>
+                  Konfirmasi Password Baru
+                  <span className="password-field">
+                    <input name="passwordConfirmation" type={passwordVisibility.resetConfirmation ? "text" : "password"} required minLength="10" autoComplete="new-password" />
+                    <button type="button" onClick={() => togglePassword("resetConfirmation")}>{passwordVisibility.resetConfirmation ? "Sembunyikan" : "Lihat"}</button>
+                  </span>
+                </label>
+                <button className="primary auth-submit" disabled={busy}>{busy ? "Menyimpan…" : "Simpan Password Baru"}</button>
+              </form>
+            </article>
+
+            <article className={`auth-card auth-success-card ${["registration-success", "password-reset-success"].includes(mode) ? "active" : ""}`}>
+              <div className="auth-card-heading">
+                <Image className="auth-card-logo" src="/warkost-bahagia-logo-clean.png" alt="Warkost Bahagia" width={1672} height={941} />
+                <span className="auth-success-mark" aria-hidden="true">✓</span>
+                <span className="auth-card-kicker">BERHASIL</span>
+                <h2>{mode === "registration-success" ? "Akun Sudah Aktif" : "Password Diperbarui"}</h2>
+                <p>{mode === "registration-success" ? "Email telah terverifikasi. Anda dapat mulai memesan." : "Silakan masuk kembali menggunakan password baru."}</p>
+              </div>
+              <div className="auth-success-actions">
+                {mode === "registration-success" ? (
+                  <button className="primary auth-submit" type="button" disabled={busy} onClick={continueAfterRegistration}>{busy ? "Memuat…" : "Mulai Pesan"}</button>
+                ) : (
+                  <button className="primary auth-submit" type="button" onClick={() => setMode("login")}>Kembali ke Masuk</button>
+                )}
+              </div>
             </article>
 
           </section>

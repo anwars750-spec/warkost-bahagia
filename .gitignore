@@ -8,3 +8,4 @@ backups/
 data/uploads/
 playwright-report/
 test-results/
+.uat/

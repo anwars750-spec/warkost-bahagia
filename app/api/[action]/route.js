@@ -48,6 +48,14 @@ import {
   registerCustomer,
 } from "../../../lib/customer-auth.mjs";
 import {
+  OTP_PURPOSES,
+  requestPasswordReset,
+  resendOtp,
+  resetPassword,
+  verifyPasswordResetOtp,
+  verifyRegistrationOtp,
+} from "../../../lib/otp.mjs";
+import {
   adjustStock,
   listStock,
   listAuditLogs,
@@ -381,15 +389,30 @@ export async function POST(request, { params }) {
     assertSameOrigin(request);
     const { action } = await params;
     const body = await readJsonBody(request);
-    if (["login", "register"].includes(action)) {
+    if (
+      [
+        "login",
+        "register",
+        "otp-verify",
+        "otp-resend",
+        "password-reset-request",
+        "password-reset",
+      ].includes(action)
+    ) {
       if (
         !(await recordAttempt(
           action,
-          String(body.identifier || body.email || body.phone || "")
+          String(
+            body.challengeId ||
+              body.identifier ||
+              body.email ||
+              body.phone ||
+              "",
+          )
             .trim()
             .toLowerCase()
             .slice(0, 255),
-          12,
+          action === "otp-verify" ? 10 : 12,
         ))
       )
         throw new DomainError(
@@ -408,12 +431,54 @@ export async function POST(request, { params }) {
     if (action === "register") {
       sessionSecret();
       const result = await registerCustomer(body);
-      const response = out(result);
-      response.cookies.set(
-        "wb_session",
-        await issueSession(result.user),
-        cookieOptions(request),
+      return out(result, 201);
+    }
+    if (action === "otp-resend") {
+      return out(
+        await resendOtp({
+          challengeId: body.challengeId,
+          purpose: body.purpose,
+        }),
       );
+    }
+    if (action === "otp-verify") {
+      if (body.purpose === OTP_PURPOSES.REGISTRATION) {
+        const result = await verifyRegistrationOtp(body);
+        if (result.alreadyVerified)
+          return out({ verified: true, alreadyVerified: true });
+        const response = out({
+          verified: true,
+          alreadyVerified: false,
+          user: {
+            id: result.user.id,
+            name: result.user.name,
+            role: result.user.role,
+          },
+        });
+        response.cookies.set(
+          "wb_session",
+          await issueSession(result.user),
+          cookieOptions(request),
+        );
+        return response;
+      }
+      if (body.purpose === OTP_PURPOSES.PASSWORD_RESET)
+        return out(await verifyPasswordResetOtp(body));
+      throw new DomainError("Tujuan OTP tidak valid");
+    }
+    if (action === "password-reset-request") {
+      return out(await requestPasswordReset(body.identifier));
+    }
+    if (action === "password-reset") {
+      const result = await resetPassword(body);
+      const response = out({
+        ...result,
+        message: "Password berhasil diperbarui. Silakan masuk kembali.",
+      });
+      response.cookies.set("wb_session", "", {
+        ...cookieOptions(request),
+        maxAge: 0,
+      });
       return response;
     }
     if (action === "login") {
