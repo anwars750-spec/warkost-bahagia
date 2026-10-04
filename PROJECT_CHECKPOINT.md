@@ -14,7 +14,8 @@
 - Customer UI Batch B implementation: `a038abf3dd92416f3aa1835dfb144ae182d40031`
 - Customer UI Batch B checkpoint: `ab7854cca9c643cf6185847b606f7c384bea5b13`
 - Batch B UAT hotfix implementation: `a38a115ad068f16021a8d9729b703d4e7c91f199`
-- Milestone: Batch B Visual + Login UAT Hotfix
+- Batch B final visual polish implementation: `1da678313b3fb18cf4454099c1fe36988e3eaa87`
+- Milestone: Batch B Final Visual Polish — 8 Corrections
 - Status: **VERIFIED**
 - Verification date: 2026-10-04
 
@@ -413,3 +414,43 @@ Status: **VERIFIED**
 - Production authentication was not weakened: password hashing, active-account checks, email-or-phone login, customer ownership, rate limiting, and session behavior remain intact.
 - No OTP backend/provider, fake OTP success, Maps, Manager/RBAC, Birthday Promo, BTN QRIS adapter, deployment, dependency upgrade, hydration workaround, or unrelated milestone work.
 - Stop after this checkpoint; do not start another milestone without explicit scope.
+
+---
+
+## Batch B Final Visual Polish — 8 Corrections
+
+Date: 2026-10-04
+
+Status: **VERIFIED — NOT YET LOCKED**
+
+### Source-control baseline
+
+- Parent checkpoint: `f4c4713c0655e8e8c960bcd55f783ae8155814ca`
+- Implementation commit: `1da678313b3fb18cf4454099c1fe36988e3eaa87`
+- No Git bundle was created in this session.
+
+### Corrections completed
+
+1. Guest mobile header now reserves clear space between the full logo/brand and a compact elevated Login button at 360px widths.
+2. Guest product action is shortened to `Pesan`; price and action have independent compact space in the two-column mobile card.
+3. Desktop Login/Register logos use their full intrinsic 1672×941 aspect ratio with `object-fit: contain` and no negative offset.
+4. Desktop onboarding now shows only the active form, defaults to Login, and reveals Register only through the explicit account switch action while retaining the brand hero.
+5. Mobile auth order is branding/header → Login/Register selector → active form → promotional hero, with Login active by default.
+6. Customer-facing Intro/Login/Register/OTP/Selesai stage chips were removed without adding or changing OTP backend behavior.
+7. Mobile cart summary now presents cart badge, item count, subtotal, and a compact `Buka` action above the bottom navigation; homepage safe padding prevents content overlap.
+8. Duplicate Account-page shortcut buttons were removed. The primary quick Account menu remains the single navigation entry point for Pesanan Aktif, Riwayat, Tracking, Voucher & Loyalty, Alamat, Pengaturan Akun, Bantuan, and Keluar.
+
+### Verification
+
+- Dedicated guest/auth/cart/account visual contract tests: **11/11 PASS**.
+- Local fixture login, wrong-password rejection, inactive-account rejection, guest catalog, active promo, expired/inactive promo filtering, private-account blocking, and production fixture guard remain **PASS** in the same targeted suite.
+- Final production build: **PASS** with `/` and all existing API routes compiled.
+- Mobile breakpoint contracts covering 360×800 and 390×844: **PASS** — two-column products, compact CTA, auth form before hero, full contain logos, cart/nav separation, and safe bottom padding.
+- Desktop breakpoint contracts covering 1366×768 and 1440×900: **PASS** — two-column hero/form composition, one active auth form, full logo, and preserved account navigation.
+- Updated Playwright UAT covers guest `Pesan` → Login, Login/Register explicit switching, absence of stage chips, and mobile form-before-hero order. It was not executed because no existing Chromium or `agent-browser` executable is available; no browser was downloaded.
+
+### Guardrails preserved
+
+- No backend/business-rule, auth-security, OTP, Maps, Manager/RBAC, BTN QRIS, Shipping, Voucher, Loyalty, Payment, Checkout, address ownership, Orders/Tracking, or unrelated screen change.
+- This visual polish is verified but does not mark Batch B as locked/final. Await explicit manual acceptance before any lock or bundle handoff.
+- Do not start Checkout Quick Address or another milestone without an explicit scope.
