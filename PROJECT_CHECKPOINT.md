@@ -11,8 +11,11 @@
 - Loyalty core implementation: `ff0aeaf66555546849902ba0769be6fc6b0f9048`
 - Loyalty core checkpoint: `f61c9f0943a21f05aa0c69675082f54d067e829e`
 - QRIS/Payment provider-neutral implementation: `e0ac1dd4514e642c48e9dbaa8592d346dc609bdd`
-- Milestone: Customer Functional Completion #4 — QRIS / Payment Core
-- Status: **PROVIDER-NEUTRAL VERIFIED / PRODUCTION PROVIDER BLOCKED**
+- Customer UI Batch B implementation: `a038abf3dd92416f3aa1835dfb144ae182d40031`
+- Customer UI Batch B checkpoint: `ab7854cca9c643cf6185847b606f7c384bea5b13`
+- Batch B UAT hotfix implementation: `a38a115ad068f16021a8d9729b703d4e7c91f199`
+- Milestone: Batch B Visual + Login UAT Hotfix
+- Status: **VERIFIED**
 - Verification date: 2026-10-04
 
 ## Scope completed
@@ -358,3 +361,55 @@ Status: **COMPLETED / AUTOMATED VERIFIED**
 
 - No Customer Homepage/Checkout redesign, OTP Email implementation, Google Maps API, birthday promo, Manager/RBAC, Kasir removal, BTN adapter, Admin/Kitchen/Driver redesign, deployment, dependency upgrade, or unrelated refactor.
 - Do not start OTP Email, Maps, or another milestone without explicit scope.
+
+---
+
+## Batch B Visual + Login UAT Hotfix
+
+Date: 2026-10-04
+
+Status: **VERIFIED**
+
+### Source-control baseline
+
+- Parent checkpoint: `ab7854cca9c643cf6185847b606f7c384bea5b13`
+- Implementation commit: `a38a115ad068f16021a8d9729b703d4e7c91f199`
+- Customer UI, Shipping/Ongkir, Voucher, Loyalty, QRIS/Payment, and Batch B functional behavior remain locked.
+
+### Root-cause audit
+
+- Guest catalog was not blocked by API or frontend authorization. The local runtime used the default SQLite path, but no populated `data/warkost.db` existed, so the public storefront received an empty catalog.
+- `customer@warkost.local` was seed-only and its password depended on the first `SEED_DEMO_PASSWORD` value used for that database. This made previously quoted local credentials non-deterministic even though scrypt verification and account-status enforcement were working correctly.
+- The hydration warning was caused by a browser extension injecting attributes. Incognito was clean; no application hydration logic was changed.
+
+### Scope completed
+
+- Guest storefront continues to use the public `/api/menu` path and now exposes only public-safe category/product fields together with active in-period promotions.
+- Guest search, category filters, product imagery, prices, and promo discovery remain available; protected product/order actions route to Login.
+- Login/Register now use the approved warm Warkost onboarding family: branded food hero, benefits, dedicated desktop Login and Register cards, and responsive mobile Intro/Login/Register with visual-ready future OTP/Success steps.
+- Google/Apple sign-in remains absent. Registration retains name, email, phone, password confirmation, birth date, and consent. No OTP success or account-verification bypass was added.
+- Added explicit local-only `npm run setup:uat`. It rejects production and remote/MySQL databases, uses a standard scrypt hash, is idempotent, and only refreshes the reserved `customer@warkost.local` fixture when deliberately invoked.
+- Local fixture also ensures the existing three demo products, categories, active demo campaigns, loyalty account, and default address are available without inventing a second catalog foundation.
+
+### Local development UAT account
+
+- Setup: `npm run setup:uat`
+- Email: `customer@warkost.local`
+- Password: `WarkostLocal#2026`
+- Scope: **LOCAL DEVELOPMENT ONLY**. The fixture cannot run in production and is not part of production request/runtime code.
+
+### Verification
+
+- Dedicated UAT hotfix tests: **8/8 PASS**.
+- Batch B affected plus locked Shipping/Voucher/Loyalty/Payment regression set: **58/58 PASS**.
+- Full unit suite: **97/97 PASS**.
+- Production build: **PASS**.
+- Live HTTP verification: **PASS** — 3 public products, 2 categories, 2 active promotions, private account returns 401 for guest, local customer login returns 200, and authenticated own-account lookup returns 200 without a password hash.
+- Desktop/mobile onboarding source and responsive CSS contracts: **PASS**; updated Playwright UAT now scopes the Login card and covers guest storefront → protected-action Login routing.
+- Browser visual automation was not rerun because no Chromium or `agent-browser` executable exists in the environment. No browser download or Cloud Browser localhost retry was attempted.
+
+### Guardrails preserved
+
+- Production authentication was not weakened: password hashing, active-account checks, email-or-phone login, customer ownership, rate limiting, and session behavior remain intact.
+- No OTP backend/provider, fake OTP success, Maps, Manager/RBAC, Birthday Promo, BTN QRIS adapter, deployment, dependency upgrade, hydration workaround, or unrelated milestone work.
+- Stop after this checkpoint; do not start another milestone without explicit scope.
