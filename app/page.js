@@ -854,7 +854,6 @@ export default function App() {
             <>
               {view === "auth" && (
                 <>
-                  <button onClick={() => setView("menu")}>Beranda</button>
                   <button
                     onClick={() => {
                       setView("menu");
@@ -1023,10 +1022,10 @@ export default function App() {
               <div className="auth-card-heading">
                 <Image
                   className="auth-card-logo"
-                  src="/warkost-bahagia-logo-transparent.png"
+                  src="/warkost-bahagia-logo.jpg"
                   alt="Warkost Bahagia"
-                  width={1672}
-                  height={941}
+                  width={1536}
+                  height={864}
                 />
                 <span className="auth-card-kicker">SELAMAT DATANG KEMBALI</span>
                 <h2>Masuk ke Akun</h2>
@@ -1087,10 +1086,10 @@ export default function App() {
               <div className="auth-card-heading compact">
                 <Image
                   className="auth-card-logo"
-                  src="/warkost-bahagia-logo-transparent.png"
+                  src="/warkost-bahagia-logo.jpg"
                   alt="Warkost Bahagia"
-                  width={1672}
-                  height={941}
+                  width={1536}
+                  height={864}
                 />
                 <span className="auth-card-kicker">MULAI PESAN DI WARKOST</span>
                 <h2>Daftar Akun</h2>

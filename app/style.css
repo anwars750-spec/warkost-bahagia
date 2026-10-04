@@ -2068,6 +2068,16 @@ footer {
   max-width: 1440px;
   background: rgba(255, 251, 244, 0.96);
 }
+.auth-header .brand-logo {
+  width: 142px;
+  max-width: 32vw;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  object-position: center;
+  border-radius: 0;
+  box-shadow: none;
+}
 .guest-customer-header .brand {
   flex: 0 1 auto;
 }
@@ -2211,19 +2221,23 @@ footer {
   padding: 22px 24px;
 }
 .auth-card-heading {
+  overflow: visible;
   text-align: center;
 }
 .auth-card-heading .auth-card-logo {
   display: block;
-  width: 138px;
-  max-width: 100%;
+  width: 190px;
+  max-width: min(70%, 190px);
   height: auto;
-  aspect-ratio: 1672 / 941;
+  aspect-ratio: 16 / 9;
   margin: 0 auto 8px;
   object-fit: contain;
+  object-position: center;
+  border-radius: 0;
+  clip-path: none;
 }
 .auth-card-heading.compact .auth-card-logo {
-  width: 124px;
+  width: 174px;
 }
 .auth-card-heading h2 {
   margin: 4px 0 3px;
@@ -2354,6 +2368,10 @@ footer {
     aspect-ratio: 16 / 9;
     object-fit: contain;
   }
+  .auth-header .brand-logo {
+    width: 88px;
+    max-width: 25vw;
+  }
   .guest-customer-header .brand-copy {
     min-width: 0;
   }
@@ -2435,6 +2453,11 @@ footer {
   }
   .auth-card-heading h2 {
     font-size: 24px;
+  }
+  .auth-card-heading .auth-card-logo,
+  .auth-card-heading.compact .auth-card-logo {
+    width: 172px;
+    max-width: 62vw;
   }
   .auth-field-grid {
     grid-template-columns: 1fr;

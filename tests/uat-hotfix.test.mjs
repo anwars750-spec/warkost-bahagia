@@ -213,16 +213,34 @@ test("logo dan header auth mempertahankan proporsi penuh pada desktop/mobile", (
   const page = fs.readFileSync(path.join(projectRoot, "app", "page.js"), "utf8");
   const style = fs.readFileSync(path.join(projectRoot, "app", "style.css"), "utf8");
   assert.equal((page.match(/className="auth-card-logo"/g) || []).length, 2);
-  assert.equal((page.match(/width=\{1672\}[\s\S]*?height=\{941\}/g) || []).length, 2);
+  assert.equal((page.match(/src="\/warkost-bahagia-logo\.jpg"/g) || []).length, 3);
+  assert.equal((page.match(/width=\{1536\}[\s\S]*?height=\{864\}/g) || []).length, 3);
+  assert.doesNotMatch(page, /warkost-bahagia-logo-transparent\.png/);
   assert.match(
     style,
-    /\.auth-card-heading \.auth-card-logo\s*{[\s\S]*?aspect-ratio:\s*1672 \/ 941[\s\S]*?object-fit:\s*contain/,
+    /\.auth-header \.brand-logo\s*{[\s\S]*?height:\s*auto[\s\S]*?object-fit:\s*contain[\s\S]*?border-radius:\s*0/,
+  );
+  assert.match(
+    style,
+    /\.auth-card-heading \.auth-card-logo\s*{[\s\S]*?height:\s*auto[\s\S]*?aspect-ratio:\s*16 \/ 9[\s\S]*?object-fit:\s*contain[\s\S]*?clip-path:\s*none/,
   );
   assert.match(
     style,
     /@media \(max-width: 760px\)[\s\S]*?\.guest-customer-header \.brand\s*{[\s\S]*?flex:\s*1 1 auto[\s\S]*?\.guest-customer-header nav\s*{[\s\S]*?margin-left:\s*14px/,
   );
   assert.match(page, /!role \? "guest-customer-header" : ""/);
+});
+
+test("header auth hanya menampilkan Menu, Bantuan, dan Masuk", () => {
+  const page = fs.readFileSync(path.join(projectRoot, "app", "page.js"), "utf8");
+  const authNavigation = page.slice(
+    page.indexOf('{view === "auth" && ('),
+    page.indexOf('className="guest-login-nav"'),
+  );
+  assert.doesNotMatch(authNavigation, />Beranda<\/button>/);
+  assert.match(authNavigation, />\s*Menu\s*<\/button>/);
+  assert.match(authNavigation, />\s*Bantuan\s*<\/button>/);
+  assert.match(page, /className="guest-login-nav"[\s\S]*?>\s*Masuk\s*<\/button>/);
 });
 
 test("CTA produk dan ringkasan cart mobile memakai hierarchy compact tanpa overlap", () => {
