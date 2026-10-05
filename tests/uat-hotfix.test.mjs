@@ -6,7 +6,9 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 
 const projectRoot = path.resolve(new URL("..", import.meta.url).pathname);
-const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "warkost-local-uat-"));
+const fixtureRoot = fs.mkdtempSync(
+  path.join(os.tmpdir(), "warkost-local-uat-"),
+);
 const setupScript = path.join(projectRoot, "scripts", "setup-local-uat.mjs");
 const localPassword = "WarkostLocal#2026";
 const fixtureEnvironment = { ...process.env, NODE_ENV: "development" };
@@ -83,10 +85,7 @@ test("promo inactive dan expired tidak masuk katalog guest", async () => {
 
 test("private account tetap memerlukan customer terautentikasi", async () => {
   await assert.rejects(getCustomerAccount(null), /masuk terlebih dahulu/);
-  await assert.rejects(
-    getCustomerAccount({ id: 1, role: "ADMIN" }),
-    /Akses/,
-  );
+  await assert.rejects(getCustomerAccount({ id: 1, role: "ADMIN" }), /Akses/);
 });
 
 test("fixture customer lokal deterministik, aman, dan dapat login", async () => {
@@ -138,7 +137,10 @@ test("fixture idempotent dan menolak production mode", () => {
   const rejected = runFixture(productionEnvironment, productionRoot);
   assert.notEqual(rejected.status, 0);
   assert.match(rejected.stderr, /tidak boleh dijalankan di production/);
-  assert.equal(fs.existsSync(path.join(productionRoot, "data", "warkost.db")), false);
+  assert.equal(
+    fs.existsSync(path.join(productionRoot, "data", "warkost.db")),
+    false,
+  );
   fs.rmSync(productionRoot, { recursive: true, force: true });
 });
 
@@ -165,7 +167,10 @@ test("customer inactive ditolak dan response login tidak mengekspos hash", async
 });
 
 test("onboarding desktop/mobile mempertahankan auth contract dan OTP nyata", () => {
-  const page = fs.readFileSync(path.join(projectRoot, "app", "page.js"), "utf8");
+  const page = fs.readFileSync(
+    path.join(projectRoot, "app", "page.js"),
+    "utf8",
+  );
   const style = fs.readFileSync(
     path.join(projectRoot, "app", "style.css"),
     "utf8",
@@ -186,7 +191,10 @@ test("onboarding desktop/mobile mempertahankan auth contract dan OTP nyata", () 
   assert.match(page, /Tampilkan password/);
   assert.doesNotMatch(page, /auth-flow-ready/);
   assert.doesNotMatch(page, /\["Intro", "ready"\]/);
-  assert.doesNotMatch(page, /Google Sign-In|Masuk dengan Google|Apple Sign-In|Masuk dengan Apple/);
+  assert.doesNotMatch(
+    page,
+    /Google Sign-In|Masuk dengan Google|Apple Sign-In|Masuk dengan Apple/,
+  );
   assert.match(page, /name="code"/);
   assert.match(page, /password-reset-request/);
   assert.match(
@@ -202,7 +210,10 @@ test("onboarding desktop/mobile mempertahankan auth contract dan OTP nyata", () 
 });
 
 test("aksi produk guest mengarahkan bersih ke login", () => {
-  const page = fs.readFileSync(path.join(projectRoot, "app", "page.js"), "utf8");
+  const page = fs.readFileSync(
+    path.join(projectRoot, "app", "page.js"),
+    "utf8",
+  );
   assert.match(
     page,
     /className="guest-product-cta"[\s\S]*?setMode\("login"\);[\s\S]*?setView\("auth"\);[\s\S]*?Pesan/,
@@ -211,8 +222,14 @@ test("aksi produk guest mengarahkan bersih ke login", () => {
 });
 
 test("logo transparan valid dipakai konsisten pada header dan auth", async () => {
-  const page = fs.readFileSync(path.join(projectRoot, "app", "page.js"), "utf8");
-  const style = fs.readFileSync(path.join(projectRoot, "app", "style.css"), "utf8");
+  const page = fs.readFileSync(
+    path.join(projectRoot, "app", "page.js"),
+    "utf8",
+  );
+  const style = fs.readFileSync(
+    path.join(projectRoot, "app", "style.css"),
+    "utf8",
+  );
   const sharp = (await import("sharp")).default;
   const logoPath = path.join(
     projectRoot,
@@ -225,8 +242,12 @@ test("logo transparan valid dipakai konsisten pada header dan auth", async () =>
     .raw()
     .toBuffer({ resolveWithObject: true });
   assert.ok((page.match(/className="auth-card-logo"/g) || []).length >= 6);
-  assert.ok((page.match(/src="\/warkost-bahagia-logo-clean\.png"/g) || []).length >= 7);
-  assert.ok((page.match(/width=\{1672\}[\s\S]*?height=\{941\}/g) || []).length >= 7);
+  assert.ok(
+    (page.match(/src="\/warkost-bahagia-logo-clean\.png"/g) || []).length >= 7,
+  );
+  assert.ok(
+    (page.match(/width=\{1672\}[\s\S]*?height=\{941\}/g) || []).length >= 7,
+  );
   assert.doesNotMatch(page, /src="\/warkost-bahagia-logo\.jpg"/);
   assert.equal(metadata.hasAlpha, true);
   assert.equal(metadata.width, 1672);
@@ -254,7 +275,10 @@ test("logo transparan valid dipakai konsisten pada header dan auth", async () =>
 });
 
 test("header auth hanya menampilkan Menu, Bantuan, dan Masuk", () => {
-  const page = fs.readFileSync(path.join(projectRoot, "app", "page.js"), "utf8");
+  const page = fs.readFileSync(
+    path.join(projectRoot, "app", "page.js"),
+    "utf8",
+  );
   const authNavigation = page.slice(
     page.indexOf('{view === "auth" && ('),
     page.indexOf('className="guest-login-nav"'),
@@ -262,12 +286,21 @@ test("header auth hanya menampilkan Menu, Bantuan, dan Masuk", () => {
   assert.doesNotMatch(authNavigation, />Beranda<\/button>/);
   assert.match(authNavigation, />\s*Menu\s*<\/button>/);
   assert.match(authNavigation, />\s*Bantuan\s*<\/button>/);
-  assert.match(page, /className="guest-login-nav"[\s\S]*?>\s*Masuk\s*<\/button>/);
+  assert.match(
+    page,
+    /className="guest-login-nav"[\s\S]*?>\s*Masuk\s*<\/button>/,
+  );
 });
 
 test("checkout quick address menyimpan, memilih, dan memicu ulang quote tanpa mereset state", () => {
-  const page = fs.readFileSync(path.join(projectRoot, "app", "page.js"), "utf8");
-  const style = fs.readFileSync(path.join(projectRoot, "app", "style.css"), "utf8");
+  const page = fs.readFileSync(
+    path.join(projectRoot, "app", "page.js"),
+    "utf8",
+  );
+  const style = fs.readFileSync(
+    path.join(projectRoot, "app", "style.css"),
+    "utf8",
+  );
   const handler = page.slice(
     page.indexOf("async function saveQuickAddress"),
     page.indexOf("function openCustomerHelp"),
@@ -278,19 +311,34 @@ test("checkout quick address menyimpan, memilih, dan memicu ulang quote tanpa me
   assert.match(page, /name="quickAddressDetail"/);
   assert.match(page, /name="quickAddressLatitude" type="hidden"/);
   assert.match(page, /name="quickAddressLongitude" type="hidden"/);
-  assert.doesNotMatch(page, /quickAddress(?:Latitude|Longitude)" type="number"/);
-  assert.match(handler, /if \(!form \|\| quickAddressAttempt\.current\) return/);
+  assert.doesNotMatch(
+    page,
+    /quickAddress(?:Latitude|Longitude)" type="number"/,
+  );
+  assert.match(
+    handler,
+    /if \(!form \|\| quickAddressAttempt\.current\) return/,
+  );
   assert.match(handler, /await api\("address",/);
   assert.match(handler, /isDefault:\s*false/);
   assert.match(handler, /await api\("account"\)/);
   assert.match(handler, /setCheckoutAddressId\(String\(created\.id\)\)/);
-  assert.match(handler, /showTransientMessage\("Alamat berhasil ditambahkan\."\)/);
-  assert.doesNotMatch(handler, /customerId|setCart|setSelectedVoucherId|setSelectedRewardId/);
+  assert.match(
+    handler,
+    /showTransientMessage\("Alamat berhasil ditambahkan\."\)/,
+  );
+  assert.doesNotMatch(
+    handler,
+    /customerId|setCart|setSelectedVoucherId|setSelectedRewardId/,
+  );
   assert.match(
     page,
     /api\([\s\S]*?"delivery\/quote",[\s\S]*?addressId:\s*selectedCheckoutAddress\.id/,
   );
-  assert.match(style, /\.checkout-quick-address\s*{[\s\S]*?border-radius:\s*15px/);
+  assert.match(
+    style,
+    /\.checkout-quick-address\s*{[\s\S]*?border-radius:\s*15px/,
+  );
   assert.match(
     style,
     /@media \(max-width:\s*620px\)[\s\S]*?\.quick-address-fields\s*{[\s\S]*?grid-template-columns:\s*1fr/,
@@ -298,10 +346,22 @@ test("checkout quick address menyimpan, memilih, dan memicu ulang quote tanpa me
 });
 
 test("CTA produk dan ringkasan cart mobile memakai hierarchy compact tanpa overlap", () => {
-  const page = fs.readFileSync(path.join(projectRoot, "app", "page.js"), "utf8");
-  const style = fs.readFileSync(path.join(projectRoot, "app", "style.css"), "utf8");
-  assert.match(page, /<small>\{count\} item di keranjang<\/small>[\s\S]*?<strong>\{money\(total\)\}<\/strong>/);
-  assert.match(page, /<span className="floating-cart-cta">[\s\S]*?Buka[\s\S]*?<ArrowIcon \/>/);
+  const page = fs.readFileSync(
+    path.join(projectRoot, "app", "page.js"),
+    "utf8",
+  );
+  const style = fs.readFileSync(
+    path.join(projectRoot, "app", "style.css"),
+    "utf8",
+  );
+  assert.match(
+    page,
+    /<small>\{count\} item di keranjang<\/small>[\s\S]*?<strong>\{money\(total\)\}<\/strong>/,
+  );
+  assert.match(
+    page,
+    /<span className="floating-cart-cta">[\s\S]*?Buka[\s\S]*?<ArrowIcon \/>/,
+  );
   assert.match(style, /\.guest-product-cta\s*{[\s\S]*?min-width:\s*68px/);
   assert.match(
     style,
@@ -314,9 +374,15 @@ test("CTA produk dan ringkasan cart mobile memakai hierarchy compact tanpa overl
 });
 
 test("menu akun menjadi satu-satunya entry point delapan aksi akun", () => {
-  const page = fs.readFileSync(path.join(projectRoot, "app", "page.js"), "utf8");
+  const page = fs.readFileSync(
+    path.join(projectRoot, "app", "page.js"),
+    "utf8",
+  );
   const overviewStart = page.indexOf('<section className="account-overview"');
-  const columnsStart = page.indexOf('<div className="columns account-columns">', overviewStart);
+  const columnsStart = page.indexOf(
+    '<div className="columns account-columns">',
+    overviewStart,
+  );
   const overview = page.slice(overviewStart, columnsStart);
   assert.ok(overviewStart >= 0 && columnsStart > overviewStart);
   assert.doesNotMatch(overview, /<button/);
@@ -339,18 +405,21 @@ test("menu akun menjadi satu-satunya entry point delapan aksi akun", () => {
 });
 
 test("voucher success auto-dismiss dan quote hanya dipanggil untuk state valid", () => {
-  const page = fs.readFileSync(path.join(projectRoot, "app", "page.js"), "utf8");
+  const page = fs.readFileSync(
+    path.join(projectRoot, "app", "page.js"),
+    "utf8",
+  );
   assert.match(
     page,
     /function showTransientMessage\(text, duration = 2500\)[\s\S]*?setTimeout\([\s\S]*?setMessage\(\(current\) => \(current === text \? "" : current\)\)[\s\S]*?duration/,
   );
   assert.match(
     page,
-    /await api\("voucher-claim", \{ promotionId: voucher\.id \}\);[\s\S]*?showTransientMessage\("Voucher berhasil diklaim\."\)/,
+    /await api\("voucher-claim", \{\s*promotionId: voucher\.id,?\s*\}\);[\s\S]*?showTransientMessage\(\s*"Voucher berhasil diklaim\.",?\s*\)/,
   );
   assert.doesNotMatch(
     page,
-    /await api\("voucher-claim", \{ promotionId: voucher\.id \}\);[\s\S]{0,160}?setSelectedVoucherId\(voucher\.id\)/,
+    /await api\("voucher-claim", \{\s*promotionId: voucher\.id,?\s*\}\);[\s\S]{0,160}?setSelectedVoucherId\(voucher\.id\)/,
   );
   assert.match(
     page,

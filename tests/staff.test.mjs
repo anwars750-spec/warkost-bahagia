@@ -30,6 +30,11 @@ database
     "INSERT INTO users(name,email,password_hash,role) VALUES('Kitchen','kitchen@t.test',?,'KITCHEN')",
   )
   .run(hashPassword("password-that-is-long"));
+database
+  .prepare(
+    "INSERT INTO users(name,email,password_hash,role) VALUES('Owner','owner@t.test',?,'OWNER')",
+  )
+  .run(hashPassword("password-that-is-long"));
 database.prepare("INSERT INTO categories(name) VALUES('Food')").run();
 database
   .prepare(
@@ -44,6 +49,7 @@ database
 const admin = { id: 1, role: "ADMIN" },
   customer = { id: 2, role: "CUSTOMER" };
 const kitchen = { id: 3, role: "KITCHEN" };
+const owner = { id: 4, role: "OWNER" };
 test("akun driver dilindungi, tugas aktif mencegah nonaktif, sesi dicabut saat dinonaktifkan", async () => {
   await assert.rejects(
     createDriver(customer, {
@@ -54,14 +60,23 @@ test("akun driver dilindungi, tugas aktif mencegah nonaktif, sesi dicabut saat d
     }),
     /Akses/,
   );
-  const driver = await createDriver(admin, {
+  await assert.rejects(
+    createDriver(admin, {
+      name: "Fake Admin",
+      email: "fake-admin@test.local",
+      password: "a-very-long-password",
+      phone: "081546407857",
+    }),
+    /Akses/,
+  );
+  const driver = await createDriver(owner, {
     name: "Driver Baru",
     email: "driver@test.local",
     password: "a-very-long-password",
     phone: "081546407856",
   });
   await assert.rejects(
-    createDriver(admin, {
+    createDriver(owner, {
       name: "Duplicate",
       email: "driver@test.local",
       password: "a-very-long-password",
@@ -82,19 +97,19 @@ test("akun driver dilindungi, tugas aktif mencegah nonaktif, sesi dicabut saat d
   await updateStationStatus(kitchen, order.id, "READY");
   await changeStatus(admin, order.id, "ASSIGNED", driver.id);
   await assert.rejects(
-    setDriverActive(admin, driver.id, false),
+    setDriverActive(owner, driver.id, false),
     /pengantaran aktif/,
   );
   await acceptDelivery({ id: driver.id, role: "DRIVER" }, order.id);
   for (const status of ["PICKED_UP", "ON_DELIVERY", "DELIVERED"])
     await changeStatus({ id: driver.id, role: "DRIVER" }, order.id, status);
-  await setDriverActive(admin, driver.id, false);
+  await setDriverActive(owner, driver.id, false);
   assert.equal(await currentUser(request), null);
   await assert.rejects(
     changeStatus(admin, order.id, "ASSIGNED", driver.id),
     /tidak diizinkan/,
   );
-  await setDriverActive(admin, driver.id, true);
+  await setDriverActive(owner, driver.id, true);
   assert.equal(await currentUser(request), null);
   const fresh = await issueSession({ id: driver.id, role: "DRIVER" });
   assert.equal(

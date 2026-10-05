@@ -16,7 +16,14 @@ const { adjustStock, listAuditLogs, listStock } =
   await import("../lib/operations.mjs");
 
 const database = db();
-for (const role of ["ADMIN", "KITCHEN", "OWNER", "CUSTOMER", "DRIVER"])
+for (const role of [
+  "ADMIN",
+  "KITCHEN",
+  "OWNER",
+  "CUSTOMER",
+  "DRIVER",
+  "MANAGER",
+])
   database
     .prepare("INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,?)")
     .run(role, role.toLowerCase() + "@ops.test", "x", role);
@@ -39,6 +46,7 @@ const kitchen = { id: 2, role: "KITCHEN" };
 const owner = { id: 3, role: "OWNER" };
 const customer = { id: 4, role: "CUSTOMER" };
 const driver = { id: 5, role: "DRIVER" };
+const manager = { id: 6, role: "MANAGER" };
 
 test("mixed order menunggu kedua stasiun dan stok tercatat serta pulih saat batal", async () => {
   const order = await createOrder(customer, {
@@ -103,20 +111,25 @@ test("mixed order menunggu kedua stasiun dan stok tercatat serta pulih saat bata
   );
 });
 
-test("RBAC stok dan audit membatasi Admin dan Owner", async () => {
-  await adjustStock(admin, {
+test("RBAC stok memberi Manager/Owner akses dan menolak Admin", async () => {
+  await assert.rejects(
+    adjustStock(admin, {
+      productId: 1,
+      quantity: 5,
+      reason: "Belanja harian",
+    }),
+    /Akses ditolak/,
+  );
+  await adjustStock(manager, {
     productId: 1,
     quantity: 5,
     reason: "Belanja harian",
   });
-  await assert.rejects(
-    adjustStock(admin, {
-      productId: 1,
-      quantity: -1,
-      reason: "Koreksi",
-    }),
-    /hanya dapat menambah/,
-  );
+  await adjustStock(manager, {
+    productId: 1,
+    quantity: -1,
+    reason: "Koreksi",
+  });
   await adjustStock(owner, {
     productId: 1,
     quantity: -2,

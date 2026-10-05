@@ -98,12 +98,12 @@ const notificationCategory = (message) => {
 };
 const notificationTitle = (message) => {
   const category = notificationCategory(message);
-  if (category === "promo") return /poin/i.test(message)
-    ? "Poin Warkost"
-    : "Promo Warkost";
-  if (category === "order") return /driver|pengantaran/i.test(message)
-    ? "Info Pengantaran"
-    : "Status Pesanan";
+  if (category === "promo")
+    return /poin/i.test(message) ? "Poin Warkost" : "Promo Warkost";
+  if (category === "order")
+    return /driver|pengantaran/i.test(message)
+      ? "Info Pengantaran"
+      : "Status Pesanan";
   return "Informasi Akun";
 };
 async function api(route, body, signal) {
@@ -142,6 +142,7 @@ export default function App() {
       rewards: [],
     }),
     [drivers, setDrivers] = useState([]),
+    [staff, setStaff] = useState([]),
     [customers, setCustomers] = useState([]),
     [customerCursor, setCustomerCursor] = useState(null),
     [customerSearch, setCustomerSearch] = useState(""),
@@ -249,19 +250,28 @@ export default function App() {
       setMenu(m);
       setUser(me.user);
       if (me.user && me.user.role !== "CUSTOMER")
-        setView((prev) => (prev === "menu" ? "orders" : prev));
+        setView((prev) =>
+          prev === "menu"
+            ? me.user.role === "MANAGER"
+              ? "products"
+              : "orders"
+            : prev,
+        );
       if (me.user) {
-        const o = await api("orders", undefined, signal);
-        setOrders(o.orders);
-        setNextOrderCursor(o.nextCursor);
+        if (me.user.role !== "MANAGER") {
+          const o = await api("orders", undefined, signal);
+          setOrders(o.orders);
+          setNextOrderCursor(o.nextCursor);
+        } else {
+          setOrders([]);
+          setNextOrderCursor(null);
+        }
         setAlerts(await api("notifications", undefined, signal));
         if (me.user.role === "CUSTOMER")
           setAccount(await api("account", undefined, signal));
         if (["ADMIN", "OWNER"].includes(me.user.role)) {
           setDrivers((await api("drivers", undefined, signal)).drivers);
-          setInventory(await api("inventory", undefined, signal));
           setDashboard(await api("dashboard", undefined, signal));
-          setStock(await api("stock", undefined, signal));
           if (view === "reports")
             setReport(
               await api(
@@ -272,17 +282,22 @@ export default function App() {
             );
           if (me.user.role === "ADMIN") {
             await loadCustomers(customerSearch, null, signal);
-            setSettings(await api("settings", undefined, signal));
-            setPromotions(
-              (await api("promotions", undefined, signal)).promotions,
-            );
           }
           if (me.user.role === "OWNER") {
+            setStaff((await api("staff", undefined, signal)).staff);
             setAudit(await api("audit", undefined, signal));
             setLoyaltyRules(
               (await api("loyalty-rewards", undefined, signal)).rewards,
             );
           }
+        }
+        if (["MANAGER", "OWNER"].includes(me.user.role)) {
+          setInventory(await api("inventory", undefined, signal));
+          setStock(await api("stock", undefined, signal));
+          setSettings(await api("settings", undefined, signal));
+          setPromotions(
+            (await api("promotions", undefined, signal)).promotions,
+          );
         }
         if (["ADMIN", "KITCHEN", "OWNER"].includes(me.user.role))
           setPrintJobs((await api("print-jobs", undefined, signal)).jobs);
@@ -322,22 +337,30 @@ export default function App() {
       if (document.visibilityState === "hidden" || running) return;
       running = true;
       try {
-        const [latestOrders, latestAlerts] = await Promise.all([
-          api("orders", undefined, controller.signal),
-          api("notifications", undefined, controller.signal),
-        ]);
-        setOrders((previous) => {
-          const fresh = new Set(latestOrders.orders.map((order) => order.id));
-          return [
-            ...latestOrders.orders,
-            ...previous.filter((order) => !fresh.has(order.id)),
-          ].sort((a, b) => b.id - a.id);
-        });
-        setNextOrderCursor((cursor) =>
-          cursor === null
-            ? null
-            : Math.min(cursor, latestOrders.nextCursor ?? cursor),
+        const latestAlerts = await api(
+          "notifications",
+          undefined,
+          controller.signal,
         );
+        if (user.role !== "MANAGER") {
+          const latestOrders = await api(
+            "orders",
+            undefined,
+            controller.signal,
+          );
+          setOrders((previous) => {
+            const fresh = new Set(latestOrders.orders.map((order) => order.id));
+            return [
+              ...latestOrders.orders,
+              ...previous.filter((order) => !fresh.has(order.id)),
+            ].sort((a, b) => b.id - a.id);
+          });
+          setNextOrderCursor((cursor) =>
+            cursor === null
+              ? null
+              : Math.min(cursor, latestOrders.nextCursor ?? cursor),
+          );
+        }
         setAlerts(latestAlerts);
         if (["ADMIN", "OWNER"].includes(user.role))
           setDashboard(await api("dashboard", undefined, controller.signal));
@@ -406,7 +429,13 @@ export default function App() {
         return;
       }
       setUser(data.user);
-      setView(data.user.role === "CUSTOMER" ? "menu" : "orders");
+      setView(
+        data.user.role === "CUSTOMER"
+          ? "menu"
+          : data.user.role === "MANAGER"
+            ? "products"
+            : "orders",
+      );
     }, action !== "register");
   }
   function submitForgotPassword(e) {
@@ -601,11 +630,7 @@ export default function App() {
     return () => controller.abort();
   }, [role, view, selectedCheckoutAddress?.id]);
   useEffect(() => {
-    if (
-      role !== "CUSTOMER" ||
-      view !== "cart" ||
-      !selectedVoucherId
-    ) {
+    if (role !== "CUSTOMER" || view !== "cart" || !selectedVoucherId) {
       setVoucherQuote(null);
       setVoucherQuoteError("");
       setVoucherQuoteBusy(false);
@@ -613,7 +638,9 @@ export default function App() {
     }
     if (selectedRewardId) {
       setVoucherQuote(null);
-      setVoucherQuoteError("Voucher tidak dapat digabung dengan Loyalty Reward.");
+      setVoucherQuoteError(
+        "Voucher tidak dapat digabung dengan Loyalty Reward.",
+      );
       setVoucherQuoteBusy(false);
       return;
     }
@@ -704,7 +731,7 @@ export default function App() {
   const supportDriverAssigned = Boolean(supportOrder?.driver_id);
   const supportDriverContactEnabled = Boolean(
     supportOrder?.driver_whatsapp &&
-      ["PICKED_UP", "ON_DELIVERY"].includes(supportOrder.status),
+    ["PICKED_UP", "ON_DELIVERY"].includes(supportOrder.status),
   );
   const filteredNotifications = alerts.notifications.filter(
     (notification) =>
@@ -734,7 +761,9 @@ export default function App() {
     setOverlay(null);
     setView("account");
     requestAnimationFrame(() =>
-      document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" }),
+      document
+        .getElementById(sectionId)
+        ?.scrollIntoView({ behavior: "smooth" }),
     );
   }
   function openCustomerSupport(orderId = null, topic = null) {
@@ -745,8 +774,11 @@ export default function App() {
   function reorderItems(items) {
     const additions = {};
     for (const item of items || []) {
-      const product = menu.products.find((candidate) => candidate.name === item.name);
-      if (product) additions[product.id] = (additions[product.id] || 0) + item.quantity;
+      const product = menu.products.find(
+        (candidate) => candidate.name === item.name,
+      );
+      if (product)
+        additions[product.id] = (additions[product.id] || 0) + item.quantity;
     }
     if (!Object.keys(additions).length) {
       setError("Menu dari pesanan ini sudah tidak tersedia.");
@@ -881,7 +913,9 @@ export default function App() {
         </button>
         <nav
           className={role === "CUSTOMER" ? "customer-desktop-nav" : ""}
-          aria-label={role === "CUSTOMER" ? "Navigasi pelanggan utama" : undefined}
+          aria-label={
+            role === "CUSTOMER" ? "Navigasi pelanggan utama" : undefined
+          }
         >
           {role === "CUSTOMER" ? (
             <>
@@ -932,46 +966,51 @@ export default function App() {
             </>
           ) : role ? (
             <>
-              <button onClick={() => setView("orders")}>
+              <button
+                onClick={() =>
+                  setView(role === "MANAGER" ? "products" : "orders")
+                }
+              >
                 {role === "ADMIN"
                   ? "Operasional"
-                  : role === "KITCHEN"
-                    ? "Dapur"
-                    : role === "OWNER"
-                      ? "Dashboard"
-                      : "Tugas saya"}
+                  : role === "MANAGER"
+                    ? "Kelola menu"
+                    : role === "KITCHEN"
+                      ? "Dapur"
+                      : role === "OWNER"
+                        ? "Dashboard"
+                        : "Tugas saya"}
               </button>
               {role === "ADMIN" && (
                 <>
-                  <button onClick={() => setView("products")}>Produk</button>
-                  <button onClick={() => setView("promotions")}>Promo</button>
-                  <button onClick={() => setView("drivers")}>Driver</button>
                   <button onClick={() => setView("customers")}>
                     Pelanggan
                   </button>
-                  <button
-                    onClick={async () => {
-                      setView("reports");
-                      try {
-                        setReport(await api("report"));
-                      } catch (e) {
-                        setError(e.message);
-                      }
-                    }}
-                  >
-                    Laporan
-                  </button>
+                  <button onClick={() => setView("printing")}>Printer</button>
+                </>
+              )}
+              {role === "MANAGER" && (
+                <>
+                  <button onClick={() => setView("products")}>Produk</button>
+                  <button onClick={() => setView("promotions")}>Promo</button>
+                  <button onClick={() => setView("stock")}>Stok</button>
                   <button onClick={() => setView("settings")}>
                     Pengaturan
                   </button>
-                  <button onClick={() => setView("stock")}>Stok</button>
-                  <button onClick={() => setView("printing")}>Printer</button>
                 </>
               )}
               {role === "OWNER" && (
                 <>
-                  <button onClick={() => setView("loyalty-rules")}>Loyalty</button>
+                  <button onClick={() => setView("products")}>Produk</button>
+                  <button onClick={() => setView("promotions")}>Promo</button>
+                  <button onClick={() => setView("settings")}>
+                    Pengaturan
+                  </button>
+                  <button onClick={() => setView("loyalty-rules")}>
+                    Loyalty
+                  </button>
                   <button onClick={() => setView("stock")}>Stok</button>
+                  <button onClick={() => setView("staff")}>Staf</button>
                   <button onClick={() => setView("audit")}>Audit log</button>
                   <button onClick={() => setView("printing")}>Printer</button>
                   <button
@@ -1067,64 +1106,69 @@ export default function App() {
       >
         {!((!role || role === "CUSTOMER") && view === "menu") &&
           !customerBatchView && (
-          <div className="heading">
-            <div>
-              <span className="eyebrow">
-                {role === "ADMIN"
-                  ? "PUSAT OPERASIONAL"
-                  : role === "KITCHEN"
-                    ? "STASIUN DAPUR"
-                    : role === "OWNER"
-                      ? "KONTROL OWNER"
-                      : role === "DRIVER"
-                        ? "PENGANTARAN"
-                        : "DAPUR WARKOST"}
-              </span>
-              <h1>
-                {view === "notifications"
-                  ? "Notifikasi"
-                  : view === "promotions" && role === "ADMIN"
-                    ? "Kelola promo"
-                    : view === "customers" && role === "ADMIN"
-                      ? "Kelola pelanggan"
-                      : view === "reports" && role === "ADMIN"
-                        ? "Laporan harian"
+            <div className="heading">
+              <div>
+                <span className="eyebrow">
+                  {role === "ADMIN"
+                    ? "PUSAT OPERASIONAL"
+                    : role === "MANAGER"
+                      ? "MANAJEMEN KOMERSIAL"
+                      : role === "KITCHEN"
+                        ? "STASIUN DAPUR"
+                        : role === "OWNER"
+                          ? "KONTROL OWNER"
+                          : role === "DRIVER"
+                            ? "PENGANTARAN"
+                            : "DAPUR WARKOST"}
+                </span>
+                <h1>
+                  {view === "notifications"
+                    ? "Notifikasi"
+                    : view === "promotions" &&
+                        ["MANAGER", "OWNER"].includes(role)
+                      ? "Kelola promo"
+                      : view === "customers" && role === "ADMIN"
+                        ? "Kelola pelanggan"
                         : view === "reports" && role === "OWNER"
                           ? "Laporan harian"
                           : view === "stock" &&
-                              ["ADMIN", "OWNER"].includes(role)
+                              ["MANAGER", "OWNER"].includes(role)
                             ? "Kontrol stok"
-                            : view === "audit" && role === "OWNER"
-                              ? "Audit aktivitas"
-                              : view === "loyalty-rules" && role === "OWNER"
-                                ? "Aturan Loyalty Reward"
-                              : role === "KITCHEN"
-                                ? "Antrean makanan"
-                                : role === "OWNER"
-                                  ? "Ringkasan usaha"
-                                  : role === "ADMIN"
-                                    ? "Pantau pesanan hari ini"
-                                    : role === "DRIVER"
-                                      ? "Tugas pengantaran"
-                                      : view === "menu"
-                                        ? "Mau makan apa hari ini?"
-                                        : view === "orders"
-                                          ? "Pesanan saya"
-                                          : view === "account"
-                                            ? "Akun saya"
-                                            : "Selamat datang"}
-              </h1>
+                            : view === "staff" && role === "OWNER"
+                              ? "Kelola staf"
+                              : view === "audit" && role === "OWNER"
+                                ? "Audit aktivitas"
+                                : view === "loyalty-rules" && role === "OWNER"
+                                  ? "Aturan Loyalty Reward"
+                                  : role === "KITCHEN"
+                                    ? "Antrean makanan"
+                                    : role === "OWNER"
+                                      ? "Ringkasan usaha"
+                                      : role === "ADMIN"
+                                        ? "Pantau pesanan hari ini"
+                                        : role === "MANAGER"
+                                          ? "Kelola operasional komersial"
+                                          : role === "DRIVER"
+                                            ? "Tugas pengantaran"
+                                            : view === "menu"
+                                              ? "Mau makan apa hari ini?"
+                                              : view === "orders"
+                                                ? "Pesanan saya"
+                                                : view === "account"
+                                                  ? "Akun saya"
+                                                  : "Selamat datang"}
+                </h1>
+              </div>
+              {role === "CUSTOMER" && view === "menu" && (
+                <button
+                  className="primary heading-cart-button"
+                  onClick={() => setOverlay("cart")}
+                >
+                  Keranjang · {count} · {money(total)}
+                </button>
+              )}
             </div>
-            {role === "CUSTOMER" && view === "menu" && (
-              <button
-                className="primary heading-cart-button"
-                onClick={() => setOverlay("cart")}
-              >
-                Keranjang · {count} · {money(total)}
-              </button>
-            )}
-          </div>
-        )}
+          )}
         {error && (
           <div role="alert" className="alert">
             {error}
@@ -1136,9 +1180,15 @@ export default function App() {
           </div>
         )}
         {!role && view === "auth" ? (
-          <section className="auth-onboarding" aria-label="Onboarding pelanggan Warkost">
+          <section
+            className="auth-onboarding"
+            aria-label="Onboarding pelanggan Warkost"
+          >
             {["login", "register"].includes(mode) ? (
-              <div className="auth-mobile-switch" aria-label="Pilih formulir akun">
+              <div
+                className="auth-mobile-switch"
+                aria-label="Pilih formulir akun"
+              >
                 <button
                   className={mode === "login" ? "active" : ""}
                   type="button"
@@ -1156,7 +1206,13 @@ export default function App() {
               </div>
             ) : (
               <div className="auth-flow-back">
-                <button type="button" onClick={() => { setOtpFlow(null); setMode("login"); }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOtpFlow(null);
+                    setMode("login");
+                  }}
+                >
                   ← Kembali ke Masuk
                 </button>
               </div>
@@ -1171,9 +1227,27 @@ export default function App() {
                   sampai di tujuan.
                 </p>
                 <ul className="auth-benefits">
-                  <li><BowlIcon /><span><strong>Pesan Makanan Favorit</strong><small>Menu hangat dari dapur Warkost</small></span></li>
-                  <li><TicketIcon /><span><strong>Banyak Promo &amp; Loyalty</strong><small>Lebih hemat di setiap pesanan</small></span></li>
-                  <li><TruckIcon /><span><strong>Diantar Sampai Tujuan</strong><small>Pengantaran aman dan terpantau</small></span></li>
+                  <li>
+                    <BowlIcon />
+                    <span>
+                      <strong>Pesan Makanan Favorit</strong>
+                      <small>Menu hangat dari dapur Warkost</small>
+                    </span>
+                  </li>
+                  <li>
+                    <TicketIcon />
+                    <span>
+                      <strong>Banyak Promo &amp; Loyalty</strong>
+                      <small>Lebih hemat di setiap pesanan</small>
+                    </span>
+                  </li>
+                  <li>
+                    <TruckIcon />
+                    <span>
+                      <strong>Diantar Sampai Tujuan</strong>
+                      <small>Pengantaran aman dan terpantau</small>
+                    </span>
+                  </li>
                 </ul>
               </div>
               <div className="auth-story-visual">
@@ -1188,7 +1262,9 @@ export default function App() {
               </div>
             </article>
 
-            <article className={`auth-card auth-login-card ${mode === "login" ? "active" : ""}`}>
+            <article
+              className={`auth-card auth-login-card ${mode === "login" ? "active" : ""}`}
+            >
               <div className="auth-card-heading">
                 <Image
                   className="auth-card-logo"
@@ -1223,7 +1299,11 @@ export default function App() {
                     />
                     <button
                       type="button"
-                      aria-label={passwordVisibility.login ? "Sembunyikan password" : "Tampilkan password"}
+                      aria-label={
+                        passwordVisibility.login
+                          ? "Sembunyikan password"
+                          : "Tampilkan password"
+                      }
                       onClick={() => togglePassword("login")}
                     >
                       {passwordVisibility.login ? "Sembunyikan" : "Lihat"}
@@ -1252,7 +1332,9 @@ export default function App() {
               </form>
             </article>
 
-            <article className={`auth-card auth-register-card ${mode === "register" ? "active" : ""}`}>
+            <article
+              className={`auth-card auth-register-card ${mode === "register" ? "active" : ""}`}
+            >
               <div className="auth-card-heading compact">
                 <Image
                   className="auth-card-logo"
@@ -1269,19 +1351,40 @@ export default function App() {
                 <div className="auth-field-grid">
                   <label>
                     Nama Lengkap
-                    <input name="name" required minLength="2" autoComplete="name" />
+                    <input
+                      name="name"
+                      required
+                      minLength="2"
+                      autoComplete="name"
+                    />
                   </label>
                   <label>
                     Email
-                    <input name="email" type="email" required autoComplete="email" />
+                    <input
+                      name="email"
+                      type="email"
+                      required
+                      autoComplete="email"
+                    />
                   </label>
                   <label>
                     Nomor HP
-                    <input name="phone" type="tel" required autoComplete="tel" placeholder="08xxxxxxxxxx" />
+                    <input
+                      name="phone"
+                      type="tel"
+                      required
+                      autoComplete="tel"
+                      placeholder="08xxxxxxxxxx"
+                    />
                   </label>
                   <label>
                     Tanggal Lahir
-                    <input name="birthDate" type="date" required max="2099-12-31" />
+                    <input
+                      name="birthDate"
+                      type="date"
+                      required
+                      max="2099-12-31"
+                    />
                   </label>
                 </div>
                 <label>
@@ -1294,7 +1397,10 @@ export default function App() {
                       minLength="10"
                       autoComplete="new-password"
                     />
-                    <button type="button" onClick={() => togglePassword("register")}>
+                    <button
+                      type="button"
+                      onClick={() => togglePassword("register")}
+                    >
                       {passwordVisibility.register ? "Sembunyikan" : "Lihat"}
                     </button>
                   </span>
@@ -1304,19 +1410,29 @@ export default function App() {
                   <span className="password-field">
                     <input
                       name="passwordConfirmation"
-                      type={passwordVisibility.confirmation ? "text" : "password"}
+                      type={
+                        passwordVisibility.confirmation ? "text" : "password"
+                      }
                       required
                       minLength="10"
                       autoComplete="new-password"
                     />
-                    <button type="button" onClick={() => togglePassword("confirmation")}>
-                      {passwordVisibility.confirmation ? "Sembunyikan" : "Lihat"}
+                    <button
+                      type="button"
+                      onClick={() => togglePassword("confirmation")}
+                    >
+                      {passwordVisibility.confirmation
+                        ? "Sembunyikan"
+                        : "Lihat"}
                     </button>
                   </span>
                 </label>
                 <label className="consent-field auth-consent">
                   <input name="consent" type="checkbox" required />
-                  <span>Saya menyetujui Syarat &amp; Ketentuan dan Kebijakan Privasi.</span>
+                  <span>
+                    Saya menyetujui Syarat &amp; Ketentuan dan Kebijakan
+                    Privasi.
+                  </span>
                 </label>
                 <p className="auth-note">
                   Setelah mendaftar, kode OTP akan dikirim ke email untuk
@@ -1335,9 +1451,17 @@ export default function App() {
               </form>
             </article>
 
-            <article className={`auth-card auth-recovery-card ${mode === "password-reset-request" ? "active" : ""}`}>
+            <article
+              className={`auth-card auth-recovery-card ${mode === "password-reset-request" ? "active" : ""}`}
+            >
               <div className="auth-card-heading compact">
-                <Image className="auth-card-logo" src="/warkost-bahagia-logo-clean.png" alt="Warkost Bahagia" width={1672} height={941} />
+                <Image
+                  className="auth-card-logo"
+                  src="/warkost-bahagia-logo-clean.png"
+                  alt="Warkost Bahagia"
+                  width={1672}
+                  height={941}
+                />
                 <span className="auth-card-kicker">PEMULIHAN AKUN</span>
                 <h2>Lupa Password</h2>
                 <p>Masukkan email atau nomor HP akun Warkost Anda.</p>
@@ -1345,37 +1469,94 @@ export default function App() {
               <form onSubmit={submitForgotPassword}>
                 <label>
                   Email atau Nomor HP
-                  <input name="identifier" required autoComplete="username" placeholder="Email atau nomor HP" />
+                  <input
+                    name="identifier"
+                    required
+                    autoComplete="username"
+                    placeholder="Email atau nomor HP"
+                  />
                 </label>
-                <p className="auth-note">Jika akun ditemukan, kode akan dikirim ke email yang terdaftar.</p>
-                <button className="primary auth-submit" disabled={busy}>{busy ? "Mengirim…" : "Kirim Kode OTP"}</button>
-                <button className="auth-secondary" type="button" onClick={() => setMode("login")}>Kembali ke Masuk</button>
-              </form>
-            </article>
-
-            <article className={`auth-card auth-otp-card ${["registration-otp", "password-reset-otp"].includes(mode) ? "active" : ""}`}>
-              <div className="auth-card-heading compact">
-                <Image className="auth-card-logo" src="/warkost-bahagia-logo-clean.png" alt="Warkost Bahagia" width={1672} height={941} />
-                <span className="auth-card-kicker">VERIFIKASI EMAIL</span>
-                <h2>Masukkan Kode OTP</h2>
-                <p>Kode 6 digit telah dikirim ke {otpFlow?.destination || "email Anda"}.</p>
-              </div>
-              <form onSubmit={submitOtp}>
-                <label>
-                  Kode OTP
-                  <input className="otp-code-input" name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" minLength="6" maxLength="6" required autoFocus placeholder="000000" />
-                </label>
-                <p className="auth-note">Kode berlaku 10 menit dan maksimal 5 percobaan.</p>
-                <button className="primary auth-submit" disabled={busy}>{busy ? "Memverifikasi…" : "Verifikasi Kode"}</button>
-                <button className="auth-secondary" type="button" disabled={busy || otpResendRemaining > 0} onClick={resendCurrentOtp}>
-                  {otpResendRemaining > 0 ? `Kirim ulang dalam ${otpResendRemaining} detik` : "Kirim Ulang Kode"}
+                <p className="auth-note">
+                  Jika akun ditemukan, kode akan dikirim ke email yang
+                  terdaftar.
+                </p>
+                <button className="primary auth-submit" disabled={busy}>
+                  {busy ? "Mengirim…" : "Kirim Kode OTP"}
+                </button>
+                <button
+                  className="auth-secondary"
+                  type="button"
+                  onClick={() => setMode("login")}
+                >
+                  Kembali ke Masuk
                 </button>
               </form>
             </article>
 
-            <article className={`auth-card auth-reset-card ${mode === "password-reset-new" ? "active" : ""}`}>
+            <article
+              className={`auth-card auth-otp-card ${["registration-otp", "password-reset-otp"].includes(mode) ? "active" : ""}`}
+            >
               <div className="auth-card-heading compact">
-                <Image className="auth-card-logo" src="/warkost-bahagia-logo-clean.png" alt="Warkost Bahagia" width={1672} height={941} />
+                <Image
+                  className="auth-card-logo"
+                  src="/warkost-bahagia-logo-clean.png"
+                  alt="Warkost Bahagia"
+                  width={1672}
+                  height={941}
+                />
+                <span className="auth-card-kicker">VERIFIKASI EMAIL</span>
+                <h2>Masukkan Kode OTP</h2>
+                <p>
+                  Kode 6 digit telah dikirim ke{" "}
+                  {otpFlow?.destination || "email Anda"}.
+                </p>
+              </div>
+              <form onSubmit={submitOtp}>
+                <label>
+                  Kode OTP
+                  <input
+                    className="otp-code-input"
+                    name="code"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="[0-9]{6}"
+                    minLength="6"
+                    maxLength="6"
+                    required
+                    autoFocus
+                    placeholder="000000"
+                  />
+                </label>
+                <p className="auth-note">
+                  Kode berlaku 10 menit dan maksimal 5 percobaan.
+                </p>
+                <button className="primary auth-submit" disabled={busy}>
+                  {busy ? "Memverifikasi…" : "Verifikasi Kode"}
+                </button>
+                <button
+                  className="auth-secondary"
+                  type="button"
+                  disabled={busy || otpResendRemaining > 0}
+                  onClick={resendCurrentOtp}
+                >
+                  {otpResendRemaining > 0
+                    ? `Kirim ulang dalam ${otpResendRemaining} detik`
+                    : "Kirim Ulang Kode"}
+                </button>
+              </form>
+            </article>
+
+            <article
+              className={`auth-card auth-reset-card ${mode === "password-reset-new" ? "active" : ""}`}
+            >
+              <div className="auth-card-heading compact">
+                <Image
+                  className="auth-card-logo"
+                  src="/warkost-bahagia-logo-clean.png"
+                  alt="Warkost Bahagia"
+                  width={1672}
+                  height={941}
+                />
                 <span className="auth-card-kicker">PASSWORD BARU</span>
                 <h2>Atur Ulang Password</h2>
                 <p>Gunakan password baru yang aman, minimal 10 karakter.</p>
@@ -1384,38 +1565,98 @@ export default function App() {
                 <label>
                   Password Baru
                   <span className="password-field">
-                    <input name="password" type={passwordVisibility.reset ? "text" : "password"} required minLength="10" autoComplete="new-password" />
-                    <button type="button" onClick={() => togglePassword("reset")}>{passwordVisibility.reset ? "Sembunyikan" : "Lihat"}</button>
+                    <input
+                      name="password"
+                      type={passwordVisibility.reset ? "text" : "password"}
+                      required
+                      minLength="10"
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => togglePassword("reset")}
+                    >
+                      {passwordVisibility.reset ? "Sembunyikan" : "Lihat"}
+                    </button>
                   </span>
                 </label>
                 <label>
                   Konfirmasi Password Baru
                   <span className="password-field">
-                    <input name="passwordConfirmation" type={passwordVisibility.resetConfirmation ? "text" : "password"} required minLength="10" autoComplete="new-password" />
-                    <button type="button" onClick={() => togglePassword("resetConfirmation")}>{passwordVisibility.resetConfirmation ? "Sembunyikan" : "Lihat"}</button>
+                    <input
+                      name="passwordConfirmation"
+                      type={
+                        passwordVisibility.resetConfirmation
+                          ? "text"
+                          : "password"
+                      }
+                      required
+                      minLength="10"
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => togglePassword("resetConfirmation")}
+                    >
+                      {passwordVisibility.resetConfirmation
+                        ? "Sembunyikan"
+                        : "Lihat"}
+                    </button>
                   </span>
                 </label>
-                <button className="primary auth-submit" disabled={busy}>{busy ? "Menyimpan…" : "Simpan Password Baru"}</button>
+                <button className="primary auth-submit" disabled={busy}>
+                  {busy ? "Menyimpan…" : "Simpan Password Baru"}
+                </button>
               </form>
             </article>
 
-            <article className={`auth-card auth-success-card ${["registration-success", "password-reset-success"].includes(mode) ? "active" : ""}`}>
+            <article
+              className={`auth-card auth-success-card ${["registration-success", "password-reset-success"].includes(mode) ? "active" : ""}`}
+            >
               <div className="auth-card-heading">
-                <Image className="auth-card-logo" src="/warkost-bahagia-logo-clean.png" alt="Warkost Bahagia" width={1672} height={941} />
-                <span className="auth-success-mark" aria-hidden="true">✓</span>
+                <Image
+                  className="auth-card-logo"
+                  src="/warkost-bahagia-logo-clean.png"
+                  alt="Warkost Bahagia"
+                  width={1672}
+                  height={941}
+                />
+                <span className="auth-success-mark" aria-hidden="true">
+                  ✓
+                </span>
                 <span className="auth-card-kicker">BERHASIL</span>
-                <h2>{mode === "registration-success" ? "Akun Sudah Aktif" : "Password Diperbarui"}</h2>
-                <p>{mode === "registration-success" ? "Email telah terverifikasi. Anda dapat mulai memesan." : "Silakan masuk kembali menggunakan password baru."}</p>
+                <h2>
+                  {mode === "registration-success"
+                    ? "Akun Sudah Aktif"
+                    : "Password Diperbarui"}
+                </h2>
+                <p>
+                  {mode === "registration-success"
+                    ? "Email telah terverifikasi. Anda dapat mulai memesan."
+                    : "Silakan masuk kembali menggunakan password baru."}
+                </p>
               </div>
               <div className="auth-success-actions">
                 {mode === "registration-success" ? (
-                  <button className="primary auth-submit" type="button" disabled={busy} onClick={continueAfterRegistration}>{busy ? "Memuat…" : "Mulai Pesan"}</button>
+                  <button
+                    className="primary auth-submit"
+                    type="button"
+                    disabled={busy}
+                    onClick={continueAfterRegistration}
+                  >
+                    {busy ? "Memuat…" : "Mulai Pesan"}
+                  </button>
                 ) : (
-                  <button className="primary auth-submit" type="button" onClick={() => setMode("login")}>Kembali ke Masuk</button>
+                  <button
+                    className="primary auth-submit"
+                    type="button"
+                    onClick={() => setMode("login")}
+                  >
+                    Kembali ke Masuk
+                  </button>
                 )}
               </div>
             </article>
-
           </section>
         ) : null}
         {(!role || role === "CUSTOMER") && view === "menu" && (
@@ -1713,20 +1954,32 @@ export default function App() {
           </>
         )}
         {role === "CUSTOMER" && view === "cart" && (
-          <section className="customer-checkout" aria-labelledby="checkout-title">
+          <section
+            className="customer-checkout"
+            aria-labelledby="checkout-title"
+          >
             <div className="customer-page-title checkout-title-block">
-              <button className="back-link" type="button" onClick={() => setView("menu")}>
+              <button
+                className="back-link"
+                type="button"
+                onClick={() => setView("menu")}
+              >
                 <ArrowIcon /> Kembali ke menu
               </button>
               <h1 id="checkout-title">Checkout Pesanan</h1>
-              <p>Lengkapi detail pesananmu. Total akhir dan ongkir tetap dihitung aman oleh server.</p>
+              <p>
+                Lengkapi detail pesananmu. Total akhir dan ongkir tetap dihitung
+                aman oleh server.
+              </p>
             </div>
             {!count ? (
               <div className="panel empty-state checkout-empty">
                 <CartIcon />
                 <h2>Keranjangmu masih kosong</h2>
                 <p>Pilih menu favoritmu terlebih dahulu.</p>
-                <button className="primary" onClick={() => setView("menu")}>Pilih Menu</button>
+                <button className="primary" onClick={() => setView("menu")}>
+                  Pilih Menu
+                </button>
               </div>
             ) : (
               <form
@@ -1752,7 +2005,10 @@ export default function App() {
                     };
                     const signature = JSON.stringify(payload);
                     if (checkoutAttempt.current?.signature !== signature)
-                      checkoutAttempt.current = { signature, key: crypto.randomUUID() };
+                      checkoutAttempt.current = {
+                        signature,
+                        key: crypto.randomUUID(),
+                      };
                     const result = await api("checkout", {
                       ...payload,
                       idempotencyKey: checkoutAttempt.current.key,
@@ -1772,87 +2028,220 @@ export default function App() {
                 <div className="checkout-stack">
                   <section className="checkout-card cart-checkout-card">
                     <div className="checkout-card-heading">
-                      <span className="section-icon"><CartIcon /></span>
+                      <span className="section-icon">
+                        <CartIcon />
+                      </span>
                       <h2>Keranjang Anda</h2>
-                      <button className="outline-action" type="button" onClick={() => setView("menu")}>+ Tambah Menu</button>
+                      <button
+                        className="outline-action"
+                        type="button"
+                        onClick={() => setView("menu")}
+                      >
+                        + Tambah Menu
+                      </button>
                     </div>
                     <div className="checkout-items">
-                      {menu.products.filter((p) => cart[p.id] > 0).map((p) => (
-                        <div className="checkout-item" key={p.id}>
-                          <Image src={p.image_url || demoProductImage(p.name)} alt="" width={86} height={68} unoptimized={Boolean(p.image_url)} />
-                          <span className="checkout-item-copy">
-                            <strong>{p.name}</strong>
-                            <small>{cart[p.id]} × {money(p.price)}</small>
-                          </span>
-                          <div className="qty checkout-qty" aria-label={`Jumlah ${p.name}`}>
-                            <button type="button" aria-label={`Kurangi ${p.name}`} onClick={() => step(p.id, -1)}>−</button>
-                            <span>{cart[p.id]}</span>
-                            <button type="button" aria-label={`Tambah ${p.name}`} onClick={() => step(p.id, 1)}>+</button>
+                      {menu.products
+                        .filter((p) => cart[p.id] > 0)
+                        .map((p) => (
+                          <div className="checkout-item" key={p.id}>
+                            <Image
+                              src={p.image_url || demoProductImage(p.name)}
+                              alt=""
+                              width={86}
+                              height={68}
+                              unoptimized={Boolean(p.image_url)}
+                            />
+                            <span className="checkout-item-copy">
+                              <strong>{p.name}</strong>
+                              <small>
+                                {cart[p.id]} × {money(p.price)}
+                              </small>
+                            </span>
+                            <div
+                              className="qty checkout-qty"
+                              aria-label={`Jumlah ${p.name}`}
+                            >
+                              <button
+                                type="button"
+                                aria-label={`Kurangi ${p.name}`}
+                                onClick={() => step(p.id, -1)}
+                              >
+                                −
+                              </button>
+                              <span>{cart[p.id]}</span>
+                              <button
+                                type="button"
+                                aria-label={`Tambah ${p.name}`}
+                                onClick={() => step(p.id, 1)}
+                              >
+                                +
+                              </button>
+                            </div>
+                            <strong className="checkout-item-total">
+                              {money(p.price * cart[p.id])}
+                            </strong>
                           </div>
-                          <strong className="checkout-item-total">{money(p.price * cart[p.id])}</strong>
-                        </div>
-                      ))}
+                        ))}
                     </div>
-                    <div className="checkout-subtotal"><span>Subtotal</span><strong>{money(total)}</strong></div>
+                    <div className="checkout-subtotal">
+                      <span>Subtotal</span>
+                      <strong>{money(total)}</strong>
+                    </div>
                   </section>
 
                   <section className="checkout-card loyalty-checkout-card">
                     <div className="checkout-card-heading">
-                      <span className="section-icon"><StarIcon /></span>
+                      <span className="section-icon">
+                        <StarIcon />
+                      </span>
                       <h2>Poin Loyalty</h2>
                     </div>
                     <div className="loyalty-summary">
                       <StarIcon />
-                      <p>Poin Anda saat ini: <strong>{account.loyalty} poin</strong><small>Kumpulkan poin dari setiap pembelian dan tukarkan sesuai reward yang tersedia.</small></p>
+                      <p>
+                        Poin Anda saat ini:{" "}
+                        <strong>{account.loyalty} poin</strong>
+                        <small>
+                          Kumpulkan poin dari setiap pembelian dan tukarkan
+                          sesuai reward yang tersedia.
+                        </small>
+                      </p>
                     </div>
                     <div className="voucher-list loyalty-reward-list">
                       {(account.rewards || []).map((reward) => {
                         const selected = Number(selectedRewardId) === reward.id;
-                        const unavailable = !reward.eligible_balance || Boolean(selectedVoucherId);
+                        const unavailable =
+                          !reward.eligible_balance ||
+                          Boolean(selectedVoucherId);
                         return (
-                          <article className={`voucher-option ${selected ? "selected" : ""}`} key={reward.id}>
+                          <article
+                            className={`voucher-option ${selected ? "selected" : ""}`}
+                            key={reward.id}
+                          >
                             <StarIcon />
                             <span>
                               <strong>{reward.name}</strong>
-                              <small>{reward.points_required} poin · minimum {money(reward.minimum_order)}</small>
-                              <small>{reward.reward_type === "PERCENT" ? `${reward.reward_value}% diskon` : `${money(reward.reward_value)} diskon`}{reward.maximum_discount ? ` · maks. ${money(reward.maximum_discount)}` : ""}</small>
+                              <small>
+                                {reward.points_required} poin · minimum{" "}
+                                {money(reward.minimum_order)}
+                              </small>
+                              <small>
+                                {reward.reward_type === "PERCENT"
+                                  ? `${reward.reward_value}% diskon`
+                                  : `${money(reward.reward_value)} diskon`}
+                                {reward.maximum_discount
+                                  ? ` · maks. ${money(reward.maximum_discount)}`
+                                  : ""}
+                              </small>
                             </span>
-                            <button type="button" className={selected ? "primary" : ""} disabled={unavailable} title={selectedVoucherId ? "Tidak dapat digabung dengan voucher" : reward.ineligible_reason || ""} onClick={() => setSelectedRewardId(selected ? null : reward.id)}>{selected ? "Dipilih" : unavailable ? reward.ineligible_reason || "Voucher dipilih" : "Pakai"}</button>
+                            <button
+                              type="button"
+                              className={selected ? "primary" : ""}
+                              disabled={unavailable}
+                              title={
+                                selectedVoucherId
+                                  ? "Tidak dapat digabung dengan voucher"
+                                  : reward.ineligible_reason || ""
+                              }
+                              onClick={() =>
+                                setSelectedRewardId(selected ? null : reward.id)
+                              }
+                            >
+                              {selected
+                                ? "Dipilih"
+                                : unavailable
+                                  ? reward.ineligible_reason ||
+                                    "Voucher dipilih"
+                                  : "Pakai"}
+                            </button>
                           </article>
                         );
                       })}
                     </div>
-                    {loyaltyQuoteBusy && <p className="voucher-feedback">Memvalidasi Loyalty Reward…</p>}
-                    {loyaltyQuoteError && <p className="voucher-feedback error" role="alert">{loyaltyQuoteError}</p>}
-                    {loyaltyQuote && <p className="voucher-feedback success">Reward valid · {loyaltyQuote.points_redeemed} poin · hemat {money(loyaltyQuote.loyalty_discount)}</p>}
+                    {loyaltyQuoteBusy && (
+                      <p className="voucher-feedback">
+                        Memvalidasi Loyalty Reward…
+                      </p>
+                    )}
+                    {loyaltyQuoteError && (
+                      <p className="voucher-feedback error" role="alert">
+                        {loyaltyQuoteError}
+                      </p>
+                    )}
+                    {loyaltyQuote && (
+                      <p className="voucher-feedback success">
+                        Reward valid · {loyaltyQuote.points_redeemed} poin ·
+                        hemat {money(loyaltyQuote.loyalty_discount)}
+                      </p>
+                    )}
                   </section>
 
                   <section className="checkout-card voucher-checkout-card">
                     <div className="checkout-card-heading">
-                      <span className="section-icon"><TicketIcon /></span>
+                      <span className="section-icon">
+                        <TicketIcon />
+                      </span>
                       <h2>Voucher</h2>
                     </div>
                     <div className="voucher-list">
                       {(account.vouchers || []).map((voucher) => {
-                        const selected = Number(selectedVoucherId) === voucher.id;
+                        const selected =
+                          Number(selectedVoucherId) === voucher.id;
                         const selectable = voucher.state === "CLAIMED";
                         return (
-                          <article className={`voucher-option ${selected ? "selected" : ""}`} key={voucher.id}>
+                          <article
+                            className={`voucher-option ${selected ? "selected" : ""}`}
+                            key={voucher.id}
+                          >
                             <TicketIcon />
                             <span>
                               <strong>{voucher.title}</strong>
                               <small>{voucher.terms}</small>
-                              <small>Minimum {money(voucher.minimum_order)} · {voucher.voucher_type === "PERCENT" ? `${voucher.discount_value}%` : money(voucher.discount_value)}{voucher.max_discount ? ` · maks. ${money(voucher.max_discount)}` : ""}</small>
+                              <small>
+                                Minimum {money(voucher.minimum_order)} ·{" "}
+                                {voucher.voucher_type === "PERCENT"
+                                  ? `${voucher.discount_value}%`
+                                  : money(voucher.discount_value)}
+                                {voucher.max_discount
+                                  ? ` · maks. ${money(voucher.max_discount)}`
+                                  : ""}
+                              </small>
                             </span>
                             {voucher.state === "AVAILABLE" ? (
-                              <button type="button" disabled={busy || Boolean(selectedRewardId)} onClick={() => run(async () => {
-                                await api("voucher-claim", { promotionId: voucher.id });
-                                showTransientMessage("Voucher berhasil diklaim.");
-                              })}>Klaim</button>
+                              <button
+                                type="button"
+                                disabled={busy || Boolean(selectedRewardId)}
+                                onClick={() =>
+                                  run(async () => {
+                                    await api("voucher-claim", {
+                                      promotionId: voucher.id,
+                                    });
+                                    showTransientMessage(
+                                      "Voucher berhasil diklaim.",
+                                    );
+                                  })
+                                }
+                              >
+                                Klaim
+                              </button>
                             ) : selectable ? (
-                              <button type="button" disabled={Boolean(selectedRewardId)} className={selected ? "primary" : ""} onClick={() => setSelectedVoucherId(selected ? null : voucher.id)}>{selected ? "Dipilih" : "Pakai"}</button>
+                              <button
+                                type="button"
+                                disabled={Boolean(selectedRewardId)}
+                                className={selected ? "primary" : ""}
+                                onClick={() =>
+                                  setSelectedVoucherId(
+                                    selected ? null : voucher.id,
+                                  )
+                                }
+                              >
+                                {selected ? "Dipilih" : "Pakai"}
+                              </button>
                             ) : (
-                              <span className="voucher-state">{voucher.state}</span>
+                              <span className="voucher-state">
+                                {voucher.state}
+                              </span>
                             )}
                           </article>
                         );
@@ -1860,18 +2249,37 @@ export default function App() {
                       {!account.vouchers?.length && (
                         <div className="voucher-empty-state">
                           <TicketIcon />
-                          <span><strong>Belum ada voucher tersedia</strong><small>Voucher aktif yang dapat diklaim akan tampil di sini.</small></span>
+                          <span>
+                            <strong>Belum ada voucher tersedia</strong>
+                            <small>
+                              Voucher aktif yang dapat diklaim akan tampil di
+                              sini.
+                            </small>
+                          </span>
                         </div>
                       )}
                     </div>
-                    {voucherQuoteBusy && <p className="voucher-feedback">Memvalidasi voucher…</p>}
-                    {voucherQuoteError && <p className="voucher-feedback error" role="alert">{voucherQuoteError}</p>}
-                    {voucherQuote && <p className="voucher-feedback success">Voucher valid · hemat {money(voucherQuote.voucher_discount)}</p>}
+                    {voucherQuoteBusy && (
+                      <p className="voucher-feedback">Memvalidasi voucher…</p>
+                    )}
+                    {voucherQuoteError && (
+                      <p className="voucher-feedback error" role="alert">
+                        {voucherQuoteError}
+                      </p>
+                    )}
+                    {voucherQuote && (
+                      <p className="voucher-feedback success">
+                        Voucher valid · hemat{" "}
+                        {money(voucherQuote.voucher_discount)}
+                      </p>
+                    )}
                   </section>
 
                   <section className="checkout-card delivery-checkout-card">
                     <div className="checkout-card-heading">
-                      <span className="section-icon"><LocationIcon /></span>
+                      <span className="section-icon">
+                        <LocationIcon />
+                      </span>
                       <h2>Pengiriman</h2>
                     </div>
                     <label className="checkout-select-label">
@@ -1887,7 +2295,9 @@ export default function App() {
                         }}
                       >
                         {account.addresses.map((address) => (
-                          <option key={address.id} value={address.id}>{address.label} · {address.detail}</option>
+                          <option key={address.id} value={address.id}>
+                            {address.label} · {address.detail}
+                          </option>
                         ))}
                       </select>
                     </label>
@@ -1898,7 +2308,9 @@ export default function App() {
                         aria-expanded={quickAddressOpen}
                         onClick={() => setQuickAddressOpen((open) => !open)}
                       >
-                        {quickAddressOpen ? "Tutup form alamat" : "+ Tambah lokasi lain"}
+                        {quickAddressOpen
+                          ? "Tutup form alamat"
+                          : "+ Tambah lokasi lain"}
                       </button>
                     </div>
                     {quickAddressOpen && (
@@ -1911,7 +2323,8 @@ export default function App() {
                           <span>
                             <strong>Lokasi pengantaran baru</strong>
                             <small>
-                              Alamat disimpan ke akun dan langsung dipakai untuk checkout ini.
+                              Alamat disimpan ke akun dan langsung dipakai untuk
+                              checkout ini.
                             </small>
                           </span>
                         </div>
@@ -1949,7 +2362,8 @@ export default function App() {
                           <input name="quickAddressLatitude" type="hidden" />
                           <input name="quickAddressLongitude" type="hidden" />
                           <small>
-                            Titik lokasi dipakai untuk kalkulasi ongkir. Input koordinat teknis tidak ditampilkan.
+                            Titik lokasi dipakai untuk kalkulasi ongkir. Input
+                            koordinat teknis tidak ditampilkan.
                           </small>
                         </div>
                         <div className="quick-address-buttons">
@@ -1959,7 +2373,9 @@ export default function App() {
                             disabled={quickAddressBusy}
                             onClick={saveQuickAddress}
                           >
-                            {quickAddressBusy ? "Menyimpan…" : "Simpan dan gunakan alamat"}
+                            {quickAddressBusy
+                              ? "Menyimpan…"
+                              : "Simpan dan gunakan alamat"}
                           </button>
                           <button
                             type="button"
@@ -1974,14 +2390,27 @@ export default function App() {
                     {selectedCheckoutAddress ? (
                       <div className="delivery-summary">
                         <LocationIcon />
-                        <span><strong>{selectedCheckoutAddress.label}</strong><small>{selectedCheckoutAddress.detail}</small></span>
+                        <span>
+                          <strong>{selectedCheckoutAddress.label}</strong>
+                          <small>{selectedCheckoutAddress.detail}</small>
+                        </span>
                       </div>
                     ) : (
-                      <p className="checkout-warning">Tambahkan lokasi pengantaran untuk melanjutkan checkout.</p>
+                      <p className="checkout-warning">
+                        Tambahkan lokasi pengantaran untuk melanjutkan checkout.
+                      </p>
                     )}
                     <div className="delivery-rules">
                       <TruckIcon />
-                      <span><strong>Jarak dan ongkir dihitung otomatis</strong><small>Gratis hingga {deliveryQuote?.free_radius_km ?? 5} km. Di atasnya mengikuti konfigurasi pengiriman dan radius layanan maksimal {deliveryQuote?.max_radius_km ?? 15} km.</small></span>
+                      <span>
+                        <strong>Jarak dan ongkir dihitung otomatis</strong>
+                        <small>
+                          Gratis hingga {deliveryQuote?.free_radius_km ?? 5} km.
+                          Di atasnya mengikuti konfigurasi pengiriman dan radius
+                          layanan maksimal {deliveryQuote?.max_radius_km ?? 15}{" "}
+                          km.
+                        </small>
+                      </span>
                     </div>
                     {deliveryQuoteBusy && (
                       <div className="delivery-quote-state" role="status">
@@ -1989,7 +2418,10 @@ export default function App() {
                       </div>
                     )}
                     {deliveryQuoteError && (
-                      <div className="delivery-quote-state unavailable" role="alert">
+                      <div
+                        className="delivery-quote-state unavailable"
+                        role="alert"
+                      >
                         {deliveryQuoteError}
                       </div>
                     )}
@@ -2010,14 +2442,18 @@ export default function App() {
 
                   <section className="checkout-card payment-method-card">
                     <div className="checkout-card-heading">
-                      <span className="section-icon"><WalletIcon /></span>
+                      <span className="section-icon">
+                        <WalletIcon />
+                      </span>
                       <h2>Metode Pembayaran</h2>
                     </div>
                     <label className="checkout-select-label sr-label">
                       Metode pembayaran
                       <select name="method">
                         <option value="CASH">Tunai saat diterima</option>
-                        <option value="BANK_TRANSFER">Transfer bank · verifikasi admin</option>
+                        <option value="BANK_TRANSFER">
+                          Transfer bank · verifikasi admin
+                        </option>
                         <option value="QRIS">QRIS</option>
                       </select>
                     </label>
@@ -2026,19 +2462,91 @@ export default function App() {
 
                 <aside className="checkout-summary-card">
                   <div className="checkout-card-heading">
-                    <span className="section-icon"><WalletIcon /></span>
+                    <span className="section-icon">
+                      <WalletIcon />
+                    </span>
                     <h2>Rincian Pembayaran</h2>
                   </div>
-                  <div className="payment-line"><span>Subtotal</span><strong>{money(total)}</strong></div>
-                  <div className="payment-line"><span>Ongkir</span><strong className={deliveryQuote?.available ? "" : "pending-value"}>{deliveryQuoteBusy ? "Menghitung…" : deliveryQuote?.available ? (deliveryQuote.free_delivery ? "GRATIS" : money(deliveryQuote.delivery_fee)) : deliveryQuote ? "Di luar jangkauan" : "Belum dihitung"}</strong></div>
-                  <div className="payment-line"><span>Voucher</span><strong>{voucherQuote?.voucher_discount ? `−${money(voucherQuote.voucher_discount)}` : money(0)}</strong></div>
-                  <div className="payment-line"><span>Loyalty Reward</span><strong>{loyaltyQuote?.loyalty_discount ? `−${money(loyaltyQuote.loyalty_discount)}` : money(0)}</strong></div>
-                  <div className="payment-total"><span>Total akhir</span><strong>{deliveryQuote?.available ? money(checkoutFinalTotal) : "—"}</strong></div>
-                  <p className="server-calculation-note">{deliveryQuote?.message || deliveryQuoteError || "Total akhir ditampilkan setelah server memvalidasi alamat."}</p>
-                  <button className="primary checkout-submit" disabled={busy || deliveryQuoteBusy || voucherQuoteBusy || loyaltyQuoteBusy || Boolean(selectedVoucherId && !voucherQuote) || Boolean(selectedRewardId && !loyaltyQuote) || !account.addresses.length || !deliveryQuote?.available}>
-                    {busy ? "Membuat Pesanan…" : deliveryQuoteBusy ? "Menghitung Ongkir…" : deliveryQuote && !deliveryQuote.available ? "Alamat Di Luar Jangkauan" : "Buat Pesanan"}<ArrowIcon />
+                  <div className="payment-line">
+                    <span>Subtotal</span>
+                    <strong>{money(total)}</strong>
+                  </div>
+                  <div className="payment-line">
+                    <span>Ongkir</span>
+                    <strong
+                      className={
+                        deliveryQuote?.available ? "" : "pending-value"
+                      }
+                    >
+                      {deliveryQuoteBusy
+                        ? "Menghitung…"
+                        : deliveryQuote?.available
+                          ? deliveryQuote.free_delivery
+                            ? "GRATIS"
+                            : money(deliveryQuote.delivery_fee)
+                          : deliveryQuote
+                            ? "Di luar jangkauan"
+                            : "Belum dihitung"}
+                    </strong>
+                  </div>
+                  <div className="payment-line">
+                    <span>Voucher</span>
+                    <strong>
+                      {voucherQuote?.voucher_discount
+                        ? `−${money(voucherQuote.voucher_discount)}`
+                        : money(0)}
+                    </strong>
+                  </div>
+                  <div className="payment-line">
+                    <span>Loyalty Reward</span>
+                    <strong>
+                      {loyaltyQuote?.loyalty_discount
+                        ? `−${money(loyaltyQuote.loyalty_discount)}`
+                        : money(0)}
+                    </strong>
+                  </div>
+                  <div className="payment-total">
+                    <span>Total akhir</span>
+                    <strong>
+                      {deliveryQuote?.available
+                        ? money(checkoutFinalTotal)
+                        : "—"}
+                    </strong>
+                  </div>
+                  <p className="server-calculation-note">
+                    {deliveryQuote?.message ||
+                      deliveryQuoteError ||
+                      "Total akhir ditampilkan setelah server memvalidasi alamat."}
+                  </p>
+                  <button
+                    className="primary checkout-submit"
+                    disabled={
+                      busy ||
+                      deliveryQuoteBusy ||
+                      voucherQuoteBusy ||
+                      loyaltyQuoteBusy ||
+                      Boolean(selectedVoucherId && !voucherQuote) ||
+                      Boolean(selectedRewardId && !loyaltyQuote) ||
+                      !account.addresses.length ||
+                      !deliveryQuote?.available
+                    }
+                  >
+                    {busy
+                      ? "Membuat Pesanan…"
+                      : deliveryQuoteBusy
+                        ? "Menghitung Ongkir…"
+                        : deliveryQuote && !deliveryQuote.available
+                          ? "Alamat Di Luar Jangkauan"
+                          : "Buat Pesanan"}
+                    <ArrowIcon />
                   </button>
-                  <div className="checkout-trust"><ShieldIcon /><span>Pesananmu diproses dengan aman menggunakan kalkulasi existing.</span></div>
+                  <div className="checkout-trust">
+                    <ShieldIcon />
+                    <span>
+                      Pesananmu diproses dengan aman menggunakan kalkulasi
+                      existing.
+                    </span>
+                  </div>
                 </aside>
               </form>
             )}
@@ -2047,7 +2555,9 @@ export default function App() {
         {role === "CUSTOMER" && view === "order-success" && (
           <CustomerTracking
             order={focusedOrder}
-            justCreated={Boolean(lastCreatedOrderId && focusedOrder?.id === lastCreatedOrderId)}
+            justCreated={Boolean(
+              lastCreatedOrderId && focusedOrder?.id === lastCreatedOrderId,
+            )}
             onBack={() => goToCustomerOrders("all")}
             onSupport={openCustomerSupport}
           />
@@ -2068,7 +2578,9 @@ export default function App() {
                   <div className="line" key={a.id}>
                     <span>
                       <strong>{a.label}</strong>{" "}
-                      {a.is_default === 1 && <span className="badge">DEFAULT</span>}
+                      {a.is_default === 1 && (
+                        <span className="badge">DEFAULT</span>
+                      )}
                       <br />
                       {a.detail}
                     </span>
@@ -2201,7 +2713,10 @@ export default function App() {
                 <h2>Pengaturan Akun</h2>
                 <p>Perbarui data profil dan password akunmu dengan aman.</p>
                 <form
-                  key={(account.profile?.email || user.email) + (account.profile?.birth_date || "")}
+                  key={
+                    (account.profile?.email || user.email) +
+                    (account.profile?.birth_date || "")
+                  }
                   onSubmit={(e) => {
                     e.preventDefault();
                     const f = new FormData(e.currentTarget);
@@ -2280,24 +2795,43 @@ export default function App() {
               <section className="panel" id="account-loyalty">
                 <h2>Poin loyalitas</h2>
                 <div className="big-number">{account.loyalty} poin</div>
-                <p>Setiap kelipatan Rp10.000 nilai produk bersih menghasilkan 1 poin setelah pesanan selesai.</p>
+                <p>
+                  Setiap kelipatan Rp10.000 nilai produk bersih menghasilkan 1
+                  poin setelah pesanan selesai.
+                </p>
                 {(account.rewards || []).map((reward) => (
                   <div className="line" key={reward.id}>
-                    <span><strong>{reward.name}</strong><br />{reward.points_required} poin · {reward.reward_type === "PERCENT" ? `${reward.reward_value}%` : money(reward.reward_value)}</span>
-                    <span className="badge">{reward.eligible_balance ? "TERSEDIA" : reward.ineligible_reason}</span>
+                    <span>
+                      <strong>{reward.name}</strong>
+                      <br />
+                      {reward.points_required} poin ·{" "}
+                      {reward.reward_type === "PERCENT"
+                        ? `${reward.reward_value}%`
+                        : money(reward.reward_value)}
+                    </span>
+                    <span className="badge">
+                      {reward.eligible_balance
+                        ? "TERSEDIA"
+                        : reward.ineligible_reason}
+                    </span>
                   </div>
                 ))}
                 {account.transactions.map((t) => (
                   <div className="line" key={t.id}>
-                    <span>Pesanan #{t.order_id} · {t.kind}</span>
-                    <strong>{t.amount > 0 ? "+" : ""}{t.amount}</strong>
+                    <span>
+                      Pesanan #{t.order_id} · {t.kind}
+                    </span>
+                    <strong>
+                      {t.amount > 0 ? "+" : ""}
+                      {t.amount}
+                    </strong>
                   </div>
                 ))}
               </section>
             </div>
           </>
         )}
-        {["ADMIN", "OWNER"].includes(role) && view === "reports" && (
+        {role === "OWNER" && view === "reports" && (
           <section className="panel">
             <h2>Ringkasan operasional</h2>
             <p>
@@ -2373,7 +2907,7 @@ export default function App() {
             )}
           </section>
         )}
-        {role === "ADMIN" && view === "settings" && (
+        {["MANAGER", "OWNER"].includes(role) && view === "settings" && (
           <section className="panel narrow">
             <h2>Pengaturan café</h2>
             <form
@@ -2524,39 +3058,73 @@ export default function App() {
             </form>
           </section>
         )}
-        {role === "ADMIN" && view === "drivers" && (
+        {role === "OWNER" && view === "staff" && (
           <section className="panel">
-            <h2>Kelola driver</h2>
+            <h2>Kelola staf</h2>
             <p>
-              Driver dengan pengantaran aktif harus menyelesaikan tugas sebelum
-              dinonaktifkan.
+              Owner dapat membuat Manager, Admin, dan Driver. Password lama
+              tidak pernah ditampilkan.
             </p>
-            {drivers.map((d) => (
-              <div className="line" key={d.id}>
+            {staff.map((member) => (
+              <div className="line" key={member.id}>
                 <span>
-                  <strong>{d.name}</strong> · {d.email} ·{" "}
-                  {d.phone || "Nomor belum diisi"} · {d.active_load}/5 tugas ·{" "}
-                  {d.active ? "Aktif" : "Nonaktif"}
+                  <strong>{member.name}</strong> · {member.role}
+                  <br />
+                  {member.email} · {member.phone || "Nomor belum diisi"} ·{" "}
+                  {member.active ? "Aktif" : "Nonaktif"}
                 </span>
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    run(() =>
-                      api("driver-active", { id: d.id, active: !d.active }),
-                    )
-                  }
-                >
-                  {d.active ? "Nonaktifkan" : "Aktifkan"}
-                </button>
+                {member.role === "DRIVER" ? (
+                  <button
+                    disabled={busy}
+                    onClick={() =>
+                      run(() =>
+                        api("driver-active", {
+                          id: member.id,
+                          active: !member.active,
+                        }),
+                      )
+                    }
+                  >
+                    {member.active ? "Nonaktifkan" : "Aktifkan"}
+                  </button>
+                ) : (
+                  <form
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      const formElement = event.currentTarget;
+                      const form = new FormData(formElement);
+                      run(async () => {
+                        await api("staff-password", {
+                          id: member.id,
+                          password: form.get("password"),
+                        });
+                        formElement.reset();
+                        setMessage(
+                          "Password staf diperbarui dan sesi lama dicabut",
+                        );
+                      });
+                    }}
+                  >
+                    <input
+                      name="password"
+                      type="password"
+                      minLength="14"
+                      placeholder="Password baru"
+                      required
+                    />
+                    <button disabled={busy}>Reset password</button>
+                  </form>
+                )}
               </div>
             ))}
-            <h2>Tambah driver</h2>
+            <h2>Tambah staf</h2>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 const f = new FormData(e.currentTarget);
                 run(async () => {
-                  await api("driver", {
+                  await api("staff", {
+                    role: f.get("role"),
                     name: f.get("name"),
                     email: f.get("email"),
                     password: f.get("password"),
@@ -2567,6 +3135,14 @@ export default function App() {
               }}
             >
               <label>
+                Role
+                <select name="role" required defaultValue="MANAGER">
+                  <option value="MANAGER">Manager</option>
+                  <option value="ADMIN">Admin</option>
+                  <option value="DRIVER">Driver</option>
+                </select>
+              </label>
+              <label>
                 Nama
                 <input name="name" minLength="2" required />
               </label>
@@ -2575,8 +3151,8 @@ export default function App() {
                 <input name="email" type="email" required />
               </label>
               <label>
-                Nomor WhatsApp
-                <input name="phone" placeholder="08xxxxxxxxxx" required />
+                Nomor WhatsApp (wajib untuk Driver)
+                <input name="phone" placeholder="08xxxxxxxxxx" />
               </label>
               <label>
                 Password awal (minimal 14 karakter)
@@ -2588,7 +3164,7 @@ export default function App() {
                 />
               </label>
               <button className="primary" disabled={busy}>
-                Buat akun driver
+                Buat akun staf
               </button>
             </form>
           </section>
@@ -2673,7 +3249,7 @@ export default function App() {
             )}
           </section>
         )}
-        {role === "ADMIN" && view === "promotions" && (
+        {["MANAGER", "OWNER"].includes(role) && view === "promotions" && (
           <section className="panel">
             <h2>Promo customer</h2>
             <p>
@@ -2706,7 +3282,7 @@ export default function App() {
             />
           </section>
         )}
-        {role === "ADMIN" && view === "products" && (
+        {["MANAGER", "OWNER"].includes(role) && view === "products" && (
           <section className="panel">
             <h2>Kelola kategori</h2>
             <form
@@ -2769,35 +3345,42 @@ export default function App() {
         {role === "OWNER" && view === "loyalty-rules" && (
           <section className="panel">
             <h2>Loyalty Reward</h2>
-            <p>Atur reward penukaran poin. Perolehan poin tetap 1 poin per kelipatan Rp10.000 nilai produk bersih.</p>
+            <p>
+              Atur reward penukaran poin. Perolehan poin tetap 1 poin per
+              kelipatan Rp10.000 nilai produk bersih.
+            </p>
             {loyaltyRules.map((rule) => (
               <LoyaltyRuleEditor
                 key={rule.id}
                 rule={rule}
                 busy={busy}
-                onSave={(body) => run(async () => {
-                  await api("loyalty-reward", body);
-                  setMessage("Aturan Loyalty Reward diperbarui");
-                })}
+                onSave={(body) =>
+                  run(async () => {
+                    await api("loyalty-reward", body);
+                    setMessage("Aturan Loyalty Reward diperbarui");
+                  })
+                }
               />
             ))}
             {!loyaltyRules.length && <p>Belum ada Loyalty Reward.</p>}
             <h2>Tambah reward</h2>
             <LoyaltyRuleEditor
               busy={busy}
-              onSave={(body) => run(async () => {
-                await api("loyalty-reward", body);
-                setMessage("Loyalty Reward dibuat");
-              })}
+              onSave={(body) =>
+                run(async () => {
+                  await api("loyalty-reward", body);
+                  setMessage("Loyalty Reward dibuat");
+                })
+              }
             />
           </section>
         )}
-        {["ADMIN", "OWNER"].includes(role) && view === "stock" && (
+        {["MANAGER", "OWNER"].includes(role) && view === "stock" && (
           <section className="panel">
             <h2>Stok produk</h2>
             <p>
-              Admin hanya dapat menambah stok. Pengurangan manual hanya dapat
-              dilakukan Owner dan selalu dicatat.
+              Manager dan Owner dapat menyesuaikan stok. Semua perubahan selalu
+              dicatat pada ledger dan audit log.
             </p>
             {stock.products.map((product) => (
               <form
@@ -2819,15 +3402,16 @@ export default function App() {
                 <div>
                   <strong>{product.name}</strong>
                   <small className="notification-date">
-                    {product.prep_station === "KITCHEN" ? "Dapur" : "Kasir"}
+                    {product.prep_station === "KITCHEN"
+                      ? "Dapur"
+                      : "Admin · minuman"}
                     {" · "}stok {product.stock_quantity}
                   </small>
                 </div>
                 <input
                   name="quantity"
                   type="number"
-                  min={role === "ADMIN" ? "1" : undefined}
-                  placeholder={role === "ADMIN" ? "+ jumlah" : "+ / − jumlah"}
+                  placeholder="+ / − jumlah"
                   required
                 />
                 <input
@@ -2972,17 +3556,28 @@ export default function App() {
                   <h1>Pesanan</h1>
                   <p>Lihat dan pantau semua pesanan Anda.</p>
                 </div>
-                <button className="orders-refresh" onClick={() => run(async () => {})} disabled={busy}>
+                <button
+                  className="orders-refresh"
+                  onClick={() => run(async () => {})}
+                  disabled={busy}
+                >
                   {busy ? "Memperbarui…" : "Perbarui status"}
                 </button>
-                <div className="customer-order-tabs" aria-label="Filter pesanan">
+                <div
+                  className="customer-order-tabs"
+                  aria-label="Filter pesanan"
+                >
                   {[
                     ["all", "Semua"],
                     ["process", "Dalam Proses"],
                     ["completed", "Selesai"],
                     ["cancelled", "Dibatalkan"],
                   ].map(([key, label]) => (
-                    <button key={key} className={orderFilter === key ? "active" : ""} onClick={() => setOrderFilter(key)}>
+                    <button
+                      key={key}
+                      className={orderFilter === key ? "active" : ""}
+                      onClick={() => setOrderFilter(key)}
+                    >
                       {label} <span>{customerOrderCounts[key]}</span>
                     </button>
                   ))}
@@ -2990,7 +3585,13 @@ export default function App() {
               </section>
             )}
             {role !== "CUSTOMER" && (
-              <button className="refresh" onClick={() => run(async () => {})} disabled={busy}>Perbarui status</button>
+              <button
+                className="refresh"
+                onClick={() => run(async () => {})}
+                disabled={busy}
+              >
+                Perbarui status
+              </button>
             )}
             {["ADMIN", "OWNER"].includes(role) && dashboard && (
               <div className="stats">
@@ -3055,7 +3656,13 @@ export default function App() {
                 ))}
               </div>
             )}
-            <div className={role === "CUSTOMER" ? "order-list customer-order-list" : "order-list"}>
+            <div
+              className={
+                role === "CUSTOMER"
+                  ? "order-list customer-order-list"
+                  : "order-list"
+              }
+            >
               {visibleOrders.map((o) => (
                 <Order
                   key={o.id}
@@ -3221,7 +3828,9 @@ export default function App() {
                         : "Akun saya"}
                 </h2>
                 {overlay === "notifications" && (
-                  <p>Informasi terbaru seputar pesanan, promo, dan akun Anda.</p>
+                  <p>
+                    Informasi terbaru seputar pesanan, promo, dan akun Anda.
+                  </p>
                 )}
                 {overlay === "support" && (
                   <p>Bantuan internal dengan konteks pesananmu.</p>
@@ -3291,18 +3900,30 @@ export default function App() {
             )}
             {overlay === "notifications" && (
               <div className="notification-center">
-                <div className="notification-filters" aria-label="Filter notifikasi">
+                <div
+                  className="notification-filters"
+                  aria-label="Filter notifikasi"
+                >
                   {[
                     ["all", "Semua"],
                     ["order", "Pesanan"],
                     ["promo", "Promo"],
                     ["system", "Sistem"],
                   ].map(([key, label]) => {
-                    const amount = key === "all"
-                      ? alerts.notifications.length
-                      : alerts.notifications.filter((notification) => notificationCategory(notification.message) === key).length;
+                    const amount =
+                      key === "all"
+                        ? alerts.notifications.length
+                        : alerts.notifications.filter(
+                            (notification) =>
+                              notificationCategory(notification.message) ===
+                              key,
+                          ).length;
                     return (
-                      <button key={key} className={notificationFilter === key ? "active" : ""} onClick={() => setNotificationFilter(key)}>
+                      <button
+                        key={key}
+                        className={notificationFilter === key ? "active" : ""}
+                        onClick={() => setNotificationFilter(key)}
+                      >
                         {label} <span>{amount}</span>
                       </button>
                     );
@@ -3312,19 +3933,50 @@ export default function App() {
                   {filteredNotifications.map((notification) => {
                     const category = notificationCategory(notification.message);
                     return (
-                      <article className={notification.read_at ? "notification-item" : "notification-item unread"} key={notification.id}>
+                      <article
+                        className={
+                          notification.read_at
+                            ? "notification-item"
+                            : "notification-item unread"
+                        }
+                        key={notification.id}
+                      >
                         <span className={`notification-icon ${category}`}>
-                          {category === "order" ? <ReceiptIcon /> : category === "promo" ? <TicketIcon /> : <BellIcon />}
+                          {category === "order" ? (
+                            <ReceiptIcon />
+                          ) : category === "promo" ? (
+                            <TicketIcon />
+                          ) : (
+                            <BellIcon />
+                          )}
                         </span>
                         <span className="notification-copy">
-                          <strong>{notificationTitle(notification.message)}</strong>
+                          <strong>
+                            {notificationTitle(notification.message)}
+                          </strong>
                           <span>{notification.message}</span>
                         </span>
                         <span className="notification-meta">
-                          <small>{formatDateTime(notification.created_at)}</small>
-                          {!notification.read_at && <span className="unread-dot" aria-label="Belum dibaca" />}
+                          <small>
+                            {formatDateTime(notification.created_at)}
+                          </small>
                           {!notification.read_at && (
-                            <button disabled={busy} onClick={() => run(() => api("notification-read", { id: notification.id }))}>
+                            <span
+                              className="unread-dot"
+                              aria-label="Belum dibaca"
+                            />
+                          )}
+                          {!notification.read_at && (
+                            <button
+                              disabled={busy}
+                              onClick={() =>
+                                run(() =>
+                                  api("notification-read", {
+                                    id: notification.id,
+                                  }),
+                                )
+                              }
+                            >
                               Tandai dibaca
                             </button>
                           )}
@@ -3334,19 +3986,33 @@ export default function App() {
                   })}
                 </div>
                 {!filteredNotifications.length && (
-                  <div className="notification-empty"><BellIcon /><h3>Belum ada notifikasi</h3><p>Informasi terbaru akan tampil di sini.</p></div>
+                  <div className="notification-empty">
+                    <BellIcon />
+                    <h3>Belum ada notifikasi</h3>
+                    <p>Informasi terbaru akan tampil di sini.</p>
+                  </div>
                 )}
               </div>
             )}
             {overlay === "support" && (
               <div className="customer-support-content">
                 {supportOrder ? (
-                  <section className="support-order-context" aria-label="Konteks pesanan">
-                    <span className="section-icon"><ReceiptIcon /></span>
+                  <section
+                    className="support-order-context"
+                    aria-label="Konteks pesanan"
+                  >
+                    <span className="section-icon">
+                      <ReceiptIcon />
+                    </span>
                     <div>
                       <small>PESANAN TERHUBUNG</small>
-                      <strong>WB{String(supportOrder.id).padStart(6, "0")}</strong>
-                      <span>{orderStatusMeta(supportOrder.status).label} · {money(supportOrder.total)}</span>
+                      <strong>
+                        WB{String(supportOrder.id).padStart(6, "0")}
+                      </strong>
+                      <span>
+                        {orderStatusMeta(supportOrder.status).label} ·{" "}
+                        {money(supportOrder.total)}
+                      </span>
                     </div>
                     <button
                       type="button"
@@ -3357,10 +4023,14 @@ export default function App() {
                   </section>
                 ) : (
                   <div className="support-intro">
-                    <span className="section-icon"><HelpIcon /></span>
+                    <span className="section-icon">
+                      <HelpIcon />
+                    </span>
                     <div>
                       <strong>Ada yang bisa kami bantu?</strong>
-                      <span>Pilih bantuan agar tim Warkost memahami kebutuhanmu.</span>
+                      <span>
+                        Pilih bantuan agar tim Warkost memahami kebutuhanmu.
+                      </span>
                     </div>
                   </div>
                 )}
@@ -3375,22 +4045,69 @@ export default function App() {
                             : goToCustomerOrders("all")
                         }
                       >
-                        <ReceiptIcon /><span><strong>Pesanan</strong><small>Cek proses dan estimasi pesanan</small></span><ArrowIcon />
+                        <ReceiptIcon />
+                        <span>
+                          <strong>Pesanan</strong>
+                          <small>Cek proses dan estimasi pesanan</small>
+                        </span>
+                        <ArrowIcon />
                       </button>
-                      <button type="button" onClick={() => setSupportTopic("payment")}>
-                        <WalletIcon /><span><strong>Pembayaran</strong><small>Bantuan pembayaran atau tagihan</small></span><ArrowIcon />
+                      <button
+                        type="button"
+                        onClick={() => setSupportTopic("payment")}
+                      >
+                        <WalletIcon />
+                        <span>
+                          <strong>Pembayaran</strong>
+                          <small>Bantuan pembayaran atau tagihan</small>
+                        </span>
+                        <ArrowIcon />
                       </button>
-                      <button type="button" onClick={() => setSupportTopic("delivery")}>
-                        <TruckIcon /><span><strong>Pengiriman &amp; Ongkir</strong><small>Alamat, ongkir, keterlambatan, atau driver</small></span><ArrowIcon />
+                      <button
+                        type="button"
+                        onClick={() => setSupportTopic("delivery")}
+                      >
+                        <TruckIcon />
+                        <span>
+                          <strong>Pengiriman &amp; Ongkir</strong>
+                          <small>
+                            Alamat, ongkir, keterlambatan, atau driver
+                          </small>
+                        </span>
+                        <ArrowIcon />
                       </button>
-                      <button type="button" onClick={() => setSupportTopic("voucher")}>
-                        <TicketIcon /><span><strong>Voucher &amp; Poin</strong><small>Klaim, penggunaan, dan saldo loyalty</small></span><ArrowIcon />
+                      <button
+                        type="button"
+                        onClick={() => setSupportTopic("voucher")}
+                      >
+                        <TicketIcon />
+                        <span>
+                          <strong>Voucher &amp; Poin</strong>
+                          <small>Klaim, penggunaan, dan saldo loyalty</small>
+                        </span>
+                        <ArrowIcon />
                       </button>
-                      <button type="button" onClick={() => setSupportTopic("account")}>
-                        <UserIcon /><span><strong>Akun &amp; Alamat</strong><small>Profil, password, dan alamat tersimpan</small></span><ArrowIcon />
+                      <button
+                        type="button"
+                        onClick={() => setSupportTopic("account")}
+                      >
+                        <UserIcon />
+                        <span>
+                          <strong>Akun &amp; Alamat</strong>
+                          <small>Profil, password, dan alamat tersimpan</small>
+                        </span>
+                        <ArrowIcon />
                       </button>
-                      <button type="button" onClick={() => setSupportTopic("faq")}>
-                        <HelpIcon /><span><strong>FAQ</strong><small>Jawaban cepat pertanyaan umum</small></span><ArrowIcon />
+                      <button
+                        type="button"
+                        onClick={() => setSupportTopic("faq")}
+                      >
+                        <HelpIcon />
+                        <span>
+                          <strong>FAQ</strong>
+                          <small>Jawaban cepat pertanyaan umum</small>
+                        </span>
+                        <ArrowIcon />
                       </button>
                     </div>
                     <button
@@ -3409,15 +4126,15 @@ export default function App() {
                         ? "Bantuan pembayaran"
                         : supportTopic === "delivery"
                           ? "Bantuan pengantaran"
-                        : supportTopic === "driver"
-                          ? "Customer dan Driver"
-                          : supportTopic === "voucher"
-                            ? "Bantuan voucher dan poin"
-                            : supportTopic === "account"
-                              ? "Bantuan akun dan alamat"
-                              : supportTopic === "faq"
-                                ? "FAQ"
-                            : "Bantuan Admin"
+                          : supportTopic === "driver"
+                            ? "Customer dan Driver"
+                            : supportTopic === "voucher"
+                              ? "Bantuan voucher dan poin"
+                              : supportTopic === "account"
+                                ? "Bantuan akun dan alamat"
+                                : supportTopic === "faq"
+                                  ? "FAQ"
+                                  : "Bantuan Admin"
                     }
                   >
                     <button
@@ -3429,30 +4146,89 @@ export default function App() {
                     </button>
                     {supportTopic === "payment" && (
                       <>
-                        <div className="support-detail-heading"><WalletIcon /><div><strong>Bantuan pembayaran</strong><span>Informasi pembayaran dari data pesanan yang tersedia.</span></div></div>
+                        <div className="support-detail-heading">
+                          <WalletIcon />
+                          <div>
+                            <strong>Bantuan pembayaran</strong>
+                            <span>
+                              Informasi pembayaran dari data pesanan yang
+                              tersedia.
+                            </span>
+                          </div>
+                        </div>
                         {supportOrder ? (
                           <div className="support-fact-list">
-                            <div><span>Nomor pesanan</span><strong>WB{String(supportOrder.id).padStart(6, "0")}</strong></div>
-                            <div><span>Status pembayaran</span><strong>{supportOrder.payment_status || "Belum tersedia"}</strong></div>
-                            <div><span>Total</span><strong>{money(supportOrder.total)}</strong></div>
+                            <div>
+                              <span>Nomor pesanan</span>
+                              <strong>
+                                WB{String(supportOrder.id).padStart(6, "0")}
+                              </strong>
+                            </div>
+                            <div>
+                              <span>Status pembayaran</span>
+                              <strong>
+                                {supportOrder.payment_status ||
+                                  "Belum tersedia"}
+                              </strong>
+                            </div>
+                            <div>
+                              <span>Total</span>
+                              <strong>{money(supportOrder.total)}</strong>
+                            </div>
                           </div>
                         ) : (
-                          <p className="support-empty-copy">Belum ada pesanan aktif. Buka daftar Pesanan untuk memilih transaksi yang memerlukan bantuan.</p>
+                          <p className="support-empty-copy">
+                            Belum ada pesanan aktif. Buka daftar Pesanan untuk
+                            memilih transaksi yang memerlukan bantuan.
+                          </p>
                         )}
-                        <button className="button-link support-wide-action" type="button" onClick={() => goToCustomerOrders("all")}><ReceiptIcon /> Buka Pesanan</button>
+                        <button
+                          className="button-link support-wide-action"
+                          type="button"
+                          onClick={() => goToCustomerOrders("all")}
+                        >
+                          <ReceiptIcon /> Buka Pesanan
+                        </button>
                       </>
                     )}
                     {supportTopic === "delivery" && (
                       <>
-                        <div className="support-detail-heading"><TruckIcon /><div><strong>Bantuan pengantaran</strong><span>Status driver mengikuti data pengantaran pesanan.</span></div></div>
+                        <div className="support-detail-heading">
+                          <TruckIcon />
+                          <div>
+                            <strong>Bantuan pengantaran</strong>
+                            <span>
+                              Status driver mengikuti data pengantaran pesanan.
+                            </span>
+                          </div>
+                        </div>
                         {supportOrder ? (
                           <div className="support-fact-list">
-                            <div><span>Nomor pesanan</span><strong>WB{String(supportOrder.id).padStart(6, "0")}</strong></div>
-                            <div><span>Status pesanan</span><strong>{orderStatusMeta(supportOrder.status).label}</strong></div>
-                            <div><span>Driver</span><strong>{supportDriverAssigned ? "Sudah ditugaskan" : "Belum ditugaskan"}</strong></div>
+                            <div>
+                              <span>Nomor pesanan</span>
+                              <strong>
+                                WB{String(supportOrder.id).padStart(6, "0")}
+                              </strong>
+                            </div>
+                            <div>
+                              <span>Status pesanan</span>
+                              <strong>
+                                {orderStatusMeta(supportOrder.status).label}
+                              </strong>
+                            </div>
+                            <div>
+                              <span>Driver</span>
+                              <strong>
+                                {supportDriverAssigned
+                                  ? "Sudah ditugaskan"
+                                  : "Belum ditugaskan"}
+                              </strong>
+                            </div>
                           </div>
                         ) : (
-                          <p className="support-empty-copy">Belum ada pesanan aktif untuk bantuan pengantaran.</p>
+                          <p className="support-empty-copy">
+                            Belum ada pesanan aktif untuk bantuan pengantaran.
+                          </p>
                         )}
                         <button
                           className="primary support-wide-action"
@@ -3473,51 +4249,161 @@ export default function App() {
                     )}
                     {supportTopic === "driver" && (
                       <>
-                        <div className="support-detail-heading"><ChatIcon /><div><strong>Customer ↔ Driver</strong><span>Konteks pengantaran terhubung ke pesanan aktif.</span></div></div>
-                        <div className="support-fact-list">
-                          <div><span>Nomor pesanan</span><strong>WB{String(supportOrder.id).padStart(6, "0")}</strong></div>
-                          <div><span>Status</span><strong>{orderStatusMeta(supportOrder.status).label}</strong></div>
-                          <div><span>Alamat</span><strong>{supportOrder.address_label || "Alamat pengantaran"}</strong></div>
+                        <div className="support-detail-heading">
+                          <ChatIcon />
+                          <div>
+                            <strong>Customer ↔ Driver</strong>
+                            <span>
+                              Konteks pengantaran terhubung ke pesanan aktif.
+                            </span>
+                          </div>
                         </div>
-                        <p className="support-empty-copy">Gunakan jalur ini hanya untuk koordinasi pengantaran pesanan dengan driver yang ditugaskan.</p>
+                        <div className="support-fact-list">
+                          <div>
+                            <span>Nomor pesanan</span>
+                            <strong>
+                              WB{String(supportOrder.id).padStart(6, "0")}
+                            </strong>
+                          </div>
+                          <div>
+                            <span>Status</span>
+                            <strong>
+                              {orderStatusMeta(supportOrder.status).label}
+                            </strong>
+                          </div>
+                          <div>
+                            <span>Alamat</span>
+                            <strong>
+                              {supportOrder.address_label ||
+                                "Alamat pengantaran"}
+                            </strong>
+                          </div>
+                        </div>
+                        <p className="support-empty-copy">
+                          Gunakan jalur ini hanya untuk koordinasi pengantaran
+                          pesanan dengan driver yang ditugaskan.
+                        </p>
                       </>
                     )}
                     {supportTopic === "voucher" && (
                       <>
-                        <div className="support-detail-heading"><TicketIcon /><div><strong>Voucher &amp; Poin</strong><span>Voucher dan loyalty mengikuti kelayakan akun dan pesananmu.</span></div></div>
-                        <p className="support-empty-copy">Buka Voucher &amp; Loyalty dari Akun untuk melihat voucher yang diklaim, saldo poin, dan reward yang tersedia.</p>
-                        <button className="button-link support-wide-action" type="button" onClick={() => openAccountSection("account-loyalty")}><TicketIcon /> Buka Voucher &amp; Loyalty</button>
+                        <div className="support-detail-heading">
+                          <TicketIcon />
+                          <div>
+                            <strong>Voucher &amp; Poin</strong>
+                            <span>
+                              Voucher dan loyalty mengikuti kelayakan akun dan
+                              pesananmu.
+                            </span>
+                          </div>
+                        </div>
+                        <p className="support-empty-copy">
+                          Buka Voucher &amp; Loyalty dari Akun untuk melihat
+                          voucher yang diklaim, saldo poin, dan reward yang
+                          tersedia.
+                        </p>
+                        <button
+                          className="button-link support-wide-action"
+                          type="button"
+                          onClick={() => openAccountSection("account-loyalty")}
+                        >
+                          <TicketIcon /> Buka Voucher &amp; Loyalty
+                        </button>
                       </>
                     )}
                     {supportTopic === "account" && (
                       <>
-                        <div className="support-detail-heading"><UserIcon /><div><strong>Akun &amp; Alamat</strong><span>Kelola profil, password, dan alamat tersimpan.</span></div></div>
-                        <p className="support-empty-copy">Data akun hanya dapat diakses oleh sesi pelanggan yang sedang login. Koordinat alamat tidak ditampilkan sebagai input teknis.</p>
-                        <button className="button-link support-wide-action" type="button" onClick={() => openAccountSection("account-settings")}><UserIcon /> Buka Pengaturan Akun</button>
+                        <div className="support-detail-heading">
+                          <UserIcon />
+                          <div>
+                            <strong>Akun &amp; Alamat</strong>
+                            <span>
+                              Kelola profil, password, dan alamat tersimpan.
+                            </span>
+                          </div>
+                        </div>
+                        <p className="support-empty-copy">
+                          Data akun hanya dapat diakses oleh sesi pelanggan yang
+                          sedang login. Koordinat alamat tidak ditampilkan
+                          sebagai input teknis.
+                        </p>
+                        <button
+                          className="button-link support-wide-action"
+                          type="button"
+                          onClick={() => openAccountSection("account-settings")}
+                        >
+                          <UserIcon /> Buka Pengaturan Akun
+                        </button>
                       </>
                     )}
                     {supportTopic === "faq" && (
                       <>
-                        <div className="support-detail-heading"><HelpIcon /><div><strong>FAQ</strong><span>Informasi umum layanan Warkost.</span></div></div>
+                        <div className="support-detail-heading">
+                          <HelpIcon />
+                          <div>
+                            <strong>FAQ</strong>
+                            <span>Informasi umum layanan Warkost.</span>
+                          </div>
+                        </div>
                         <div className="support-fact-list">
-                          <div><span>Kapan ongkir gratis?</span><strong>Hingga radius 5 km</strong></div>
-                          <div><span>Bisakah voucher dan poin digabung?</span><strong>Tidak pada versi saat ini</strong></div>
-                          <div><span>Kapan driver dapat dihubungi?</span><strong>Saat sudah ditugaskan dan mengantar</strong></div>
+                          <div>
+                            <span>Kapan ongkir gratis?</span>
+                            <strong>Hingga radius 5 km</strong>
+                          </div>
+                          <div>
+                            <span>Bisakah voucher dan poin digabung?</span>
+                            <strong>Tidak pada versi saat ini</strong>
+                          </div>
+                          <div>
+                            <span>Kapan driver dapat dihubungi?</span>
+                            <strong>Saat sudah ditugaskan dan mengantar</strong>
+                          </div>
                         </div>
                       </>
                     )}
                     {supportTopic === "admin" && (
                       <>
-                        <div className="support-detail-heading"><ChatIcon /><div><strong>Customer Support Admin</strong><span>Bantuan internal Warkost dengan konteks pesanan.</span></div></div>
+                        <div className="support-detail-heading">
+                          <ChatIcon />
+                          <div>
+                            <strong>Customer Support Admin</strong>
+                            <span>
+                              Bantuan internal Warkost dengan konteks pesanan.
+                            </span>
+                          </div>
+                        </div>
                         {supportOrder ? (
                           <div className="support-fact-list">
-                            <div><span>Nomor pesanan</span><strong>WB{String(supportOrder.id).padStart(6, "0")}</strong></div>
-                            <div><span>Status pesanan</span><strong>{orderStatusMeta(supportOrder.status).label}</strong></div>
-                            <div><span>Status pembayaran</span><strong>{supportOrder.payment_status || "Belum tersedia"}</strong></div>
-                            <div><span>Total</span><strong>{money(supportOrder.total)}</strong></div>
+                            <div>
+                              <span>Nomor pesanan</span>
+                              <strong>
+                                WB{String(supportOrder.id).padStart(6, "0")}
+                              </strong>
+                            </div>
+                            <div>
+                              <span>Status pesanan</span>
+                              <strong>
+                                {orderStatusMeta(supportOrder.status).label}
+                              </strong>
+                            </div>
+                            <div>
+                              <span>Status pembayaran</span>
+                              <strong>
+                                {supportOrder.payment_status ||
+                                  "Belum tersedia"}
+                              </strong>
+                            </div>
+                            <div>
+                              <span>Total</span>
+                              <strong>{money(supportOrder.total)}</strong>
+                            </div>
                           </div>
                         ) : (
-                          <p className="support-empty-copy">Sampaikan kebutuhan umum melalui pusat bantuan. Pilih pesanan terlebih dahulu bila bantuan terkait transaksi tertentu.</p>
+                          <p className="support-empty-copy">
+                            Sampaikan kebutuhan umum melalui pusat bantuan.
+                            Pilih pesanan terlebih dahulu bila bantuan terkait
+                            transaksi tertentu.
+                          </p>
                         )}
                       </>
                     )}
@@ -3525,10 +4411,16 @@ export default function App() {
                 )}
                 <div className="support-fallback">
                   <strong>Kontak umum</strong>
-                  <p>Untuk kebutuhan umum di luar pesanan, WhatsApp tetap tersedia sebagai fallback.</p>
+                  <p>
+                    Untuk kebutuhan umum di luar pesanan, WhatsApp tetap
+                    tersedia sebagai fallback.
+                  </p>
                   <a
                     className="button-link"
-                    href={whatsappLink(settings.businessWhatsApp, "Halo Warkost Bahagia, saya membutuhkan bantuan umum.")}
+                    href={whatsappLink(
+                      settings.businessWhatsApp,
+                      "Halo Warkost Bahagia, saya membutuhkan bantuan umum.",
+                    )}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -3559,9 +4451,7 @@ export default function App() {
                   <LocationIcon />
                   <span>Alamat</span>
                 </button>
-                <button
-                  onClick={() => openAccountSection("account-settings")}
-                >
+                <button onClick={() => openAccountSection("account-settings")}>
                   <UserIcon />
                   <span>Pengaturan Akun</span>
                 </button>
@@ -3769,9 +4659,15 @@ function OrderProgress({ status, compact = false }) {
   const activeStage = orderStage(status);
   if (status === "CANCELLED") return null;
   return (
-    <div className={`order-progress ${compact ? "compact" : ""}`} aria-label={`Progress pesanan: ${orderStatusMeta(status).label}`}>
+    <div
+      className={`order-progress ${compact ? "compact" : ""}`}
+      aria-label={`Progress pesanan: ${orderStatusMeta(status).label}`}
+    >
       {ORDER_STAGES.map((stage, index) => (
-        <div className={`progress-step ${index <= activeStage ? "complete" : ""} ${index === activeStage ? "current" : ""}`} key={stage.key}>
+        <div
+          className={`progress-step ${index <= activeStage ? "complete" : ""} ${index === activeStage ? "current" : ""}`}
+          key={stage.key}
+        >
           <span>{index < activeStage ? <CheckIcon /> : index + 1}</span>
           <small>{stage.label}</small>
         </div>
@@ -3835,96 +4731,245 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
   const paymentExpiry = payment?.expires_at
     ? new Date(String(payment.expires_at).replace(" ", "T") + "Z").getTime()
     : 0;
-  const paymentSeconds = Math.max(0, Math.floor((paymentExpiry - clock) / 1000));
+  const paymentSeconds = Math.max(
+    0,
+    Math.floor((paymentExpiry - clock) / 1000),
+  );
   const paymentCountdown = `${String(Math.floor(paymentSeconds / 60)).padStart(2, "0")}:${String(paymentSeconds % 60).padStart(2, "0")}`;
   return (
     <section className="customer-tracking" aria-labelledby="tracking-title">
       <div className="customer-page-title tracking-page-title">
-        <button className="back-link" type="button" onClick={onBack}><ArrowIcon /> Kembali ke Pesanan</button>
-        <h1 id="tracking-title">{justCreated ? "Pesanan Berhasil Dibuat!" : "Lacak Pesanan"}</h1>
-        <p>{justCreated ? "Terima kasih sudah memesan di Warkost Bahagia." : "Pantau progres pesananmu secara real time."}</p>
+        <button className="back-link" type="button" onClick={onBack}>
+          <ArrowIcon /> Kembali ke Pesanan
+        </button>
+        <h1 id="tracking-title">
+          {justCreated ? "Pesanan Berhasil Dibuat!" : "Lacak Pesanan"}
+        </h1>
+        <p>
+          {justCreated
+            ? "Terima kasih sudah memesan di Warkost Bahagia."
+            : "Pantau progres pesananmu secara real time."}
+        </p>
       </div>
       <div className="tracking-layout">
         <div className="tracking-main">
           {justCreated && (
             <section className="success-order-banner" role="status">
-              <span><CheckIcon /></span>
-              <div><strong>Pesanan #{order.id} berhasil dibuat</strong><small>Pesanan sedang diproses dan akan segera diantar.</small></div>
+              <span>
+                <CheckIcon />
+              </span>
+              <div>
+                <strong>Pesanan #{order.id} berhasil dibuat</strong>
+                <small>Pesanan sedang diproses dan akan segera diantar.</small>
+              </div>
             </section>
           )}
           <section className="tracking-card tracking-order-number">
-            <span className="section-icon"><ReceiptIcon /></span>
-            <div><small>Nomor Pesanan</small><strong>WB{String(order.id).padStart(6, "0")}</strong></div>
+            <span className="section-icon">
+              <ReceiptIcon />
+            </span>
+            <div>
+              <small>Nomor Pesanan</small>
+              <strong>WB{String(order.id).padStart(6, "0")}</strong>
+            </div>
             <time>{formatDateTime(order.created_at)}</time>
           </section>
           <section className="tracking-card delivery-status-card">
             <div className="tracking-card-heading">
-              <span className="section-icon"><TruckIcon /></span>
-              <div><small>Status Pengantaran</small><h2>{orderHeadline(order.status)}</h2></div>
-              <span className={`order-status-pill ${status.tone}`}>{status.label}</span>
+              <span className="section-icon">
+                <TruckIcon />
+              </span>
+              <div>
+                <small>Status Pengantaran</small>
+                <h2>{orderHeadline(order.status)}</h2>
+              </div>
+              <span className={`order-status-pill ${status.tone}`}>
+                {status.label}
+              </span>
             </div>
             <OrderProgress status={order.status} />
             {order.driver_delay_notice === 1 && (
               <div className="driver-delay-notice">
                 <strong>Mohon maaf, driver sedang penuh.</strong>
-                <span>Pesanan tetap diproses, namun waktu pengantaran mungkin lebih lama dari biasanya.</span>
+                <span>
+                  Pesanan tetap diproses, namun waktu pengantaran mungkin lebih
+                  lama dari biasanya.
+                </span>
               </div>
             )}
             <div className="contact-actions">
-              <button className="primary" type="button" onClick={() => onSupport(order.id, "admin")}><ChatIcon /> Hubungi Admin</button>
-              {order.driver_whatsapp && ["PICKED_UP", "ON_DELIVERY"].includes(order.status) ? (
-                <button className="button-link" type="button" onClick={() => onSupport(order.id, "delivery")}><PhoneIcon /> Hubungi Driver</button>
+              <button
+                className="primary"
+                type="button"
+                onClick={() => onSupport(order.id, "admin")}
+              >
+                <ChatIcon /> Hubungi Admin
+              </button>
+              {order.driver_whatsapp &&
+              ["PICKED_UP", "ON_DELIVERY"].includes(order.status) ? (
+                <button
+                  className="button-link"
+                  type="button"
+                  onClick={() => onSupport(order.id, "delivery")}
+                >
+                  <PhoneIcon /> Hubungi Driver
+                </button>
               ) : (
-                <button type="button" disabled><PhoneIcon /> Hubungi Driver <small>{order.driver_id ? "Belum memasuki fase pengantaran" : "Driver belum ditugaskan"}</small></button>
+                <button type="button" disabled>
+                  <PhoneIcon /> Hubungi Driver{" "}
+                  <small>
+                    {order.driver_id
+                      ? "Belum memasuki fase pengantaran"
+                      : "Driver belum ditugaskan"}
+                  </small>
+                </button>
               )}
             </div>
           </section>
           <section className="tracking-card tracking-info-card">
-            <div className="tracking-card-heading"><span className="section-icon"><LocationIcon /></span><div><small>Alamat Pengiriman</small><h2>{order.address_label || "Alamat"}</h2></div></div>
+            <div className="tracking-card-heading">
+              <span className="section-icon">
+                <LocationIcon />
+              </span>
+              <div>
+                <small>Alamat Pengiriman</small>
+                <h2>{order.address_label || "Alamat"}</h2>
+              </div>
+            </div>
             <p>{order.address}</p>
-            <small>{(Number(order.distance_meters) / 1000).toFixed(1)} km dari Warkost</small>
+            <small>
+              {(Number(order.distance_meters) / 1000).toFixed(1)} km dari
+              Warkost
+            </small>
           </section>
           <section className="tracking-card tracking-info-card">
-            <div className="tracking-card-heading"><span className="section-icon"><WalletIcon /></span><div><small>Metode Pembayaran</small><h2>{order.method === "QRIS" ? "QRIS" : order.method === "BANK_TRANSFER" ? "Transfer bank" : "Tunai saat diterima"}</h2></div></div>
-            <span className={`payment-status ${String(payment?.status || order.payment_status || "").toLowerCase()}`}>{payment?.status || order.payment_status}</span>
+            <div className="tracking-card-heading">
+              <span className="section-icon">
+                <WalletIcon />
+              </span>
+              <div>
+                <small>Metode Pembayaran</small>
+                <h2>
+                  {order.method === "QRIS"
+                    ? "QRIS"
+                    : order.method === "BANK_TRANSFER"
+                      ? "Transfer bank"
+                      : "Tunai saat diterima"}
+                </h2>
+              </div>
+            </div>
+            <span
+              className={`payment-status ${String(payment?.status || order.payment_status || "").toLowerCase()}`}
+            >
+              {payment?.status || order.payment_status}
+            </span>
             {order.method === "QRIS" && payment && (
               <div className="qris-payment-panel">
-                <div><span>Total tepat</span><strong>{money(payment.amount)}</strong></div>
-                {payment.status === "PENDING" && <div><span>Sisa waktu</span><strong>{paymentCountdown}</strong></div>}
-                {payment.qr_payload && payment.status === "PENDING" && <code>{payment.qr_payload}</code>}
-                {payment.payment_url && payment.status === "PENDING" && <a className="button-link" href={payment.payment_url} target="_blank" rel="noreferrer">Buka halaman pembayaran</a>}
-                <p>{payment.status === "PAID" ? "Pembayaran berhasil diverifikasi." : payment.status === "FAILED" ? "Pembayaran gagal. Silakan buat pesanan baru untuk mencoba kembali." : payment.status === "EXPIRED" ? "Pembayaran kedaluwarsa. Silakan buat pesanan baru untuk mencoba kembali." : "Menunggu konfirmasi aman dari provider pembayaran."}</p>
-                {payment.status === "PENDING" && <button type="button" onClick={() => {
-                  setPaymentError("");
-                  api("payment-status?orderId=" + order.id).then(setPayment).catch((error) => setPaymentError(error.message));
-                }}>Periksa status pembayaran</button>}
+                <div>
+                  <span>Total tepat</span>
+                  <strong>{money(payment.amount)}</strong>
+                </div>
+                {payment.status === "PENDING" && (
+                  <div>
+                    <span>Sisa waktu</span>
+                    <strong>{paymentCountdown}</strong>
+                  </div>
+                )}
+                {payment.qr_payload && payment.status === "PENDING" && (
+                  <code>{payment.qr_payload}</code>
+                )}
+                {payment.payment_url && payment.status === "PENDING" && (
+                  <a
+                    className="button-link"
+                    href={payment.payment_url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Buka halaman pembayaran
+                  </a>
+                )}
+                <p>
+                  {payment.status === "PAID"
+                    ? "Pembayaran berhasil diverifikasi."
+                    : payment.status === "FAILED"
+                      ? "Pembayaran gagal. Silakan buat pesanan baru untuk mencoba kembali."
+                      : payment.status === "EXPIRED"
+                        ? "Pembayaran kedaluwarsa. Silakan buat pesanan baru untuk mencoba kembali."
+                        : "Menunggu konfirmasi aman dari provider pembayaran."}
+                </p>
+                {payment.status === "PENDING" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentError("");
+                      api("payment-status?orderId=" + order.id)
+                        .then(setPayment)
+                        .catch((error) => setPaymentError(error.message));
+                    }}
+                  >
+                    Periksa status pembayaran
+                  </button>
+                )}
                 {paymentError && <small role="alert">{paymentError}</small>}
               </div>
             )}
           </section>
         </div>
         <aside className="tracking-card tracking-summary">
-          <div className="checkout-card-heading"><span className="section-icon"><CartIcon /></span><h2>Ringkasan Pesanan</h2></div>
+          <div className="checkout-card-heading">
+            <span className="section-icon">
+              <CartIcon />
+            </span>
+            <h2>Ringkasan Pesanan</h2>
+          </div>
           {details?.items.map((item, index) => (
             <div className="tracking-item" key={`${item.name}-${index}`}>
-              <Image src={demoProductImage(item.name)} alt="" width={72} height={56} />
-              <span><strong>{item.name}</strong><small>{item.quantity} × {money(item.price)}</small></span>
+              <Image
+                src={demoProductImage(item.name)}
+                alt=""
+                width={72}
+                height={56}
+              />
+              <span>
+                <strong>{item.name}</strong>
+                <small>
+                  {item.quantity} × {money(item.price)}
+                </small>
+              </span>
               <strong>{money(item.quantity * item.price)}</strong>
             </div>
           ))}
           {!details && !detailError && <p>Memuat detail menu…</p>}
           {detailError && <p role="alert">{detailError}</p>}
           <div className="tracking-totals">
-            <div><span>Subtotal</span><strong>{money(order.subtotal)}</strong></div>
-            <div><span>Ongkir</span><strong>{money(order.delivery_fee)}</strong></div>
-            <div className="grand-total"><span>Total Pembayaran</span><strong>{money(order.total)}</strong></div>
+            <div>
+              <span>Subtotal</span>
+              <strong>{money(order.subtotal)}</strong>
+            </div>
+            <div>
+              <span>Ongkir</span>
+              <strong>{money(order.delivery_fee)}</strong>
+            </div>
+            <div className="grand-total">
+              <span>Total Pembayaran</span>
+              <strong>{money(order.total)}</strong>
+            </div>
           </div>
         </aside>
       </div>
     </section>
   );
 }
-function Order({ order: o, role, drivers, busy, action, onTrack, onReorder, onSupport }) {
+function Order({
+  order: o,
+  role,
+  drivers,
+  busy,
+  action,
+  onTrack,
+  onReorder,
+  onSupport,
+}) {
   const [driver, setDriver] = useState("");
   const [details, setDetails] = useState(null);
   const [detailError, setDetailError] = useState("");
@@ -3954,38 +4999,103 @@ function Order({ order: o, role, drivers, busy, action, onTrack, onReorder, onSu
       <article className="panel order customer-order-card">
         <span className="badge sr-only">{o.status.replaceAll("_", " ")}</span>
         <div className="customer-order-meta">
-          <span className={`order-status-pill ${status.tone}`}>{status.label}</span>
+          <span className={`order-status-pill ${status.tone}`}>
+            {status.label}
+          </span>
           <time>{formatDateTime(o.created_at)}</time>
-          <strong>#{o.id} · WB{String(o.id).padStart(6, "0")}</strong>
+          <strong>
+            #{o.id} · WB{String(o.id).padStart(6, "0")}
+          </strong>
         </div>
         <div className="customer-order-content">
           <div className="order-item-preview">
             {(details?.items || []).slice(0, 3).map((item, index) => (
-              <Image key={`${item.name}-${index}`} src={demoProductImage(item.name)} alt="" width={86} height={70} />
+              <Image
+                key={`${item.name}-${index}`}
+                src={demoProductImage(item.name)}
+                alt=""
+                width={86}
+                height={70}
+              />
             ))}
-            {!details && <span className="order-preview-placeholder"><CartIcon /></span>}
-            {details && <small>{details.items.reduce((sum, item) => sum + item.quantity, 0)} menu</small>}
+            {!details && (
+              <span className="order-preview-placeholder">
+                <CartIcon />
+              </span>
+            )}
+            {details && (
+              <small>
+                {details.items.reduce((sum, item) => sum + item.quantity, 0)}{" "}
+                menu
+              </small>
+            )}
           </div>
           <div className="order-summary-copy">
             <h2>{orderHeadline(o.status)}</h2>
-            <p>{active ? "Pantau perkembangan pesananmu di bawah ini." : o.status === "DELIVERED" ? "Terima kasih sudah memesan di Warkost Bahagia." : "Pesanan ini tidak dilanjutkan."}</p>
+            <p>
+              {active
+                ? "Pantau perkembangan pesananmu di bawah ini."
+                : o.status === "DELIVERED"
+                  ? "Terima kasih sudah memesan di Warkost Bahagia."
+                  : "Pesanan ini tidak dilanjutkan."}
+            </p>
             <strong>{money(o.total)}</strong>
           </div>
           <OrderProgress status={o.status} compact />
         </div>
-        {o.driver_delay_notice === 1 && <div className="driver-delay-notice compact"><strong>Pengantaran mungkin lebih lama</strong><span>Semua driver sedang bertugas.</span></div>}
+        {o.driver_delay_notice === 1 && (
+          <div className="driver-delay-notice compact">
+            <strong>Pengantaran mungkin lebih lama</strong>
+            <span>Semua driver sedang bertugas.</span>
+          </div>
+        )}
         <div className="customer-order-actions">
-          <button aria-label="Lihat item & riwayat" onClick={() => setExpanded((current) => !current)}>{expanded ? "Tutup Detail" : "Lihat Detail"}</button>
-          {active && <button className="primary" onClick={() => onTrack?.(o.id)}><TruckIcon /> Lacak Pesanan</button>}
-          {o.status === "DELIVERED" && <button className="primary" disabled={!details} onClick={() => onReorder?.(details?.items)}><HistoryIcon /> Pesan Lagi</button>}
+          <button
+            aria-label="Lihat item & riwayat"
+            onClick={() => setExpanded((current) => !current)}
+          >
+            {expanded ? "Tutup Detail" : "Lihat Detail"}
+          </button>
+          {active && (
+            <button className="primary" onClick={() => onTrack?.(o.id)}>
+              <TruckIcon /> Lacak Pesanan
+            </button>
+          )}
+          {o.status === "DELIVERED" && (
+            <button
+              className="primary"
+              disabled={!details}
+              onClick={() => onReorder?.(details?.items)}
+            >
+              <HistoryIcon /> Pesan Lagi
+            </button>
+          )}
         </div>
         {detailError && <p role="alert">{detailError}</p>}
         {expanded && details && (
           <div className="order-details customer-order-details">
-            {details.items.map((item, index) => <div className="line" key={`${item.name}-${index}`}><span>{item.quantity} × {item.name}</span><strong>{money(item.quantity * item.price)}</strong></div>)}
+            {details.items.map((item, index) => (
+              <div className="line" key={`${item.name}-${index}`}>
+                <span>
+                  {item.quantity} × {item.name}
+                </span>
+                <strong>{money(item.quantity * item.price)}</strong>
+              </div>
+            ))}
             <small>Riwayat status</small>
-            {details.events.map((event, index) => <p key={index}>{formatDateTime(event.created_at)} · {event.next_status.replaceAll("_", " ")}</p>)}
-            <button className="button-link order-support-action" type="button" onClick={() => onSupport?.(o.id, "admin")}><ChatIcon /> Hubungi Admin</button>
+            {details.events.map((event, index) => (
+              <p key={index}>
+                {formatDateTime(event.created_at)} ·{" "}
+                {event.next_status.replaceAll("_", " ")}
+              </p>
+            ))}
+            <button
+              className="button-link order-support-action"
+              type="button"
+              onClick={() => onSupport?.(o.id, "admin")}
+            >
+              <ChatIcon /> Hubungi Admin
+            </button>
           </div>
         )}
       </article>
@@ -4013,7 +5123,7 @@ function Order({ order: o, role, drivers, busy, action, onTrack, onReorder, onSu
             <span className="badge">Dapur · {o.kitchen_status}</span>
           )}
           {o.cashier_status && (
-            <span className="badge">Kasir · {o.cashier_status}</span>
+            <span className="badge">Admin minuman · {o.cashier_status}</span>
           )}
         </div>
       )}
@@ -4038,7 +5148,7 @@ function Order({ order: o, role, drivers, busy, action, onTrack, onReorder, onSu
               <span>
                 {item.quantity} × {item.name}
                 {item.prep_station &&
-                  ` · ${item.prep_station === "KITCHEN" ? "Dapur" : "Kasir"}`}
+                  ` · ${item.prep_station === "KITCHEN" ? "Dapur" : "Admin · minuman"}`}
               </span>
               <strong>{money(item.quantity * item.price)}</strong>
             </div>
@@ -4116,26 +5226,27 @@ function Order({ order: o, role, drivers, busy, action, onTrack, onReorder, onSu
               </button>
             </>
           )}
-          {o.method !== "QRIS" && ["UNPAID", "PENDING"].includes(o.payment_status) && (
-            <>
-              <button
-                onClick={() =>
-                  action("payment", { orderId: o.id, status: "PAID" })
-                }
-                disabled={busy}
-              >
-                Tandai lunas
-              </button>
-              <button
-                onClick={() =>
-                  action("payment", { orderId: o.id, status: "FAILED" })
-                }
-                disabled={busy}
-              >
-                Tandai gagal
-              </button>
-            </>
-          )}
+          {o.method !== "QRIS" &&
+            ["UNPAID", "PENDING"].includes(o.payment_status) && (
+              <>
+                <button
+                  onClick={() =>
+                    action("payment", { orderId: o.id, status: "PAID" })
+                  }
+                  disabled={busy}
+                >
+                  Tandai lunas
+                </button>
+                <button
+                  onClick={() =>
+                    action("payment", { orderId: o.id, status: "FAILED" })
+                  }
+                  disabled={busy}
+                >
+                  Tandai gagal
+                </button>
+              </>
+            )}
         </div>
       )}
       {role === "KITCHEN" &&
@@ -4191,33 +5302,103 @@ function Order({ order: o, role, drivers, busy, action, onTrack, onReorder, onSu
 
 function LoyaltyRuleEditor({ rule, busy, onSave }) {
   return (
-    <form className="promo-editor" onSubmit={(event) => {
-      event.preventDefault();
-      const form = new FormData(event.currentTarget);
-      onSave({
-        ...(rule ? { id: rule.id } : {}),
-        name: form.get("name"),
-        pointsRequired: Number(form.get("pointsRequired")),
-        rewardType: form.get("rewardType"),
-        rewardValue: Number(form.get("rewardValue")),
-        minimumOrder: Number(form.get("minimumOrder")),
-        maximumDiscount: form.get("maximumDiscount"),
-        active: form.get("active") === "on",
-      });
-    }}>
-      {rule && <div className="line"><strong>{rule.name}</strong><span className="badge">{rule.active ? "ACTIVE" : "INACTIVE"}</span></div>}
-      <label>Nama reward<input name="name" minLength="2" maxLength="100" defaultValue={rule?.name || ""} required /></label>
+    <form
+      className="promo-editor"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const form = new FormData(event.currentTarget);
+        onSave({
+          ...(rule ? { id: rule.id } : {}),
+          name: form.get("name"),
+          pointsRequired: Number(form.get("pointsRequired")),
+          rewardType: form.get("rewardType"),
+          rewardValue: Number(form.get("rewardValue")),
+          minimumOrder: Number(form.get("minimumOrder")),
+          maximumDiscount: form.get("maximumDiscount"),
+          active: form.get("active") === "on",
+        });
+      }}
+    >
+      {rule && (
+        <div className="line">
+          <strong>{rule.name}</strong>
+          <span className="badge">{rule.active ? "ACTIVE" : "INACTIVE"}</span>
+        </div>
+      )}
+      <label>
+        Nama reward
+        <input
+          name="name"
+          minLength="2"
+          maxLength="100"
+          defaultValue={rule?.name || ""}
+          required
+        />
+      </label>
       <div className="columns compact-columns">
-        <label>Poin dibutuhkan<input name="pointsRequired" type="number" min="1" defaultValue={rule?.points_required || 1} required /></label>
-        <label>Tipe reward<select name="rewardType" defaultValue={rule?.reward_type || "PERCENT"}><option value="PERCENT">Persen</option><option value="FIXED">Nominal tetap</option></select></label>
+        <label>
+          Poin dibutuhkan
+          <input
+            name="pointsRequired"
+            type="number"
+            min="1"
+            defaultValue={rule?.points_required || 1}
+            required
+          />
+        </label>
+        <label>
+          Tipe reward
+          <select
+            name="rewardType"
+            defaultValue={rule?.reward_type || "PERCENT"}
+          >
+            <option value="PERCENT">Persen</option>
+            <option value="FIXED">Nominal tetap</option>
+          </select>
+        </label>
       </div>
       <div className="columns compact-columns">
-        <label>Nilai reward<input name="rewardValue" type="number" min="1" defaultValue={rule?.reward_value || 1} required /></label>
-        <label>Minimum belanja<input name="minimumOrder" type="number" min="0" defaultValue={rule?.minimum_order || 0} required /></label>
+        <label>
+          Nilai reward
+          <input
+            name="rewardValue"
+            type="number"
+            min="1"
+            defaultValue={rule?.reward_value || 1}
+            required
+          />
+        </label>
+        <label>
+          Minimum belanja
+          <input
+            name="minimumOrder"
+            type="number"
+            min="0"
+            defaultValue={rule?.minimum_order || 0}
+            required
+          />
+        </label>
       </div>
-      <label>Maksimum diskon (opsional)<input name="maximumDiscount" type="number" min="0" defaultValue={rule?.maximum_discount ?? ""} /></label>
-      <label className="checkbox"><input name="active" type="checkbox" defaultChecked={rule ? rule.active : true} />Aktifkan reward</label>
-      <button className="primary" disabled={busy}>{rule ? "Simpan reward" : "Buat reward"}</button>
+      <label>
+        Maksimum diskon (opsional)
+        <input
+          name="maximumDiscount"
+          type="number"
+          min="0"
+          defaultValue={rule?.maximum_discount ?? ""}
+        />
+      </label>
+      <label className="checkbox">
+        <input
+          name="active"
+          type="checkbox"
+          defaultChecked={rule ? rule.active : true}
+        />
+        Aktifkan reward
+      </label>
+      <button className="primary" disabled={busy}>
+        {rule ? "Simpan reward" : "Buat reward"}
+      </button>
     </form>
   );
 }
@@ -4340,7 +5521,10 @@ function PromotionEditor({ promotion, busy, onSave }) {
       <div className="columns compact-columns">
         <label>
           Tipe voucher (opsional)
-          <select name="voucherType" defaultValue={promotion?.voucher_type || ""}>
+          <select
+            name="voucherType"
+            defaultValue={promotion?.voucher_type || ""}
+          >
             <option value="">Campaign tanpa voucher</option>
             <option value="PERCENT">Persen</option>
             <option value="FIXED">Nominal tetap</option>
@@ -4348,22 +5532,42 @@ function PromotionEditor({ promotion, busy, onSave }) {
         </label>
         <label>
           Nilai diskon
-          <input name="discountValue" type="number" min="0" defaultValue={promotion?.discount_value || 0} />
+          <input
+            name="discountValue"
+            type="number"
+            min="0"
+            defaultValue={promotion?.discount_value || 0}
+          />
         </label>
       </div>
       <div className="columns compact-columns">
         <label>
           Minimum belanja
-          <input name="minimumOrder" type="number" min="0" defaultValue={promotion?.minimum_order || 0} />
+          <input
+            name="minimumOrder"
+            type="number"
+            min="0"
+            defaultValue={promotion?.minimum_order || 0}
+          />
         </label>
         <label>
           Maksimum diskon (opsional)
-          <input name="maxDiscount" type="number" min="0" defaultValue={promotion?.max_discount ?? ""} />
+          <input
+            name="maxDiscount"
+            type="number"
+            min="0"
+            defaultValue={promotion?.max_discount ?? ""}
+          />
         </label>
       </div>
       <label>
         Kuota penggunaan global (opsional)
-        <input name="quota" type="number" min="0" defaultValue={promotion?.quota ?? ""} />
+        <input
+          name="quota"
+          type="number"
+          min="0"
+          defaultValue={promotion?.quota ?? ""}
+        />
       </label>
       <label className="checkbox">
         <input
@@ -4443,7 +5647,7 @@ function ProductEditor({ product: p, categories, busy, onSave }) {
         Stasiun persiapan
         <select name="prepStation" defaultValue={p?.prep_station || "KITCHEN"}>
           <option value="KITCHEN">Dapur · makanan</option>
-          <option value="CASHIER">Kasir · minuman</option>
+          <option value="CASHIER">Admin · minuman</option>
         </select>
       </label>
       <label>

@@ -49,6 +49,7 @@ const login = async (email) => {
 };
 const customer = await login("customer@warkost.local"),
   admin = await login("admin@warkost.local"),
+  manager = await login("manager@warkost.local"),
   driver = await login("driver@warkost.local"),
   kitchen = await login("kitchen@warkost.local"),
   owner = await login("owner@warkost.local");
@@ -72,7 +73,8 @@ assert.equal((await call("stock", undefined, kitchen)).status, 403);
 assert.equal((await call("audit", undefined, admin)).status, 403);
 assert.equal((await call("audit", undefined, owner)).status, 200);
 assert.equal((await call("promotions", undefined, customer)).status, 403);
-assert.equal((await call("promotions", undefined, owner)).status, 403);
+assert.equal((await call("promotions", undefined, owner)).status, 200);
+assert.equal((await call("promotions", undefined, admin)).status, 403);
 const scheduledPromotion = await call(
   "promotion",
   {
@@ -86,7 +88,7 @@ const scheduledPromotion = await call(
     endsAt: new Date(Date.now() + 7200000).toISOString(),
     active: true,
   },
-  admin,
+  manager,
 );
 assert.equal(
   scheduledPromotion.status,
@@ -113,7 +115,7 @@ const activatedPromotion = await call(
     endsAt: new Date(Date.now() + 3600000).toISOString(),
     active: true,
   },
-  admin,
+  manager,
 );
 assert.equal(
   activatedPromotion.status,
@@ -182,7 +184,8 @@ assert.equal(
     .status,
   200,
 );
-const inv = await call("inventory", undefined, admin);
+assert.equal((await call("inventory", undefined, admin)).status, 403);
+const inv = await call("inventory", undefined, manager);
 assert.equal(inv.status, 200);
 assert.ok(inv.value.products.length > 0);
 assert.equal(
@@ -190,17 +193,17 @@ assert.equal(
     await call(
       "stock",
       { productId: 1, quantity: -1, reason: "Koreksi smoke" },
-      admin,
+      manager,
     )
   ).status,
-  403,
+  200,
 );
 assert.equal(
   (
     await call(
       "stock",
       { productId: 1, quantity: 1, reason: "Stok smoke" },
-      admin,
+      manager,
     )
   ).status,
   200,
@@ -242,7 +245,7 @@ assert.equal(
     await fetch(origin + "/api/upload", {
       method: "POST",
       headers: {
-        cookie: admin,
+        cookie: manager,
         "content-type": "multipart/form-data; boundary=broken",
       },
       body: "invalid multipart",
@@ -252,7 +255,7 @@ assert.equal(
 );
 const uploaded = await fetch(origin + "/api/upload", {
   method: "POST",
-  headers: { cookie: admin },
+  headers: { cookie: manager },
   body: mediaForm,
 });
 assert.equal(uploaded.status, 201);
@@ -273,7 +276,7 @@ const updated = await call(
     prepStation: first.prep_station,
     active: true,
   },
-  admin,
+  manager,
 );
 assert.equal(updated.status, 200, JSON.stringify(updated.value));
 assert.equal(
@@ -284,7 +287,8 @@ assert.equal(
 assert.equal((await call("dashboard", undefined, customer)).status, 403);
 assert.equal((await call("dashboard", undefined, admin)).status, 200);
 assert.equal((await call("settings", undefined, customer)).status, 403);
-assert.equal((await call("settings", undefined, admin)).status, 200);
+assert.equal((await call("settings", undefined, admin)).status, 403);
+assert.equal((await call("settings", undefined, manager)).status, 200);
 const newDriver = await call(
   "driver",
   {
@@ -293,7 +297,7 @@ const newDriver = await call(
     password: "a-long-unique-password-123",
     phone: "081546407856",
   },
-  admin,
+  owner,
 );
 assert.equal(newDriver.status, 201, JSON.stringify(newDriver.value));
 const primaryDriver = (
@@ -305,7 +309,7 @@ assert.equal(
     await call(
       "driver-active",
       { id: newDriver.value.id, active: false },
-      admin,
+      owner,
     )
   ).status,
   200,
@@ -321,7 +325,7 @@ assert.equal(
 );
 const dashboardBaseline = (await call("dashboard", undefined, admin)).value;
 const accountBaseline = (await call("account", undefined, customer)).value;
-const reportBaseline = (await call("report", undefined, admin)).value;
+const reportBaseline = (await call("report", undefined, owner)).value;
 const checkoutBody = {
   addressId: 1,
   method: "CASH",
@@ -449,7 +453,7 @@ assert.equal(
   (await call("dashboard", undefined, admin)).value.today.revenue,
   dashboardBaseline.today.revenue + created.value.total,
 );
-const report = await call("report", undefined, admin);
+const report = await call("report", undefined, owner);
 assert.equal(report.status, 200);
 assert.equal(
   report.value.paid.revenue,
@@ -470,7 +474,7 @@ assert.equal(
 );
 assert.equal((await call("report", undefined, customer)).status, 403);
 assert.equal(
-  (await call("report?date=2026-02-30", undefined, admin)).status,
+  (await call("report?date=2026-02-30", undefined, owner)).status,
   400,
 );
 assert.equal(
@@ -482,7 +486,7 @@ assert.equal(
     await call(
       "settings",
       { brandName: "Kafe Smoke", rupiahPerPoint: 10000 },
-      admin,
+      manager,
     )
   ).status,
   200,
@@ -603,6 +607,6 @@ assert.equal(
   403,
 );
 console.log(
-  "HTTP PASS: login lima role, RBAC, stok, kitchen, owner audit, driver, delivered, loyalty once; order #" +
+  "HTTP PASS: login enam role, RBAC, stok, kitchen, owner audit, driver, delivered, loyalty once; order #" +
     id,
 );

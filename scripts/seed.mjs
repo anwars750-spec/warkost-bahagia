@@ -24,8 +24,8 @@ async function seed() {
     ["business_longitude", "106.9272"],
     ["delivery_free_km", "5"],
     ["delivery_fee_per_km", "2500"],
-  ["delivery_max_km", "15"],
-  ["payment_expiry_minutes", "15"],
+    ["delivery_max_km", "15"],
+    ["payment_expiry_minutes", "15"],
     ["printer_simulation", "true"],
     ["printer_admin", "LAN 80mm Admin (simulasi)"],
     ["printer_kitchen", "LAN 80mm Kitchen (simulasi)"],
@@ -37,6 +37,7 @@ async function seed() {
     );
   for (const [email, name, role] of [
     ["admin@warkost.local", "Admin Warkost", "ADMIN"],
+    ["manager@warkost.local", "Manager Warkost", "MANAGER"],
     ["kitchen@warkost.local", "Kitchen Warkost", "KITCHEN"],
     ["owner@warkost.local", "Owner Warkost", "OWNER"],
     ["driver@warkost.local", "Driver Warkost", "DRIVER"],
@@ -62,8 +63,8 @@ async function seed() {
     "UPDATE users SET phone=? WHERE role='DRIVER' AND phone IS NULL",
     "6281546407856",
   );
-  const admin = await store.get(
-    "SELECT id FROM users WHERE email='admin@warkost.local'",
+  const manager = await store.get(
+    "SELECT id FROM users WHERE email='manager@warkost.local'",
   );
   const owner = await store.get(
     "SELECT id FROM users WHERE email='owner@warkost.local'",
@@ -103,8 +104,8 @@ async function seed() {
       startsAt,
       endsAt,
       1,
-      admin.id,
-      admin.id,
+      manager.id,
+      manager.id,
     );
   }
   if (
@@ -136,8 +137,8 @@ async function seed() {
       30000,
       15000,
       100,
-      admin.id,
-      admin.id,
+      manager.id,
+      manager.id,
     );
   }
   if (resetLocalUat) {
@@ -166,28 +167,28 @@ async function seed() {
       await store.get("SELECT id FROM categories WHERE name=?", "Minuman")
     ).id;
   for (const [name, description, price, category, station] of [
-      [
-        "Nasi Goreng Warkost",
-        "Nasi goreng hangat dengan telur dan kerupuk",
-        25000,
-        food,
-        "KITCHEN",
-      ],
-      [
-        "Mie Ayam Bahagia",
-        "Mie ayam gurih dengan sayuran segar",
-        22000,
-        food,
-        "KITCHEN",
-      ],
-      [
-        "Kopi Susu Rumah",
-        "Espresso, susu, dan gula aren",
-        18000,
-        drink,
-        "CASHIER",
-      ],
-    ]) {
+    [
+      "Nasi Goreng Warkost",
+      "Nasi goreng hangat dengan telur dan kerupuk",
+      25000,
+      food,
+      "KITCHEN",
+    ],
+    [
+      "Mie Ayam Bahagia",
+      "Mie ayam gurih dengan sayuran segar",
+      22000,
+      food,
+      "KITCHEN",
+    ],
+    [
+      "Kopi Susu Rumah",
+      "Espresso, susu, dan gula aren",
+      18000,
+      drink,
+      "CASHIER",
+    ],
+  ]) {
     if (!(await store.get("SELECT id FROM products WHERE name=?", name)))
       await store.run(
         "INSERT INTO products(name,description,price,category_id,prep_station,stock_quantity) VALUES(?,?,?,?,?,50)",

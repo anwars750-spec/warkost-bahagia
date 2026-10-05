@@ -79,6 +79,7 @@ async function main() {
     roles: [
       "customer@warkost.local",
       "admin@warkost.local",
+      "manager@warkost.local",
       "kitchen@warkost.local",
       "owner@warkost.local",
       "driver@warkost.local",
@@ -87,7 +88,7 @@ async function main() {
   console.log("OWNER_DEMO_READY " + JSON.stringify(evidence));
   if (prepareOnly) return;
 
-  console.log("Gunakan password dari OWNER_DEMO_PASSWORD untuk kelima akun.");
+  console.log("Gunakan password dari OWNER_DEMO_PASSWORD untuk keenam akun.");
   console.log("Tekan Ctrl+C setelah demo selesai.");
 
   const nextBin = path.join(

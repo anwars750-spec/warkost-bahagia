@@ -8,6 +8,7 @@ if (errors.length) throw Error(errors.join("; "));
 const password = process.env.STAGING_UAT_PASSWORD;
 const accounts = [
   ["admin@warkost.local", "Admin Warkost", "ADMIN"],
+  ["manager@warkost.local", "Manager Warkost", "MANAGER"],
   ["kitchen@warkost.local", "Kitchen Warkost", "KITCHEN"],
   ["owner@warkost.local", "Owner Warkost", "OWNER"],
   ["driver@warkost.local", "Driver Warkost", "DRIVER"],
@@ -55,9 +56,9 @@ try {
       "UPDATE users SET phone=? WHERE role='DRIVER' AND phone IS NULL",
       "6281546407856",
     );
-    const admin = await tx.get(
+    const manager = await tx.get(
       "SELECT id FROM users WHERE email=?",
-      "admin@warkost.local",
+      "manager@warkost.local",
     );
     if (
       !(await tx.get(
@@ -83,8 +84,8 @@ try {
         startsAt,
         endsAt,
         1,
-        admin.id,
-        admin.id,
+        manager.id,
+        manager.id,
       );
     }
 
@@ -169,7 +170,7 @@ try {
         106.9272,
       );
   });
-  console.log("Bootstrap staging siap untuk lima role UAT");
+  console.log("Bootstrap staging siap untuk enam role UAT");
 } finally {
   await store.close();
 }

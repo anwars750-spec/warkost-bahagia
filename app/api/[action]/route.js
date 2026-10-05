@@ -15,13 +15,20 @@ import {
   updateStationStatus,
   acceptDelivery,
   DomainError,
+  requiredCapability,
 } from "../../../lib/domain.mjs";
 import {
   listCatalog,
   saveProduct,
   saveCategory,
 } from "../../../lib/catalog.mjs";
-import { createDriver, setDriverActive } from "../../../lib/staff.mjs";
+import {
+  createDriver,
+  createStaff,
+  listStaff,
+  resetStaffPassword,
+  setDriverActive,
+} from "../../../lib/staff.mjs";
 import { listCustomers, setCustomerActive } from "../../../lib/customers.mjs";
 import { dailyReport } from "../../../lib/reports.mjs";
 import { nonNegativeInteger } from "../../../lib/numbers.mjs";
@@ -74,6 +81,7 @@ import {
   quoteLoyaltyReward,
   saveRewardRule,
 } from "../../../lib/loyalty.mjs";
+import { CAPABILITIES } from "../../../lib/rbac.mjs";
 export const runtime = "nodejs";
 const out = (data, status = 200) =>
   NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
@@ -105,7 +113,7 @@ export async function GET(request, { params }) {
     if (action === "notifications") return out(await listNotifications(user));
     if (action === "menu") return out(await listCatalog(false));
     if (action === "inventory") {
-      required(user, ["ADMIN", "OWNER"]);
+      requiredCapability(user, CAPABILITIES.CATALOG_READ);
       return out(await listCatalog(true));
     }
     if (action === "stock") return out(await listStock(user));
@@ -159,7 +167,7 @@ export async function GET(request, { params }) {
         ),
       );
     if (action === "dashboard") {
-      required(user, ["ADMIN", "OWNER"]);
+      requiredCapability(user, CAPABILITIES.DASHBOARD_READ);
       await expirePendingPayments();
       const localDate = new Intl.DateTimeFormat("en-CA", {
         timeZone: "Asia/Jakarta",
@@ -327,13 +335,14 @@ export async function GET(request, { params }) {
       });
     }
     if (action === "drivers") {
-      required(user, ["ADMIN", "OWNER"]);
+      requiredCapability(user, CAPABILITIES.DELIVERY_READ);
       return out({
         drivers: await store.all(
           "SELECT u.id,u.name,u.email,u.phone,u.active,(SELECT COUNT(*) FROM deliveries d JOIN orders o ON o.id=d.order_id WHERE d.driver_id=u.id AND o.status IN ('ASSIGNED','PICKED_UP','ON_DELIVERY')) active_load FROM users u WHERE u.role='DRIVER' ORDER BY active_load,u.name",
         ),
       });
     }
+    if (action === "staff") return out({ staff: await listStaff(user) });
     if (action === "customers") {
       const rawBefore = request.nextUrl.searchParams.get("before");
       return out(
@@ -585,6 +594,11 @@ export async function POST(request, { params }) {
       return out(await retryPrintJob(user, integer(body.id)));
     if (action === "settings") return out(await saveSettings(user, body));
     if (action === "driver") return out(await createDriver(user, body), 201);
+    if (action === "staff") return out(await createStaff(user, body), 201);
+    if (action === "staff-password")
+      return out(
+        await resetStaffPassword(user, integer(body.id), body.password),
+      );
     if (action === "driver-active")
       return out(await setDriverActive(user, integer(body.id), body.active));
     if (action === "customer-active")

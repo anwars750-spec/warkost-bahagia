@@ -14,7 +14,7 @@ const { createOrder, changeStatus, acceptDelivery, updateStationStatus } =
   await import("../lib/domain.mjs");
 const { verifyPayment } = await import("../lib/payments.mjs");
 const database = db();
-for (const role of ["ADMIN", "DRIVER", "CUSTOMER", "KITCHEN"])
+for (const role of ["ADMIN", "DRIVER", "CUSTOMER", "KITCHEN", "MANAGER"])
   database
     .prepare("INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,?)")
     .run(role, role + "@test.local", "x", role);
@@ -33,13 +33,15 @@ const admin = { id: 1, role: "ADMIN" },
   driver = { id: 2, role: "DRIVER" },
   customer = { id: 3, role: "CUSTOMER" };
 const kitchen = { id: 4, role: "KITCHEN" };
-test("pengaturan hanya admin, brand tersimpan dan earn rate tetap Rp10.000", async () => {
+const manager = { id: 5, role: "MANAGER" };
+test("pengaturan hanya Manager/Owner, brand tersimpan dan earn rate tetap Rp10.000", async () => {
   await assert.rejects(getSettings(customer), /Akses/);
+  await assert.rejects(getSettings(admin), /Akses/);
   await assert.rejects(
-    saveSettings(admin, { brandName: "X", rupiahPerPoint: 1 }),
+    saveSettings(manager, { brandName: "X", rupiahPerPoint: 1 }),
     /tidak valid/,
   );
-  await saveSettings(admin, {
+  await saveSettings(manager, {
     brandName: "Kafe Test",
     rupiahPerPoint: 5000,
     deliveryFreeKm: 5,
@@ -51,11 +53,11 @@ test("pengaturan hanya admin, brand tersimpan dan earn rate tetap Rp10.000", asy
       deliveryFreeKm,
       deliveryFeePerKm,
       deliveryMaxKm,
-    }))(await getSettings(admin)),
+    }))(await getSettings(manager)),
     { deliveryFreeKm: 5, deliveryFeePerKm: 3000, deliveryMaxKm: 15 },
   );
   await assert.rejects(
-    saveSettings(admin, {
+    saveSettings(manager, {
       brandName: "Kafe Test",
       rupiahPerPoint: 5000,
       deliveryFreeKm: 16,
