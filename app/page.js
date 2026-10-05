@@ -286,6 +286,7 @@ export default function App() {
           if (me.user.role === "OWNER") {
             setStaff((await api("staff", undefined, signal)).staff);
             setAudit(await api("audit", undefined, signal));
+            setSettings(await api("settings", undefined, signal));
             setLoyaltyRules(
               (await api("loyalty-rewards", undefined, signal)).rewards,
             );
@@ -294,7 +295,6 @@ export default function App() {
         if (["MANAGER", "OWNER"].includes(me.user.role)) {
           setInventory(await api("inventory", undefined, signal));
           setStock(await api("stock", undefined, signal));
-          setSettings(await api("settings", undefined, signal));
           setPromotions(
             (await api("promotions", undefined, signal)).promotions,
           );
@@ -994,9 +994,6 @@ export default function App() {
                   <button onClick={() => setView("products")}>Produk</button>
                   <button onClick={() => setView("promotions")}>Promo</button>
                   <button onClick={() => setView("stock")}>Stok</button>
-                  <button onClick={() => setView("settings")}>
-                    Pengaturan
-                  </button>
                 </>
               )}
               {role === "OWNER" && (
@@ -2907,7 +2904,7 @@ export default function App() {
             )}
           </section>
         )}
-        {["MANAGER", "OWNER"].includes(role) && view === "settings" && (
+        {role === "OWNER" && view === "settings" && (
           <section className="panel narrow">
             <h2>Pengaturan café</h2>
             <form

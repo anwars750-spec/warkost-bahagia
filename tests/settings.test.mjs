@@ -14,7 +14,14 @@ const { createOrder, changeStatus, acceptDelivery, updateStationStatus } =
   await import("../lib/domain.mjs");
 const { verifyPayment } = await import("../lib/payments.mjs");
 const database = db();
-for (const role of ["ADMIN", "DRIVER", "CUSTOMER", "KITCHEN", "MANAGER"])
+for (const role of [
+  "ADMIN",
+  "DRIVER",
+  "CUSTOMER",
+  "KITCHEN",
+  "MANAGER",
+  "OWNER",
+])
   database
     .prepare("INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,?)")
     .run(role, role + "@test.local", "x", role);
@@ -34,14 +41,23 @@ const admin = { id: 1, role: "ADMIN" },
   customer = { id: 3, role: "CUSTOMER" };
 const kitchen = { id: 4, role: "KITCHEN" };
 const manager = { id: 5, role: "MANAGER" };
-test("pengaturan hanya Manager/Owner, brand tersimpan dan earn rate tetap Rp10.000", async () => {
-  await assert.rejects(getSettings(customer), /Akses/);
-  await assert.rejects(getSettings(admin), /Akses/);
+const owner = { id: 6, role: "OWNER" };
+
+test("pengaturan global hanya Owner, brand tersimpan dan earn rate tetap Rp10.000", async () => {
+  await assert.rejects(
+    getSettings(null),
+    (error) => error.status === 401 && /masuk/i.test(error.message),
+  );
+  for (const user of [customer, admin, manager])
+    await assert.rejects(
+      getSettings(user),
+      (error) => error.status === 403 && /Akses/.test(error.message),
+    );
   await assert.rejects(
     saveSettings(manager, { brandName: "X", rupiahPerPoint: 1 }),
-    /tidak valid/,
+    (error) => error.status === 403 && /Akses/.test(error.message),
   );
-  await saveSettings(manager, {
+  await saveSettings(owner, {
     brandName: "Kafe Test",
     rupiahPerPoint: 5000,
     deliveryFreeKm: 5,
@@ -53,11 +69,11 @@ test("pengaturan hanya Manager/Owner, brand tersimpan dan earn rate tetap Rp10.0
       deliveryFreeKm,
       deliveryFeePerKm,
       deliveryMaxKm,
-    }))(await getSettings(manager)),
+    }))(await getSettings(owner)),
     { deliveryFreeKm: 5, deliveryFeePerKm: 3000, deliveryMaxKm: 15 },
   );
   await assert.rejects(
-    saveSettings(manager, {
+    saveSettings(owner, {
       brandName: "Kafe Test",
       rupiahPerPoint: 5000,
       deliveryFreeKm: 16,

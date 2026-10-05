@@ -17,6 +17,7 @@ const { DomainError, requiredCapability } = await import("../lib/domain.mjs");
 const { saveCategory, saveProduct } = await import("../lib/catalog.mjs");
 const { adjustStock } = await import("../lib/operations.mjs");
 const { listPromotions, savePromotion } = await import("../lib/promotions.mjs");
+const { listNotifications } = await import("../lib/notifications.mjs");
 const { createStaff, listStaff, resetStaffPassword } =
   await import("../lib/staff.mjs");
 const { checkPassword, currentUser, hashPassword, issueSession } =
@@ -68,6 +69,11 @@ test("model role final tidak memuat Cashier/Kasir dan permission map terpisah", 
   assert.equal(hasCapability("MANAGER", CAPABILITIES.CATALOG_WRITE), true);
   assert.equal(hasCapability("MANAGER", CAPABILITIES.STOCK_WRITE), true);
   assert.equal(hasCapability("MANAGER", CAPABILITIES.PROMOTION_WRITE), true);
+  assert.equal(hasCapability("MANAGER", CAPABILITIES.NOTIFICATIONS_READ), true);
+  assert.equal(hasCapability("MANAGER", CAPABILITIES.SETTINGS_READ), false);
+  assert.equal(hasCapability("MANAGER", CAPABILITIES.SETTINGS_WRITE), false);
+  assert.equal(hasCapability("OWNER", CAPABILITIES.SETTINGS_READ), true);
+  assert.equal(hasCapability("OWNER", CAPABILITIES.SETTINGS_WRITE), true);
   assert.equal(hasCapability("ADMIN", CAPABILITIES.CATALOG_WRITE), false);
   assert.equal(hasCapability("ADMIN", CAPABILITIES.ORDERS_OPERATE), true);
   assert.equal(hasCapability("ADMIN", CAPABILITIES.PAYMENTS_VERIFY), true);
@@ -86,6 +92,18 @@ test("unauthenticated menghasilkan 401 dan role tanpa capability menghasilkan 40
   assert.throws(
     () => requiredCapability(admin, CAPABILITIES.CATALOG_WRITE),
     (error) => error instanceof DomainError && error.status === 403,
+  );
+});
+
+test("endpoint global settings meneruskan user ke guard server", () => {
+  const route = fs.readFileSync(
+    path.resolve("app/api/[action]/route.js"),
+    "utf8",
+  );
+  assert.match(route, /action === "settings"[\s\S]*?getSettings\(user\)/);
+  assert.match(
+    route,
+    /action === "settings"[\s\S]*?saveSettings\(user, body\)/,
   );
 });
 
@@ -120,6 +138,10 @@ test("Manager dan Owner mengelola komersial sementara Admin ditolak server", asy
   });
   await savePromotion(manager, promotion());
   assert.equal((await listPromotions(owner)).length, 1);
+  assert.deepEqual(await listNotifications(manager), {
+    notifications: [],
+    unread: 0,
+  });
 
   await assert.rejects(saveCategory(admin, { name: "Ditolak" }), /Akses/);
   await assert.rejects(
@@ -233,4 +255,25 @@ test("UI Manager/Owner tersedia tanpa mengandalkan hiding sebagai guard", () => 
   assert.match(page, /role === "MANAGER"/);
   assert.match(page, /setView\("staff"\)/);
   assert.doesNotMatch(page, />Kasir · minuman</);
+  const managerNavigationStart = page.indexOf('{role === "MANAGER" && (');
+  const ownerNavigationStart = page.indexOf(
+    '{role === "OWNER" && (',
+    managerNavigationStart,
+  );
+  assert.notEqual(managerNavigationStart, -1);
+  assert.notEqual(ownerNavigationStart, -1);
+  const managerNavigation = page.slice(
+    managerNavigationStart,
+    ownerNavigationStart,
+  );
+  assert.match(managerNavigation, />Produk</);
+  assert.match(managerNavigation, />Promo</);
+  assert.match(managerNavigation, />Stok</);
+  assert.doesNotMatch(managerNavigation, /setView\("settings"\)/);
+  assert.match(page.slice(ownerNavigationStart), /setView\("settings"\)/);
+  assert.match(page, /role === "OWNER" && view === "settings"/);
+  assert.doesNotMatch(
+    page,
+    /\["MANAGER", "OWNER"\]\.includes\(role\) && view === "settings"/,
+  );
 });
