@@ -23,7 +23,8 @@
 - Customer UI Batch B status: **VERIFIED / ACCEPTED / LOCKED**
 - Customer OTP Email Core implementation: `236028a0708298d8d0a6825efaac19e662bb1668`
 - Manager / RBAC Core + Kasir Removal implementation: `53636e8c01b887afe3cac9134cfa0fd8f9b81ff9`
-- Current milestone: Manager / RBAC Core + Kasir Removal — completed
+- Manager RBAC Settings hotfix implementation: `038c82d7c159d1bd2bee17cdc03553fa4b24385e`
+- Current milestone: Manager RBAC Settings hotfix — completed
 - Current status: **VERIFIED**
 - Verification date: 2026-10-05
 
@@ -743,7 +744,7 @@ Status: **VERIFIED**
 
 - Final assignable roles are exactly `OWNER`, `MANAGER`, `ADMIN`, `KITCHEN`, `DRIVER`, and `CUSTOMER`.
 - Owner retains operational oversight, reports, audit logs, loyalty rules, commercial oversight, and restricted staff management.
-- Manager owns catalog/product/category/image/price/availability, stock, promotions/vouchers, and appropriate commercial settings. Manager has no Owner audit/security controls and no order-operation access.
+- Manager owns catalog/product/category/image/price/availability, stock, promotions/vouchers, and notifications through their dedicated APIs. Manager has no global Settings, Owner audit/security controls, or order-operation access.
 - Admin owns order/payment cross-check, customer support/administration, operational coordination, and beverage preparation. Admin is denied catalog, stock master, promotion/voucher, commercial settings, and loyalty-rule mutation.
 - Kitchen is limited to food preparation and relevant print/queue operations.
 - Driver remains limited to its own assigned delivery context and valid delivery transitions.
@@ -774,6 +775,19 @@ Status: **VERIFIED**
 - MySQL migration order/checksum and legacy-role mapping contract: **PASS**.
 - Production build: **PASS** with all existing application and API routes compiled.
 - Critical/High defects remaining in this milestone scope: **NONE**.
+
+### Manager RBAC Settings hotfix
+
+- Manual Manager UAT confirmed Login/Routing, Kelola menu/Produk, Promo, Stok, and Notifikasi passed, but found that the Manager navigation still exposed global `Pengaturan`.
+- Root cause: `settings.read` and `settings.write` were still assigned to Manager, Manager refresh loaded the global Settings endpoint, and both navigation and form rendering allowed Manager.
+- Global Settings are now Owner-only server-side. Unauthenticated access returns `401`; Manager and every unauthorized authenticated role receive `403` for read and write.
+- Manager final navigation is `Kelola menu | Produk | Promo | Stok | Notifikasi | Keluar`; `Pengaturan` is absent and the global form cannot render for Manager.
+- Owner retains the existing global `Pengaturan` page and read/write capability for business identity, contact, store coordinates, delivery configuration, loyalty earning configuration, printer/system settings, and other high-level configuration.
+- Manager Product, Promo, Stock, and Notification capabilities remain enabled through their existing dedicated APIs.
+- Targeted RBAC/settings/catalog/promotion verification: **12/12 PASS**.
+- Production build after the source/UI guard change: **PASS**.
+- Full unit suite was intentionally not rerun because the targeted hotfix suite passed and the scope changed only the Settings capability boundary and matching navigation/render guard.
+- Manager/RBAC remains **VERIFIED but not yet ACCEPTED/LOCKED**, pending local manual UAT of this final correction.
 
 ### Guardrails preserved
 
