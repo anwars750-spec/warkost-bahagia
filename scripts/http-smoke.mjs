@@ -164,6 +164,11 @@ assert.equal(
 assert.equal(
   (await call("customer-active", { id: newCustomerId, active: false }, admin))
     .status,
+  403,
+);
+assert.equal(
+  (await call("customer-active", { id: newCustomerId, active: false }, owner))
+    .status,
   200,
 );
 assert.equal(
@@ -180,7 +185,7 @@ assert.equal(
   401,
 );
 assert.equal(
-  (await call("customer-active", { id: newCustomerId, active: true }, admin))
+  (await call("customer-active", { id: newCustomerId, active: true }, owner))
     .status,
   200,
 );
@@ -420,9 +425,12 @@ assert.equal(
       admin,
     )
   ).status,
+  403,
+);
+assert.equal(
+  (await call("claim-delivery", { orderId: id }, driver)).status,
   200,
 );
-assert.equal((await call("accept", { orderId: id }, driver)).status, 200);
 for (const status of ["PICKED_UP", "ON_DELIVERY", "DELIVERED"])
   assert.equal(
     (await call("status", { orderId: id, status }, driver)).status,

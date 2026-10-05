@@ -10,8 +10,13 @@ process.env.DATABASE_PATH = path.join(
 );
 
 const { db } = await import("../lib/db.mjs");
-const { createOrder, changeStatus, updateStationStatus } =
-  await import("../lib/domain.mjs");
+const {
+  createOrder,
+  changeStatus,
+  claimDelivery,
+  listDriverOrders,
+  updateStationStatus,
+} = await import("../lib/domain.mjs");
 const { adjustStock, listAuditLogs, listStock } =
   await import("../lib/operations.mjs");
 
@@ -141,7 +146,7 @@ test("RBAC stok memberi Manager/Owner akses dan menolak Admin", async () => {
   await assert.rejects(listAuditLogs(admin), /Akses ditolak/);
 });
 
-test("assignment serentak menolak pesanan keenam pada Driver yang sama", async () => {
+test("self-claim serentak menolak pesanan keenam pada Driver yang sama", async () => {
   const readyOrders = [];
   for (let index = 0; index < 6; index += 1) {
     const order = await createOrder(customer, {
@@ -155,9 +160,7 @@ test("assignment serentak menolak pesanan keenam pada Driver yang sama", async (
     readyOrders.push(order);
   }
   const outcomes = await Promise.allSettled(
-    readyOrders.map((order) =>
-      changeStatus(admin, order.id, "ASSIGNED", driver.id),
-    ),
+    readyOrders.map((order) => claimDelivery(driver, order.id)),
   );
   assert.equal(
     outcomes.filter((item) => item.status === "fulfilled").length,
@@ -173,5 +176,11 @@ test("assignment serentak menolak pesanan keenam pada Driver yang sama", async (
       .prepare("SELECT COUNT(*) count FROM orders WHERE status='ASSIGNED'")
       .get().count,
     5,
+  );
+  assert.equal(
+    (await listDriverOrders(driver)).some(
+      (entry) => entry.id === readyOrders[5].id && entry.available_to_claim,
+    ),
+    false,
   );
 });

@@ -141,7 +141,6 @@ export default function App() {
       vouchers: [],
       rewards: [],
     }),
-    [drivers, setDrivers] = useState([]),
     [staff, setStaff] = useState([]),
     [customers, setCustomers] = useState([]),
     [customerCursor, setCustomerCursor] = useState(null),
@@ -270,7 +269,6 @@ export default function App() {
         if (me.user.role === "CUSTOMER")
           setAccount(await api("account", undefined, signal));
         if (["ADMIN", "OWNER"].includes(me.user.role)) {
-          setDrivers((await api("drivers", undefined, signal)).drivers);
           setDashboard(await api("dashboard", undefined, signal));
           if (view === "reports")
             setReport(
@@ -280,9 +278,7 @@ export default function App() {
                 signal,
               ),
             );
-          if (me.user.role === "ADMIN") {
-            await loadCustomers(customerSearch, null, signal);
-          }
+          await loadCustomers(customerSearch, null, signal);
           if (me.user.role === "OWNER") {
             setStaff((await api("staff", undefined, signal)).staff);
             setAudit(await api("audit", undefined, signal));
@@ -998,6 +994,9 @@ export default function App() {
               )}
               {role === "OWNER" && (
                 <>
+                  <button onClick={() => setView("customers")}>
+                    Pelanggan
+                  </button>
                   <button onClick={() => setView("products")}>Produk</button>
                   <button onClick={() => setView("promotions")}>Promo</button>
                   <button onClick={() => setView("settings")}>
@@ -1124,7 +1123,8 @@ export default function App() {
                     : view === "promotions" &&
                         ["MANAGER", "OWNER"].includes(role)
                       ? "Kelola promo"
-                      : view === "customers" && role === "ADMIN"
+                      : view === "customers" &&
+                          ["ADMIN", "OWNER"].includes(role)
                         ? "Kelola pelanggan"
                         : view === "reports" && role === "OWNER"
                           ? "Laporan harian"
@@ -3166,10 +3166,14 @@ export default function App() {
             </form>
           </section>
         )}
-        {role === "ADMIN" && view === "customers" && (
+        {["ADMIN", "OWNER"].includes(role) && view === "customers" && (
           <section className="panel">
             <h2>Daftar pelanggan</h2>
-            <p>Pesanan aktif harus diselesaikan sebelum akun dinonaktifkan.</p>
+            <p>
+              {role === "OWNER"
+                ? "Pesanan aktif harus diselesaikan sebelum akun dinonaktifkan."
+                : "Admin dapat mencari pelanggan dan menangani dukungan akun. Aktivasi akun dikelola Owner."}
+            </p>
             <form
               onSubmit={async (event) => {
                 event.preventDefault();
@@ -3209,19 +3213,21 @@ export default function App() {
                   {customer.active ? "Aktif" : "Nonaktif"} ·{" "}
                   {customer.order_count} pesanan · {customer.points} poin
                 </span>
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    run(() =>
-                      api("customer-active", {
-                        id: customer.id,
-                        active: !customer.active,
-                      }),
-                    )
-                  }
-                >
-                  {customer.active ? "Nonaktifkan" : "Aktifkan"}
-                </button>
+                {role === "OWNER" && (
+                  <button
+                    disabled={busy}
+                    onClick={() =>
+                      run(() =>
+                        api("customer-active", {
+                          id: customer.id,
+                          active: !customer.active,
+                        }),
+                      )
+                    }
+                  >
+                    {customer.active ? "Nonaktifkan" : "Aktifkan"}
+                  </button>
+                )}
               </div>
             ))}
             {!customers.length && <p>Belum ada pelanggan yang cocok.</p>}
@@ -3660,12 +3666,20 @@ export default function App() {
                   : "order-list"
               }
             >
+              {role === "DRIVER" &&
+                visibleOrders.some((order) => order.available_to_claim) && (
+                  <section className="panel">
+                    <h2>Pesanan siap diantar</h2>
+                    <p>
+                      Ambil pesanan yang tersedia. Maksimal 5 pengantaran aktif.
+                    </p>
+                  </section>
+                )}
               {visibleOrders.map((o) => (
                 <Order
                   key={o.id}
                   order={o}
                   role={role}
-                  drivers={drivers}
                   busy={busy}
                   onTrack={openCustomerTracking}
                   onReorder={reorderItems}
@@ -4960,14 +4974,12 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
 function Order({
   order: o,
   role,
-  drivers,
   busy,
   action,
   onTrack,
   onReorder,
   onSupport,
 }) {
-  const [driver, setDriver] = useState("");
   const [details, setDetails] = useState(null);
   const [detailError, setDetailError] = useState("");
   const [expanded, setExpanded] = useState(false);
@@ -5124,19 +5136,21 @@ function Order({
           )}
         </div>
       )}
-      <button
-        onClick={() => {
-          if (details) {
-            setDetails(null);
-            return;
-          }
-          api("order-items?id=" + o.id)
-            .then(setDetails)
-            .catch((e) => setDetailError(e.message));
-        }}
-      >
-        {details ? "Tutup detail" : "Lihat item & riwayat"}
-      </button>
+      {!(role === "DRIVER" && o.available_to_claim) && (
+        <button
+          onClick={() => {
+            if (details) {
+              setDetails(null);
+              return;
+            }
+            api("order-items?id=" + o.id)
+              .then(setDetails)
+              .catch((e) => setDetailError(e.message));
+          }}
+        >
+          {details ? "Tutup detail" : "Lihat item & riwayat"}
+        </button>
+      )}
       {detailError && <p role="alert">{detailError}</p>}
       {details && (
         <div className="order-details">
@@ -5192,36 +5206,6 @@ function Order({
             >
               Minuman siap
             </button>
-          )}
-          {o.status === "READY" && (
-            <>
-              <select
-                value={driver}
-                onChange={(e) => setDriver(e.target.value)}
-              >
-                <option value="">Pilih driver</option>
-                {drivers
-                  .filter((d) => d.active && Number(d.active_load) < 5)
-                  .map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name} · {d.active_load}/5
-                    </option>
-                  ))}
-              </select>
-              <button
-                className="primary"
-                disabled={!driver || busy}
-                onClick={() =>
-                  action("status", {
-                    orderId: o.id,
-                    status: "ASSIGNED",
-                    driverId: Number(driver),
-                  })
-                }
-              >
-                Tugaskan driver
-              </button>
-            </>
           )}
           {o.method !== "QRIS" &&
             ["UNPAID", "PENDING"].includes(o.payment_status) && (
@@ -5291,6 +5275,17 @@ function Order({
                   : "Selesaikan pengantaran"}
             </button>
           )}
+        </div>
+      )}
+      {role === "DRIVER" && Boolean(o.available_to_claim) && (
+        <div className="actions">
+          <button
+            className="primary"
+            disabled={busy}
+            onClick={() => action("claim-delivery", { orderId: o.id })}
+          >
+            Ambil Pesanan
+          </button>
         </div>
       )}
     </article>

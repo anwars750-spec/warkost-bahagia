@@ -11,7 +11,7 @@ process.env.DATABASE_PATH = path.join(
 process.env.SESSION_SECRET = "loyalty-test-secret-with-more-than-32-characters";
 
 const { db } = await import("../lib/db.mjs");
-const { createOrder, changeStatus, acceptDelivery, updateStationStatus } =
+const { createOrder, changeStatus, claimDelivery, updateStationStatus } =
   await import("../lib/domain.mjs");
 const {
   calculateEarnPoints,
@@ -78,8 +78,7 @@ async function complete(orderId, { pay = true } = {}) {
   await changeStatus(admin, orderId, "CONFIRMED");
   await updateStationStatus(kitchen, orderId, "PREPARING");
   await updateStationStatus(kitchen, orderId, "READY");
-  await changeStatus(admin, orderId, "ASSIGNED", driver.id);
-  await acceptDelivery(driver, orderId);
+  await claimDelivery(driver, orderId);
   await changeStatus(driver, orderId, "PICKED_UP");
   await changeStatus(driver, orderId, "ON_DELIVERY");
   await changeStatus(driver, orderId, "DELIVERED");
@@ -184,10 +183,7 @@ test("poin hanya masuk setelah DELIVERED dan ongkir tidak menjadi earn base", as
 
 test("payment FAILED dan EXPIRED tidak menghasilkan poin", async () => {
   setBalance(10, 0);
-  const failed = await createOrder(
-    customerA,
-    orderInput({ productId: 4 }),
-  );
+  const failed = await createOrder(customerA, orderInput({ productId: 4 }));
   await verifyPayment(admin, failed.id, "FAILED");
   await complete(failed.id, { pay: false });
   assert.equal(balance(), 0);

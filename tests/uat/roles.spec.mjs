@@ -191,7 +191,9 @@ test("guest dapat menjelajah storefront dan diarahkan login saat memesan", async
   await expect(
     page.getByRole("heading", { name: "Mau makan apa hari ini?" }),
   ).toBeVisible();
-  await expect(page.getByRole("region", { name: "Promo berlangsung" })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Promo berlangsung" }),
+  ).toBeVisible();
   await expect(page.locator("article.customer-product")).toHaveCount(3);
   await expect(
     page.getByRole("searchbox", { name: "Cari makanan atau minuman" }),
@@ -220,8 +222,12 @@ test("guest dapat menjelajah storefront dan diarahkan login saat memesan", async
   await expect(page.locator(".auth-flow-ready")).toHaveCount(0);
   if (page.viewportSize().width <= 620) {
     const order = await page.evaluate(() => ({
-      form: Number(getComputedStyle(document.querySelector(".auth-login-card")).order),
-      hero: Number(getComputedStyle(document.querySelector(".auth-story-card")).order),
+      form: Number(
+        getComputedStyle(document.querySelector(".auth-login-card")).order,
+      ),
+      hero: Number(
+        getComputedStyle(document.querySelector(".auth-story-card")).order,
+      ),
     }));
     expect(order.form).toBeLessThan(order.hero);
   }
@@ -774,26 +780,27 @@ test("OP-UAT-02 transfer customer ke admin ke driver memberi poin", async ({
   await signOut(page);
   await signIn(page, "admin@warkost.local");
   const readyAdminOrder = orderCard(page, orderId);
-  await readyAdminOrder.locator("select").selectOption({ index: 1 });
-  await readyAdminOrder
-    .getByRole("button", { name: "Tugaskan driver" })
-    .click();
-  await expect(readyAdminOrder.locator(".badge").first()).toHaveText(
-    "ASSIGNED",
-  );
+  await expect(readyAdminOrder.locator(".badge").first()).toHaveText("READY");
+  await expect(
+    readyAdminOrder.getByRole("button", { name: "Tugaskan driver" }),
+  ).toHaveCount(0);
   await page.screenshot({
-    path: testInfo.outputPath(`admin-assigned-${orderId}.png`),
+    path: testInfo.outputPath(`admin-ready-${orderId}.png`),
     fullPage: true,
   });
 
   await signOut(page);
   await signIn(page, "driver@warkost.local");
+  const driverOrder = orderCard(page, orderId);
+  await expect(driverOrder).toHaveCount(1);
+  await driverOrder.getByRole("button", { name: "Ambil Pesanan" }).click();
+  await expect(driverOrder.locator(".badge")).toHaveText("ASSIGNED");
   await page
     .locator("nav")
     .getByRole("button", { name: /notifikasi/i })
     .click();
   await expect(
-    page.getByText(`Pengantaran pesanan #${orderId} ditugaskan kepada Anda`, {
+    page.getByText(`Anda mengambil pengantaran pesanan #${orderId}`, {
       exact: true,
     }),
   ).toBeVisible();
@@ -801,9 +808,6 @@ test("OP-UAT-02 transfer customer ke admin ke driver memberi poin", async ({
     .locator("nav")
     .getByRole("button", { name: "Tugas saya", exact: true })
     .click();
-  const driverOrder = orderCard(page, orderId);
-  await expect(driverOrder).toHaveCount(1);
-  await driverOrder.getByRole("button", { name: "Terima tugas" }).click();
   await expect(
     driverOrder.getByRole("button", { name: "Sudah diambil · Pickup" }),
   ).toBeVisible();

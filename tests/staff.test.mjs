@@ -10,7 +10,7 @@ process.env.DATABASE_PATH = path.join(
 process.env.SESSION_SECRET = "staff-test-secret-with-over-32-characters";
 const { db } = await import("../lib/db.mjs");
 const { createDriver, setDriverActive } = await import("../lib/staff.mjs");
-const { createOrder, changeStatus, acceptDelivery, updateStationStatus } =
+const { createOrder, changeStatus, claimDelivery, updateStationStatus } =
   await import("../lib/domain.mjs");
 const { currentUser, issueSession, hashPassword } =
   await import("../lib/auth.mjs");
@@ -95,12 +95,11 @@ test("akun driver dilindungi, tugas aktif mencegah nonaktif, sesi dicabut saat d
   await changeStatus(admin, order.id, "CONFIRMED");
   await updateStationStatus(kitchen, order.id, "PREPARING");
   await updateStationStatus(kitchen, order.id, "READY");
-  await changeStatus(admin, order.id, "ASSIGNED", driver.id);
+  await claimDelivery({ id: driver.id, role: "DRIVER" }, order.id);
   await assert.rejects(
     setDriverActive(owner, driver.id, false),
     /pengantaran aktif/,
   );
-  await acceptDelivery({ id: driver.id, role: "DRIVER" }, order.id);
   for (const status of ["PICKED_UP", "ON_DELIVERY", "DELIVERED"])
     await changeStatus({ id: driver.id, role: "DRIVER" }, order.id, status);
   await setDriverActive(owner, driver.id, false);

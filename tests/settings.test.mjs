@@ -10,7 +10,7 @@ process.env.DATABASE_PATH = path.join(
 const { db } = await import("../lib/db.mjs");
 const { saveSettings, getSettings } = await import("../lib/settings.mjs");
 const { listCatalog } = await import("../lib/catalog.mjs");
-const { createOrder, changeStatus, acceptDelivery, updateStationStatus } =
+const { createOrder, changeStatus, claimDelivery, updateStationStatus } =
   await import("../lib/domain.mjs");
 const { verifyPayment } = await import("../lib/payments.mjs");
 const database = db();
@@ -92,8 +92,7 @@ test("pengaturan global hanya Owner, brand tersimpan dan earn rate tetap Rp10.00
   await verifyPayment(admin, order.id, "PAID");
   await updateStationStatus(kitchen, order.id, "PREPARING");
   await updateStationStatus(kitchen, order.id, "READY");
-  await changeStatus(admin, order.id, "ASSIGNED", driver.id);
-  await acceptDelivery(driver, order.id);
+  await claimDelivery(driver, order.id);
   for (const status of ["PICKED_UP", "ON_DELIVERY", "DELIVERED"])
     await changeStatus(driver, order.id, status);
   assert.equal(

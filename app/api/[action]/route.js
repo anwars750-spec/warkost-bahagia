@@ -14,6 +14,8 @@ import {
   changeStatus,
   updateStationStatus,
   acceptDelivery,
+  claimDelivery,
+  listDriverOrders,
   DomainError,
   requiredCapability,
 } from "../../../lib/domain.mjs";
@@ -259,13 +261,7 @@ export async function GET(request, { params }) {
           ...(before === null ? [] : [before]),
         );
       else if (user.role === "DRIVER")
-        orders = await store.all(
-          "SELECT o.*,a.detail address,a.latitude,a.longitude,u.name customer_name,d.accepted_at FROM orders o JOIN deliveries d ON d.order_id=o.id JOIN addresses a ON a.id=o.address_id JOIN users u ON u.id=o.customer_id WHERE d.driver_id=?" +
-            bound +
-            " ORDER BY o.id DESC LIMIT 26",
-          user.id,
-          ...(before === null ? [] : [before]),
-        );
+        orders = await listDriverOrders(user, before);
       else if (user.role === "KITCHEN")
         orders = await store.all(
           "SELECT o.*,u.name customer_name,s.status kitchen_status FROM orders o JOIN order_stations s ON s.order_id=o.id AND s.station='KITCHEN' JOIN users u ON u.id=o.customer_id WHERE o.status IN ('CONFIRMED','PREPARING','READY')" +
@@ -588,6 +584,8 @@ export async function POST(request, { params }) {
       );
     if (action === "accept")
       return out(await acceptDelivery(user, integer(body.orderId)));
+    if (action === "claim-delivery")
+      return out(await claimDelivery(user, integer(body.orderId)));
     if (action === "payment")
       return out(await verifyPayment(user, integer(body.orderId), body.status));
     if (action === "print-retry")
