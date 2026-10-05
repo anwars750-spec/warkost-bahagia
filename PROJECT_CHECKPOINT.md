@@ -22,9 +22,10 @@
 - Customer UI Batch B final lock: `75f049c5cd53b5d98b28f58231c13dc2a3f7b251`
 - Customer UI Batch B status: **VERIFIED / ACCEPTED / LOCKED**
 - Customer OTP Email Core implementation: `236028a0708298d8d0a6825efaac19e662bb1668`
-- Current milestone: Customer OTP Email Core — completed and locked
-- Current status: **VERIFIED / ACCEPTED / LOCKED**
-- Verification date: 2026-10-04
+- Manager / RBAC Core + Kasir Removal implementation: `53636e8c01b887afe3cac9134cfa0fd8f9b81ff9`
+- Current milestone: Manager / RBAC Core + Kasir Removal — completed
+- Current status: **VERIFIED**
+- Verification date: 2026-10-05
 
 ## Scope completed
 
@@ -715,3 +716,67 @@ Status: **VERIFIED / ACCEPTED / LOCKED**
 
 - No Google Maps, Manager/RBAC, Kasir removal, Birthday Promo, BTN QRIS adapter, Web Push, deployment, dependency upgrade, or unrelated milestone work.
 - No broad Customer UI redesign and no change to locked Shipping/Voucher/Loyalty/Payment business rules.
+
+---
+
+## Manager / RBAC Core + Kasir Removal
+
+Date: 2026-10-05
+
+Status: **VERIFIED**
+
+### Source-control baseline
+
+- Locked Customer OTP Email Core parent: `fb1772c8ed3fc2e7b9c56bafad4b476918805024`.
+- Manager/RBAC implementation: `53636e8c01b887afe3cac9134cfa0fd8f9b81ff9`.
+- Locked Customer UI Batch B, Customer OTP Email Core, Shipping, Voucher, Loyalty, and Payment Core remain unchanged except for minimal role-integration compatibility.
+
+### Targeted audit result
+
+- The pre-milestone active roles were `OWNER`, `ADMIN`, `KITCHEN`, `DRIVER`, and `CUSTOMER`; `MANAGER` was missing.
+- Authorization existed as scattered server role checks. It was consolidated into a reusable capability map and guard while retaining endpoint-level enforcement.
+- No legacy Cashier/Kasir user existed in the inspected local runtime database.
+- `CASHIER` occurrences in product preparation and order-station data are internal beverage-station identifiers, not an assignable/login role. They remain for order-history and Kitchen/Admin workflow compatibility; all customer/staff-facing labels identify the station as Admin minuman.
+- Manager dashboard/navigation, Owner staff controls, final role schema, legacy role migration, and targeted RBAC coverage were previously missing.
+
+### Final role and authorization model
+
+- Final assignable roles are exactly `OWNER`, `MANAGER`, `ADMIN`, `KITCHEN`, `DRIVER`, and `CUSTOMER`.
+- Owner retains operational oversight, reports, audit logs, loyalty rules, commercial oversight, and restricted staff management.
+- Manager owns catalog/product/category/image/price/availability, stock, promotions/vouchers, and appropriate commercial settings. Manager has no Owner audit/security controls and no order-operation access.
+- Admin owns order/payment cross-check, customer support/administration, operational coordination, and beverage preparation. Admin is denied catalog, stock master, promotion/voucher, commercial settings, and loyalty-rule mutation.
+- Kitchen is limited to food preparation and relevant print/queue operations.
+- Driver remains limited to its own assigned delivery context and valid delivery transitions.
+- Customer protections and locked customer flows are unchanged.
+- Protected server operations now call centralized capability checks and return `401` when unauthenticated and `403` when authenticated without permission. UI visibility is only a convenience and is not the security boundary.
+
+### Cashier/Kasir removal and migration
+
+- SQLite user schema and MySQL migration `018_manager_rbac.sql` enforce the final six-role model.
+- Legacy `CASHIER`/`KASIR` users migrate deterministically to `ADMIN` while preserving user identity, dependent sessions/history, and an audit record.
+- New Cashier/Kasir users cannot be assigned; stale non-final role sessions are rejected by session resolution.
+- No dedicated Cashier dashboard, navigation, seed account, or staff-role selection remains.
+- The internal `CASHIER` preparation-station value remains intentionally as a non-user technical identifier so historic order/station data is not destroyed.
+
+### Owner staff and audit controls
+
+- Owner can create Manager/Admin/Driver accounts, manage Driver active state, and reset Manager/Admin credentials only.
+- Staff password reset uses the existing secure password hashing, never returns an existing password/hash, revokes all active sessions for that staff member atomically, and writes an audit entry.
+- Staff creation, credential reset, Driver activation, catalog/price changes, stock adjustments, promotions/vouchers, and high-level settings continue through the existing audit architecture.
+- Manager/Admin cannot create Owner, elevate themselves, or access Owner-only staff/audit operations.
+
+### Verification
+
+- Targeted RBAC, catalog, promo, settings, staff, kitchen/order, reports, media, SQLite migration, and MySQL migration-contract tests: **23/23 PASS**.
+- Affected customer/auth/OTP/delivery/order/loyalty/notification/payment/voucher regression set initially produced **75/76 PASS** because one source-contract regex did not tolerate Prettier multiline formatting; the assertion was corrected without changing voucher behavior and its targeted retest passed **14/14**.
+- Full unit suite after the retest: **117/117 PASS**, including all affected locked-core regressions.
+- SQLite legacy Cashier-to-Admin migration and session/history preservation: **PASS**.
+- MySQL migration order/checksum and legacy-role mapping contract: **PASS**.
+- Production build: **PASS** with all existing application and API routes compiled.
+- Critical/High defects remaining in this milestone scope: **NONE**.
+
+### Guardrails preserved
+
+- No Birthday Promo implementation, Google Maps, BTN QRIS production adapter, deployment, Web Push, dependency upgrade, Customer UI redesign, or unrelated milestone work.
+- No bundle was created.
+- Do not open another milestone without a new explicit scope.
