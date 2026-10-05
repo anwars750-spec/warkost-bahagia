@@ -24,7 +24,8 @@
 - Customer OTP Email Core implementation: `236028a0708298d8d0a6825efaac19e662bb1668`
 - Manager / RBAC Core + Kasir Removal implementation: `53636e8c01b887afe3cac9134cfa0fd8f9b81ff9`
 - Manager RBAC Settings hotfix implementation: `038c82d7c159d1bd2bee17cdc03553fa4b24385e`
-- Current milestone: Manager RBAC Settings hotfix — completed
+- Admin + Driver Operational Flow hotfix implementation: `72d2685295d5a86c587a4aa09373f4925a193db9`
+- Current milestone: Admin + Driver Operational Flow hotfix — completed
 - Current status: **VERIFIED**
 - Verification date: 2026-10-05
 
@@ -794,3 +795,51 @@ Status: **VERIFIED**
 - No Birthday Promo implementation, Google Maps, BTN QRIS production adapter, deployment, Web Push, dependency upgrade, Customer UI redesign, or unrelated milestone work.
 - No bundle was created.
 - Do not open another milestone without a new explicit scope.
+
+---
+
+## Admin + Driver Operational Flow Hotfix
+
+Date: 2026-10-05
+
+Status: **VERIFIED — NOT YET ACCEPTED/LOCKED**
+
+### Source-control baseline
+
+- Parent checkpoint: `eb7470b3984af8ba4924a44e2e5b5c6a29c7c7ff`.
+- Implementation commit: `72d2685295d5a86c587a4aa09373f4925a193db9`.
+- Locked Customer UI Batch B and Customer OTP Email Core remain unchanged.
+
+### Customer activation boundary
+
+- Root cause: customer listing/search and customer activation shared the same `customers.manage` capability, which gave Admin both support visibility and account-state mutation.
+- Customer listing/search remains available to Admin and Owner without exposing password hashes.
+- Customer deactivate/reactivate now uses a separate Owner-only capability enforced server-side.
+- Unauthenticated mutation returns `401`; Admin, Manager, Kitchen, Driver, and Customer receive `403`; Owner retains the existing active-order safety check, session revocation, and audit trail.
+- Admin UI no longer renders activate/deactivate controls. Owner has the sole customer activation control in the existing customer list.
+
+### Driver self-claim dispatch
+
+- Root cause: READY orders were manually assigned by Admin through a driver selector and the `status=ASSIGNED` operation.
+- Admin/Owner manual assignment is now forbidden server-side and the selector/actions were removed from operational UI.
+- Existing station aggregation remains the READY source of truth: food-only requires Kitchen READY, beverage-only requires Admin beverage READY, and mixed orders require both stations READY.
+- Active Drivers see unclaimed READY orders in `Pesanan siap diantar` and claim them with `Ambil Pesanan`.
+- Claim runs in one transaction, locks Driver and order state, persists one delivery row, changes READY to ASSIGNED, records event/audit/notifications, and sets acceptance time for the existing customer-driver contact foundation.
+- Concurrent claims allow only one Driver to win; duplicate same-Driver claim is idempotent; offline Drivers and unauthorized roles cannot claim.
+- Maximum active delivery load remains 5. Capacity is checked atomically and the READY pool is hidden once the Driver is at capacity.
+- Existing Driver transitions PICKED_UP → ON_DELIVERY → DELIVERED and customer contact privacy rules are preserved.
+
+### Verification
+
+- Targeted customer RBAC, dispatch, station readiness, race/capacity, order, settings, staff, notification, and loyalty regression: **32/32 PASS**.
+- Final focused RBAC/dispatch/station retest after capacity-pool guard: **11/11 PASS**.
+- Full unit suite: **124/124 PASS**.
+- Production build after final source changes: **PASS**.
+- UI source contract confirms Admin assignment controls are absent and Driver self-claim controls are present.
+- Critical/High defects remaining in this hotfix scope: **NONE**.
+
+### Guardrails preserved
+
+- No payment logic, customer locked UI redesign, OTP, Maps, Birthday Promo, BTN QRIS adapter, deployment, dependency upgrade, or unrelated milestone work.
+- Manager Product, Promo, Stock, and Notification access remains unchanged; Owner Settings remains unchanged.
+- No bundle was created and Manager/RBAC was not marked accepted/locked.
