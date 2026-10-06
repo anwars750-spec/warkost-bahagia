@@ -2,7 +2,9 @@ import "./style.css";
 import "./admin-ui.css";
 import "./admin-icons.css";
 import "./admin-detail.css";
+import "./admin-order-cards-v2.css";
 import AdminUiEnhancer from "./AdminUiEnhancer";
+import AdminOrderCardEnhancer from "./AdminOrderCardEnhancer";
 
 export const metadata = {
   title: "Warkost Bahagia",
@@ -14,6 +16,7 @@ export default function RootLayout({ children }) {
     <html lang="id">
       <body>
         <AdminUiEnhancer />
+        <AdminOrderCardEnhancer />
         {children}
       </body>
     </html>
