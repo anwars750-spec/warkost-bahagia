@@ -1,0 +1,339 @@
+/* Admin order cards v2 — presentation/data preview only */
+
+.admin-ui-mode .admin-order-list-v2 {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+  align-items: start;
+}
+
+.admin-ui-mode .admin-order-card-v2 {
+  display: flex !important;
+  min-width: 0;
+  height: 100%;
+  flex-direction: column;
+  gap: 11px;
+  padding: 16px !important;
+  border-left-width: 1px !important;
+  border-radius: 18px !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  box-shadow: 0 12px 32px rgba(64, 36, 22, 0.055) !important;
+}
+
+.admin-ui-mode .admin-order-card-v2:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 38px rgba(64, 36, 22, 0.08) !important;
+}
+
+.admin-ui-mode .admin-order-card-v2 > .order-head {
+  display: flex !important;
+  width: 100%;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.admin-ui-mode .admin-order-card-v2 > .order-head small {
+  color: #8b7a71;
+  font-size: 9px;
+  font-weight: 680;
+}
+
+.admin-ui-mode .admin-order-card-v2 > .order-head h2 {
+  margin-top: 5px;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.admin-ui-mode .admin-order-card-v2 > .order-head .badge {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.admin-ui-mode .admin-order-card-v2 > p {
+  display: -webkit-box;
+  min-height: 30px;
+  margin: 0 !important;
+  overflow: hidden;
+  color: #756861;
+  font-size: 10px;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.admin-ui-mode .admin-order-card-v2 > .line {
+  display: none !important;
+}
+
+.admin-ui-mode .admin-card-preview-v2 {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+}
+
+.admin-ui-mode .admin-card-commerce {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid #eee3d9;
+  border-radius: 13px;
+  background: #fffaf6;
+}
+
+.admin-ui-mode .admin-card-total,
+.admin-ui-mode .admin-card-payment {
+  min-width: 0;
+}
+
+.admin-ui-mode .admin-card-total {
+  padding-right: 9px;
+  border-right: 1px solid #eadfd5;
+}
+
+.admin-ui-mode .admin-card-total small,
+.admin-ui-mode .admin-card-payment small {
+  display: block;
+  color: #85766e;
+  font-size: 8px;
+  font-weight: 720;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.admin-ui-mode .admin-card-total strong {
+  display: block;
+  margin-top: 5px;
+  color: #281712;
+  font-size: 21px;
+  font-weight: 860;
+  line-height: 1.05;
+}
+
+.admin-ui-mode .admin-card-payment > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+  margin-top: 5px;
+}
+
+.admin-ui-mode .admin-card-method,
+.admin-ui-mode .admin-card-payment-status {
+  display: inline-flex;
+  min-height: 23px;
+  align-items: center;
+  padding: 4px 7px;
+  border-radius: 999px;
+  font-size: 8px;
+  font-weight: 820;
+}
+
+.admin-ui-mode .admin-card-method {
+  color: #9c3f31;
+  background: #ffe9e5;
+}
+
+.admin-ui-mode .admin-card-payment-status {
+  color: #9a5d09;
+  background: #fff1cb;
+}
+
+.admin-ui-mode .admin-order-card-v2[data-payment-status-v2="PAID"] .admin-card-payment-status {
+  color: #177d40;
+  background: #e5f7ea;
+}
+
+.admin-ui-mode .admin-order-card-v2[data-payment-status-v2="FAILED"] .admin-card-payment-status,
+.admin-ui-mode .admin-order-card-v2[data-payment-status-v2="EXPIRED"] .admin-card-payment-status {
+  color: #a23d34;
+  background: #ffe9e6;
+}
+
+.admin-ui-mode .admin-card-payment em {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  color: #8a7b72;
+  font-size: 8px;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-ui-mode .admin-card-items-block {
+  display: grid;
+  gap: 0;
+  padding: 11px;
+  border: 1px solid #eee3d9;
+  border-radius: 13px;
+  background: #fff;
+}
+
+.admin-ui-mode .admin-card-items-title {
+  margin-bottom: 5px;
+}
+
+.admin-ui-mode .admin-card-items-title strong {
+  color: #432820;
+  font-size: 10px;
+  font-weight: 820;
+}
+
+.admin-ui-mode .admin-card-item-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 0;
+  border-top: 1px solid #f2e9e2;
+}
+
+.admin-ui-mode .admin-card-item-row > div {
+  min-width: 0;
+}
+
+.admin-ui-mode .admin-card-item-row strong {
+  display: block;
+  overflow: hidden;
+  color: #2f1c16;
+  font-size: 10px;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-ui-mode .admin-card-item-row small {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: #8a7c73;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-ui-mode .admin-card-item-row > span {
+  color: #322019;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.admin-ui-mode .admin-card-more,
+.admin-ui-mode .admin-card-loading {
+  padding-top: 6px;
+  color: #947b6c;
+  font-size: 8px;
+  font-weight: 650;
+}
+
+.admin-ui-mode .admin-order-card-v2 > .station-statuses {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 5px !important;
+  margin: 0 !important;
+}
+
+.admin-ui-mode .admin-order-card-v2 > .station-statuses .badge {
+  padding: 6px 8px !important;
+  border-radius: 999px !important;
+  font-size: 8px !important;
+}
+
+.admin-ui-mode .admin-order-card-v2 > .admin-card-detail-button {
+  width: 100% !important;
+  min-height: 36px;
+  margin: 0 !important;
+  border: 1px solid #e5d9cf;
+  border-radius: 10px;
+  color: #6d392b;
+  background: #fffdfb;
+  font-size: 9px;
+  font-weight: 780;
+}
+
+.admin-ui-mode .admin-order-card-v2 > .actions {
+  display: flex !important;
+  width: 100%;
+  flex-direction: column;
+  gap: 7px;
+  margin: auto 0 0 !important;
+}
+
+.admin-ui-mode .admin-order-card-v2 > .actions > button {
+  width: 100% !important;
+  min-height: 38px !important;
+  margin: 0 !important;
+  border-radius: 10px !important;
+  font-size: 9px !important;
+  font-weight: 790 !important;
+}
+
+.admin-ui-mode .admin-order-card-v2 > .actions > .primary {
+  border-color: #6d2f20 !important;
+  background: linear-gradient(135deg, #7a3422, #5a2117) !important;
+}
+
+.admin-ui-mode .admin-order-card-v2.admin-order-expanded,
+.admin-ui-mode .admin-order-card-v2-expanded {
+  grid-column: 1 / -1 !important;
+  height: auto;
+  transform: none !important;
+}
+
+.admin-ui-mode .admin-order-card-v2.admin-order-expanded > .admin-card-preview-v2,
+.admin-ui-mode .admin-order-card-v2.admin-order-expanded > .station-statuses {
+  display: none !important;
+}
+
+.admin-ui-mode .admin-customer-message-button {
+  border-color: #d7a98e !important;
+  color: #7a3422 !important;
+  background: #fff7f1 !important;
+}
+
+.admin-ui-mode .admin-chat-backend-note {
+  display: block !important;
+  margin-top: 5px !important;
+  color: #9b8a80 !important;
+  font-size: 8px !important;
+  line-height: 1.35;
+}
+
+@media (max-width: 1180px) {
+  .admin-ui-mode .admin-order-list-v2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-ui-mode .admin-order-list-v2 {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .admin-ui-mode .admin-order-card-v2 {
+    gap: 9px;
+    padding: 12px !important;
+    border-radius: 14px !important;
+  }
+
+  .admin-ui-mode .admin-card-commerce {
+    padding: 9px;
+  }
+
+  .admin-ui-mode .admin-card-total strong {
+    font-size: 18px;
+  }
+
+  .admin-ui-mode .admin-card-items-block {
+    padding: 9px;
+  }
+
+  .admin-ui-mode .admin-order-card-v2 > .actions > button,
+  .admin-ui-mode .admin-order-card-v2 > .admin-card-detail-button {
+    min-height: 40px !important;
+  }
+}
