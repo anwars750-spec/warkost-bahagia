@@ -30,6 +30,8 @@ const ICONS = {
   search: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>',
   refresh: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0 2 5"/><path d="M20 4v7h-7"/></svg>',
   calendar: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
+  chat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-9 8 9 9 0 0 1-4-1l-5 2 2-5a8 8 0 1 1 16-4Z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg>',
+  pin: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>',
 };
 
 const NAV_ICON = {
@@ -66,6 +68,17 @@ const KPI_MOBILE_LABELS = [
   "Poin",
 ];
 
+const ORDER_STEPS = [
+  ["PENDING", "Pesanan masuk"],
+  ["CONFIRMED", "Dikonfirmasi"],
+  ["PREPARING", "Disiapkan"],
+  ["READY", "Siap antar"],
+  ["ASSIGNED", "Driver ambil"],
+  ["PICKED_UP", "Pickup"],
+  ["ON_DELIVERY", "Dalam pengantaran"],
+  ["DELIVERED", "Selesai"],
+];
+
 const statusGroup = (status) => {
   if (["PENDING", "CONFIRMED"].includes(status)) return "waiting";
   if (status === "PREPARING") return "preparing";
@@ -79,6 +92,14 @@ const statusGroup = (status) => {
 const iconMarkup = (name, className = "admin-svg-icon") =>
   `<span class="${className}" aria-hidden="true">${ICONS[name] || ""}</span>`;
 
+const escapeHtml = (value) =>
+  String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
 const todayLabel = () =>
   new Intl.DateTimeFormat("id-ID", {
     timeZone: "Asia/Jakarta",
@@ -86,6 +107,13 @@ const todayLabel = () =>
     month: "long",
     year: "numeric",
   }).format(new Date());
+
+const driverCopyForStatus = (status) => {
+  if (["ASSIGNED", "PICKED_UP", "ON_DELIVERY", "DELIVERED"].includes(status))
+    return "Driver sudah menangani pesanan";
+  if (status === "READY") return "Menunggu driver mengambil pesanan";
+  return "Menunggu pesanan siap untuk driver";
+};
 
 export default function AdminUiEnhancer() {
   useEffect(() => {
@@ -102,9 +130,19 @@ export default function AdminUiEnhancer() {
       ...document.querySelectorAll("main .order-list > .order"),
     ];
 
+    const removeOrderDetailEnhancement = (card) => {
+      card.classList.remove("admin-order-expanded");
+      card.querySelector(":scope > .admin-order-detail-v1")?.remove();
+      card
+        .querySelector(":scope > .actions .admin-detail-action-summary")
+        ?.remove();
+      card.querySelector(":scope > .admin-detail-toggle")?.classList.remove("admin-detail-toggle");
+    };
+
     const resetOrderCards = () => {
       getOrders().forEach((card) => {
         card.hidden = false;
+        removeOrderDetailEnhancement(card);
         card.classList.remove("admin-order-card");
         delete card.dataset.orderStatus;
         delete card.dataset.orderGroup;
@@ -163,6 +201,196 @@ export default function AdminUiEnhancer() {
       card.dataset.paymentStatus = payment.toUpperCase();
     };
 
+    const decorateOrderDetail = (card) => {
+      const details = card.querySelector(":scope > .order-details");
+      if (!details) {
+        removeOrderDetailEnhancement(card);
+        return;
+      }
+
+      const headMeta = card.querySelector(".order-head small")?.textContent?.trim() || "";
+      const customer = card.querySelector(".order-head h2")?.textContent?.trim() || "Pelanggan";
+      const status = card.dataset.orderStatus || "";
+      const address = card.querySelector(":scope > p")?.textContent?.trim() || "Alamat belum tersedia";
+      const total = card.querySelector(":scope > .line strong")?.textContent?.trim() || "Rp0";
+      const payment = card.querySelector(":scope > .line span")?.textContent?.trim() || "";
+      const stationNodes = [...card.querySelectorAll(".station-statuses .badge")];
+      const stations = stationNodes.map((node) => node.textContent.trim());
+      const idMatch = headMeta.match(/#(\d+)/);
+      const orderId = idMatch ? idMatch[1] : "";
+      const displayOrder = orderId ? `WB${String(orderId).padStart(6, "0")}` : "Pesanan";
+      const dateText = headMeta.includes("·") ? headMeta.split("·").slice(1).join("·").trim() : headMeta;
+
+      const itemRows = [...details.querySelectorAll(":scope > .line")].map((line) => {
+        const text = line.querySelector("span")?.textContent?.trim() || "Item";
+        const amount = line.querySelector("strong")?.textContent?.trim() || "";
+        const match = text.match(/^(\d+)\s*×\s*(.*?)(?:\s*·\s*(.*))?$/);
+        return {
+          qty: match?.[1] || "",
+          name: match?.[2] || text,
+          station: match?.[3] || "",
+          amount,
+        };
+      });
+
+      const eventMap = new Map();
+      [...details.querySelectorAll(":scope > p")].forEach((node) => {
+        const text = node.textContent.trim();
+        const splitAt = text.lastIndexOf(" · ");
+        if (splitAt < 0) return;
+        const time = text.slice(0, splitAt).trim();
+        const eventStatus = text
+          .slice(splitAt + 3)
+          .trim()
+          .replaceAll(" ", "_")
+          .toUpperCase();
+        eventMap.set(eventStatus, time);
+      });
+
+      const signature = JSON.stringify({
+        headMeta,
+        customer,
+        status,
+        address,
+        total,
+        payment,
+        stations,
+        itemRows,
+        events: [...eventMap.entries()],
+      });
+
+      const existing = card.querySelector(":scope > .admin-order-detail-v1");
+      if (existing?.dataset.signature === signature) {
+        card.classList.add("admin-order-expanded");
+        return;
+      }
+
+      existing?.remove();
+      card
+        .querySelector(":scope > .actions .admin-detail-action-summary")
+        ?.remove();
+      card.classList.add("admin-order-expanded");
+
+      const toggle = [...card.querySelectorAll(":scope > button")].find((button) =>
+        /detail|riwayat/i.test(button.textContent),
+      );
+      toggle?.classList.add("admin-detail-toggle");
+
+      const currentIndex = ORDER_STEPS.findIndex(([key]) => key === status);
+      const timeline = ORDER_STEPS.map(([key, label], index) => {
+        const eventTime = eventMap.get(key) || "";
+        const state =
+          index < currentIndex ? "complete" : index === currentIndex ? "current" : "upcoming";
+        return `
+          <div class="admin-detail-step ${state}">
+            <span class="admin-detail-step-dot">${index < currentIndex ? ICONS.check : index + 1}</span>
+            <div>
+              <strong>${escapeHtml(label)}</strong>
+              <small>${escapeHtml(eventTime || (index === currentIndex ? "Status saat ini" : ""))}</small>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      const itemsMarkup = itemRows.length
+        ? itemRows
+            .map(
+              (item) => `
+                <div class="admin-detail-item">
+                  <div>
+                    <strong>${escapeHtml(item.name)}</strong>
+                    <span>
+                      ${item.qty ? `${escapeHtml(item.qty)}×` : ""}
+                      ${item.station ? `<em>${escapeHtml(item.station)}</em>` : ""}
+                    </span>
+                  </div>
+                  <strong>${escapeHtml(item.amount)}</strong>
+                </div>
+              `,
+            )
+            .join("")
+        : '<p class="admin-detail-empty">Belum ada detail item.</p>';
+
+      const detailSection = document.createElement("section");
+      detailSection.className = "admin-order-detail-v1";
+      detailSection.dataset.signature = signature;
+      detailSection.innerHTML = `
+        <div class="admin-detail-hero">
+          <div class="admin-detail-order-id">
+            ${iconMarkup("receipt", "admin-svg-icon admin-detail-hero-icon")}
+            <div>
+              <small>DETAIL PESANAN</small>
+              <strong>#${escapeHtml(displayOrder)}</strong>
+              <span>${escapeHtml(dateText)}</span>
+            </div>
+          </div>
+          <span class="admin-detail-status ${escapeHtml(statusGroup(status))}">${escapeHtml(status.replaceAll("_", " "))}</span>
+        </div>
+
+        <div class="admin-detail-info-grid">
+          <section class="admin-detail-info-card">
+            <span class="admin-detail-info-icon">${ICONS.customer}</span>
+            <div>
+              <small>PELANGGAN</small>
+              <strong>${escapeHtml(customer)}</strong>
+              <span>${escapeHtml(address)}</span>
+              <button type="button" disabled>${iconMarkup("chat")} Chat Customer · segera tersedia</button>
+            </div>
+          </section>
+          <section class="admin-detail-info-card">
+            <span class="admin-detail-info-icon">${ICONS.truck}</span>
+            <div>
+              <small>PENGIRIMAN</small>
+              <strong>${escapeHtml(driverCopyForStatus(status))}</strong>
+              <span>${escapeHtml(address)}</span>
+              <span class="admin-detail-delivery-state">Status order · ${escapeHtml(status.replaceAll("_", " "))}</span>
+            </div>
+          </section>
+        </div>
+
+        <section class="admin-detail-section">
+          <div class="admin-detail-section-title">
+            <span>${ICONS.receipt}</span>
+            <div><small>RINGKASAN</small><h3>Item pesanan</h3></div>
+          </div>
+          <div class="admin-detail-items">${itemsMarkup}</div>
+          <div class="admin-detail-total-row">
+            <span>Total pesanan</span>
+            <strong>${escapeHtml(total)}</strong>
+          </div>
+        </section>
+
+        <section class="admin-detail-section admin-detail-timeline-section">
+          <div class="admin-detail-section-title">
+            <span>${ICONS.clock}</span>
+            <div><small>PROGRESS</small><h3>Perjalanan pesanan</h3></div>
+          </div>
+          <div class="admin-detail-timeline">${timeline}</div>
+        </section>
+      `;
+      details.before(detailSection);
+
+      const actions = card.querySelector(":scope > .actions");
+      if (actions) {
+        const stationMarkup = stations.length
+          ? stations.map((station) => `<span>${escapeHtml(station)}</span>`).join("")
+          : '<span>Belum ada station aktif</span>';
+        actions.insertAdjacentHTML(
+          "afterbegin",
+          `
+            <div class="admin-detail-action-summary">
+              <small>TINDAKAN ADMIN</small>
+              <div class="admin-detail-action-total">
+                <span>Total</span><strong>${escapeHtml(total)}</strong>
+              </div>
+              <span class="admin-detail-payment">${escapeHtml(payment || "Belum ada status pembayaran")}</span>
+              <div class="admin-detail-stations">${stationMarkup}</div>
+            </div>
+          `,
+        );
+      }
+    };
+
     const applyFilter = () => {
       const tools = document.getElementById("admin-order-tools");
       if (!tools || !document.body.classList.contains("admin-operations-view")) {
@@ -173,6 +401,7 @@ export default function AdminUiEnhancer() {
       const cards = getOrders();
       cards.forEach(annotateOrder);
       cards.forEach((card) => {
+        decorateOrderDetail(card);
         const matchesGroup =
           activeFilter === "all" || card.dataset.orderGroup === activeFilter;
         const haystack = card.textContent.toLowerCase();
