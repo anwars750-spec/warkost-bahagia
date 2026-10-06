@@ -1,0 +1,183 @@
+/* Admin icon polish — presentation only */
+.admin-ui-mode .admin-svg-icon {
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: currentColor;
+}
+
+.admin-ui-mode .admin-svg-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Replace temporary text glyphs in top navigation. */
+.admin-ui-mode .admin-nav button::before {
+  display: none !important;
+  content: none !important;
+}
+
+.admin-ui-mode .admin-nav button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.admin-ui-mode .admin-nav-icon {
+  width: 18px;
+  height: 18px;
+  color: #75412f;
+  transition: transform 160ms ease, color 160ms ease;
+}
+
+.admin-ui-mode .admin-nav button:hover .admin-nav-icon,
+.admin-ui-mode .admin-nav .admin-nav-active .admin-nav-icon {
+  color: #5b2418;
+  transform: translateY(-1px);
+}
+
+.admin-ui-mode .admin-nav .admin-nav-active .admin-nav-icon svg {
+  stroke-width: 2;
+}
+
+/* Replace temporary KPI characters with consistent outline icons. */
+.admin-ui-mode .admin-kpi-grid .stat::before {
+  display: none !important;
+  content: none !important;
+}
+
+.admin-ui-mode .admin-kpi-grid .stat {
+  padding-left: 66px;
+}
+
+.admin-ui-mode .admin-kpi-icon {
+  position: absolute;
+  top: 50%;
+  left: 15px;
+  width: 38px;
+  height: 38px;
+  padding: 9px;
+  transform: translateY(-50%);
+  border-radius: 12px;
+  color: #b76b0c;
+  background: linear-gradient(145deg, #fff7e8, #ffedca);
+  box-shadow: inset 0 0 0 1px rgba(212, 143, 31, 0.08);
+}
+
+.admin-ui-mode .admin-kpi-icon svg {
+  stroke-width: 1.9;
+}
+
+.admin-ui-mode .admin-kpi-icon-2 {
+  color: #8e4c22;
+  background: linear-gradient(145deg, #fff5ed, #f9e4d4);
+}
+
+.admin-ui-mode .admin-kpi-icon-6,
+.admin-ui-mode .admin-kpi-icon-7,
+.admin-ui-mode .admin-kpi-icon-9 {
+  color: #18864b;
+  background: linear-gradient(145deg, #effcf3, #ddf5e6);
+  box-shadow: inset 0 0 0 1px rgba(24, 134, 75, 0.08);
+}
+
+.admin-ui-mode .admin-kpi-icon-5 {
+  color: #d45a23;
+  background: linear-gradient(145deg, #fff4ed, #ffe2d2);
+}
+
+.admin-ui-mode .admin-kpi-icon-10 {
+  color: #d58a06;
+  background: linear-gradient(145deg, #fff8e4, #ffedbd);
+}
+
+/* Search icon */
+.admin-ui-mode .admin-order-search > span:first-child {
+  padding-left: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.admin-ui-mode .admin-search-icon {
+  width: 19px;
+  height: 19px;
+  margin-left: 3px;
+  color: #806d64;
+}
+
+/* Refresh icon */
+.admin-ui-mode .admin-refresh::before {
+  display: none !important;
+  content: none !important;
+}
+
+.admin-ui-mode .admin-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 12px;
+}
+
+.admin-ui-mode .admin-refresh::after {
+  content: "Segarkan";
+  font-size: 12px;
+}
+
+.admin-ui-mode .admin-refresh-icon {
+  width: 16px;
+  height: 16px;
+  color: #6e3829;
+}
+
+/* Improve the COD callout icon without adding backend behavior. */
+.admin-operations-view .admin-ui-heading::after {
+  padding-left: 68px;
+  background-color: #fff8ef;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a85b16' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 3h8l-1 4H9L8 3Z'/%3E%3Cpath d='M9 7c-4 3-6 6-6 10 0 3 2 4 9 4s9-1 9-4c0-4-2-7-6-10'/%3E%3Cpath d='M12 11v6M9.5 13h5M9.5 16h5'/%3E%3C/svg%3E"),
+    radial-gradient(circle at 31px 50%, #f8dbaa 0 24px, transparent 25px),
+    linear-gradient(135deg, #fff8ef, #fbefe3);
+  background-repeat: no-repeat, no-repeat, no-repeat;
+  background-position: 20px center, 0 0, 0 0;
+  background-size: 23px 23px, auto, auto;
+}
+
+/* Slightly stronger icon surfaces on high-density screens. */
+@media (min-width: 1100px) {
+  .admin-ui-mode .admin-kpi-icon {
+    width: 40px;
+    height: 40px;
+    padding: 9px;
+  }
+}
+
+@media (max-width: 820px) {
+  .admin-ui-mode .admin-nav button {
+    gap: 6px;
+  }
+
+  .admin-ui-mode .admin-nav-icon {
+    width: 17px;
+    height: 17px;
+  }
+
+  .admin-ui-mode .admin-kpi-grid .stat {
+    padding-left: 60px;
+  }
+
+  .admin-ui-mode .admin-kpi-icon {
+    left: 13px;
+    width: 36px;
+    height: 36px;
+    padding: 8px;
+  }
+}
