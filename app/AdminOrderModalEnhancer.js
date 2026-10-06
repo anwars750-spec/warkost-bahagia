@@ -2,148 +2,238 @@
 
 import { useEffect } from "react";
 
-const orderIdFromCard = (card) => {
-  const text = card.querySelector(".order-head small")?.textContent || "";
-  const match = text.match(/#(\d+)/);
-  return match ? `WB${String(match[1]).padStart(6, "0")}` : "Detail Pesanan";
+const escapeHtml = (value) =>
+  String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+const money = (value) =>
+  `Rp${Number(value || 0).toLocaleString("id-ID")}`;
+
+const methodLabel = (method) => {
+  if (["COD", "CASH"].includes(String(method || "").toUpperCase())) {
+    return ["COD", "Tunai saat diterima"];
+  }
+  if (method === "QRIS") return ["QRIS", "Pembayaran QRIS"];
+  if (method === "BANK_TRANSFER") return ["Transfer", "Transfer bank"];
+  return [method || "—", "Media pembayaran"];
 };
+
+const stationLabel = (station) =>
+  station === "KITCHEN"
+    ? "Dapur"
+    : station === "CASHIER"
+      ? "Admin · minuman"
+      : station || "";
+
+const ORDER_STEPS = [
+  ["PENDING", "Pesanan masuk"],
+  ["CONFIRMED", "Dikonfirmasi"],
+  ["PREPARING", "Disiapkan"],
+  ["READY", "Siap antar"],
+  ["ASSIGNED", "Driver mengambil"],
+  ["PICKED_UP", "Pickup"],
+  ["ON_DELIVERY", "Dalam pengantaran"],
+  ["DELIVERED", "Selesai"],
+];
+
+const orderIdFromCard = (card) => {
+  const text = card?.querySelector(".order-head small")?.textContent || "";
+  const match = text.match(/#(\d+)/);
+  return match ? Number(match[1]) : null;
+};
+
+const displayOrderId = (id) => `WB${String(id).padStart(6, "0")}`;
 
 export default function AdminOrderModalEnhancer() {
   useEffect(() => {
     let modal = null;
-    let sourceCard = null;
-    let timer = null;
-    let closingFromModal = false;
     let previousOverflow = "";
+    let requestToken = 0;
 
-    const findToggle = (card) =>
-      [...card.querySelectorAll(":scope > button")].find((button) =>
-        /detail|riwayat/i.test(button.textContent),
-      );
-
-    const removeModal = ({ collapse = false } = {}) => {
-      const card = sourceCard;
+    const closeModal = () => {
+      requestToken += 1;
       modal?.remove();
       modal = null;
-      sourceCard = null;
       document.body.classList.remove("admin-order-modal-open");
       document.body.style.overflow = previousOverflow;
+    };
 
-      if (collapse && card) {
-        const toggle = findToggle(card);
-        if (toggle && /tutup/i.test(toggle.textContent)) {
-          closingFromModal = true;
-          toggle.click();
-          window.setTimeout(() => {
-            closingFromModal = false;
-          }, 120);
+    const renderLoadingModal = (id) => {
+      closeModal();
+      previousOverflow = document.body.style.overflow;
+      modal = document.createElement("div");
+      modal.className = "admin-order-modal-overlay is-visible";
+      modal.innerHTML = `
+        <section class="admin-order-modal" role="dialog" aria-modal="true" aria-labelledby="admin-modal-title">
+          <header class="admin-order-modal-header">
+            <div>
+              <small>DETAIL PESANAN</small>
+              <h2 id="admin-modal-title">#${escapeHtml(displayOrderId(id))}</h2>
+            </div>
+            <button type="button" class="admin-order-modal-close" aria-label="Tutup detail">×</button>
+          </header>
+          <div class="admin-order-modal-body">
+            <div class="admin-modal-loading">
+              <span></span>
+              <strong>Memuat rincian pesanan…</strong>
+            </div>
+          </div>
+        </section>
+      `;
+      modal.querySelector(".admin-order-modal-close")?.addEventListener("click", closeModal);
+      modal.addEventListener("click", (event) => {
+        if (event.target === modal) closeModal();
+      });
+      document.body.appendChild(modal);
+      document.body.classList.add("admin-order-modal-open");
+      document.body.style.overflow = "hidden";
+    };
+
+    const buildTimeline = (status, events = []) => {
+      const currentIndex = ORDER_STEPS.findIndex(([key]) => key === status);
+      const eventMap = new Map(
+        events.map((event) => [String(event.next_status || "").toUpperCase(), event.created_at || ""]),
+      );
+      return ORDER_STEPS.map(([key, label], index) => {
+        const state = index < currentIndex ? "complete" : index === currentIndex ? "current" : "upcoming";
+        const marker = index < currentIndex ? "✓" : index + 1;
+        const time = eventMap.get(key) || (index === currentIndex ? "Status saat ini" : "");
+        return `
+          <div class="admin-modal-step ${state}">
+            <span>${marker}</span>
+            <div>
+              <strong>${escapeHtml(label)}</strong>
+              ${time ? `<small>${escapeHtml(time)}</small>` : ""}
+            </div>
+          </div>
+        `;
+      }).join("");
+    };
+
+    const buildModalContent = (order, details) => {
+      if (!modal) return;
+      const [methodShort, methodLong] = methodLabel(order.method);
+      const items = details?.items || [];
+      const events = details?.events || [];
+      const status = String(order.status || "PENDING").toUpperCase();
+      const itemsMarkup = items.length
+        ? items.map((item) => `
+            <div class="admin-modal-item">
+              <div>
+                <strong>${escapeHtml(item.name)}</strong>
+                <small>${escapeHtml(item.quantity)}×${item.prep_station ? ` · ${escapeHtml(stationLabel(item.prep_station))}` : ""}</small>
+              </div>
+              <strong>${escapeHtml(money(Number(item.price || 0) * Number(item.quantity || 0)))}</strong>
+            </div>
+          `).join("")
+        : '<div class="admin-modal-empty">Belum ada item pesanan.</div>';
+
+      const stationChips = [
+        order.kitchen_status ? `Dapur · ${order.kitchen_status}` : "",
+        order.cashier_status ? `Admin minuman · ${order.cashier_status}` : "",
+      ].filter(Boolean).map((label) => `<span>${escapeHtml(label)}</span>`).join("");
+
+      const body = modal.querySelector(".admin-order-modal-body");
+      if (!body) return;
+      body.innerHTML = `
+        <div class="admin-modal-top-grid">
+          <section class="admin-modal-summary-card">
+            <small>STATUS PESANAN</small>
+            <div class="admin-modal-status-row">
+              <strong>${escapeHtml(status.replaceAll("_", " "))}</strong>
+              <span>${escapeHtml(order.payment_status || "—")}</span>
+            </div>
+            <div class="admin-modal-money-row">
+              <div><small>Total</small><strong>${escapeHtml(money(order.total))}</strong></div>
+              <div><small>Media bayar</small><strong>${escapeHtml(methodShort)}</strong><em>${escapeHtml(methodLong)}</em></div>
+            </div>
+            ${stationChips ? `<div class="admin-modal-stations">${stationChips}</div>` : ""}
+          </section>
+
+          <section class="admin-modal-customer-card">
+            <small>PELANGGAN</small>
+            <strong>${escapeHtml(order.customer_name || "Pelanggan")}</strong>
+            <span>${escapeHtml(order.address || "Alamat belum tersedia")}</span>
+            <button type="button" class="admin-modal-message-button" disabled>Kirim pesan ke customer</button>
+            <p>Chat internal akan aktif setelah backend komunikasi selesai.</p>
+          </section>
+        </div>
+
+        <section class="admin-modal-section">
+          <div class="admin-modal-section-heading">
+            <div><small>RINGKASAN</small><h3>Item pesanan (${items.length})</h3></div>
+          </div>
+          <div class="admin-modal-items">${itemsMarkup}</div>
+          <div class="admin-modal-total"><span>Total pesanan</span><strong>${escapeHtml(money(order.total))}</strong></div>
+        </section>
+
+        <section class="admin-modal-section">
+          <div class="admin-modal-section-heading">
+            <div><small>PROGRESS</small><h3>Perjalanan pesanan</h3></div>
+          </div>
+          <div class="admin-modal-timeline">${buildTimeline(status, events)}</div>
+        </section>
+      `;
+    };
+
+    const openModal = async (card) => {
+      const id = orderIdFromCard(card);
+      if (!id) return;
+      const token = ++requestToken;
+      renderLoadingModal(id);
+
+      try {
+        const [ordersResponse, detailsResponse] = await Promise.all([
+          fetch("/api/orders", { cache: "no-store" }),
+          fetch(`/api/order-items?id=${encodeURIComponent(id)}`, { cache: "no-store" }),
+        ]);
+        if (!ordersResponse.ok || !detailsResponse.ok) throw new Error("Gagal memuat detail pesanan");
+        const ordersData = await ordersResponse.json();
+        const detailsData = await detailsResponse.json();
+        if (token !== requestToken || !modal) return;
+        const order = (ordersData.orders || []).find((item) => Number(item.id) === id);
+        if (!order) throw new Error("Pesanan tidak ditemukan");
+        buildModalContent(order, detailsData);
+      } catch (error) {
+        if (token !== requestToken || !modal) return;
+        const body = modal.querySelector(".admin-order-modal-body");
+        if (body) {
+          body.innerHTML = `<div class="admin-modal-error"><strong>Detail belum dapat dimuat.</strong><span>${escapeHtml(error.message)}</span></div>`;
         }
       }
     };
 
-    const buildModal = (card) => {
-      const detail = card.querySelector(":scope > .admin-order-detail-v1");
-      if (!detail) return;
+    const onClickCapture = (event) => {
+      if (!document.body.classList.contains("admin-operations-view")) return;
+      const button = event.target.closest("button");
+      if (!button) return;
+      const card = button.closest("main .order-list .order");
+      if (!card) return;
+      const text = button.textContent.trim();
+      const isDetailButton = button.classList.contains("admin-card-detail-button") || /lihat\s+(item\s*&\s*riwayat|detail)/i.test(text);
+      if (!isDetailButton || /tutup/i.test(text)) return;
 
-      card.classList.add("admin-order-modalized");
-      const orderId = orderIdFromCard(card);
-      const paymentSummary = card.querySelector(":scope > .admin-card-preview-v2 .admin-card-commerce");
-      const signature = `${detail.textContent}|${paymentSummary?.textContent || ""}`;
-
-      if (modal && sourceCard === card && modal.dataset.signature === signature) return;
-
-      if (modal) removeModal({ collapse: false });
-      previousOverflow = document.body.style.overflow;
-      sourceCard = card;
-
-      modal = document.createElement("div");
-      modal.className = "admin-order-modal-overlay";
-      modal.dataset.signature = signature;
-      modal.innerHTML = `
-        <section class="admin-order-modal" role="dialog" aria-modal="true" aria-label="${orderId}">
-          <header class="admin-order-modal-header">
-            <div>
-              <small>DETAIL PESANAN</small>
-              <h2>${orderId}</h2>
-            </div>
-            <button type="button" class="admin-order-modal-close" aria-label="Tutup detail">×</button>
-          </header>
-          <div class="admin-order-modal-body"></div>
-        </section>
-      `;
-
-      const body = modal.querySelector(".admin-order-modal-body");
-      if (paymentSummary) {
-        const summaryClone = paymentSummary.cloneNode(true);
-        summaryClone.classList.add("admin-order-modal-payment-summary");
-        body.appendChild(summaryClone);
-      }
-
-      const detailClone = detail.cloneNode(true);
-      detailClone.classList.add("admin-order-modal-detail");
-      body.appendChild(detailClone);
-
-      modal.querySelector(".admin-order-modal-close")?.addEventListener("click", () =>
-        removeModal({ collapse: true }),
-      );
-      modal.addEventListener("click", (event) => {
-        if (event.target === modal) removeModal({ collapse: true });
-      });
-
-      document.body.appendChild(modal);
-      document.body.classList.add("admin-order-modal-open");
-      document.body.style.overflow = "hidden";
-      window.requestAnimationFrame(() => modal?.classList.add("is-visible"));
-    };
-
-    const scan = () => {
-      if (!document.body.classList.contains("admin-operations-view")) {
-        document.querySelectorAll(".admin-order-modalized").forEach((card) =>
-          card.classList.remove("admin-order-modalized"),
-        );
-        if (modal) removeModal({ collapse: false });
-        return;
-      }
-
-      const cards = [
-        ...document.querySelectorAll("main .order-list .admin-order-card-v2"),
-      ];
-      cards.forEach((card) => {
-        const hasDetail = Boolean(card.querySelector(":scope > .admin-order-detail-v1"));
-        card.classList.toggle("admin-order-modalized", hasDetail);
-      });
-
-      if (closingFromModal) return;
-      const detailedCard = cards.find((card) =>
-        card.querySelector(":scope > .admin-order-detail-v1"),
-      );
-
-      if (detailedCard) buildModal(detailedCard);
-      else if (modal) removeModal({ collapse: false });
-    };
-
-    const scheduleScan = () => {
-      if (timer) window.clearTimeout(timer);
-      timer = window.setTimeout(scan, 60);
+      event.preventDefault();
+      event.stopPropagation();
+      if (typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation();
+      openModal(card);
     };
 
     const onKeyDown = (event) => {
-      if (event.key === "Escape" && modal) removeModal({ collapse: true });
+      if (event.key === "Escape" && modal) closeModal();
     };
 
-    scan();
-    const observer = new MutationObserver(scheduleScan);
-    observer.observe(document.body, { childList: true, subtree: true });
+    document.addEventListener("click", onClickCapture, true);
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
-      observer.disconnect();
+      document.removeEventListener("click", onClickCapture, true);
       window.removeEventListener("keydown", onKeyDown);
-      if (timer) window.clearTimeout(timer);
-      removeModal({ collapse: false });
-      document.querySelectorAll(".admin-order-modalized").forEach((card) =>
-        card.classList.remove("admin-order-modalized"),
-      );
+      closeModal();
     };
   }, []);
 
