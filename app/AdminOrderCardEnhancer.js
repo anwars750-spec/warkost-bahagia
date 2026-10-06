@@ -87,7 +87,9 @@ export default function AdminOrderCardEnhancer() {
       const button = customerCard.querySelector("button");
       if (!button) return;
       button.classList.add("admin-customer-message-button");
-      button.textContent = "Kirim pesan ke customer";
+      if (button.textContent.trim() !== "Kirim pesan ke customer") {
+        button.textContent = "Kirim pesan ke customer";
+      }
       button.title = "Akan aktif setelah backend chat customer tersedia";
 
       if (!customerCard.querySelector(".admin-chat-backend-note")) {
@@ -116,7 +118,8 @@ export default function AdminOrderCardEnhancer() {
       if (!preview) {
         preview = document.createElement("section");
         preview.className = "admin-card-preview-v2";
-        const anchor = card.querySelector(":scope > .station-statuses") ||
+        const anchor =
+          card.querySelector(":scope > .station-statuses") ||
           [...card.querySelectorAll(":scope > button")].find((button) =>
             /detail|riwayat/i.test(button.textContent),
           ) ||
@@ -127,28 +130,39 @@ export default function AdminOrderCardEnhancer() {
 
       const visibleItems = (items || []).slice(0, 2);
       const remaining = Math.max(0, (items || []).length - visibleItems.length);
-      const itemMarkup = items === undefined
-        ? '<div class="admin-card-loading">Memuat item pesanan…</div>'
-        : visibleItems.length
-          ? visibleItems
-              .map(
-                (item) => `
-                  <div class="admin-card-item-row">
-                    <div>
-                      <strong>${escapeHtml(item.name)}</strong>
-                      <small>${escapeHtml(item.quantity)}×${item.prep_station ? ` · ${escapeHtml(stationLabel(item.prep_station))}` : ""}</small>
+      const itemMarkup =
+        items === undefined
+          ? '<div class="admin-card-loading">Memuat item pesanan…</div>'
+          : visibleItems.length
+            ? visibleItems
+                .map(
+                  (item) => `
+                    <div class="admin-card-item-row">
+                      <div>
+                        <strong>${escapeHtml(item.name)}</strong>
+                        <small>${escapeHtml(item.quantity)}×${item.prep_station ? ` · ${escapeHtml(stationLabel(item.prep_station))}` : ""}</small>
+                      </div>
+                      <span>${escapeHtml(
+                        "Rp" + Number(item.price * item.quantity || 0).toLocaleString("id-ID"),
+                      )}</span>
                     </div>
-                    <span>${escapeHtml(
-                      "Rp" + Number(item.price * item.quantity || 0).toLocaleString("id-ID"),
-                    )}</span>
-                  </div>
-                `,
-              )
-              .join("") +
-            (remaining
-              ? `<div class="admin-card-more">+${remaining} item lainnya</div>`
-              : "")
-          : '<div class="admin-card-loading">Belum ada item.</div>';
+                  `,
+                )
+                .join("") +
+              (remaining
+                ? `<div class="admin-card-more">+${remaining} item lainnya</div>`
+                : "")
+            : '<div class="admin-card-loading">Belum ada item.</div>';
+
+      const signature = JSON.stringify({
+        total,
+        paymentStatus,
+        methodShort,
+        methodLong,
+        items: items || null,
+      });
+      if (preview.dataset.signature === signature) return;
+      preview.dataset.signature = signature;
 
       preview.innerHTML = `
         <div class="admin-card-commerce">
@@ -193,9 +207,12 @@ export default function AdminOrderCardEnhancer() {
       );
       if (detailButton) {
         detailButton.classList.add("admin-card-detail-button");
-        detailButton.textContent = card.querySelector(":scope > .admin-order-detail-v1")
+        const nextLabel = card.querySelector(":scope > .admin-order-detail-v1")
           ? "Tutup detail"
           : "Lihat detail";
+        if (detailButton.textContent.trim() !== nextLabel) {
+          detailButton.textContent = nextLabel;
+        }
       }
     };
 
