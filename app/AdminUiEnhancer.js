@@ -29,6 +29,7 @@ const ICONS = {
   star: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z"/></svg>',
   search: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>',
   refresh: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0 2 5"/><path d="M20 4v7h-7"/></svg>',
+  calendar: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
 };
 
 const NAV_ICON = {
@@ -52,6 +53,19 @@ const KPI_ICONS = [
   "star",
 ];
 
+const KPI_MOBILE_LABELS = [
+  "Order",
+  "Revenue",
+  "Menunggu",
+  "Disiapkan",
+  "Siap antar",
+  "Diantar",
+  "Selesai",
+  "Pelanggan",
+  "Driver",
+  "Poin",
+];
+
 const statusGroup = (status) => {
   if (["PENDING", "CONFIRMED"].includes(status)) return "waiting";
   if (status === "PREPARING") return "preparing";
@@ -64,6 +78,14 @@ const statusGroup = (status) => {
 
 const iconMarkup = (name, className = "admin-svg-icon") =>
   `<span class="${className}" aria-hidden="true">${ICONS[name] || ""}</span>`;
+
+const todayLabel = () =>
+  new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Jakarta",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date());
 
 export default function AdminUiEnhancer() {
   useEffect(() => {
@@ -97,8 +119,13 @@ export default function AdminUiEnhancer() {
       resetOrderCards();
     };
 
+    const removeSummary = () => {
+      document.getElementById("admin-daily-summary")?.remove();
+    };
+
     const clearAdminDecorations = () => {
       removeAdminTools();
+      removeSummary();
       document.body.classList.remove("admin-ui-mode", "admin-operations-view");
       document.querySelector("header.top")?.classList.remove("admin-ui-header");
       document.querySelector("main")?.classList.remove("admin-ui-main");
@@ -106,7 +133,11 @@ export default function AdminUiEnhancer() {
       document.querySelector("header.top nav")?.classList.remove("admin-nav");
       document
         .querySelectorAll("header.top nav button")
-        .forEach((button) => button.classList.remove("admin-nav-active"));
+        .forEach((button) => {
+          button.classList.remove("admin-nav-active");
+          delete button.dataset.adminNav;
+          button.querySelector(".admin-nav-icon")?.remove();
+        });
       document
         .querySelector("main .stats.admin-kpi-grid")
         ?.classList.remove("admin-kpi-grid");
@@ -213,13 +244,18 @@ export default function AdminUiEnhancer() {
       nav.classList.add("admin-nav");
       [...nav.querySelectorAll("button")].forEach((button) => {
         const label = button.textContent.replace(/\d+/g, "").trim();
+        button.dataset.adminNav = label;
         const iconName = NAV_ICON[label];
-        if (iconName && !button.querySelector(".admin-nav-icon")) {
+
+        if (label === "Notifikasi") {
+          button.querySelector(".admin-nav-icon")?.remove();
+        } else if (iconName && !button.querySelector(".admin-nav-icon")) {
           button.insertAdjacentHTML(
             "afterbegin",
             iconMarkup(iconName, "admin-svg-icon admin-nav-icon"),
           );
         }
+
         button.classList.remove("admin-nav-active");
         if (
           (label === "Operasional" && headingText === "Pantau pesanan hari ini") ||
@@ -236,6 +272,8 @@ export default function AdminUiEnhancer() {
       const grid = main.querySelector(".admin-kpi-grid");
       if (!grid) return;
       [...grid.querySelectorAll(":scope > .stat")].forEach((stat, index) => {
+        const label = stat.querySelector("small");
+        if (label) label.dataset.mobileLabel = KPI_MOBILE_LABELS[index] || label.textContent;
         if (stat.querySelector(".admin-kpi-icon")) return;
         const name = KPI_ICONS[index] || "receipt";
         stat.insertAdjacentHTML(
@@ -252,6 +290,63 @@ export default function AdminUiEnhancer() {
         "afterbegin",
         iconMarkup("refresh", "admin-svg-icon admin-refresh-icon"),
       );
+    };
+
+    const statValue = (main, labelPrefix) => {
+      const stats = [
+        ...main.querySelectorAll(".admin-kpi-grid .stat, .admin-payment-grid .stat"),
+      ];
+      const stat = stats.find((item) =>
+        item.querySelector("small")?.textContent?.trim().startsWith(labelPrefix),
+      );
+      return stat?.querySelector("strong")?.textContent?.trim() || "0";
+    };
+
+    const setSummaryValue = (summary, key, value) => {
+      const node = summary.querySelector(`[data-summary-value="${key}"]`);
+      if (node && node.textContent !== value) node.textContent = value;
+    };
+
+    const ensureSummary = (main) => {
+      const kpiGrid = main.querySelector(".admin-kpi-grid");
+      if (!kpiGrid) return;
+
+      let summary = document.getElementById("admin-daily-summary");
+      if (!summary) {
+        summary = document.createElement("section");
+        summary.id = "admin-daily-summary";
+        summary.className = "admin-daily-summary";
+        summary.innerHTML = `
+          <div class="admin-summary-head">
+            <span class="admin-summary-icon">${ICONS.calendar}</span>
+            <div>
+              <small>RINGKASAN PENJUALAN</small>
+              <strong>Hari ini</strong>
+            </div>
+            <span class="admin-summary-date">${todayLabel()}</span>
+          </div>
+          <div class="admin-summary-grid">
+            <div><small>Total pesanan</small><strong data-summary-value="orders">0</strong></div>
+            <div><small>Revenue</small><strong data-summary-value="revenue">Rp0</strong></div>
+            <div><small>PAID</small><strong data-summary-value="paid">0</strong></div>
+            <div><small>Selesai</small><strong data-summary-value="done">0</strong></div>
+            <div class="admin-summary-secondary"><small>Menunggu</small><strong data-summary-value="waiting">0</strong></div>
+            <div class="admin-summary-secondary"><small>Disiapkan</small><strong data-summary-value="preparing">0</strong></div>
+            <div class="admin-summary-secondary"><small>Siap antar</small><strong data-summary-value="ready">0</strong></div>
+            <div class="admin-summary-secondary"><small>Dalam pengantaran</small><strong data-summary-value="delivery">0</strong></div>
+          </div>
+        `;
+        kpiGrid.before(summary);
+      }
+
+      setSummaryValue(summary, "orders", statValue(main, "Order hari ini"));
+      setSummaryValue(summary, "revenue", statValue(main, "Revenue terverifikasi"));
+      setSummaryValue(summary, "paid", statValue(main, "Pembayaran PAID"));
+      setSummaryValue(summary, "done", statValue(main, "Selesai"));
+      setSummaryValue(summary, "waiting", statValue(main, "Menunggu"));
+      setSummaryValue(summary, "preparing", statValue(main, "Disiapkan"));
+      setSummaryValue(summary, "ready", statValue(main, "Siap antar"));
+      setSummaryValue(summary, "delivery", statValue(main, "Dalam pengantaran"));
     };
 
     const decorate = () => {
@@ -281,6 +376,7 @@ export default function AdminUiEnhancer() {
 
       if (!onOperations) {
         removeAdminTools();
+        removeSummary();
         return;
       }
 
@@ -292,6 +388,7 @@ export default function AdminUiEnhancer() {
 
       decorateKpis(main);
       decorateRefresh(main);
+      ensureSummary(main);
       ensureTools(main);
       applyFilter();
     };
