@@ -1,0 +1,240 @@
+/* Admin order detail modal — presentation layer only */
+
+.admin-order-modal-open {
+  overflow: hidden;
+}
+
+.admin-order-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: rgba(34, 19, 14, 0.46);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.admin-order-modal-overlay.is-visible {
+  opacity: 1;
+}
+
+.admin-order-modal {
+  width: min(1100px, 94vw);
+  max-height: 88vh;
+  overflow: hidden;
+  border: 1px solid #e6d8cc;
+  border-radius: 22px;
+  background: #fffdfb;
+  box-shadow: 0 30px 90px rgba(45, 24, 16, 0.28);
+  transform: translateY(12px) scale(0.985);
+  transition: transform 180ms ease;
+}
+
+.admin-order-modal-overlay.is-visible .admin-order-modal {
+  transform: translateY(0) scale(1);
+}
+
+.admin-order-modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #eee1d6;
+  background: rgba(255, 253, 251, 0.96);
+  backdrop-filter: blur(10px);
+}
+
+.admin-order-modal-header small {
+  display: block;
+  color: #9b5a3c;
+  font-size: 9px;
+  font-weight: 820;
+  letter-spacing: 0.12em;
+}
+
+.admin-order-modal-header h2 {
+  margin: 3px 0 0;
+  color: #2b1913;
+  font-size: 22px;
+  font-weight: 860;
+  letter-spacing: -0.025em;
+}
+
+.admin-order-modal-close {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid #e7d9cd;
+  border-radius: 12px;
+  color: #5f3326;
+  background: #fff8f2;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.admin-order-modal-close:hover {
+  background: #f9eadf;
+}
+
+.admin-order-modal-body {
+  max-height: calc(88vh - 76px);
+  overflow-y: auto;
+  padding: 18px 20px 22px;
+}
+
+.admin-order-modal-payment-summary {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  margin-bottom: 14px;
+}
+
+.admin-order-modal-payment-summary .admin-card-total,
+.admin-order-modal-payment-summary .admin-card-payment {
+  padding: 13px 14px !important;
+  border: 1px solid #eee2d8;
+  border-radius: 14px;
+  background: #fff9f4;
+}
+
+.admin-order-modal-payment-summary .admin-card-total {
+  border-right: 1px solid #eee2d8 !important;
+}
+
+.admin-order-modal-detail {
+  display: block !important;
+  width: 100%;
+}
+
+.admin-order-modal-detail .admin-detail-hero {
+  margin-bottom: 14px;
+}
+
+.admin-order-modal-detail .admin-detail-info-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-order-modal-detail .admin-detail-section {
+  margin-bottom: 14px;
+}
+
+.admin-order-modal-detail .admin-customer-message-button {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+/* Keep the card compact even while React detail state is open. */
+.admin-ui-mode .admin-order-card-v2.admin-order-modalized.admin-order-expanded,
+.admin-ui-mode .admin-order-card-v2.admin-order-modalized.admin-order-card-v2-expanded {
+  display: flex !important;
+  grid-column: auto !important;
+  grid-template-columns: none !important;
+  gap: 11px !important;
+  height: 100% !important;
+  padding: 16px !important;
+  overflow: hidden !important;
+  transform: none !important;
+}
+
+.admin-ui-mode .admin-order-card-v2.admin-order-modalized > .admin-order-detail-v1,
+.admin-ui-mode .admin-order-card-v2.admin-order-modalized > .order-details,
+.admin-ui-mode .admin-order-card-v2.admin-order-modalized > .admin-detail-action-summary {
+  display: none !important;
+}
+
+.admin-ui-mode .admin-order-card-v2.admin-order-modalized > .order-head {
+  display: flex !important;
+}
+
+.admin-ui-mode .admin-order-card-v2.admin-order-modalized > p {
+  display: -webkit-box !important;
+}
+
+.admin-ui-mode .admin-order-card-v2.admin-order-modalized > .station-statuses {
+  display: flex !important;
+}
+
+.admin-ui-mode .admin-order-card-v2.admin-order-modalized > .admin-card-preview-v2 {
+  display: grid !important;
+}
+
+.admin-ui-mode .admin-order-card-v2.admin-order-modalized > .admin-detail-toggle,
+.admin-ui-mode .admin-order-card-v2.admin-order-modalized > .admin-card-detail-button {
+  display: block !important;
+  grid-column: auto !important;
+  grid-row: auto !important;
+  justify-self: stretch !important;
+  width: 100% !important;
+  min-height: 36px !important;
+  margin: 0 !important;
+  padding: 8px 10px !important;
+}
+
+.admin-ui-mode .admin-order-card-v2.admin-order-modalized > .actions {
+  position: static !important;
+  display: flex !important;
+  grid-column: auto !important;
+  grid-row: auto !important;
+  width: 100% !important;
+  align-self: auto !important;
+  flex-direction: column !important;
+  gap: 7px !important;
+  margin: auto 0 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 760px) {
+  .admin-order-modal-overlay {
+    align-items: end;
+    padding: 0;
+  }
+
+  .admin-order-modal {
+    width: 100%;
+    max-height: 93vh;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .admin-order-modal-header {
+    padding: 14px 15px;
+  }
+
+  .admin-order-modal-header h2 {
+    font-size: 18px;
+  }
+
+  .admin-order-modal-close {
+    width: 36px;
+    height: 36px;
+  }
+
+  .admin-order-modal-body {
+    max-height: calc(93vh - 68px);
+    padding: 12px 12px 20px;
+  }
+
+  .admin-order-modal-payment-summary {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .admin-order-modal-detail .admin-detail-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
