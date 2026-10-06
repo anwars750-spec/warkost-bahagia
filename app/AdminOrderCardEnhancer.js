@@ -30,6 +30,14 @@ const orderIdFromCard = (card) => {
   return match ? Number(match[1]) : null;
 };
 
+const isAdminOperations = () => {
+  const hasAdminNav = [...document.querySelectorAll("header.top nav button")].some(
+    (button) => button.textContent.trim().startsWith("Operasional"),
+  );
+  const heading = document.querySelector("main .heading h1")?.textContent?.trim();
+  return hasAdminNav && heading === "Pantau pesanan hari ini";
+};
+
 export default function AdminOrderCardEnhancer() {
   useEffect(() => {
     const ordersById = new Map();
@@ -39,10 +47,10 @@ export default function AdminOrderCardEnhancer() {
     let timer = null;
     let disposed = false;
 
-    const schedule = () => {
+    const schedule = (delay = 40) => {
       if (disposed) return;
       if (timer) window.clearTimeout(timer);
-      timer = window.setTimeout(decorate, 70);
+      timer = window.setTimeout(decorate, delay);
     };
 
     const loadOrders = async () => {
@@ -51,12 +59,13 @@ export default function AdminOrderCardEnhancer() {
         .then(async (response) => {
           if (!response.ok) throw new Error("Gagal memuat ringkasan pesanan");
           const data = await response.json();
+          ordersById.clear();
           (data.orders || []).forEach((order) => ordersById.set(Number(order.id), order));
         })
         .catch(() => {})
         .finally(() => {
           orderRequest = null;
-          schedule();
+          schedule(0);
         });
       return orderRequest;
     };
@@ -75,7 +84,7 @@ export default function AdminOrderCardEnhancer() {
         itemCache.set(id, []);
       } finally {
         itemPending.delete(id);
-        schedule();
+        schedule(0);
       }
     };
 
@@ -191,7 +200,8 @@ export default function AdminOrderCardEnhancer() {
     const decorateCard = (card) => {
       const id = orderIdFromCard(card);
       if (!id) return;
-      card.classList.add("admin-order-card-v2");
+
+      card.classList.add("admin-order-card", "admin-order-card-v2");
       card.classList.toggle(
         "admin-order-card-v2-expanded",
         Boolean(card.querySelector(":scope > .admin-order-detail-v1")),
@@ -217,29 +227,39 @@ export default function AdminOrderCardEnhancer() {
     };
 
     function decorate() {
-      if (!document.body.classList.contains("admin-operations-view")) return;
-      const list = document.querySelector("main .order-list.admin-order-list");
+      if (!isAdminOperations()) return;
+
+      document.body.classList.add("admin-ui-mode", "admin-operations-view");
+      const list = document.querySelector("main .order-list");
       if (!list) return;
-      list.classList.add("admin-order-list-v2");
-      [...list.querySelectorAll(":scope > .admin-order-card")].forEach(decorateCard);
+
+      list.classList.add("admin-order-list", "admin-order-list-v2");
+      [...list.querySelectorAll(":scope > .order")].forEach(decorateCard);
     }
 
     loadOrders();
-    decorate();
+    schedule(0);
 
     const observer = new MutationObserver(schedule);
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class"],
+    });
 
-    const interval = window.setInterval(() => {
-      if (!document.body.classList.contains("admin-operations-view")) return;
+    const uiHeartbeat = window.setInterval(() => schedule(0), 800);
+    const dataHeartbeat = window.setInterval(() => {
+      if (!isAdminOperations()) return;
       loadOrders();
-      schedule();
-    }, 15000);
+      schedule(0);
+    }, 10000);
 
     return () => {
       disposed = true;
       observer.disconnect();
-      window.clearInterval(interval);
+      window.clearInterval(uiHeartbeat);
+      window.clearInterval(dataHeartbeat);
       if (timer) window.clearTimeout(timer);
       document
         .querySelector("main .order-list.admin-order-list-v2")
