@@ -1,5 +1,6 @@
 import "./style.css";
 import "./admin-ui.css";
+import "./admin-icons.css";
 import AdminUiEnhancer from "./AdminUiEnhancer";
 
 export const metadata = {
