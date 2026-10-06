@@ -36,6 +36,47 @@ export default function AdminUiEnhancer() {
       ...document.querySelectorAll("main .order-list > .order"),
     ];
 
+    const resetOrderCards = () => {
+      getOrders().forEach((card) => {
+        card.hidden = false;
+        card.classList.remove("admin-order-card");
+        delete card.dataset.orderStatus;
+        delete card.dataset.orderGroup;
+        delete card.dataset.paymentStatus;
+      });
+    };
+
+    const removeAdminTools = () => {
+      document.getElementById("admin-order-tools")?.remove();
+      activeFilter = "all";
+      query = "";
+      resetOrderCards();
+    };
+
+    const clearAdminDecorations = () => {
+      removeAdminTools();
+      document.body.classList.remove("admin-ui-mode", "admin-operations-view");
+      document.querySelector("header.top")?.classList.remove("admin-ui-header");
+      document.querySelector("main")?.classList.remove("admin-ui-main");
+      document.querySelector("main .heading")?.classList.remove("admin-ui-heading");
+      document.querySelector("header.top nav")?.classList.remove("admin-nav");
+      document
+        .querySelectorAll("header.top nav button")
+        .forEach((button) => button.classList.remove("admin-nav-active"));
+      document
+        .querySelector("main .stats.admin-kpi-grid")
+        ?.classList.remove("admin-kpi-grid");
+      document
+        .querySelector("main .payment-stats.admin-payment-grid")
+        ?.classList.remove("admin-payment-grid");
+      document
+        .querySelector("main .order-list.admin-order-list")
+        ?.classList.remove("admin-order-list");
+      document
+        .querySelector("main .refresh.admin-refresh")
+        ?.classList.remove("admin-refresh");
+    };
+
     const annotateOrder = (card) => {
       const status =
         card.querySelector(".order-head .badge")?.textContent?.trim() || "";
@@ -48,6 +89,12 @@ export default function AdminUiEnhancer() {
     };
 
     const applyFilter = () => {
+      const tools = document.getElementById("admin-order-tools");
+      if (!tools || !document.body.classList.contains("admin-operations-view")) {
+        resetOrderCards();
+        return;
+      }
+
       const cards = getOrders();
       cards.forEach(annotateOrder);
       cards.forEach((card) => {
@@ -58,8 +105,6 @@ export default function AdminUiEnhancer() {
         card.hidden = !(matchesGroup && matchesQuery);
       });
 
-      const tools = document.getElementById("admin-order-tools");
-      if (!tools) return;
       FILTERS.forEach(([key]) => {
         const button = tools.querySelector(`[data-filter="${key}"]`);
         if (!button) return;
@@ -75,7 +120,14 @@ export default function AdminUiEnhancer() {
 
     const ensureTools = (main) => {
       const orderList = main.querySelector(".order-list");
-      if (!orderList || document.getElementById("admin-order-tools")) return;
+      if (!orderList) return;
+
+      const existing = document.getElementById("admin-order-tools");
+      if (existing) {
+        if (existing.nextElementSibling !== orderList) orderList.before(existing);
+        applyFilter();
+        return;
+      }
 
       const tools = document.createElement("section");
       tools.id = "admin-order-tools";
@@ -130,14 +182,19 @@ export default function AdminUiEnhancer() {
     };
 
     const decorate = () => {
-      const admin = isAdmin();
-      document.body.classList.toggle("admin-ui-mode", admin);
-      if (!admin) return;
+      if (!isAdmin()) {
+        clearAdminDecorations();
+        return;
+      }
 
       const header = document.querySelector("header.top");
       const main = document.querySelector("main");
-      if (!header || !main) return;
+      if (!header || !main) {
+        clearAdminDecorations();
+        return;
+      }
 
+      document.body.classList.add("admin-ui-mode");
       header.classList.add("admin-ui-header");
       main.classList.add("admin-ui-main");
 
@@ -149,13 +206,18 @@ export default function AdminUiEnhancer() {
       const onOperations = headingText === "Pantau pesanan hari ini";
       document.body.classList.toggle("admin-operations-view", onOperations);
 
+      if (!onOperations) {
+        removeAdminTools();
+        return;
+      }
+
       const firstStats = main.querySelector(".stats:not(.payment-stats)");
       if (firstStats) firstStats.classList.add("admin-kpi-grid");
       main.querySelector(".payment-stats")?.classList.add("admin-payment-grid");
       main.querySelector(".order-list")?.classList.add("admin-order-list");
       main.querySelector(".refresh")?.classList.add("admin-refresh");
 
-      if (onOperations) ensureTools(main);
+      ensureTools(main);
       applyFilter();
     };
 
@@ -171,7 +233,7 @@ export default function AdminUiEnhancer() {
     return () => {
       observer.disconnect();
       if (timer) window.clearTimeout(timer);
-      document.body.classList.remove("admin-ui-mode", "admin-operations-view");
+      clearAdminDecorations();
     };
   }, []);
 
