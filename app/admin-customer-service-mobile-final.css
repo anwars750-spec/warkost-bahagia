@@ -1,0 +1,237 @@
+@media (max-width: 760px) {
+  #admin-customers-v1:has([data-customer-tab="service"].active) .admin-customers-hero {
+    display: none !important;
+  }
+
+  #admin-customers-v1:has(#admin-customer-service-mobile-v2) .admin-customers-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 8;
+    margin: 0 0 8px;
+    padding: 4px;
+    border: 1px solid #eadfd7;
+    border-radius: 14px;
+    background: rgba(255, 250, 246, .96);
+    box-shadow: 0 8px 20px rgba(61, 37, 27, .05);
+    backdrop-filter: blur(10px);
+  }
+
+  #admin-customers-v1:has(#admin-customer-service-mobile-v2.is-chat) .admin-customers-tabs {
+    display: none !important;
+  }
+
+  #admin-customers-v1:has(#admin-customer-service-mobile-v2) .admin-customers-tabs button {
+    min-height: 46px;
+    padding: 7px 9px;
+  }
+
+  #admin-customers-v1:has(#admin-customer-service-mobile-v2) .admin-customers-tabs button > span {
+    width: 30px;
+    height: 30px;
+  }
+
+  #admin-customers-v1:has(#admin-customer-service-mobile-v2) .admin-customers-tabs button strong {
+    font-size: 10px;
+  }
+
+  #admin-customers-v1:has(#admin-customer-service-mobile-v2) .admin-customers-tabs button small {
+    display: none;
+  }
+
+  .admin-cs-mobile-v2 {
+    margin-top: 6px;
+    padding-bottom: 12px;
+  }
+
+  .admin-cs-mobile-head {
+    align-items: center;
+    min-height: 72px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    box-shadow: 0 8px 20px rgba(63, 37, 25, .04);
+  }
+
+  .admin-cs-mobile-head h3 {
+    margin-top: 3px;
+    font-size: 17px;
+    line-height: 1.12;
+  }
+
+  .admin-cs-mobile-head p {
+    display: none;
+  }
+
+  .admin-cs-mobile-count,
+  .admin-cs-mobile-status {
+    padding: 6px 8px;
+    font-size: 8px;
+  }
+
+  .admin-cs-mobile-stats {
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .admin-cs-mobile-stats article {
+    padding: 8px 6px;
+    border-radius: 12px;
+  }
+
+  .admin-cs-mobile-stats span {
+    font-size: 7px;
+  }
+
+  .admin-cs-mobile-stats strong {
+    margin-top: 2px;
+    font-size: 15px;
+  }
+
+  .admin-cs-mobile-search {
+    min-height: 40px;
+    margin-top: 8px;
+    padding-inline: 11px;
+    border-radius: 12px;
+  }
+
+  .admin-cs-mobile-tabs {
+    gap: 4px;
+    margin-top: 7px;
+    padding: 3px;
+    border-radius: 12px;
+  }
+
+  .admin-cs-mobile-tabs button {
+    min-height: 31px;
+    border-radius: 9px;
+    font-size: 8px;
+  }
+
+  .admin-cs-mobile-selected {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 9px 10px;
+    border-radius: 14px;
+    box-shadow: none;
+  }
+
+  .admin-cs-mobile-selected .admin-cs-mobile-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    font-size: 10px;
+  }
+
+  .admin-cs-mobile-selected-copy small {
+    font-size: 7px;
+  }
+
+  .admin-cs-mobile-selected-copy strong {
+    font-size: 10px;
+  }
+
+  .admin-cs-mobile-selected-copy span {
+    font-size: 7px;
+  }
+
+  .admin-cs-mobile-selected button {
+    min-height: 32px;
+    padding: 0 10px;
+    border-radius: 9px;
+    font-size: 8px;
+  }
+
+  .admin-cs-mobile-inbox-empty {
+    min-height: 150px;
+    margin-top: 8px;
+    padding: 22px 16px;
+    border-radius: 16px;
+  }
+
+  .admin-cs-mobile-empty-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 13px;
+  }
+
+  .admin-cs-mobile-inbox-empty strong,
+  .admin-cs-mobile-chat-body strong {
+    margin-top: 9px;
+    font-size: 11px;
+  }
+
+  .admin-cs-mobile-inbox-empty p,
+  .admin-cs-mobile-chat-body p {
+    max-width: 260px;
+    margin-top: 4px;
+    font-size: 8px;
+    line-height: 1.45;
+  }
+
+  .admin-cs-mobile-chat-head {
+    grid-template-columns: 36px 38px minmax(0, 1fr) 36px;
+    gap: 7px;
+    padding: 9px;
+    border-radius: 16px;
+    box-shadow: 0 8px 20px rgba(62, 39, 29, .04);
+  }
+
+  .admin-cs-mobile-chat-head .admin-cs-mobile-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    font-size: 10px;
+  }
+
+  .admin-cs-mobile-icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+  }
+
+  .admin-cs-mobile-chat-title strong {
+    font-size: 11px;
+  }
+
+  .admin-cs-mobile-chat-title span {
+    font-size: 7px;
+  }
+
+  .admin-cs-mobile-order-context {
+    margin-top: 8px;
+    padding: 10px 12px;
+    border-radius: 14px;
+  }
+
+  .admin-cs-mobile-order-context strong {
+    font-size: 10px;
+  }
+
+  .admin-cs-mobile-order-context span:not(.admin-cs-mobile-status) {
+    font-size: 7px;
+  }
+
+  .admin-cs-mobile-chat-body {
+    min-height: 300px;
+    margin-top: 8px;
+    padding: 28px 18px;
+    border-radius: 16px;
+  }
+
+  .admin-cs-mobile-composer {
+    margin-top: 8px;
+    padding: 7px;
+    border-radius: 14px;
+  }
+
+  .admin-cs-mobile-composer input,
+  .admin-cs-mobile-composer button {
+    min-height: 36px;
+    border-radius: 10px;
+  }
+
+  .admin-cs-mobile-composer input,
+  .admin-cs-mobile-composer button.send {
+    font-size: 8px;
+  }
+}
