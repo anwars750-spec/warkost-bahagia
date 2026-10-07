@@ -6,9 +6,11 @@ import "./admin-order-cards-v2.css";
 import "./admin-order-modal.css";
 import "./admin-order-modal-close-fix.css";
 import "./admin-order-modal-fallback.css";
+import "./admin-customers.css";
 import AdminUiEnhancer from "./AdminUiEnhancer";
 import AdminOrderCardEnhancer from "./AdminOrderCardEnhancer";
 import AdminOrderModalEnhancer from "./AdminOrderModalEnhancer";
+import AdminCustomersEnhancer from "./AdminCustomersEnhancer";
 
 export const metadata = {
   title: "Warkost Bahagia",
@@ -22,6 +24,7 @@ export default function RootLayout({ children }) {
         <AdminUiEnhancer />
         <AdminOrderCardEnhancer />
         <AdminOrderModalEnhancer />
+        <AdminCustomersEnhancer />
         {children}
       </body>
     </html>
