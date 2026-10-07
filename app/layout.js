@@ -16,6 +16,7 @@ import "./admin-printer-center.css";
 import "./admin-notification-popover.css";
 import "./admin-notification-popover-mobile-fix.css";
 import "./admin-beverage-stock.css";
+import "./admin-beverage-stock-polish.css";
 import AdminUiEnhancer from "./AdminUiEnhancer";
 import AdminOrderCardEnhancer from "./AdminOrderCardEnhancer";
 import AdminOrderModalEnhancer from "./AdminOrderModalEnhancer";
@@ -25,6 +26,7 @@ import AdminCustomerServiceMobileEnhancer from "./AdminCustomerServiceMobileEnha
 import AdminPrinterEnhancerV2 from "./AdminPrinterEnhancerV2";
 import AdminNotificationPopover from "./AdminNotificationPopover";
 import AdminBeverageStockEnhancer from "./AdminBeverageStockEnhancer";
+import AdminBeverageStockPolish from "./AdminBeverageStockPolish";
 
 export const metadata = {
   title: "Warkost Bahagia",
@@ -44,6 +46,7 @@ export default function RootLayout({ children }) {
         <AdminPrinterEnhancerV2 />
         <AdminNotificationPopover />
         <AdminBeverageStockEnhancer />
+        <AdminBeverageStockPolish />
         {children}
       </body>
     </html>
