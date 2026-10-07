@@ -1,0 +1,54 @@
+/* Focused Admin Operasional hotfix: filter visibility + COD shortcut affordance */
+
+.admin-ui-mode .admin-order-list > .order[hidden],
+.admin-ui-mode .admin-order-list > .admin-order-card-v2[hidden] {
+  display: none !important;
+}
+
+.admin-cod-settlement-shortcut {
+  cursor: pointer !important;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.admin-cod-settlement-shortcut:hover,
+.admin-cod-settlement-shortcut:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(151, 76, 42, 0.28) !important;
+  background: #fffaf4 !important;
+  box-shadow: 0 10px 24px rgba(88, 48, 29, 0.09);
+  outline: none;
+}
+
+.admin-cod-settlement-shortcut:focus-visible {
+  box-shadow:
+    0 0 0 3px rgba(181, 112, 71, 0.16),
+    0 10px 24px rgba(88, 48, 29, 0.09);
+}
+
+.admin-cod-settlement-shortcut::after {
+  content: "Buka";
+  display: inline-flex;
+  margin-left: 10px;
+  padding: 4px 8px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(139, 67, 36, 0.16);
+  border-radius: 999px;
+  color: #7c3827;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 760px) {
+  .admin-cod-settlement-shortcut::after {
+    margin-left: 6px;
+    padding: 3px 6px;
+    font-size: 8px;
+  }
+}
