@@ -20,6 +20,7 @@ import "./admin-beverage-stock-polish.css";
 import "./admin-beverage-stock-mobile-v3.css";
 import "./admin-beverage-stock-mobile-kpi-center.css";
 import "./admin-ui-stability.css";
+import AdminCodSettlementShortcut from "./AdminCodSettlementShortcut";
 
 export const metadata = {
   title: "Warkost Bahagia",
@@ -31,6 +32,7 @@ export default function RootLayout({ children }) {
     <html lang="id">
       <body>
         {children}
+        <AdminCodSettlementShortcut />
         <div id="admin-ui-portal-root" />
       </body>
     </html>
