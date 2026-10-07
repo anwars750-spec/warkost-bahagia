@@ -14,11 +14,12 @@ const money = (value) =>
   `Rp${Number(value || 0).toLocaleString("id-ID")}`;
 
 const methodLabel = (method) => {
-  if (["COD", "CASH"].includes(String(method || "").toUpperCase())) {
+  const normalized = String(method || "").toUpperCase();
+  if (["COD", "CASH"].includes(normalized)) {
     return ["COD", "Tunai saat diterima"];
   }
-  if (method === "QRIS") return ["QRIS", "Pembayaran QRIS"];
-  if (method === "BANK_TRANSFER") return ["Transfer", "Transfer bank"];
+  if (normalized === "QRIS") return ["QRIS", "Pembayaran QRIS"];
+  if (normalized === "BANK_TRANSFER") return ["Transfer", "Transfer bank"];
   return [method || "—", "Media pembayaran"];
 };
 
@@ -26,7 +27,7 @@ const stationLabel = (station) =>
   station === "KITCHEN"
     ? "Dapur"
     : station === "CASHIER"
-      ? "Admin · minuman"
+      ? "Admin minuman"
       : station || "";
 
 const ORDER_STEPS = [
@@ -47,6 +48,36 @@ const orderIdFromCard = (card) => {
 };
 
 const displayOrderId = (id) => `WB${String(id).padStart(6, "0")}`;
+
+const formatDateTime = (value) => {
+  if (!value) return "Waktu pesanan tidak tersedia";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date).replace(" pukul", " ·");
+};
+
+const statusTone = (value) =>
+  String(value || "default")
+    .toLowerCase()
+    .replaceAll("_", "-")
+    .replace(/[^a-z0-9-]/g, "");
+
+const deliverySummary = (status) => {
+  const current = String(status || "PENDING").toUpperCase();
+  if (["PENDING", "CONFIRMED", "PREPARING"].includes(current)) return "Belum siap untuk driver";
+  if (current === "READY") return "Menunggu driver mengambil pesanan";
+  if (current === "ASSIGNED") return "Driver sudah mengambil tugas";
+  if (current === "PICKED_UP") return "Pesanan sudah diambil driver";
+  if (current === "ON_DELIVERY") return "Pesanan sedang menuju pelanggan";
+  if (current === "DELIVERED") return "Pesanan telah diterima pelanggan";
+  return current.replaceAll("_", " ");
+};
 
 export default function AdminOrderModalEnhancer() {
   useEffect(() => {
@@ -70,9 +101,10 @@ export default function AdminOrderModalEnhancer() {
       modal.innerHTML = `
         <section class="admin-order-modal" role="dialog" aria-modal="true" aria-labelledby="admin-modal-title">
           <header class="admin-order-modal-header">
-            <div>
+            <div class="admin-order-modal-heading">
               <small>DETAIL PESANAN</small>
               <h2 id="admin-modal-title">#${escapeHtml(displayOrderId(id))}</h2>
+              <p id="admin-modal-meta">Memuat informasi pesanan…</p>
             </div>
             <button type="button" class="admin-order-modal-close" aria-label="Tutup detail">×</button>
           </header>
@@ -80,6 +112,7 @@ export default function AdminOrderModalEnhancer() {
             <div class="admin-modal-loading">
               <span></span>
               <strong>Memuat rincian pesanan…</strong>
+              <small>Menyiapkan informasi transaksi dan perjalanan order.</small>
             </div>
           </div>
         </section>
@@ -116,7 +149,10 @@ export default function AdminOrderModalEnhancer() {
     };
 
     const buildTimeline = (status, events = []) => {
-      const currentIndex = ORDER_STEPS.findIndex(([key]) => key === status);
+      const currentIndex = Math.max(
+        0,
+        ORDER_STEPS.findIndex(([key]) => key === status),
+      );
       const eventMap = new Map(
         events.map((event) => [String(event.next_status || "").toUpperCase(), event.created_at || ""]),
       );
@@ -126,10 +162,10 @@ export default function AdminOrderModalEnhancer() {
         const time = eventMap.get(key) || (index === currentIndex ? "Status saat ini" : "");
         return `
           <div class="admin-modal-step ${state}">
-            <span>${marker}</span>
-            <div>
+            <span class="admin-modal-step-marker">${marker}</span>
+            <div class="admin-modal-step-copy">
               <strong>${escapeHtml(label)}</strong>
-              ${time ? `<small>${escapeHtml(time)}</small>` : ""}
+              ${time ? `<small>${escapeHtml(formatDateTime(time))}</small>` : ""}
             </div>
           </div>
         `;
@@ -142,63 +178,135 @@ export default function AdminOrderModalEnhancer() {
       const items = details?.items || [];
       const events = details?.events || [];
       const status = String(order.status || "PENDING").toUpperCase();
+      const paymentStatus = String(order.payment_status || "—").toUpperCase();
+      const createdAt = order.created_at || order.createdAt || events?.[0]?.created_at || "";
+      const customerName = order.customer_name || "Pelanggan";
+      const customerInitial = String(customerName).trim().charAt(0).toUpperCase() || "P";
+
       const itemsMarkup = items.length
-        ? items.map((item) => `
+        ? items.map((item, index) => `
             <div class="admin-modal-item">
-              <div>
+              <div class="admin-modal-item-index">${index + 1}</div>
+              <div class="admin-modal-item-copy">
                 <strong>${escapeHtml(item.name)}</strong>
-                <small>${escapeHtml(item.quantity)}×${item.prep_station ? ` · ${escapeHtml(stationLabel(item.prep_station))}` : ""}</small>
+                <small>${escapeHtml(item.quantity)} × ${escapeHtml(money(item.price))}${item.prep_station ? ` · ${escapeHtml(stationLabel(item.prep_station))}` : ""}</small>
               </div>
-              <strong>${escapeHtml(money(Number(item.price || 0) * Number(item.quantity || 0)))}</strong>
+              <strong class="admin-modal-item-price">${escapeHtml(money(Number(item.price || 0) * Number(item.quantity || 0)))}</strong>
             </div>
           `).join("")
         : '<div class="admin-modal-empty">Belum ada item pesanan.</div>';
 
-      const stationChips = [
-        order.kitchen_status ? `Dapur · ${order.kitchen_status}` : "",
-        order.cashier_status ? `Admin minuman · ${order.cashier_status}` : "",
-      ].filter(Boolean).map((label) => `<span>${escapeHtml(label)}</span>`).join("");
+      const stations = [
+        order.kitchen_status ? ["Dapur", order.kitchen_status] : null,
+        order.cashier_status ? ["Admin minuman", order.cashier_status] : null,
+      ].filter(Boolean);
+
+      const stationRows = stations.length
+        ? stations.map(([label, value]) => `
+            <div class="admin-modal-operation-row">
+              <span>${escapeHtml(label)}</span>
+              <strong>${escapeHtml(String(value).replaceAll("_", " "))}</strong>
+            </div>
+          `).join("")
+        : '<div class="admin-modal-operation-row muted"><span>Station</span><strong>Belum tersedia</strong></div>';
+
+      const headerMeta = modal.querySelector("#admin-modal-meta");
+      if (headerMeta) {
+        headerMeta.textContent = `${customerName} · ${formatDateTime(createdAt)}`;
+      }
 
       const body = modal.querySelector(".admin-order-modal-body");
       if (!body) return;
       body.innerHTML = `
-        <div class="admin-modal-top-grid">
-          <section class="admin-modal-summary-card">
-            <small>STATUS PESANAN</small>
-            <div class="admin-modal-status-row">
-              <strong>${escapeHtml(status.replaceAll("_", " "))}</strong>
-              <span>${escapeHtml(order.payment_status || "—")}</span>
+        <section class="admin-modal-hero">
+          <div class="admin-modal-hero-copy">
+            <small>STATUS ORDER</small>
+            <div class="admin-modal-status-stack">
+              <span class="admin-modal-status-pill status-${escapeHtml(statusTone(status))}">${escapeHtml(status.replaceAll("_", " "))}</span>
+              <span class="admin-modal-payment-pill payment-${escapeHtml(statusTone(paymentStatus))}">${escapeHtml(paymentStatus)}</span>
             </div>
-            <div class="admin-modal-money-row">
-              <div><small>Total</small><strong>${escapeHtml(money(order.total))}</strong></div>
-              <div><small>Media bayar</small><strong>${escapeHtml(methodShort)}</strong><em>${escapeHtml(methodLong)}</em></div>
-            </div>
-            ${stationChips ? `<div class="admin-modal-stations">${stationChips}</div>` : ""}
-          </section>
+            <p>${escapeHtml(deliverySummary(status))}</p>
+          </div>
+          <div class="admin-modal-hero-total">
+            <small>TOTAL PESANAN</small>
+            <strong>${escapeHtml(money(order.total))}</strong>
+            <span>${escapeHtml(methodShort)} · ${escapeHtml(methodLong)}</span>
+          </div>
+        </section>
 
-          <section class="admin-modal-customer-card">
-            <small>PELANGGAN</small>
-            <strong>${escapeHtml(order.customer_name || "Pelanggan")}</strong>
-            <span>${escapeHtml(order.address || "Alamat belum tersedia")}</span>
-            <button type="button" class="admin-modal-message-button" disabled>Kirim pesan ke customer</button>
-            <p>Chat internal akan aktif setelah backend komunikasi selesai.</p>
-          </section>
+        <div class="admin-modal-content-grid">
+          <div class="admin-modal-main-column">
+            <section class="admin-modal-panel admin-modal-items-panel">
+              <div class="admin-modal-panel-heading">
+                <div>
+                  <small>RINGKASAN ORDER</small>
+                  <h3>Item pesanan</h3>
+                </div>
+                <span>${items.length} item</span>
+              </div>
+              <div class="admin-modal-items">${itemsMarkup}</div>
+              <div class="admin-modal-total-row">
+                <div>
+                  <span>Total transaksi</span>
+                  <small>${escapeHtml(methodShort)} · ${escapeHtml(paymentStatus)}</small>
+                </div>
+                <strong>${escapeHtml(money(order.total))}</strong>
+              </div>
+            </section>
+
+            <section class="admin-modal-panel admin-modal-progress-panel">
+              <div class="admin-modal-panel-heading">
+                <div>
+                  <small>PROGRESS PESANAN</small>
+                  <h3>Perjalanan order</h3>
+                </div>
+                <span class="admin-modal-current-state">${escapeHtml(status.replaceAll("_", " "))}</span>
+              </div>
+              <div class="admin-modal-timeline">${buildTimeline(status, events)}</div>
+            </section>
+          </div>
+
+          <aside class="admin-modal-side-column">
+            <section class="admin-modal-panel admin-modal-customer-panel">
+              <div class="admin-modal-customer-head">
+                <div class="admin-modal-avatar">${escapeHtml(customerInitial)}</div>
+                <div>
+                  <small>PELANGGAN</small>
+                  <strong>${escapeHtml(customerName)}</strong>
+                </div>
+              </div>
+              <div class="admin-modal-address-block">
+                <small>ALAMAT PENGIRIMAN</small>
+                <span>${escapeHtml(order.address || "Alamat belum tersedia")}</span>
+              </div>
+              <button type="button" class="admin-modal-message-button" disabled>
+                <span class="admin-modal-message-icon" aria-hidden="true">↗</span>
+                Kirim pesan ke customer
+              </button>
+              <p class="admin-modal-backend-note">Chat internal siap dihubungkan saat backend komunikasi selesai.</p>
+            </section>
+
+            <section class="admin-modal-panel admin-modal-operations-panel">
+              <div class="admin-modal-panel-heading compact">
+                <div>
+                  <small>OPERASIONAL</small>
+                  <h3>Status penanganan</h3>
+                </div>
+              </div>
+              <div class="admin-modal-operation-list">
+                ${stationRows}
+                <div class="admin-modal-operation-row">
+                  <span>Pengiriman</span>
+                  <strong>${escapeHtml(deliverySummary(status))}</strong>
+                </div>
+                <div class="admin-modal-operation-row">
+                  <span>Pembayaran</span>
+                  <strong>${escapeHtml(methodShort)} · ${escapeHtml(paymentStatus)}</strong>
+                </div>
+              </div>
+            </section>
+          </aside>
         </div>
-
-        <section class="admin-modal-section">
-          <div class="admin-modal-section-heading">
-            <div><small>RINGKASAN</small><h3>Item pesanan (${items.length})</h3></div>
-          </div>
-          <div class="admin-modal-items">${itemsMarkup}</div>
-          <div class="admin-modal-total"><span>Total pesanan</span><strong>${escapeHtml(money(order.total))}</strong></div>
-        </section>
-
-        <section class="admin-modal-section">
-          <div class="admin-modal-section-heading">
-            <div><small>PROGRESS</small><h3>Perjalanan pesanan</h3></div>
-          </div>
-          <div class="admin-modal-timeline">${buildTimeline(status, events)}</div>
-        </section>
       `;
     };
 
@@ -206,8 +314,6 @@ export default function AdminOrderModalEnhancer() {
       const id = orderIdFromCard(card);
       if (!id) return;
 
-      // renderLoadingModal closes any previous modal and advances requestToken.
-      // Capture the token only after the new modal exists so the response is not discarded.
       renderLoadingModal(id);
       const token = requestToken;
 
@@ -224,7 +330,13 @@ export default function AdminOrderModalEnhancer() {
         if (token !== requestToken || !modal) return;
         const body = modal.querySelector(".admin-order-modal-body");
         if (body) {
-          body.innerHTML = `<div class="admin-modal-error"><strong>Detail belum dapat dimuat.</strong><span>${escapeHtml(error.message)}</span></div>`;
+          body.innerHTML = `
+            <div class="admin-modal-error">
+              <strong>Detail belum dapat dimuat.</strong>
+              <span>${escapeHtml(error.message)}</span>
+              <small>Tutup popup lalu coba buka kembali detail pesanan.</small>
+            </div>
+          `;
         }
       }
     };
