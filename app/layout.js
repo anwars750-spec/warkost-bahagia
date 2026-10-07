@@ -17,6 +17,7 @@ import "./admin-notification-popover.css";
 import "./admin-notification-popover-mobile-fix.css";
 import "./admin-beverage-stock.css";
 import "./admin-beverage-stock-polish.css";
+import "./admin-beverage-stock-mobile-v3.css";
 import AdminUiEnhancer from "./AdminUiEnhancer";
 import AdminOrderCardEnhancer from "./AdminOrderCardEnhancer";
 import AdminOrderModalEnhancer from "./AdminOrderModalEnhancer";
