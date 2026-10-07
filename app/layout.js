@@ -19,6 +19,7 @@ import "./admin-beverage-stock.css";
 import "./admin-beverage-stock-polish.css";
 import "./admin-beverage-stock-mobile-v3.css";
 import "./admin-beverage-stock-mobile-kpi-center.css";
+import "./admin-ui-stability.css";
 import AdminUiEnhancer from "./AdminUiEnhancer";
 import AdminOrderCardEnhancer from "./AdminOrderCardEnhancer";
 import AdminOrderModalEnhancer from "./AdminOrderModalEnhancer";
@@ -27,8 +28,9 @@ import AdminCustomersEnhancer from "./AdminCustomersEnhancer";
 import AdminCustomerServiceMobileEnhancer from "./AdminCustomerServiceMobileEnhancer";
 import AdminPrinterEnhancerV2 from "./AdminPrinterEnhancerV2";
 import AdminNotificationPopover from "./AdminNotificationPopover";
-import AdminBeverageStockEnhancer from "./AdminBeverageStockEnhancer";
+import AdminBeverageStockEnhancerV2 from "./AdminBeverageStockEnhancerV2";
 import AdminBeverageStockPolish from "./AdminBeverageStockPolish";
+import AdminUiStabilityGuard from "./AdminUiStabilityGuard";
 
 export const metadata = {
   title: "Warkost Bahagia",
@@ -47,9 +49,11 @@ export default function RootLayout({ children }) {
         <AdminCustomerServiceMobileEnhancer />
         <AdminPrinterEnhancerV2 />
         <AdminNotificationPopover />
-        <AdminBeverageStockEnhancer />
+        <AdminBeverageStockEnhancerV2 />
         <AdminBeverageStockPolish />
+        <AdminUiStabilityGuard />
         {children}
+        <div id="admin-ui-portal-root" />
       </body>
     </html>
   );
