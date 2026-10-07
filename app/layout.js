@@ -11,6 +11,7 @@ import "./admin-customers-polish.css";
 import "./admin-customer-modal-polish.css";
 import "./admin-customers-singleton.css";
 import "./admin-customer-service-mobile.css";
+import "./admin-customer-service-mobile-final.css";
 import AdminUiEnhancer from "./AdminUiEnhancer";
 import AdminOrderCardEnhancer from "./AdminOrderCardEnhancer";
 import AdminOrderModalEnhancer from "./AdminOrderModalEnhancer";
