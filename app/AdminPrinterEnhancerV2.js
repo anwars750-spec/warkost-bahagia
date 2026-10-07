@@ -61,7 +61,6 @@ const jobKind = (job) => (isKitchen(job) ? "Kitchen Ticket" : "Struk Admin");
 export default function AdminPrinterEnhancerV2() {
   useEffect(() => {
     let root = null;
-    let nativePanel = null;
     let observer = null;
     let raf = null;
     let modal = null;
@@ -71,15 +70,22 @@ export default function AdminPrinterEnhancerV2() {
     let activeTab = "queue";
     let activeTarget = "all";
     let search = "";
-    let originalHeadingText = null;
-    let originalHeadingDisplay = "";
-    let hiddenCodBlock = null;
-    let hiddenCodDisplay = "";
+    let loaded = false;
 
     const findNativePanel = () =>
       [...document.querySelectorAll("main .panel")].find((panel) =>
         panel.textContent?.includes("Antrean cetak struk 80mm"),
       );
+
+    const portal = () => document.getElementById("admin-ui-portal-root");
+
+    const syncNavActive = (active) => {
+      document.querySelectorAll("header.top nav button").forEach((button) => {
+        const label = button.textContent.replace(/\d+/g, "").trim();
+        if (active) button.classList.toggle("admin-nav-active", label === "Printer");
+        else if (label === "Printer") button.classList.remove("admin-nav-active");
+      });
+    };
 
     const statusTone = (status) => {
       if (["SUCCESS", "PRINTED", "DONE", "COMPLETED"].includes(status)) return "success";
@@ -113,66 +119,6 @@ export default function AdminPrinterEnhancerV2() {
         const haystack = `${jobOrder(job)} ${jobKind(job)} ${jobPrinter(job)} ${status}`.toLowerCase();
         return targetOk && tabOk && (!term || haystack.includes(term));
       });
-    };
-
-    const findSmallestTextBlock = (needle) => {
-      const matches = [...document.querySelectorAll("main *")].filter((el) =>
-        el.textContent?.trim().includes(needle),
-      );
-      const leaf = matches.find((el) =>
-        ![...el.children].some((child) => child.textContent?.includes(needle)),
-      );
-      if (!leaf) return null;
-      let candidate = leaf;
-      while (
-        candidate.parentElement &&
-        candidate.parentElement.matches("main *") &&
-        candidate.parentElement.textContent.trim().length < 240
-      ) {
-        candidate = candidate.parentElement;
-      }
-      return candidate;
-    };
-
-    const preparePrinterContext = () => {
-      const heading = document.querySelector("main .heading");
-      const h1 = heading?.querySelector("h1");
-      if (heading && h1) {
-        if (originalHeadingText === null) originalHeadingText = h1.textContent;
-        originalHeadingDisplay = heading.style.display || "";
-        if (h1.textContent !== "Pusat cetak printer") h1.textContent = "Pusat cetak printer";
-        heading.style.display = "none";
-      }
-
-      document.getElementById("admin-order-tools")?.remove();
-      document.getElementById("admin-daily-summary")?.remove();
-      document.body.classList.remove("admin-operations-view");
-
-      const cod = findSmallestTextBlock("SETORAN COD");
-      if (cod && cod !== root) {
-        if (!hiddenCodBlock) {
-          hiddenCodBlock = cod;
-          hiddenCodDisplay = cod.style.display || "";
-        }
-        cod.style.display = "none";
-      }
-
-      document.querySelectorAll("header.top nav button").forEach((button) => {
-        const label = button.textContent.replace(/\d+/g, "").trim();
-        button.classList.toggle("admin-nav-active", label === "Printer");
-      });
-    };
-
-    const restorePrinterContext = () => {
-      const heading = document.querySelector("main .heading");
-      const h1 = heading?.querySelector("h1");
-      if (heading && h1 && originalHeadingText !== null) {
-        h1.textContent = originalHeadingText;
-        heading.style.display = originalHeadingDisplay;
-      }
-      if (hiddenCodBlock?.isConnected) hiddenCodBlock.style.display = hiddenCodDisplay;
-      hiddenCodBlock = null;
-      originalHeadingText = null;
     };
 
     const renderPrinterStatus = () => `
@@ -355,26 +301,34 @@ export default function AdminPrinterEnhancerV2() {
       closeModal();
       root?.remove();
       root = null;
-      if (nativePanel?.isConnected) nativePanel.style.display = "";
-      nativePanel = null;
-      restorePrinterContext();
+      loaded = false;
+      document.body.classList.remove("admin-printer-stable-view");
+      syncNavActive(false);
     };
 
     const mount = () => {
       const panel = findNativePanel();
-      if (!panel) {
-        if (root) unmount();
+      const host = portal();
+      if (!panel || !host) {
+        if (root || document.body.classList.contains("admin-printer-stable-view")) unmount();
         return;
       }
-      nativePanel = panel;
-      preparePrinterContext();
-      nativePanel.style.display = "none";
+
+      document.body.classList.add("admin-printer-stable-view");
+      syncNavActive(true);
+
       if (!root || !root.isConnected) {
         root = document.createElement("div");
         root.id = "admin-printer-center-v1";
-        nativePanel.before(root);
+        host.appendChild(root);
         attachRootEvents();
         render();
+      } else if (root.parentElement !== host) {
+        host.appendChild(root);
+      }
+
+      if (!loaded) {
+        loaded = true;
         loadJobs();
       }
     };
