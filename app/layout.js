@@ -7,6 +7,7 @@ import "./admin-order-modal.css";
 import "./admin-order-modal-close-fix.css";
 import "./admin-order-modal-fallback.css";
 import "./admin-cod-settlement.css";
+import "./admin-operational-hotfix.css";
 import "./admin-customers.css";
 import "./admin-customers-polish.css";
 import "./admin-customer-modal-polish.css";
