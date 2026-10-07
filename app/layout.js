@@ -19,7 +19,7 @@ import AdminOrderModalEnhancer from "./AdminOrderModalEnhancer";
 import AdminCustomersSingletonGuard from "./AdminCustomersSingletonGuard";
 import AdminCustomersEnhancer from "./AdminCustomersEnhancer";
 import AdminCustomerServiceMobileEnhancer from "./AdminCustomerServiceMobileEnhancer";
-import AdminPrinterEnhancer from "./AdminPrinterEnhancer";
+import AdminPrinterEnhancerV2 from "./AdminPrinterEnhancerV2";
 
 export const metadata = {
   title: "Warkost Bahagia",
@@ -36,7 +36,7 @@ export default function RootLayout({ children }) {
         <AdminCustomersSingletonGuard />
         <AdminCustomersEnhancer />
         <AdminCustomerServiceMobileEnhancer />
-        <AdminPrinterEnhancer />
+        <AdminPrinterEnhancerV2 />
         {children}
       </body>
     </html>
