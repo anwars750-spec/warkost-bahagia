@@ -14,6 +14,7 @@ import "./admin-customer-service-mobile.css";
 import "./admin-customer-service-mobile-final.css";
 import "./admin-printer-center.css";
 import "./admin-notification-popover.css";
+import "./admin-notification-popover-mobile-fix.css";
 import AdminUiEnhancer from "./AdminUiEnhancer";
 import AdminOrderCardEnhancer from "./AdminOrderCardEnhancer";
 import AdminOrderModalEnhancer from "./AdminOrderModalEnhancer";
