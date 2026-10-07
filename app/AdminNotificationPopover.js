@@ -96,20 +96,11 @@ export default function AdminNotificationPopover() {
       }
     };
 
-    const updateAnchorBadge = () => {
+    const syncNativeBadge = () => {
       const button = findButton();
-      if (!button) return;
-      let badge = button.querySelector(".admin-notification-badge-v2");
-      if (!unread) {
-        badge?.remove();
-        return;
-      }
-      if (!badge) {
-        badge = document.createElement("span");
-        badge.className = "admin-notification-badge-v2";
-        button.appendChild(badge);
-      }
-      badge.textContent = unread > 99 ? "99+" : String(unread);
+      const badge = button?.querySelector(".notification-count");
+      if (badge && unread > 0) badge.textContent = unread > 99 ? "99+" : String(unread);
+      if (badge && unread === 0) badge.style.display = "none";
     };
 
     const render = () => {
@@ -202,7 +193,7 @@ export default function AdminNotificationPopover() {
       } finally {
         loading = false;
         render();
-        updateAnchorBadge();
+        syncNativeBadge();
       }
     };
 
@@ -220,7 +211,7 @@ export default function AdminNotificationPopover() {
         target.read_at = new Date().toISOString();
         unread = Math.max(0, unread - 1);
         render();
-        updateAnchorBadge();
+        syncNativeBadge();
       } catch (err) {
         error = err.message || "Gagal menandai notifikasi";
         render();
@@ -249,7 +240,7 @@ export default function AdminNotificationPopover() {
       } finally {
         loading = false;
         render();
-        updateAnchorBadge();
+        syncNativeBadge();
       }
     };
 
