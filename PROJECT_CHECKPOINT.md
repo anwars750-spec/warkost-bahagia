@@ -25,9 +25,52 @@
 - Manager / RBAC Core + Kasir Removal implementation: `53636e8c01b887afe3cac9134cfa0fd8f9b81ff9`
 - Manager RBAC Settings hotfix implementation: `038c82d7c159d1bd2bee17cdc03553fa4b24385e`
 - Admin + Driver Operational Flow hotfix implementation: `72d2685295d5a86c587a4aa09373f4925a193db9`
-- Current milestone: Admin + Driver Operational Flow hotfix — completed
-- Current status: **VERIFIED**
-- Verification date: 2026-10-05
+- Admin UI Final Regression Stabilization implementation: `5db3642804c4cb264410ae24e245da8064cae6eb`
+- Current milestone: Admin UI Final Regression Stabilization
+- Current status: **IMPLEMENTED / TARGETED TESTS PASS / BUILD PASS / LOCAL BROWSER UAT REQUIRED**
+- Verification date: 2026-10-07
+
+## Admin UI Final Regression Stabilization
+
+### Root cause
+
+- Admin enhancers were mounted globally from `app/layout.js` even when their view was inactive.
+- Multiple body-wide `MutationObserver` instances inferred routes from headings/native panels and competed over React-owned navigation, body classes, enhanced roots, and portal content.
+- Floating Stok navigation, successive Printer/Customer guards, delayed callbacks, and CSS route fences could restore stale or mixed UI after React view changes.
+
+### Deterministic lifecycle fix
+
+- React `role + view` in `app/page.js` is now the single Admin workspace lifecycle owner.
+- Admin navigation is React-owned in the final order: `Operasional | Pelanggan | Stok | Printer | Notifikasi | Keluar`; active state and icons no longer depend on DOM injection.
+- Operasional, Pelanggan, Stok, and Printer enhancers mount only while their matching view is active and clean up on React unmount.
+- Stok and Printer retain their approved portal presentations, with body class/root cleanup bound to the active view.
+- Pelanggan mobile and Operasional card polish use explicit render events instead of global body observers.
+- Obsolete view coordinator, stability guard, singleton guard, legacy Stock/Printer enhancers, polling heartbeat, floating navigation, and CSS route fences were removed.
+- Existing Admin business permissions and all non-Admin flows were unchanged.
+
+### Focused verification
+
+- Targeted Admin lifecycle/customer/notification/RBAC tests: **15/15 PASS**.
+- New structural lifecycle suite: **4/4 PASS**.
+- Production build with Next.js 16.3.6: **PASS**.
+- Desktop/mobile Playwright 3-cycle regression spec: **2 projects discovered and ready**.
+- Browser execution in this Work environment: **BLOCKED before app launch** because the Playwright Chromium executable is not installed; no browser download was attempted.
+- Structural checks confirm one React-owned active view, deterministic Stok/Printer roots, removal of heading-based routing/global observers, no stale route-fence CSS, and view-keyed notification cleanup.
+
+### Files and areas changed
+
+- `app/page.js`, `app/layout.js`
+- Active Admin Operasional, Pelanggan, Stok, Printer, and Notifikasi enhancers
+- Admin stability/icon CSS
+- Obsolete Admin coordinator/guard/enhancer files removed
+- `tests/admin-ui-stabilization.test.mjs`
+- `tests/uat/admin-ui-stabilization.spec.mjs`
+- `ADMIN_UI_REGRESSION_AUDIT.md`
+
+### Remaining verification limitation
+
+- Run `tests/uat/admin-ui-stabilization.spec.mjs` on a local machine with Playwright Chromium to execute the specified cross-view sequence three times at desktop and mobile viewports. This is an environment/browser availability limitation, not a known application defect.
+- No Critical or High defect was found by the completed focused tests and production build.
 
 ## Scope completed
 
