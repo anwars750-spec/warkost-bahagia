@@ -1,0 +1,326 @@
+#admin-printer-center-v1 {
+  margin: 0 auto;
+  max-width: 1480px;
+  color: #2f1b14;
+}
+
+#admin-printer-center-v1 * { box-sizing: border-box; }
+#admin-printer-center-v1 svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.admin-printer-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 4px 0 22px;
+}
+.admin-printer-hero > div:first-child small,
+.admin-printer-device-card small,
+.admin-printer-modal header small,
+.admin-printer-preview small {
+  color: #a45738;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .14em;
+}
+.admin-printer-hero h2 { margin: 6px 0 4px; font-size: clamp(32px, 4vw, 48px); line-height: 1; letter-spacing: -.04em; }
+.admin-printer-hero p { margin: 0; color: #7f6e66; font-size: 15px; }
+.admin-printer-hero-badge {
+  display: flex;
+  min-width: 260px;
+  align-items: center;
+  gap: 14px;
+  padding: 15px 18px;
+  border: 1px solid #eadfd7;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #fff8f1, #fff);
+  box-shadow: 0 12px 28px rgba(62, 39, 29, .05);
+}
+.admin-printer-hero-badge > span {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 15px;
+  color: #9b472d;
+  background: #f7e6d8;
+}
+.admin-printer-hero-badge strong,
+.admin-printer-hero-badge small { display: block; }
+.admin-printer-hero-badge strong { font-size: 14px; }
+.admin-printer-hero-badge small { margin-top: 3px; color: #95857d; font-size: 11px; }
+
+.admin-printer-kpis {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.admin-printer-kpis article {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #eadfd7;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 9px 24px rgba(62, 39, 29, .035);
+}
+.admin-printer-kpis .icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 14px;
+  color: #b76a18;
+  background: #fff2d9;
+}
+.admin-printer-kpis .icon.success { color: #12864c; background: #e5f8ed; }
+.admin-printer-kpis .icon.danger { color: #c74433; background: #fde9e5; }
+.admin-printer-kpis .icon.warn { color: #b77919; background: #fff2da; }
+.admin-printer-kpis .icon.admin { color: #8c4934; background: #f6e9e1; }
+.admin-printer-kpis .icon.kitchen { color: #208a56; background: #e7f7ed; }
+.admin-printer-kpis small,
+.admin-printer-kpis strong { display: block; }
+.admin-printer-kpis small { overflow: hidden; color: #8d7e76; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.admin-printer-kpis strong { margin-top: 3px; font-size: 20px; }
+
+.admin-printer-workspace {
+  overflow: hidden;
+  border: 1px solid #e7dcd4;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 18px 45px rgba(65, 39, 28, .055);
+}
+.admin-printer-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 14px 16px 0;
+  border-bottom: 1px solid #eee4dd;
+  background: #fffdfa;
+}
+.admin-printer-tabs button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px 12px 0 0;
+  color: #76665f;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 780;
+  cursor: pointer;
+}
+.admin-printer-tabs button span { margin-left: 6px; padding: 2px 7px; border-radius: 999px; background: #f0e7e1; font-size: 10px; }
+.admin-printer-tabs button.active { color: #fff; background: #7e3524; }
+.admin-printer-tabs button.active span { background: rgba(255,255,255,.18); }
+
+.admin-printer-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f0e8e2;
+}
+.admin-printer-search {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 13px;
+  border: 1px solid #e7dcd4;
+  border-radius: 13px;
+  background: #fff;
+}
+.admin-printer-search input { width: 100%; border: 0; outline: 0; color: #3b2720; background: transparent; font: inherit; font-size: 13px; }
+.admin-printer-targets { display: flex; gap: 6px; padding: 4px; border-radius: 13px; background: #f7f2ee; }
+.admin-printer-targets button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  color: #7d6b63;
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 760;
+  cursor: pointer;
+}
+.admin-printer-targets button.active { color: #fff; background: #7e3524; }
+
+.admin-printer-content { min-height: 300px; padding: 16px; }
+.admin-printer-empty {
+  display: grid;
+  min-height: 270px;
+  place-items: center;
+  align-content: center;
+  padding: 28px;
+  border: 1px dashed #e5dad2;
+  border-radius: 18px;
+  background: #fffdfa;
+  text-align: center;
+}
+.admin-printer-empty > span:not(.admin-printer-spinner) {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border-radius: 18px;
+  color: #92523c;
+  background: #f6e8df;
+}
+.admin-printer-empty strong { margin-top: 12px; font-size: 16px; }
+.admin-printer-empty p { max-width: 420px; margin: 6px 0 0; color: #91817a; font-size: 12px; line-height: 1.5; }
+.admin-printer-empty.error > span { color: #b84231; background: #fde9e5; }
+.admin-printer-spinner { width: 32px; height: 32px; border: 3px solid #eadbd1; border-top-color: #8d3f2a; border-radius: 50%; animation: adminPrinterSpin .8s linear infinite; }
+@keyframes adminPrinterSpin { to { transform: rotate(360deg); } }
+
+.admin-printer-job-list { display: grid; gap: 10px; }
+.admin-printer-job {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: 13px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid #eadfd7;
+  border-radius: 16px;
+  background: #fff;
+}
+.admin-printer-job-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 15px;
+  color: #8d4934;
+  background: #f7e9e1;
+}
+.admin-printer-job-icon.kitchen { color: #208a56; background: #e7f7ed; }
+.admin-printer-job-title { display: flex; align-items: center; gap: 9px; }
+.admin-printer-job-main > span,
+.admin-printer-job-main > small { display: block; }
+.admin-printer-job-main > span { margin-top: 4px; color: #77675f; font-size: 12px; }
+.admin-printer-job-main > small { margin-top: 3px; color: #a19189; font-size: 10px; }
+.admin-printer-job button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid #e4d7cf;
+  border-radius: 11px;
+  color: #723726;
+  background: #fffaf7;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 780;
+  cursor: pointer;
+}
+.admin-printer-status { display: inline-flex; align-items: center; min-height: 24px; padding: 0 9px; border-radius: 999px; font-size: 9px; font-weight: 850; letter-spacing: .04em; }
+.admin-printer-status.queued { color: #a46b11; background: #fff1cc; }
+.admin-printer-status.printing { color: #285da7; background: #e5effd; }
+.admin-printer-status.success { color: #157d48; background: #e4f6eb; }
+.admin-printer-status.failed { color: #b83d31; background: #fde8e4; }
+.admin-printer-status.timeout { color: #a66a18; background: #fff0d5; }
+
+.admin-printer-device-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.admin-printer-device-card {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 18px;
+  border: 1px solid #eadfd7;
+  border-radius: 18px;
+  background: #fff;
+}
+.admin-printer-device-icon { display: grid; width: 52px; height: 52px; place-items: center; border-radius: 16px; color: #8c4934; background: #f6e9e1; }
+.admin-printer-device-icon.kitchen { color: #208a56; background: #e7f7ed; }
+.admin-printer-device-card strong, .admin-printer-device-card p { display: block; }
+.admin-printer-device-card strong { margin-top: 3px; font-size: 15px; }
+.admin-printer-device-card p { margin: 4px 0 0; color: #8c7d75; font-size: 11px; line-height: 1.45; }
+.admin-printer-device-state { padding: 7px 9px; border-radius: 999px; font-size: 9px; font-weight: 850; }
+.admin-printer-device-state.neutral { color: #6d5b53; background: #f1ece8; }
+.admin-printer-routing-note { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; padding: 14px 16px; border-radius: 15px; background: #fbf7f3; }
+.admin-printer-routing-note strong { margin-right: 6px; }
+.admin-printer-routing-note span { padding: 6px 9px; border-radius: 999px; color: #765c50; background: #fff; font-size: 10px; }
+
+.admin-printer-modal-overlay {
+  position: fixed;
+  z-index: 9999;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(43, 28, 21, .58);
+  backdrop-filter: blur(8px);
+}
+.admin-printer-modal { width: min(720px, 100%); overflow: hidden; border: 1px solid rgba(255,255,255,.5); border-radius: 24px; background: #fffdfa; box-shadow: 0 30px 80px rgba(37, 23, 18, .25); }
+.admin-printer-modal header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 24px; border-bottom: 1px solid #eee3dc; }
+.admin-printer-modal header h3 { margin: 5px 0 0; font-size: 25px; }
+.admin-printer-modal header p { margin: 3px 0 0; color: #8d7d75; font-size: 12px; }
+.admin-printer-modal header button { position: relative; width: 42px; height: 42px; flex: 0 0 auto; border: 1px solid #e4d7cf; border-radius: 13px; background: #fff8f4; cursor: pointer; }
+.admin-printer-close-x::before,
+.admin-printer-close-x::after { content: ""; position: absolute; left: 50%; top: 50%; width: 16px; height: 1.8px; border-radius: 2px; background: #774230; transform-origin: center; }
+.admin-printer-close-x::before { transform: translate(-50%, -50%) rotate(45deg); }
+.admin-printer-close-x::after { transform: translate(-50%, -50%) rotate(-45deg); }
+.admin-printer-modal-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 20px 24px 0; }
+.admin-printer-modal-grid article { padding: 14px; border: 1px solid #eadfd7; border-radius: 14px; background: #fff; }
+.admin-printer-modal-grid span:not(.admin-printer-status), .admin-printer-modal-grid strong { display: block; }
+.admin-printer-modal-grid span:not(.admin-printer-status) { color: #94847c; font-size: 10px; }
+.admin-printer-modal-grid strong { margin-top: 5px; font-size: 12px; }
+.admin-printer-preview { margin: 14px 24px 24px; padding: 18px; border: 1px solid #eadfd7; border-radius: 16px; background: #fbf7f3; }
+.admin-printer-preview strong { display: block; margin-top: 5px; }
+.admin-printer-preview p { margin: 7px 0 0; color: #85756e; font-size: 11px; line-height: 1.5; }
+
+@media (max-width: 1100px) {
+  .admin-printer-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .admin-printer-device-grid { grid-template-columns: 1fr; }
+  .admin-printer-modal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  #admin-printer-center-v1 { padding: 0 8px 18px; }
+  .admin-printer-hero { align-items: flex-start; padding: 4px 0 14px; }
+  .admin-printer-hero h2 { font-size: 26px; }
+  .admin-printer-hero p { max-width: 260px; font-size: 10px; line-height: 1.45; }
+  .admin-printer-hero-badge { display: none; }
+  .admin-printer-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+  .admin-printer-kpis article { display: block; padding: 9px 8px; border-radius: 13px; text-align: center; }
+  .admin-printer-kpis .icon { width: 30px; height: 30px; margin: 0 auto 5px; border-radius: 10px; }
+  .admin-printer-kpis .icon svg { width: 15px; height: 15px; }
+  .admin-printer-kpis small { font-size: 7px; }
+  .admin-printer-kpis strong { margin-top: 2px; font-size: 14px; }
+  .admin-printer-workspace { border-radius: 16px; }
+  .admin-printer-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 6px; border-bottom: 0; background: #f7f2ee; }
+  .admin-printer-tabs button { min-height: 36px; padding: 0 4px; border-radius: 10px; font-size: 8px; }
+  .admin-printer-tabs button span { margin-left: 2px; padding: 1px 4px; font-size: 7px; }
+  .admin-printer-toolbar { grid-template-columns: 1fr; gap: 7px; padding: 8px; }
+  .admin-printer-search { min-height: 40px; border-radius: 11px; }
+  .admin-printer-search input { font-size: 9px; }
+  .admin-printer-targets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+  .admin-printer-targets button { min-height: 32px; padding: 0 4px; font-size: 8px; }
+  .admin-printer-content { min-height: 180px; padding: 8px; }
+  .admin-printer-empty { min-height: 180px; padding: 20px 15px; border-radius: 14px; }
+  .admin-printer-empty > span:not(.admin-printer-spinner) { width: 44px; height: 44px; border-radius: 14px; }
+  .admin-printer-empty strong { margin-top: 9px; font-size: 11px; }
+  .admin-printer-empty p { margin-top: 4px; font-size: 8px; }
+  .admin-printer-job { grid-template-columns: 40px minmax(0, 1fr); gap: 9px; padding: 10px; border-radius: 13px; }
+  .admin-printer-job-icon { width: 40px; height: 40px; border-radius: 12px; }
+  .admin-printer-job button { grid-column: 1 / -1; min-height: 34px; font-size: 8px; }
+  .admin-printer-job-title strong { font-size: 10px; }
+  .admin-printer-job-main > span { font-size: 8px; }
+  .admin-printer-job-main > small { font-size: 7px; }
+  .admin-printer-status { min-height: 20px; padding: 0 6px; font-size: 7px; }
+  .admin-printer-device-card { grid-template-columns: 42px minmax(0, 1fr); gap: 10px; padding: 12px; }
+  .admin-printer-device-icon { width: 42px; height: 42px; border-radius: 13px; }
+  .admin-printer-device-state { grid-column: 1 / -1; justify-self: start; }
+  .admin-printer-routing-note { display: grid; gap: 6px; padding: 10px; }
+  .admin-printer-modal-overlay { align-items: end; padding: 0; }
+  .admin-printer-modal { width: 100%; max-height: 86vh; overflow: auto; border-radius: 22px 22px 0 0; }
+  .admin-printer-modal header { padding: 18px; }
+  .admin-printer-modal header h3 { font-size: 20px; }
+  .admin-printer-modal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 14px 14px 0; }
+  .admin-printer-preview { margin: 12px 14px 18px; }
+}
