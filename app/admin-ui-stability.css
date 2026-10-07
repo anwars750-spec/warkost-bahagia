@@ -5,23 +5,37 @@
   z-index: auto;
 }
 
-/* Stock and Printer use the portal as their visible workspace.
-   Hide the native React main while either overlay workspace is active so the
-   portal content starts directly below the header instead of below a blank
-   full-height main. */
+/* Hard route fences: prevent stale Operations UI from leaking into other Admin views. */
+body[data-admin-route="customers"] #admin-daily-summary,
+body[data-admin-route="customers"] #admin-order-tools,
+body[data-admin-route="printing"] #admin-daily-summary,
+body[data-admin-route="printing"] #admin-order-tools,
+body[data-admin-route="stock"] #admin-daily-summary,
+body[data-admin-route="stock"] #admin-order-tools {
+  display: none !important;
+}
+
+/* Customer workspace already has its own professional hero; suppress the native
+   Operations heading so “PUSAT OPERASIONAL” can never appear above Customers. */
+body[data-admin-route="customers"] main > .heading {
+  display: none !important;
+}
+
+/* Stock and Printer use the portal as their visible workspace. */
 body.admin-beverage-stock-view main,
-body.admin-printer-stable-view main {
+body.admin-printer-stable-view main,
+body[data-admin-route="printing"] main {
   display: none !important;
 }
 
 body.admin-beverage-stock-view #admin-ui-portal-root,
-body.admin-printer-stable-view #admin-ui-portal-root {
+body.admin-printer-stable-view #admin-ui-portal-root,
+body[data-admin-route="printing"] #admin-ui-portal-root {
   display: block;
 }
 
 /* Reserve a real visual slot immediately before the native Printer button.
-   The Stock button itself lives outside React's nav tree to avoid React/DOM
-   ownership conflicts, then floats into this reserved slot. */
+   Stock itself lives outside React's nav tree to avoid React/DOM ownership conflicts. */
 .admin-stock-gap-anchor {
   margin-left: 74px !important;
 }
@@ -84,7 +98,7 @@ body.admin-printer-stable-view #admin-ui-portal-root {
 }
 
 /* Never let stale portal workspaces show outside their own view. */
-body:not(.admin-printer-stable-view) #admin-ui-portal-root > #admin-printer-center-v1 {
+body:not(.admin-printer-stable-view):not([data-admin-route="printing"]) #admin-ui-portal-root > #admin-printer-center-v1 {
   display: none;
 }
 
@@ -93,6 +107,7 @@ body:not(.admin-beverage-stock-view) #admin-ui-portal-root > #admin-beverage-sto
 }
 
 body.admin-printer-stable-view #admin-ui-portal-root > #admin-printer-center-v1,
+body[data-admin-route="printing"] #admin-ui-portal-root > #admin-printer-center-v1,
 body.admin-beverage-stock-view #admin-ui-portal-root > #admin-beverage-stock-v1 {
   display: block;
 }
