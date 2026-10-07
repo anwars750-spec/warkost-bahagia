@@ -1,4 +1,0 @@
-/* Prevent a stale async customer enhancer mount from flashing duplicate UI. */
-#admin-customers-v1:has(~ #admin-customers-v1) {
-  display: none !important;
-}

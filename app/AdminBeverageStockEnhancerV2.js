@@ -13,7 +13,6 @@ const esc = (value) =>
 const money = (value) => `Rp${Number(value || 0).toLocaleString("id-ID")}`;
 
 const ICONS = {
-  box: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z"/><path d="m4.5 7.5 7.5 4 7.5-4M12 11.5V21"/></svg>`,
   search: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>`,
   cup: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h11l-1 12H7L6 7Z"/><path d="M17 9h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 3c0 1 1 1.5 1 2.5M12 3c0 1 1 1.5 1 2.5"/></svg>`,
   check: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg>`,
@@ -57,12 +56,6 @@ export default function AdminBeverageStockEnhancerV2() {
   useEffect(() => {
     let portal = null;
     let root = null;
-    let stockButton = null;
-    let printerButton = null;
-    let nav = null;
-    let observer = null;
-    let raf = null;
-    let active = false;
     let loading = false;
     let menuProducts = [];
     let categories = [];
@@ -71,17 +64,6 @@ export default function AdminBeverageStockEnhancerV2() {
     let dataError = "";
     let query = "";
     let filter = "all";
-    let lastLoadAt = 0;
-
-    const adminNavButtons = () => [
-      ...document.querySelectorAll("header.top nav button"),
-    ];
-
-    const cleanLabel = (button) =>
-      button?.textContent?.replace(/\d+/g, "").trim() || "";
-
-    const isAdmin = () =>
-      adminNavButtons().some((item) => cleanLabel(item) === "Operasional");
 
     const ensurePortal = () => {
       portal = document.getElementById("admin-ui-portal-root");
@@ -311,7 +293,6 @@ export default function AdminBeverageStockEnhancerV2() {
           stockProducts = [];
           stockAvailable = false;
         }
-        lastLoadAt = Date.now();
       } catch (error) {
         dataError = error.message || "Data minuman belum dapat dimuat";
       } finally {
@@ -334,126 +315,18 @@ export default function AdminBeverageStockEnhancerV2() {
       return root;
     };
 
-    const syncNativeActiveState = () => {
-      adminNavButtons().forEach((item) => {
-        if (active) item.classList.remove("admin-nav-active");
-      });
-      stockButton?.classList.toggle("admin-nav-active", active);
-    };
-
-    const positionStockButton = () => {
-      if (!stockButton || !printerButton?.isConnected) return;
-      const rect = printerButton.getBoundingClientRect();
-      const buttonWidth = stockButton.offsetWidth || (window.innerWidth <= 700 ? 52 : 68);
-      const gap = window.innerWidth <= 700 ? 4 : 6;
-      const left = rect.left - buttonWidth - gap;
-      stockButton.style.top = `${Math.round(rect.top)}px`;
-      stockButton.style.left = `${Math.max(4, Math.round(left))}px`;
-      stockButton.style.height = `${Math.round(rect.height)}px`;
-      const visible = rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0;
-      stockButton.hidden = !visible;
-    };
-
-    const removeNativeArtifacts = () => {
-      document
-        .querySelectorAll("header.top nav [data-admin-stock-nav]")
-        .forEach((legacy) => legacy.remove());
-    };
-
-    const ensureStockButton = () => {
-      if (!isAdmin()) {
-        stockButton?.remove();
-        stockButton = null;
-        printerButton?.classList.remove("admin-stock-gap-anchor");
-        printerButton = null;
-        nav = null;
-        if (active) close();
-        return;
-      }
-      const host = ensurePortal();
-      if (!host) return;
-      removeNativeArtifacts();
-      nav = document.querySelector("header.top nav");
-      printerButton = adminNavButtons().find(
-        (item) => cleanLabel(item) === "Printer",
-      );
-      if (!nav || !printerButton) return;
-      printerButton.classList.add("admin-stock-gap-anchor");
-      if (!stockButton || !stockButton.isConnected) {
-        stockButton = document.createElement("button");
-        stockButton.type = "button";
-        stockButton.id = "admin-beverage-stock-nav-v2";
-        stockButton.className = "admin-beverage-stock-floating-nav";
-        stockButton.innerHTML = `<span class="admin-beverage-stock-nav-icon">${ICONS.box}</span><span>Stok</span>`;
-        stockButton.addEventListener("click", (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          open();
-        });
-        host.appendChild(stockButton);
-      }
-      positionStockButton();
-      syncNativeActiveState();
-    };
-
-    const open = () => {
-      if (!isAdmin()) return;
-      active = true;
+    const mount = () => {
       document.body.classList.add("admin-beverage-stock-view");
       ensureRoot();
-      syncNativeActiveState();
       render();
-      if (Date.now() - lastLoadAt > 5000) load();
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      requestAnimationFrame(positionStockButton);
+      load();
     };
 
-    function close() {
-      if (!active) return;
-      active = false;
-      document.body.classList.remove("admin-beverage-stock-view");
-      syncNativeActiveState();
-      requestAnimationFrame(positionStockButton);
-    }
-
-    const onNativeNavClick = (event) => {
-      const clicked = event.target.closest?.("header.top nav button");
-      if (!clicked) return;
-      if (active) close();
-    };
-
-    const schedule = () => {
-      if (raf) cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        ensureStockButton();
-        if (active) {
-          ensureRoot();
-          syncNativeActiveState();
-        }
-        positionStockButton();
-      });
-    };
-
-    const onViewport = () => positionStockButton();
-
-    document.addEventListener("click", onNativeNavClick, true);
-    window.addEventListener("resize", onViewport);
-    window.addEventListener("scroll", onViewport, true);
-    observer = new MutationObserver(schedule);
-    observer.observe(document.body, { childList: true, subtree: true });
-    schedule();
+    mount();
 
     return () => {
-      if (raf) cancelAnimationFrame(raf);
-      observer?.disconnect();
-      document.removeEventListener("click", onNativeNavClick, true);
-      window.removeEventListener("resize", onViewport);
-      window.removeEventListener("scroll", onViewport, true);
       document.body.classList.remove("admin-beverage-stock-view");
-      printerButton?.classList.remove("admin-stock-gap-anchor");
-      stockButton?.remove();
       root?.remove();
-      removeNativeArtifacts();
     };
   }, []);
 

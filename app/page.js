@@ -1,6 +1,15 @@
 "use client";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import AdminBeverageStockEnhancerV2 from "./AdminBeverageStockEnhancerV2";
+import AdminBeverageStockPolish from "./AdminBeverageStockPolish";
+import AdminCustomersEnhancer from "./AdminCustomersEnhancer";
+import AdminCustomerServiceMobileEnhancer from "./AdminCustomerServiceMobileEnhancer";
+import AdminNotificationPopover from "./AdminNotificationPopover";
+import AdminOrderCardEnhancer from "./AdminOrderCardEnhancer";
+import AdminOrderModalEnhancer from "./AdminOrderModalEnhancer";
+import AdminPrinterController from "./AdminPrinterController";
+import AdminUiEnhancer from "./AdminUiEnhancer";
 const money = (n) => "Rp" + Number(n || 0).toLocaleString("id-ID");
 const whatsappLink = (number, text) =>
   `https://wa.me/${String(number || "").replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
@@ -963,10 +972,17 @@ export default function App() {
           ) : role ? (
             <>
               <button
+                data-admin-nav={role === "ADMIN" ? "Operasional" : undefined}
+                className={
+                  role === "ADMIN" && view === "orders"
+                    ? "admin-nav-active"
+                    : undefined
+                }
                 onClick={() =>
                   setView(role === "MANAGER" ? "products" : "orders")
                 }
               >
+                {role === "ADMIN" && <AdminNavIcon name="home" />}
                 {role === "ADMIN"
                   ? "Operasional"
                   : role === "MANAGER"
@@ -979,10 +995,36 @@ export default function App() {
               </button>
               {role === "ADMIN" && (
                 <>
-                  <button onClick={() => setView("customers")}>
+                  <button
+                    data-admin-nav="Pelanggan"
+                    className={
+                      view === "customers" ? "admin-nav-active" : undefined
+                    }
+                    onClick={() => setView("customers")}
+                  >
+                    <AdminNavIcon name="users" />
                     Pelanggan
                   </button>
-                  <button onClick={() => setView("printing")}>Printer</button>
+                  <button
+                    data-admin-nav="Stok"
+                    className={
+                      view === "admin-stock" ? "admin-nav-active" : undefined
+                    }
+                    onClick={() => setView("admin-stock")}
+                  >
+                    <AdminNavIcon name="box" />
+                    Stok
+                  </button>
+                  <button
+                    data-admin-nav="Printer"
+                    className={
+                      view === "printing" ? "admin-nav-active" : undefined
+                    }
+                    onClick={() => setView("printing")}
+                  >
+                    <AdminNavIcon name="printer" />
+                    Printer
+                  </button>
                 </>
               )}
               {role === "MANAGER" && (
@@ -1030,13 +1072,13 @@ export default function App() {
           ) : null}
           {role && role !== "CUSTOMER" && (
             <button
+              data-admin-nav={role === "ADMIN" ? "Notifikasi" : undefined}
               className="icon-nav-button"
               aria-label="Buka notifikasi"
-              onClick={() =>
-                role === "CUSTOMER"
-                  ? setOverlay("notifications")
-                  : setView("notifications")
-              }
+              onClick={() => {
+                if (role === "CUSTOMER") setOverlay("notifications");
+                else if (role !== "ADMIN") setView("notifications");
+              }}
             >
               <BellIcon />
               <span>Notifikasi</span>
@@ -1046,7 +1088,13 @@ export default function App() {
             </button>
           )}
           {role && role !== "CUSTOMER" ? (
-            <button onClick={logout}>Keluar</button>
+            <button
+              data-admin-nav={role === "ADMIN" ? "Keluar" : undefined}
+              onClick={logout}
+            >
+              {role === "ADMIN" && <AdminNavIcon name="logout" />}
+              Keluar
+            </button>
           ) : !role ? (
             <>
               {view === "auth" && (
@@ -1091,6 +1139,7 @@ export default function App() {
         </nav>
       </header>
       <main
+        data-admin-view={role === "ADMIN" ? view : undefined}
         className={[
           role === "CUSTOMER" ? "customer-app-main" : "",
           (!role || role === "CUSTOMER") && view === "menu"
@@ -1106,7 +1155,13 @@ export default function App() {
               <div>
                 <span className="eyebrow">
                   {role === "ADMIN"
-                    ? "PUSAT OPERASIONAL"
+                    ? view === "customers"
+                      ? "PUSAT PELANGGAN"
+                      : view === "admin-stock"
+                        ? "PUSAT STOK ADMIN"
+                        : view === "printing"
+                          ? "PUSAT PRINTER"
+                          : "PUSAT OPERASIONAL"
                     : role === "MANAGER"
                       ? "MANAJEMEN KOMERSIAL"
                       : role === "KITCHEN"
@@ -1120,6 +1175,8 @@ export default function App() {
                 <h1>
                   {view === "notifications"
                     ? "Notifikasi"
+                    : view === "admin-stock" && role === "ADMIN"
+                      ? "Stok Minuman"
                     : view === "promotions" &&
                         ["MANAGER", "OWNER"].includes(role)
                       ? "Kelola promo"
@@ -3491,6 +3548,12 @@ export default function App() {
             )}
           </section>
         )}
+        {role === "ADMIN" && view === "admin-stock" && (
+          <section className="panel admin-stock-native-placeholder">
+            <h2>Stok Minuman</h2>
+            <p>Memuat inventori minuman read-only untuk Admin…</p>
+          </section>
+        )}
         {["ADMIN", "KITCHEN", "OWNER"].includes(role) &&
           view === "printing" && (
             <section className="panel">
@@ -4479,10 +4542,78 @@ export default function App() {
           </section>
         </div>
       )}
+      {role === "ADMIN" && <AdminUiRuntime view={view} />}
       <footer>
         Warkost Bahagia · Dibuat untuk operasional yang lebih rapi
       </footer>
     </>
+  );
+}
+
+function AdminUiRuntime({ view }) {
+  return (
+    <>
+      <AdminUiEnhancer view={view} />
+      <AdminNotificationPopover key={`admin-notifications-${view}`} />
+      {view === "orders" && (
+        <>
+          <AdminOrderCardEnhancer />
+          <AdminOrderModalEnhancer />
+        </>
+      )}
+      {view === "customers" && (
+        <>
+          <AdminCustomersEnhancer />
+          <AdminCustomerServiceMobileEnhancer />
+        </>
+      )}
+      {view === "admin-stock" && (
+        <>
+          <AdminBeverageStockEnhancerV2 />
+          <AdminBeverageStockPolish />
+        </>
+      )}
+      {view === "printing" && <AdminPrinterController />}
+    </>
+  );
+}
+function AdminNavIcon({ name }) {
+  const paths = {
+    home: (
+      <>
+        <path d="M3 11 12 4l9 7" />
+        <path d="M5 10v10h14V10M9 20v-6h6v6" />
+      </>
+    ),
+    users: (
+      <>
+        <circle cx="9" cy="8" r="3.5" />
+        <path d="M3 20a6 6 0 0 1 12 0M16 5.5a3 3 0 0 1 0 5.8M17 15a5 5 0 0 1 4 5" />
+      </>
+    ),
+    box: (
+      <>
+        <path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z" />
+        <path d="m4.5 7.5 7.5 4 7.5-4M12 11.5V21" />
+      </>
+    ),
+    printer: (
+      <>
+        <path d="M7 8V3h10v5" />
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a3 3 0 0 1 3-3h14a3 3 0 0 1 3 3v5a2 2 0 0 1-2 2h-2" />
+        <path d="M7 14h10v7H7zM18 11h.01" />
+      </>
+    ),
+    logout: (
+      <>
+        <path d="M10 5H5v14h5M14 8l4 4-4 4M9 12h9" />
+      </>
+    ),
+  };
+  return (
+    <SvgIcon className="admin-svg-icon admin-nav-icon">
+      {paths[name]}
+    </SvgIcon>
   );
 }
 function SvgIcon({ children, className = "ui-icon" }) {

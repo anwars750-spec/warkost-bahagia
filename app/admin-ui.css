@@ -60,22 +60,6 @@
   font-weight: 760;
 }
 
-.admin-ui-mode .admin-nav button::before {
-  display: inline-grid;
-  width: 20px;
-  margin-right: 7px;
-  place-items: center;
-  color: #6c3425;
-  font-size: 15px;
-  font-weight: 900;
-}
-
-.admin-ui-mode .admin-nav button:nth-child(1)::before { content: "⌂"; }
-.admin-ui-mode .admin-nav button:nth-child(2)::before { content: "◉"; }
-.admin-ui-mode .admin-nav button:nth-child(3)::before { content: "▣"; }
-.admin-ui-mode .admin-nav button:nth-child(4)::before { content: "•"; }
-.admin-ui-mode .admin-nav button:nth-child(5)::before { content: "↪"; }
-
 .admin-ui-mode .admin-nav button:hover,
 .admin-ui-mode .admin-nav .admin-nav-active {
   color: var(--admin-brown-strong);

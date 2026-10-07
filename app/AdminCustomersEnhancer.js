@@ -72,8 +72,8 @@ export default function AdminCustomersEnhancer() {
     let root = null;
     let nativePanel = null;
     let modal = null;
-    let observer = null;
     let mounted = false;
+    let disposed = false;
     let activeTab = "data";
     let activeFilter = "all";
     let searchValue = "";
@@ -91,10 +91,6 @@ export default function AdminCustomersEnhancer() {
       if (!response.ok) throw new Error(data.error || "Gagal memuat data");
       return data;
     };
-
-    const isCustomersView = () =>
-      document.querySelector("main .heading h1")?.textContent?.trim() ===
-      "Kelola pelanggan";
 
     const findNativePanel = () =>
       [...document.querySelectorAll("main .panel")].find((panel) =>
@@ -299,6 +295,7 @@ export default function AdminCustomersEnhancer() {
         </div>
       `;
       bindEvents();
+      window.dispatchEvent(new CustomEvent("warkost:admin-customers-rendered"));
     };
 
     const loadCustomers = async (query = "") => {
@@ -420,11 +417,11 @@ export default function AdminCustomersEnhancer() {
     }
 
     const mount = async () => {
-      if (mounted || !isCustomersView()) return;
+      if (mounted || disposed) return;
       const me = await fetchJson("/api/me").catch(() => ({ user: null }));
-      if (me.user?.role !== "ADMIN" || !isCustomersView()) return;
+      if (disposed || me.user?.role !== "ADMIN") return;
       nativePanel = findNativePanel();
-      if (!nativePanel) return;
+      if (disposed || !nativePanel) return;
       mounted = true;
       nativePanel.classList.add("admin-customers-native-hidden");
       root = document.createElement("div");
@@ -460,22 +457,15 @@ export default function AdminCustomersEnhancer() {
       selectedCustomerId = null;
     };
 
-    const sync = () => {
-      if (isCustomersView()) mount();
-      else unmount();
-    };
-
     const onKeyDown = (event) => {
       if (event.key === "Escape" && modal) closeModal();
     };
 
-    sync();
-    observer = new MutationObserver(() => window.setTimeout(sync, 30));
-    observer.observe(document.body, { childList: true, subtree: true });
+    mount();
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
-      observer?.disconnect();
+      disposed = true;
       window.removeEventListener("keydown", onKeyDown);
       if (searchTimer) window.clearTimeout(searchTimer);
       unmount();

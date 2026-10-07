@@ -30,14 +30,6 @@ const orderIdFromCard = (card) => {
   return match ? Number(match[1]) : null;
 };
 
-const isAdminOperations = () => {
-  const hasAdminNav = [...document.querySelectorAll("header.top nav button")].some(
-    (button) => button.textContent.trim().startsWith("Operasional"),
-  );
-  const heading = document.querySelector("main .heading h1")?.textContent?.trim();
-  return hasAdminNav && heading === "Pantau pesanan hari ini";
-};
-
 export default function AdminOrderCardEnhancer() {
   useEffect(() => {
     const ordersById = new Map();
@@ -227,9 +219,6 @@ export default function AdminOrderCardEnhancer() {
     };
 
     function decorate() {
-      if (!isAdminOperations()) return;
-
-      document.body.classList.add("admin-ui-mode", "admin-operations-view");
       const list = document.querySelector("main .order-list");
       if (!list) return;
 
@@ -239,26 +228,20 @@ export default function AdminOrderCardEnhancer() {
 
     loadOrders();
     schedule(0);
+    const onOrdersRendered = () => schedule();
+    window.addEventListener("warkost:admin-orders-rendered", onOrdersRendered);
 
-    const observer = new MutationObserver(schedule);
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-
-    const uiHeartbeat = window.setInterval(() => schedule(0), 800);
     const dataHeartbeat = window.setInterval(() => {
-      if (!isAdminOperations()) return;
       loadOrders();
       schedule(0);
     }, 10000);
 
     return () => {
       disposed = true;
-      observer.disconnect();
-      window.clearInterval(uiHeartbeat);
+      window.removeEventListener(
+        "warkost:admin-orders-rendered",
+        onOrdersRendered,
+      );
       window.clearInterval(dataHeartbeat);
       if (timer) window.clearTimeout(timer);
       document

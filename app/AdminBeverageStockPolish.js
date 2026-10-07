@@ -19,7 +19,7 @@ export default function AdminBeverageStockPolish() {
     let stopped = false;
     let productsByName = new Map();
     let rootObserver = null;
-    let bodyObserver = null;
+    let retryTimer = null;
     let decorating = false;
 
     const escapeSelectorValue = (value) => String(value || "").trim();
@@ -114,19 +114,19 @@ export default function AdminBeverageStockPolish() {
 
     loadProducts();
     if (!observeRoot()) {
-      bodyObserver = new MutationObserver(() => {
-        if (observeRoot()) {
-          bodyObserver?.disconnect();
-          bodyObserver = null;
-        }
-      });
-      bodyObserver.observe(document.body, { childList: true, subtree: true });
+      let attempts = 0;
+      const retry = () => {
+        if (stopped || observeRoot()) return;
+        attempts += 1;
+        if (attempts < 5) retryTimer = window.setTimeout(retry, 40);
+      };
+      retryTimer = window.setTimeout(retry, 0);
     }
 
     return () => {
       stopped = true;
       rootObserver?.disconnect();
-      bodyObserver?.disconnect();
+      if (retryTimer) window.clearTimeout(retryTimer);
     };
   }, []);
 

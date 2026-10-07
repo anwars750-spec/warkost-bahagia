@@ -49,7 +49,6 @@ const initials = (name) =>
 export default function AdminCustomerServiceMobileEnhancer() {
   useEffect(() => {
     let mobileRoot = null;
-    let observer = null;
     let raf = null;
     let screen = "inbox";
     let lastSignature = "";
@@ -220,19 +219,13 @@ export default function AdminCustomerServiceMobileEnhancer() {
       raf = requestAnimationFrame(render);
     };
 
-    observer = new MutationObserver(scheduleRender);
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["class"],
-    });
+    window.addEventListener("warkost:admin-customers-rendered", scheduleRender);
     window.addEventListener("resize", scheduleRender);
     scheduleRender();
 
     return () => {
       if (raf) cancelAnimationFrame(raf);
-      observer?.disconnect();
+      window.removeEventListener("warkost:admin-customers-rendered", scheduleRender);
       window.removeEventListener("resize", scheduleRender);
       mobileRoot?.remove();
     };

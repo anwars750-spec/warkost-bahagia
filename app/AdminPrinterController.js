@@ -16,8 +16,6 @@ const successIcon = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12"
 const alertIcon = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.8 19h18.4L12 3Z"/><path d="M12 9v4M12 16h.01"/></svg>`;
 const searchIcon = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>`;
 
-const labelOf = (button) =>
-  button?.textContent?.replace(/\d+/g, "").trim() || "";
 const statusOf = (job) => String(job?.status || job?.state || "QUEUED").toUpperCase();
 const printerOf = (job) => String(job?.printer || job?.station || job?.target || job?.type || "ADMIN").toUpperCase();
 const orderOf = (job) => job?.order_number || job?.order_no || job?.order_id || job?.orderId || "—";
@@ -34,8 +32,6 @@ export default function AdminPrinterController() {
   useEffect(() => {
     let root = null;
     let modal = null;
-    let observer = null;
-    let active = false;
     let loaded = false;
     let loading = false;
     let jobs = [];
@@ -45,24 +41,6 @@ export default function AdminPrinterController() {
     let search = "";
 
     const portal = () => document.getElementById("admin-ui-portal-root");
-    const nativePrinterPanel = () =>
-      [...document.querySelectorAll("main .panel")].find((panel) =>
-        panel.textContent?.includes("Antrean cetak struk 80mm"),
-      );
-
-    const isAdmin = () =>
-      [...document.querySelectorAll("header.top nav button")].some(
-        (button) => labelOf(button) === "Operasional",
-      );
-
-    const setNav = () => {
-      document.querySelectorAll("header.top nav button").forEach((button) => {
-        const label = labelOf(button);
-        if (["Operasional", "Pelanggan", "Printer"].includes(label))
-          button.classList.toggle("admin-nav-active", active && label === "Printer");
-      });
-    };
-
     const summary = () => {
       const states = jobs.map(statusOf);
       return {
@@ -169,57 +147,30 @@ export default function AdminPrinterController() {
     };
 
     const activate = () => {
-      if (!isAdmin() || !ensureRoot()) return;
-      active = true;
-      document.body.classList.remove("admin-beverage-stock-view");
+      if (!ensureRoot()) return;
       document.body.classList.add("admin-printer-stable-view");
-      document.getElementById("admin-daily-summary")?.remove();
-      document.getElementById("admin-order-tools")?.remove();
-      setNav();
       render();
       if (!loaded) load();
     };
 
     const deactivate = () => {
-      if (!active && !document.body.classList.contains("admin-printer-stable-view")) return;
-      active = false;
       document.body.classList.remove("admin-printer-stable-view");
       modal?.remove(); modal = null;
       root?.remove(); root = null;
       loaded = false;
-      setNav();
-    };
-
-    const reconcile = () => {
-      if (!isAdmin()) { deactivate(); return; }
-      if (nativePrinterPanel()) activate();
-      else if (active && !document.body.classList.contains("admin-beverage-stock-view")) deactivate();
     };
 
     const onDocumentClick = (event) => {
       if (event.target.closest("[data-printer-close]")) { modal?.remove(); modal = null; return; }
       if (event.target === modal) { modal?.remove(); modal = null; return; }
-      if (event.target.closest("#admin-beverage-stock-nav-v2")) { deactivate(); return; }
-      const button = event.target.closest("header.top nav button");
-      if (!button) return;
-      const label = labelOf(button);
-      if (label === "Printer") {
-        setTimeout(activate, 0);
-        setTimeout(activate, 80);
-      } else if (["Operasional", "Pelanggan", "Keluar"].includes(label)) {
-        deactivate();
-      }
     };
 
     document.addEventListener("click", onDocumentClick, true);
     const onKey = (event) => { if (event.key === "Escape") { modal?.remove(); modal = null; } };
     window.addEventListener("keydown", onKey);
-    observer = new MutationObserver(() => requestAnimationFrame(reconcile));
-    observer.observe(document.body, { childList: true, subtree: true });
-    [0, 100, 250].forEach((delay) => setTimeout(reconcile, delay));
+    activate();
 
     return () => {
-      observer?.disconnect();
       document.removeEventListener("click", onDocumentClick, true);
       window.removeEventListener("keydown", onKey);
       deactivate();

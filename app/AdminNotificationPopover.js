@@ -64,15 +64,8 @@ export default function AdminNotificationPopover() {
     let filter = "all";
     let controller = null;
 
-    const isAdminUi = () =>
-      [...document.querySelectorAll("header.top nav button")].some(
-        (button) => button.textContent.replace(/\d+/g, "").trim() === "Operasional",
-      );
-
     const findButton = () =>
-      [...document.querySelectorAll("header.top nav button")].find(
-        (button) => button.textContent.replace(/\d+/g, "").trim() === "Notifikasi",
-      );
+      document.querySelector('header.top nav button[data-admin-nav="Notifikasi"]');
 
     const filtered = () =>
       filter === "unread" ? notifications.filter((item) => !item.read_at) : notifications;
@@ -257,9 +250,8 @@ export default function AdminNotificationPopover() {
     };
 
     const onDocumentClickCapture = (event) => {
-      if (!isAdminUi()) return;
       const button = event.target.closest?.("header.top nav button");
-      if (button && button.textContent.replace(/\d+/g, "").trim() === "Notifikasi") {
+      if (button?.dataset.adminNav === "Notifikasi") {
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation?.();

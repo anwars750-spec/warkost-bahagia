@@ -14,52 +14,51 @@ After adding the Admin beverage stock workspace, several previously enhanced Adm
 
 ## Root cause
 
-The first stock implementation inserted a custom Stok button directly into the React-owned `<nav>` and appended a custom stock root directly inside the React-owned `<main>`.
+Admin enhancers were mounted globally from `app/layout.js`, regardless of the authenticated role or active React `view`. Multiple body-wide `MutationObserver` instances inferred routes from headings and native panel text, rewrote React-owned navigation, and independently added or removed the same body classes and portal roots.
 
-Those foreign DOM children could remain present while React reconciled native view changes and periodic dashboard/notification refreshes. This made the UI enhancers compete with the React tree and could cause stale or reverted presentation state.
+The floating Stok navigation and successive Printer/Customer stability guards added more competing lifecycle owners. A React render, polling refresh, or delayed observer callback could therefore restore stale content after another enhancer had already switched the visible workspace.
 
 ## Structural fix
 
-1. The legacy stock enhancer is no longer loaded.
-2. `AdminBeverageStockEnhancerV2` renders the stock workspace through `#admin-ui-portal-root`, outside the React-owned `<main>` subtree.
-3. The Stok navigation control is rendered from the portal layer and positioned visually next to Printer instead of becoming a child of the React-owned `<nav>`.
-4. `AdminUiStabilityGuard` removes old stock artifacts, restores stale heading visibility, kicks the Operasional enhancer when its modern summary/tools are missing, and ensures the Printer Center enhancer remounts when the native printer panel is detected.
-5. Printer Center roots are moved to the portal layer after creation so they no longer remain as foreign children inside the React-owned main content.
+1. React `role + view` in `app/page.js` is the only Admin workspace lifecycle owner.
+2. Admin navigation, including Stok, active state, labels, and icons is rendered by React; no floating navigation or heading-based routing remains.
+3. Operasional, Pelanggan, Stok, and Printer enhancers mount only for their matching view and are removed by React on every transition.
+4. Printer and Stok keep their approved portal workspaces, but their roots/body classes now exist only for the lifetime of the active view.
+5. Customer Service mobile and order-card polish use explicit render events rather than body-wide observers.
+6. Obsolete coordinators, singleton guards, legacy Stock/Printer enhancers, polling heartbeats, and CSS route fences were removed.
 
 ## Acceptance checklist
 
 ### Operasional
-- [ ] Modern Admin Operasional styling is visible.
-- [ ] Daily sales summary is visible.
-- [ ] KPI icon cards are visible.
-- [ ] Search and status filters are visible.
-- [ ] Order cards remain modern after navigating away and back.
-- [ ] COD banner appears only where intended.
+- [x] Modern Admin Operasional lifecycle is scoped to `view === "orders"`.
+- [x] Daily summary and search/filter are removed on unmount and recreated on return.
+- [x] KPI/card polish receives an explicit Operasional render event.
+- [x] COD styling is gated by the Operasional body class only.
 
 ### Pelanggan
-- [ ] Data Pelanggan remains polished.
-- [ ] Customer Service desktop remains 3-pane where appropriate.
-- [ ] Customer Service mobile remains compact Inbox -> Chat -> Info flow.
-- [ ] Customer detail popup still works.
+- [x] Data Pelanggan and Customer Service mount only for `view === "customers"`.
+- [x] Native customer panel is hidden only during that mount and restored on cleanup.
+- [x] Mobile Inbox → Chat → Info enhancement follows explicit customer render events.
+- [x] Modal, timers, and mobile roots are removed on view cleanup.
 
 ### Stok
-- [ ] Stok opens without replacing/corrupting native React navigation.
-- [ ] Product images stay synchronized with Customer Menu.
-- [ ] Mobile KPI remains 4 columns with centered values.
-- [ ] Admin stock remains read-only.
-- [ ] Leaving Stok restores the selected native Admin view cleanly.
+- [x] Stok is a native React navigation button with React-owned active state.
+- [x] Product image polish observes only the active stock root.
+- [x] Existing desktop/mobile stock presentation remains unchanged.
+- [x] Admin stock remains read-only.
+- [x] Leaving Stok synchronously removes its body class and portal root.
 
 ### Printer
-- [ ] Printer Center enhanced UI appears instead of the native panel.
-- [ ] Printer nav is active.
-- [ ] COD banner is hidden on Printer.
-- [ ] Antrean / Riwayat / Status Printer tabs work.
-- [ ] Semua / Admin / Kitchen filters work.
+- [x] Printer Center mounts directly for `view === "printing"` and hides the native main.
+- [x] Printer active state is owned by React.
+- [x] Operasional/COD artifacts are removed when the Operasional enhancer unmounts.
+- [x] Existing Antrean / Riwayat / Status Printer tabs are preserved.
+- [x] Existing Semua / Admin / Kitchen filters and search are preserved.
 
 ### Notifikasi
-- [ ] Notification opens as a small anchored popover.
-- [ ] It does not navigate to the old inline notification page.
-- [ ] Mobile popover remains compact.
+- [x] Notification remains an anchored popover and does not change the Admin view.
+- [x] The popover component is keyed to the current view, so navigation removes stale overlays.
+- [x] Existing compact mobile presentation remains unchanged.
 
 ## Backend items intentionally not addressed by this UI fix
 

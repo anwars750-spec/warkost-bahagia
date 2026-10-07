@@ -34,14 +34,6 @@ const ICONS = {
   pin: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>',
 };
 
-const NAV_ICON = {
-  Operasional: "home",
-  Pelanggan: "users",
-  Printer: "printer",
-  Notifikasi: "bell",
-  Keluar: "logout",
-};
-
 const KPI_ICONS = [
   "receipt",
   "wallet",
@@ -115,16 +107,11 @@ const driverCopyForStatus = (status) => {
   return "Menunggu pesanan siap untuk driver";
 };
 
-export default function AdminUiEnhancer() {
+export default function AdminUiEnhancer({ view }) {
   useEffect(() => {
     let activeFilter = "all";
     let query = "";
     let timer = null;
-
-    const isAdmin = () =>
-      [...document.querySelectorAll("header.top nav button")].some(
-        (button) => button.textContent.trim() === "Operasional",
-      );
 
     const getOrders = () => [
       ...document.querySelectorAll("main .order-list > .order"),
@@ -169,13 +156,6 @@ export default function AdminUiEnhancer() {
       document.querySelector("main")?.classList.remove("admin-ui-main");
       document.querySelector("main .heading")?.classList.remove("admin-ui-heading");
       document.querySelector("header.top nav")?.classList.remove("admin-nav");
-      document
-        .querySelectorAll("header.top nav button")
-        .forEach((button) => {
-          button.classList.remove("admin-nav-active");
-          delete button.dataset.adminNav;
-          button.querySelector(".admin-nav-icon")?.remove();
-        });
       document
         .querySelector("main .stats.admin-kpi-grid")
         ?.classList.remove("admin-kpi-grid");
@@ -467,34 +447,10 @@ export default function AdminUiEnhancer() {
       applyFilter();
     };
 
-    const decorateNavigation = (header, headingText) => {
+    const decorateNavigation = (header) => {
       const nav = header.querySelector("nav");
       if (!nav) return;
       nav.classList.add("admin-nav");
-      [...nav.querySelectorAll("button")].forEach((button) => {
-        const label = button.textContent.replace(/\d+/g, "").trim();
-        button.dataset.adminNav = label;
-        const iconName = NAV_ICON[label];
-
-        if (label === "Notifikasi") {
-          button.querySelector(".admin-nav-icon")?.remove();
-        } else if (iconName && !button.querySelector(".admin-nav-icon")) {
-          button.insertAdjacentHTML(
-            "afterbegin",
-            iconMarkup(iconName, "admin-svg-icon admin-nav-icon"),
-          );
-        }
-
-        button.classList.remove("admin-nav-active");
-        if (
-          (label === "Operasional" && headingText === "Pantau pesanan hari ini") ||
-          (label === "Pelanggan" && headingText === "Kelola pelanggan") ||
-          (label === "Printer" && headingText.includes("cetak")) ||
-          (label === "Notifikasi" && headingText === "Notifikasi")
-        ) {
-          button.classList.add("admin-nav-active");
-        }
-      });
     };
 
     const decorateKpis = (main) => {
@@ -579,11 +535,6 @@ export default function AdminUiEnhancer() {
     };
 
     const decorate = () => {
-      if (!isAdmin()) {
-        clearAdminDecorations();
-        return;
-      }
-
       const header = document.querySelector("header.top");
       const main = document.querySelector("main");
       if (!header || !main) {
@@ -596,11 +547,10 @@ export default function AdminUiEnhancer() {
       main.classList.add("admin-ui-main");
 
       const heading = main.querySelector(".heading");
-      const headingText = heading?.querySelector("h1")?.textContent?.trim() || "";
       if (heading) heading.classList.add("admin-ui-heading");
-      decorateNavigation(header, headingText);
+      decorateNavigation(header);
 
-      const onOperations = headingText === "Pantau pesanan hari ini";
+      const onOperations = view === "orders";
       document.body.classList.toggle("admin-operations-view", onOperations);
 
       if (!onOperations) {
@@ -620,6 +570,7 @@ export default function AdminUiEnhancer() {
       ensureSummary(main);
       ensureTools(main);
       applyFilter();
+      window.dispatchEvent(new CustomEvent("warkost:admin-orders-rendered"));
     };
 
     const scheduleDecorate = () => {
@@ -629,14 +580,15 @@ export default function AdminUiEnhancer() {
 
     decorate();
     const observer = new MutationObserver(scheduleDecorate);
-    observer.observe(document.body, { childList: true, subtree: true });
+    const main = document.querySelector("main");
+    if (main) observer.observe(main, { childList: true, subtree: true });
 
     return () => {
       observer.disconnect();
       if (timer) window.clearTimeout(timer);
       clearAdminDecorations();
     };
-  }, []);
+  }, [view]);
 
   return null;
 }
