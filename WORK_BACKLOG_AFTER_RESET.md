@@ -23,6 +23,27 @@ Owner decision: UI/UX stays handled outside Work. Work is reserved for backend, 
 
 This is the highest-priority backend milestone after quota reset because it protects cash revenue and prevents fraud/accounting mismatch.
 
+## Critical Admin bug that must be fixed first
+
+A confirmed UAT bug currently exists in Admin Operasional:
+
+> While an order is still actively being processed, Admin can still trigger payment actions that mark the payment as successful/paid or failed/cancelled.
+
+This is a **critical state-integrity bug**, not merely a UI issue.
+
+Required behavior:
+
+- While fulfillment is still running, payment terminal actions must not be available unless the business flow explicitly allows that transition.
+- For COD, Admin must not be able to set payment to `PAID` or `FAILED` during preparation/delivery states before the physical cash settlement flow is completed.
+- The UI must hide or disable invalid actions such as `Tandai lunas` / `Tandai gagal` when the order state does not permit them.
+- The server/API must independently reject the same invalid transitions even if a request is sent manually.
+- A page refresh, duplicate request, direct API call, stale browser state, or manipulated client must not bypass the guard.
+- Payment state changes must follow an explicit allowed-transition matrix tied to order status and payment method.
+- Provider-managed payment methods such as QRIS must not be manually overridden by Admin during an active transaction unless there is a separately authorized reconciliation flow.
+- Any rejected transition must leave order/payment state unchanged and must not trigger loyalty, stock, print, notification, or fulfillment side effects.
+
+This bug must be covered by targeted regression tests before Pack 1 is considered complete.
+
 ## Required business rules
 
 ### A. COD cannot be prematurely marked paid/failed
@@ -85,6 +106,10 @@ If proof attachment/photo/receipt evidence is implemented, store a safe referenc
 
 Targeted tests must cover:
 
+- Admin cannot mark an actively processed COD order `PAID`.
+- Admin cannot mark an actively processed COD order `FAILED`/cancel payment while the state forbids it.
+- Direct API attempts to bypass hidden/disabled payment buttons are rejected.
+- Rejected payment transition leaves payment/order state unchanged and creates no side effects.
 - COD premature Admin `PAID` rejected.
 - COD premature Admin `FAILED` rejected where business rule prohibits it.
 - Driver cash collection requires assigned driver.
