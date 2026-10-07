@@ -342,14 +342,15 @@ export default function AdminOrderModalEnhancer() {
     };
 
     const onClickCapture = (event) => {
-      if (!document.body.classList.contains("admin-operations-view")) return;
       const button = event.target.closest("button");
       if (!button) return;
       const card = button.closest("main .order-list .order");
       if (!card) return;
       const text = button.textContent.trim();
-      const isDetailButton = button.classList.contains("admin-card-detail-button") || /lihat\s+(item\s*&\s*riwayat|detail)/i.test(text);
-      if (!isDetailButton || /tutup/i.test(text)) return;
+      const isDetailButton =
+        button.classList.contains("admin-card-detail-button") ||
+        /(?:lihat|tutup)\s+(?:item\s*&\s*riwayat|detail)/i.test(text);
+      if (!isDetailButton) return;
 
       event.preventDefault();
       event.stopPropagation();
