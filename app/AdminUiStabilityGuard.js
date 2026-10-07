@@ -83,18 +83,22 @@ export default function AdminUiStabilityGuard() {
     };
 
     const stabilizeHeading = (printing) => {
-      if (printing) return;
+      if (printing || document.body.classList.contains("admin-beverage-stock-view"))
+        return;
       const main = document.querySelector("main");
       const h1 = main?.querySelector(".heading h1");
       if (!main || !h1) return;
-      const text = h1.textContent?.trim() || "";
-      if (text !== "Pusat cetak printer") return;
 
       if (findCustomerPanel()) {
-        h1.textContent = "Kelola pelanggan";
+        if (h1.textContent?.trim() !== "Kelola pelanggan")
+          h1.textContent = "Kelola pelanggan";
         return;
       }
-      if (main.querySelector(".order-list")) h1.textContent = "Pantau pesanan hari ini";
+
+      if (main.querySelector(".order-list")) {
+        if (h1.textContent?.trim() !== "Pantau pesanan hari ini")
+          h1.textContent = "Pantau pesanan hari ini";
+      }
     };
 
     const stabilizeOperations = (printing) => {
