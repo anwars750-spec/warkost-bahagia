@@ -8,6 +8,7 @@ import "./admin-order-modal-close-fix.css";
 import "./admin-order-modal-fallback.css";
 import "./admin-customers.css";
 import "./admin-customers-polish.css";
+import "./admin-customer-modal-polish.css";
 import AdminUiEnhancer from "./AdminUiEnhancer";
 import AdminOrderCardEnhancer from "./AdminOrderCardEnhancer";
 import AdminOrderModalEnhancer from "./AdminOrderModalEnhancer";
