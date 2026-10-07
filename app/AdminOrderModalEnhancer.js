@@ -93,6 +93,28 @@ export default function AdminOrderModalEnhancer() {
       document.body.style.overflow = "hidden";
     };
 
+    const fetchJson = async (url) => {
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 8000);
+      try {
+        const response = await fetch(url, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          throw new Error(`Gagal memuat data (${response.status})`);
+        }
+        return await response.json();
+      } catch (error) {
+        if (error?.name === "AbortError") {
+          throw new Error("Waktu memuat detail habis. Silakan coba lagi.");
+        }
+        throw error;
+      } finally {
+        window.clearTimeout(timeout);
+      }
+    };
+
     const buildTimeline = (status, events = []) => {
       const currentIndex = ORDER_STEPS.findIndex(([key]) => key === status);
       const eventMap = new Map(
@@ -183,17 +205,17 @@ export default function AdminOrderModalEnhancer() {
     const openModal = async (card) => {
       const id = orderIdFromCard(card);
       if (!id) return;
-      const token = ++requestToken;
+
+      // renderLoadingModal closes any previous modal and advances requestToken.
+      // Capture the token only after the new modal exists so the response is not discarded.
       renderLoadingModal(id);
+      const token = requestToken;
 
       try {
-        const [ordersResponse, detailsResponse] = await Promise.all([
-          fetch("/api/orders", { cache: "no-store" }),
-          fetch(`/api/order-items?id=${encodeURIComponent(id)}`, { cache: "no-store" }),
+        const [ordersData, detailsData] = await Promise.all([
+          fetchJson("/api/orders"),
+          fetchJson(`/api/order-items?id=${encodeURIComponent(id)}`),
         ]);
-        if (!ordersResponse.ok || !detailsResponse.ok) throw new Error("Gagal memuat detail pesanan");
-        const ordersData = await ordersResponse.json();
-        const detailsData = await detailsResponse.json();
         if (token !== requestToken || !modal) return;
         const order = (ordersData.orders || []).find((item) => Number(item.id) === id);
         if (!order) throw new Error("Pesanan tidak ditemukan");
