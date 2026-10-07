@@ -26,9 +26,45 @@
 - Manager RBAC Settings hotfix implementation: `038c82d7c159d1bd2bee17cdc03553fa4b24385e`
 - Admin + Driver Operational Flow hotfix implementation: `72d2685295d5a86c587a4aa09373f4925a193db9`
 - Admin UI Final Regression Stabilization implementation: `5db3642804c4cb264410ae24e245da8064cae6eb`
-- Current milestone: Admin UI Final Regression Stabilization
-- Current status: **IMPLEMENTED / TARGETED TESTS PASS / BUILD PASS / LOCAL BROWSER UAT REQUIRED**
+- COD Payment Integrity + Cash Settlement implementation: `acfd4ad440b1af996f68df2284d0be3bdd219849`
+- Current milestone: COD Payment Integrity + Cash Settlement
+- Current status: **IMPLEMENTED / AUTOMATED VERIFIED / MANUAL UAT REQUIRED**
 - Verification date: 2026-10-07
+
+## COD Payment Integrity + Cash Settlement
+
+### Final state machine and integrity guards
+
+- COD (`CASH`) remains `UNPAID` before and after terminal `DELIVERED`; it cannot be marked `PAID` or `FAILED` through the generic Admin payment action.
+- Reaching `DELIVERED` creates one idempotent `AWAITING_COD_SETTLEMENT` record using the server-owned payment amount and assigned driver.
+- Only the assigned driver can submit cash, only after delivery, without any ability to change the expected amount or payment status.
+- Driver submission moves the settlement to `SUBMITTED`; mismatched cash moves it to `NEEDS_REVIEW` with a signed discrepancy and keeps payment unpaid.
+- Exact Admin verification moves the settlement to `VERIFIED`, records the verifier/time, and atomically changes payment to `PAID`.
+- A verified settlement cannot be edited. Repeated verification is idempotent and does not repeat payment, loyalty, or financial audit effects.
+
+### Data, audit, and compatibility
+
+- Added `cod_settlements` with one row per order, driver ownership, expected/submitted amounts, evidence reference, verifier, timestamps, status, and discrepancy.
+- Added MySQL migration `019_cod_settlements.sql`, SQLite runtime schema/upgrade support, MySQL schema validation, and readiness probing.
+- Existing delivered/unpaid COD orders are backfilled to `AWAITING_COD_SETTLEMENT`; historical already-paid records are not reclassified without proof.
+- Audit records cover settlement awaiting, driver submission, discrepancy, verification, close, and payment transition with actor, role, order, amounts, and timestamps.
+- Loyalty remains gated by `DELIVERED + PAID`; COD verification triggers the existing idempotent award path exactly once.
+
+### UI integration
+
+- Locked Admin Operasional layout was preserved; only settlement status and an eligible Admin verification action were added.
+- Generic `Tandai lunas/gagal` actions now apply only to bank transfer, never COD.
+- Driver receives a minimal delivered-order cash handoff form; discrepancy can be corrected and resubmitted.
+
+### Verification
+
+- Targeted COD/payment/order/loyalty/report/notification/MySQL regression: **31/31 PASS**.
+- Dedicated COD settlement scenarios (16 required integrity cases across 5 focused tests): **PASS**.
+- Full unit suite: **133/133 PASS**.
+- Production build with Next.js 16.3.6: **PASS**.
+- Critical defects in milestone scope: **0**.
+- High defects in milestone scope: **0**.
+- Manual UAT remains required for the exact Driver submission → Admin verification click path.
 
 ## Admin UI Final Regression Stabilization
 
