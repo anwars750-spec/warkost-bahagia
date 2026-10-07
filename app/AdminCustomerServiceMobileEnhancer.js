@@ -55,9 +55,7 @@ export default function AdminCustomerServiceMobileEnhancer() {
     let lastSignature = "";
 
     const isMobile = () => window.matchMedia("(max-width: 760px)").matches;
-
     const getWorkspace = () => document.querySelector("#admin-customers-v1");
-
     const isServiceTabActive = (workspace) =>
       workspace?.querySelector('[data-customer-tab="service"].active') != null;
 
@@ -91,8 +89,7 @@ export default function AdminCustomerServiceMobileEnhancer() {
       <section class="admin-cs-mobile-head">
         <div>
           <small>CUSTOMER SERVICE</small>
-          <h3>Pusat percakapan</h3>
-          <p>Tangani pertanyaan customer dengan cepat dan tetap teratur.</p>
+          <h3>Inbox pelanggan</h3>
         </div>
         <span class="admin-cs-mobile-count">0 baru</span>
       </section>
@@ -105,7 +102,7 @@ export default function AdminCustomerServiceMobileEnhancer() {
 
       <label class="admin-cs-mobile-search">
         <span>${searchIcon}</span>
-        <input type="search" placeholder="Cari percakapan atau pelanggan..." disabled />
+        <input type="search" placeholder="Cari customer atau percakapan..." disabled />
       </label>
 
       <div class="admin-cs-mobile-tabs" aria-label="Filter percakapan">
@@ -120,11 +117,11 @@ export default function AdminCustomerServiceMobileEnhancer() {
             <section class="admin-cs-mobile-selected">
               <div class="admin-cs-mobile-avatar">${esc(initials(customer.name))}</div>
               <div class="admin-cs-mobile-selected-copy">
-                <small>PELANGGAN DIPILIH</small>
+                <small>SIAP DIBUKA</small>
                 <strong>${esc(customer.name)}</strong>
                 <span>${esc(customer.email || "Customer Warkost")}</span>
               </div>
-              <button type="button" data-admin-cs-mobile-open> Buka </button>
+              <button type="button" data-admin-cs-mobile-open>Buka chat</button>
             </section>
           `
           : ""
@@ -133,7 +130,7 @@ export default function AdminCustomerServiceMobileEnhancer() {
       <section class="admin-cs-mobile-inbox-empty">
         <span class="admin-cs-mobile-empty-icon">${chatIcon}</span>
         <strong>Belum ada percakapan</strong>
-        <p>Pesan customer baru akan tampil sebagai daftar ringkas di sini, jadi inbox tetap mudah dipantau saat chat bertambah banyak.</p>
+        <p>Pesan baru nanti tampil sebagai daftar ringkas berisi customer, preview pesan, waktu, status, dan jumlah belum dibaca.</p>
       </section>
     `;
 
@@ -154,22 +151,22 @@ export default function AdminCustomerServiceMobileEnhancer() {
 
       <section class="admin-cs-mobile-order-context">
         <div>
-          <small>KONTEKS LAYANAN</small>
+          <small>LAYANAN</small>
           <strong>Customer Service Warkost</strong>
           <span>Chat internal Customer ↔ Admin</span>
         </div>
-        <span class="admin-cs-mobile-status">Siap</span>
+        <span class="admin-cs-mobile-status">Aktif</span>
       </section>
 
       <section class="admin-cs-mobile-chat-body">
         <span class="admin-cs-mobile-empty-icon large">${chatIcon}</span>
         <strong>Belum ada pesan</strong>
-        <p>Riwayat percakapan akan tampil di area ini. Untuk panggilan langsung, customer diarahkan ke WhatsApp Warkost.</p>
+        <p>Riwayat chat akan tampil di sini. Untuk panggilan langsung, customer diarahkan ke WhatsApp Warkost.</p>
       </section>
 
       <section class="admin-cs-mobile-composer" aria-label="Kirim pesan">
         <button type="button" disabled aria-label="Lampiran">＋</button>
-        <input type="text" disabled placeholder="Ketik balasan untuk customer..." />
+        <input type="text" disabled placeholder="Ketik balasan..." />
         <button type="button" class="send" disabled>Kirim</button>
       </section>
     `;
@@ -207,9 +204,10 @@ export default function AdminCustomerServiceMobileEnhancer() {
       if (!mobileRoot || !mobileRoot.isConnected) {
         mobileRoot = document.createElement("div");
         mobileRoot.id = "admin-customer-service-mobile-v2";
-        mobileRoot.className = "admin-cs-mobile-v2";
         serviceShell.before(mobileRoot);
       }
+
+      mobileRoot.className = `admin-cs-mobile-v2 ${screen === "chat" && customer ? "is-chat" : "is-inbox"}`;
 
       if (signature === lastSignature && mobileRoot.childElementCount) return;
       lastSignature = signature;
@@ -223,7 +221,12 @@ export default function AdminCustomerServiceMobileEnhancer() {
     };
 
     observer = new MutationObserver(scheduleRender);
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class"],
+    });
     window.addEventListener("resize", scheduleRender);
     scheduleRender();
 
