@@ -5114,6 +5114,10 @@ function Order({
   const [details, setDetails] = useState(null);
   const [detailError, setDetailError] = useState("");
   const [expanded, setExpanded] = useState(false);
+  const [settlementAmount, setSettlementAmount] = useState(
+    String(o.expected_amount ?? o.payment_amount ?? o.total ?? ""),
+  );
+  const [settlementReference, setSettlementReference] = useState("");
   const adminNext = {
     PENDING: "CONFIRMED",
   };
@@ -5257,6 +5261,22 @@ function Order({
         <strong>{money(o.total)}</strong>
         <span>{o.payment_status || ""}</span>
       </div>
+      {o.method === "CASH" && o.status === "DELIVERED" && (
+        <div className="order-details cod-settlement-status">
+          <strong>Setoran COD</strong>
+          <span>
+            {o.settlement_status === "AWAITING_COD_SETTLEMENT"
+              ? "Menunggu setoran tunai driver"
+              : o.settlement_status === "SUBMITTED"
+                ? `Menunggu verifikasi Admin · ${money(o.cash_amount)}`
+                : o.settlement_status === "NEEDS_REVIEW"
+                  ? `Perlu diperbaiki · selisih ${money(Math.abs(Number(o.discrepancy_amount || 0)))}`
+                  : o.settlement_status === "VERIFIED"
+                    ? "Setoran tunai terverifikasi"
+                    : "Menunggu data setoran"}
+          </span>
+        </div>
+      )}
       {(o.kitchen_status || o.cashier_status) && (
         <div className="station-statuses">
           {o.kitchen_status && (
@@ -5338,7 +5358,8 @@ function Order({
               Minuman siap
             </button>
           )}
-          {o.method !== "QRIS" &&
+          {role === "ADMIN" &&
+            o.method === "BANK_TRANSFER" &&
             ["UNPAID", "PENDING"].includes(o.payment_status) && (
               <>
                 <button
@@ -5358,6 +5379,20 @@ function Order({
                   Tandai gagal
                 </button>
               </>
+            )}
+          {role === "ADMIN" &&
+            o.method === "CASH" &&
+            o.status === "DELIVERED" &&
+            o.settlement_status === "SUBMITTED" && (
+              <button
+                className="primary"
+                disabled={busy}
+                onClick={() =>
+                  action("cod-settlement-verify", { orderId: o.id })
+                }
+              >
+                Verifikasi setoran COD
+              </button>
             )}
         </div>
       )}
@@ -5419,6 +5454,49 @@ function Order({
           </button>
         </div>
       )}
+      {role === "DRIVER" &&
+        o.method === "CASH" &&
+        o.status === "DELIVERED" &&
+        ["AWAITING_COD_SETTLEMENT", "NEEDS_REVIEW"].includes(
+          o.settlement_status,
+        ) && (
+          <form
+            className="order-details"
+            onSubmit={(event) => {
+              event.preventDefault();
+              action("cod-settlement-submit", {
+                orderId: o.id,
+                cashAmount: settlementAmount,
+                evidenceReference: settlementReference,
+              });
+            }}
+          >
+            <strong>Serahkan tunai ke Admin</strong>
+            <label>
+              Jumlah tunai
+              <input
+                type="number"
+                min="0"
+                step="1"
+                required
+                value={settlementAmount}
+                onChange={(event) => setSettlementAmount(event.target.value)}
+              />
+            </label>
+            <label>
+              Referensi serah terima (opsional)
+              <input
+                maxLength="191"
+                value={settlementReference}
+                onChange={(event) => setSettlementReference(event.target.value)}
+                placeholder="Contoh: diterima Admin Rina"
+              />
+            </label>
+            <button className="primary" disabled={busy} type="submit">
+              Kirim setoran COD
+            </button>
+          </form>
+        )}
     </article>
   );
 }

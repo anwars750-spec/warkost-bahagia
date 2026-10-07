@@ -39,6 +39,10 @@ import {
   getPaymentStatus,
   verifyPayment,
 } from "../../../lib/payments.mjs";
+import {
+  submitCodSettlement,
+  verifyCodSettlement,
+} from "../../../lib/cod-settlements.mjs";
 import { getSettings, saveSettings } from "../../../lib/settings.mjs";
 import {
   listNotifications,
@@ -271,7 +275,7 @@ export async function GET(request, { params }) {
         );
       else
         orders = await store.all(
-          "SELECT o.*,u.name customer_name,a.detail address,p.method,p.status payment_status,d.driver_id,(SELECT status FROM order_stations WHERE order_id=o.id AND station='KITCHEN') kitchen_status,(SELECT status FROM order_stations WHERE order_id=o.id AND station='CASHIER') cashier_status FROM orders o JOIN users u ON u.id=o.customer_id JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id WHERE 1=1" +
+          "SELECT o.*,u.name customer_name,a.detail address,p.method,p.status payment_status,p.amount payment_amount,d.driver_id,s.id settlement_id,s.status settlement_status,s.expected_amount,s.cash_amount,s.evidence_reference,s.submitted_at,s.admin_verifier_id,s.verified_at,s.discrepancy_amount,(SELECT status FROM order_stations WHERE order_id=o.id AND station='KITCHEN') kitchen_status,(SELECT status FROM order_stations WHERE order_id=o.id AND station='CASHIER') cashier_status FROM orders o JOIN users u ON u.id=o.customer_id JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id LEFT JOIN cod_settlements s ON s.order_id=o.id WHERE 1=1" +
             bound +
             " ORDER BY o.id DESC LIMIT 26",
           ...(before === null ? [] : [before]),
@@ -588,6 +592,16 @@ export async function POST(request, { params }) {
       return out(await claimDelivery(user, integer(body.orderId)));
     if (action === "payment")
       return out(await verifyPayment(user, integer(body.orderId), body.status));
+    if (action === "cod-settlement-submit")
+      return out(
+        await submitCodSettlement(user, {
+          orderId: integer(body.orderId),
+          cashAmount: body.cashAmount,
+          evidenceReference: body.evidenceReference,
+        }),
+      );
+    if (action === "cod-settlement-verify")
+      return out(await verifyCodSettlement(user, integer(body.orderId)));
     if (action === "print-retry")
       return out(await retryPrintJob(user, integer(body.id)));
     if (action === "settings") return out(await saveSettings(user, body));

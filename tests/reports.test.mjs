@@ -54,7 +54,7 @@ test("laporan hanya Owner, tanggal valid, revenue dari pembayaran lunas", async 
   await assert.rejects(dailyReport(owner, "2026-02-30"), /Tanggal/);
   const paidOrder = await createOrder(customer, {
     addressId: 1,
-    method: "CASH",
+    method: "BANK_TRANSFER",
     items: [{ productId: 1, quantity: 2 }],
   });
   const cancelledOrder = await createOrder(customer, {

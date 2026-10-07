@@ -36,7 +36,7 @@ const kitchen = { id: 4, role: "KITCHEN" };
 test("notifikasi terikat status, role, pembacaan dan duplikasi", async () => {
   const order = await createOrder(customer, {
     addressId: 1,
-    method: "CASH",
+    method: "BANK_TRANSFER",
     items: [{ productId: 1, quantity: 1 }],
   });
   assert.equal((await listNotifications(admin)).unread, 1);

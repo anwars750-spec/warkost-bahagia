@@ -83,7 +83,7 @@ test("order sampai delivered, poin tepat sekali, otorisasi dan status tervalidas
   );
   const o = await createOrder(people.CUSTOMER, {
     addressId: 1,
-    method: "CASH",
+    method: "BANK_TRANSFER",
     items: [{ productId: 1, quantity: 2 }],
   });
   assert.equal(o.total, 50000);

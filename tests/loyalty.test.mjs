@@ -95,7 +95,7 @@ function orderInput({
 } = {}) {
   return {
     addressId,
-    method: "CASH",
+    method: "BANK_TRANSFER",
     items: [{ productId, quantity: 1 }],
     loyaltyRewardId,
     promotionId,
