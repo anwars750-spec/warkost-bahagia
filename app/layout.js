@@ -30,7 +30,7 @@ import AdminPrinterEnhancerV2 from "./AdminPrinterEnhancerV2";
 import AdminNotificationPopover from "./AdminNotificationPopover";
 import AdminBeverageStockEnhancerV2 from "./AdminBeverageStockEnhancerV2";
 import AdminBeverageStockPolish from "./AdminBeverageStockPolish";
-import AdminUiStabilityGuard from "./AdminUiStabilityGuard";
+import AdminViewCoordinator from "./AdminViewCoordinator";
 
 export const metadata = {
   title: "Warkost Bahagia",
@@ -51,7 +51,7 @@ export default function RootLayout({ children }) {
         <AdminNotificationPopover />
         <AdminBeverageStockEnhancerV2 />
         <AdminBeverageStockPolish />
-        <AdminUiStabilityGuard />
+        <AdminViewCoordinator />
         {children}
         <div id="admin-ui-portal-root" />
       </body>
