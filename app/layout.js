@@ -9,9 +9,11 @@ import "./admin-order-modal-fallback.css";
 import "./admin-customers.css";
 import "./admin-customers-polish.css";
 import "./admin-customer-modal-polish.css";
+import "./admin-customers-singleton.css";
 import AdminUiEnhancer from "./AdminUiEnhancer";
 import AdminOrderCardEnhancer from "./AdminOrderCardEnhancer";
 import AdminOrderModalEnhancer from "./AdminOrderModalEnhancer";
+import AdminCustomersSingletonGuard from "./AdminCustomersSingletonGuard";
 import AdminCustomersEnhancer from "./AdminCustomersEnhancer";
 
 export const metadata = {
@@ -26,6 +28,7 @@ export default function RootLayout({ children }) {
         <AdminUiEnhancer />
         <AdminOrderCardEnhancer />
         <AdminOrderModalEnhancer />
+        <AdminCustomersSingletonGuard />
         <AdminCustomersEnhancer />
         {children}
       </body>
