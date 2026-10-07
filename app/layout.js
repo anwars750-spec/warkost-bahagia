@@ -26,7 +26,7 @@ import AdminOrderModalEnhancer from "./AdminOrderModalEnhancer";
 import AdminCustomersSingletonGuard from "./AdminCustomersSingletonGuard";
 import AdminCustomersEnhancer from "./AdminCustomersEnhancer";
 import AdminCustomerServiceMobileEnhancer from "./AdminCustomerServiceMobileEnhancer";
-import AdminPrinterEnhancerV2 from "./AdminPrinterEnhancerV2";
+import AdminPrinterController from "./AdminPrinterController";
 import AdminNotificationPopover from "./AdminNotificationPopover";
 import AdminBeverageStockEnhancerV2 from "./AdminBeverageStockEnhancerV2";
 import AdminBeverageStockPolish from "./AdminBeverageStockPolish";
@@ -47,7 +47,7 @@ export default function RootLayout({ children }) {
         <AdminCustomersSingletonGuard />
         <AdminCustomersEnhancer />
         <AdminCustomerServiceMobileEnhancer />
-        <AdminPrinterEnhancerV2 />
+        <AdminPrinterController />
         <AdminNotificationPopover />
         <AdminBeverageStockEnhancerV2 />
         <AdminBeverageStockPolish />
