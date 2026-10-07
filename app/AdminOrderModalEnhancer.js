@@ -50,7 +50,7 @@ const orderIdFromCard = (card) => {
 const displayOrderId = (id) => `WB${String(id).padStart(6, "0")}`;
 
 const formatDateTime = (value) => {
-  if (!value) return "Waktu pesanan tidak tersedia";
+  if (!value) return "Belum tersedia";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
   return new Intl.DateTimeFormat("id-ID", {
@@ -77,6 +77,50 @@ const deliverySummary = (status) => {
   if (current === "ON_DELIVERY") return "Pesanan sedang menuju pelanggan";
   if (current === "DELIVERED") return "Pesanan telah diterima pelanggan";
   return current.replaceAll("_", " ");
+};
+
+const settlementMeta = (status) => {
+  const normalized = String(status || "AWAITING_COD_SETTLEMENT").toUpperCase();
+  const map = {
+    AWAITING_COD_SETTLEMENT: {
+      label: "Menunggu setoran",
+      tone: "waiting",
+      description: "Driver belum menyerahkan tunai COD ke Admin.",
+    },
+    SUBMITTED: {
+      label: "Siap diverifikasi",
+      tone: "submitted",
+      description: "Tunai sudah dicatat Driver dan menunggu verifikasi Admin.",
+    },
+    NEEDS_REVIEW: {
+      label: "Perlu koreksi",
+      tone: "review",
+      description: "Nominal setoran tidak sama dengan tagihan. Pembayaran tetap UNPAID.",
+    },
+    VERIFIED: {
+      label: "Terverifikasi",
+      tone: "verified",
+      description: "Setoran COD sudah cocok dan pembayaran telah dikonfirmasi.",
+    },
+  };
+  return {
+    status: normalized,
+    ...(map[normalized] || {
+      label: normalized.replaceAll("_", " "),
+      tone: "waiting",
+      description: "Status setoran COD sedang diproses.",
+    }),
+  };
+};
+
+const discrepancyCopy = (value) => {
+  const amount = Number(value || 0);
+  if (amount === 0) return { label: "Cocok", value: "Rp0", tone: "match" };
+  return {
+    label: amount < 0 ? "Kurang" : "Lebih",
+    value: money(Math.abs(amount)),
+    tone: "mismatch",
+  };
 };
 
 export default function AdminOrderModalEnhancer() {
@@ -135,12 +179,39 @@ export default function AdminOrderModalEnhancer() {
           signal: controller.signal,
         });
         if (!response.ok) {
-          throw new Error(`Gagal memuat data (${response.status})`);
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || `Gagal memuat data (${response.status})`);
         }
         return await response.json();
       } catch (error) {
         if (error?.name === "AbortError") {
           throw new Error("Waktu memuat detail habis. Silakan coba lagi.");
+        }
+        throw error;
+      } finally {
+        window.clearTimeout(timeout);
+      }
+    };
+
+    const postJson = async (url, payload) => {
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 8000);
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || `Gagal memproses data (${response.status})`);
+        }
+        return data;
+      } catch (error) {
+        if (error?.name === "AbortError") {
+          throw new Error("Proses verifikasi terlalu lama. Silakan coba lagi.");
         }
         throw error;
       } finally {
@@ -170,6 +241,76 @@ export default function AdminOrderModalEnhancer() {
           </div>
         `;
       }).join("");
+    };
+
+    const buildSettlementPanel = (order) => {
+      const method = String(order.method || "").toUpperCase();
+      const status = String(order.status || "").toUpperCase();
+      if (!["CASH", "COD"].includes(method) || status !== "DELIVERED") return "";
+
+      const meta = settlementMeta(order.settlement_status);
+      const expected = Number(order.expected_amount ?? order.payment_amount ?? order.total ?? 0);
+      const submitted = order.cash_amount == null ? null : Number(order.cash_amount);
+      const discrepancy = discrepancyCopy(order.discrepancy_amount);
+      const driverLabel = order.driver_id ? `Driver #${Number(order.driver_id)}` : "Belum tersedia";
+      const verifierLabel = order.admin_verifier_id
+        ? `Admin #${Number(order.admin_verifier_id)}`
+        : "Belum diverifikasi";
+      const canVerify = meta.status === "SUBMITTED";
+      const correctionNote = meta.status === "NEEDS_REVIEW"
+        ? '<div class="admin-cod-settlement-alert"><strong>Setoran perlu diperbaiki</strong><span>Driver harus mengirim ulang nominal yang sesuai sebelum Admin dapat menyelesaikan verifikasi.</span></div>'
+        : "";
+
+      return `
+        <section class="admin-modal-panel admin-cod-settlement-panel" data-settlement-status="${escapeHtml(meta.status)}">
+          <div class="admin-cod-settlement-heading">
+            <div>
+              <small>SETORAN COD</small>
+              <h3>Rekonsiliasi tunai</h3>
+            </div>
+            <span class="admin-cod-settlement-status ${escapeHtml(meta.tone)}">${escapeHtml(meta.label)}</span>
+          </div>
+
+          <p class="admin-cod-settlement-description">${escapeHtml(meta.description)}</p>
+
+          <div class="admin-cod-settlement-amounts">
+            <div class="admin-cod-amount-card">
+              <span>Tagihan COD</span>
+              <strong>${escapeHtml(money(expected))}</strong>
+              <small>Nominal dari sistem</small>
+            </div>
+            <div class="admin-cod-amount-card">
+              <span>Setoran Driver</span>
+              <strong>${submitted == null ? "—" : escapeHtml(money(submitted))}</strong>
+              <small>${submitted == null ? "Belum diserahkan" : "Tunai tercatat"}</small>
+            </div>
+            <div class="admin-cod-amount-card ${escapeHtml(discrepancy.tone)}">
+              <span>Selisih</span>
+              <strong>${escapeHtml(discrepancy.value)}</strong>
+              <small>${escapeHtml(discrepancy.label)}</small>
+            </div>
+          </div>
+
+          ${correctionNote}
+
+          <div class="admin-cod-settlement-meta">
+            <div><span>Driver</span><strong>${escapeHtml(driverLabel)}</strong></div>
+            <div><span>Waktu setoran</span><strong>${escapeHtml(order.submitted_at ? formatDateTime(order.submitted_at) : "Belum ada")}</strong></div>
+            <div><span>Referensi</span><strong>${escapeHtml(order.evidence_reference || "Tidak ada")}</strong></div>
+            <div><span>Verifikator</span><strong>${escapeHtml(verifierLabel)}</strong></div>
+            ${order.verified_at ? `<div><span>Waktu verifikasi</span><strong>${escapeHtml(formatDateTime(order.verified_at))}</strong></div>` : ""}
+          </div>
+
+          <div class="admin-cod-settlement-feedback" role="status" aria-live="polite"></div>
+
+          ${canVerify ? `
+            <button type="button" class="admin-cod-settlement-verify" data-order-id="${Number(order.id)}">
+              <span aria-hidden="true">✓</span>
+              Verifikasi setoran COD
+            </button>
+          ` : ""}
+        </section>
+      `;
     };
 
     const buildModalContent = (order, details) => {
@@ -209,6 +350,8 @@ export default function AdminOrderModalEnhancer() {
             </div>
           `).join("")
         : '<div class="admin-modal-operation-row muted"><span>Station</span><strong>Belum tersedia</strong></div>';
+
+      const settlementPanel = buildSettlementPanel(order);
 
       const headerMeta = modal.querySelector("#admin-modal-meta");
       if (headerMeta) {
@@ -305,9 +448,41 @@ export default function AdminOrderModalEnhancer() {
                 </div>
               </div>
             </section>
+
+            ${settlementPanel}
           </aside>
         </div>
       `;
+
+      const verifyButton = body.querySelector(".admin-cod-settlement-verify");
+      if (verifyButton) {
+        verifyButton.addEventListener("click", async () => {
+          const feedback = body.querySelector(".admin-cod-settlement-feedback");
+          const originalText = verifyButton.innerHTML;
+          verifyButton.disabled = true;
+          verifyButton.innerHTML = '<span class="admin-cod-settlement-spinner" aria-hidden="true"></span> Memverifikasi…';
+          if (feedback) {
+            feedback.className = "admin-cod-settlement-feedback";
+            feedback.textContent = "";
+          }
+          try {
+            await postJson("/api/cod-settlement-verify", { orderId: Number(order.id) });
+            const ordersData = await fetchJson("/api/orders");
+            const updatedOrder = (ordersData.orders || []).find(
+              (item) => Number(item.id) === Number(order.id),
+            );
+            if (!updatedOrder) throw new Error("Pesanan tidak ditemukan setelah verifikasi");
+            buildModalContent(updatedOrder, details);
+          } catch (error) {
+            verifyButton.disabled = false;
+            verifyButton.innerHTML = originalText;
+            if (feedback) {
+              feedback.className = "admin-cod-settlement-feedback error";
+              feedback.textContent = error.message || "Setoran belum dapat diverifikasi.";
+            }
+          }
+        });
+      }
     };
 
     const openModal = async (card) => {
