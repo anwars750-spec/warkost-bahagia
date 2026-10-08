@@ -7,6 +7,7 @@ import "./admin-order-modal.css";
 import "./admin-order-modal-close-fix.css";
 import "./admin-order-modal-fallback.css";
 import "./admin-cod-settlement.css";
+import "./cod-batch-settlement-center.css";
 import "./admin-operational-hotfix.css";
 import "./admin-customers.css";
 import "./admin-customers-polish.css";
@@ -21,7 +22,7 @@ import "./admin-beverage-stock-polish.css";
 import "./admin-beverage-stock-mobile-v3.css";
 import "./admin-beverage-stock-mobile-kpi-center.css";
 import "./admin-ui-stability.css";
-import AdminCodSettlementShortcut from "./AdminCodSettlementShortcut";
+import CodBatchSettlementCenter from "./CodBatchSettlementCenter";
 
 export const metadata = {
   title: "Warkost Bahagia",
@@ -33,7 +34,7 @@ export default function RootLayout({ children }) {
     <html lang="id">
       <body>
         {children}
-        <AdminCodSettlementShortcut />
+        <CodBatchSettlementCenter />
         <div id="admin-ui-portal-root" />
       </body>
     </html>
