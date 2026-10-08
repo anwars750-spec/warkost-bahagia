@@ -34,6 +34,7 @@ try {
       ["delivery_free_km", "5"],
       ["delivery_fee_per_km", "2500"],
       ["delivery_max_km", "15"],
+      ["cod_max_order_amount", "150000"],
       ["printer_simulation", "true"],
       ["printer_admin", "LAN 80mm Admin (simulasi)"],
       ["printer_kitchen", "LAN 80mm Kitchen (simulasi)"],

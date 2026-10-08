@@ -43,6 +43,13 @@ import {
   submitCodSettlement,
   verifyCodSettlement,
 } from "../../../lib/cod-settlements.mjs";
+import {
+  getCodBatch,
+  getDriverCodBatch,
+  listAdminCodBatches,
+  submitCodBatch,
+  verifyCodBatch,
+} from "../../../lib/cod-settlement-batches.mjs";
 import { getSettings, saveSettings } from "../../../lib/settings.mjs";
 import {
   listNotifications,
@@ -307,6 +314,22 @@ export async function GET(request, { params }) {
         await getPaymentStatus(
           user,
           integer(request.nextUrl.searchParams.get("orderId")),
+        ),
+      );
+    if (action === "cod-batch-driver")
+      return out(await getDriverCodBatch(user));
+    if (action === "cod-batches")
+      return out({
+        batches: await listAdminCodBatches(
+          user,
+          request.nextUrl.searchParams.get("filter") || "pending",
+        ),
+      });
+    if (action === "cod-batch")
+      return out(
+        await getCodBatch(
+          user,
+          integer(request.nextUrl.searchParams.get("batchId")),
         ),
       );
     if (action === "account") {
@@ -602,6 +625,15 @@ export async function POST(request, { params }) {
       );
     if (action === "cod-settlement-verify")
       return out(await verifyCodSettlement(user, integer(body.orderId)));
+    if (action === "cod-batch-submit")
+      return out(
+        await submitCodBatch(user, {
+          cashAmount: body.cashAmount,
+          evidenceReference: body.evidenceReference,
+        }),
+      );
+    if (action === "cod-batch-verify")
+      return out(await verifyCodBatch(user, integer(body.batchId)));
     if (action === "print-retry")
       return out(await retryPrintJob(user, integer(body.id)));
     if (action === "settings") return out(await saveSettings(user, body));
