@@ -24,6 +24,7 @@ import "./admin-beverage-stock-mobile-kpi-center.css";
 import "./admin-ui-stability.css";
 import CodBatchSettlementCenter from "./CodBatchSettlementCenter";
 import DriverCodBatchEventBridge from "./DriverCodBatchEventBridge";
+import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
 
 export const metadata = {
   title: "Warkost Bahagia",
@@ -37,6 +38,7 @@ export default function RootLayout({ children }) {
         {children}
         <CodBatchSettlementCenter />
         <DriverCodBatchEventBridge />
+        <AdminCodBatchEventBridge />
         <div id="admin-ui-portal-root" />
       </body>
     </html>
