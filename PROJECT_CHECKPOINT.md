@@ -29,9 +29,40 @@
 - COD Payment Integrity + Cash Settlement implementation: `acfd4ad440b1af996f68df2284d0be3bdd219849`
 - Admin Order Filter Architecture implementation: `4456119cee6fb5e0d62eb9c1564f4daf75aa8c9c`
 - Batch COD Settlement Backend implementation: `590d56f727f5d1cb2ff47d590678e24b213affed`
-- Current milestone: Batch COD Settlement Backend
+- Driver Multi-order Trip + Grouped COD UI implementation: `d506e466ad999a708be69fbd1a5d582978c8dadf`
+- Current milestone: Driver Multi-order Trip + Customer Wait Notice + Grouped COD UI
 - Current status: **VERIFIED**
 - Verification date: 2026-10-08
+
+## Driver Multi-order Trip + Customer Wait Notice + Grouped COD UI
+
+### Server-authoritative availability and trip lifecycle
+
+- Customer order responses now derive the delivery wait indicator from current server state: an unassigned active order shows the delay notice when no online Driver is immediately available at the store, including when Drivers still have nominal capacity but are already away with `PICKED_UP`/`ON_DELIVERY` work.
+- An idle online Driver suppresses the notice; assignment suppresses it and returns the Customer to the normal assigned/delivery status flow.
+- `MAX_ACTIVE_DELIVERIES` remains locked at 5. `Ambil Semua Pesanan` atomically claims only unassigned `READY` orders up to the authenticated Driver's remaining capacity.
+- Driver, order, and unique delivery ownership checks run inside the existing SQLite/MySQL transaction abstraction. Concurrent Drivers cannot claim the same order, and offline Drivers are rejected.
+- A Driver with a `PICKED_UP` or `ON_DELIVERY` trip cannot claim a new pickup group. Individual claim follows the same realistic trip guard.
+- `Pickup Semua` atomically moves only that Driver's accepted `ASSIGNED` orders to `PICKED_UP`, recording an order event, audit entry, and Customer notification for every affected order. Retrying is idempotent and creates no duplicate events.
+- Delivery remains strictly per order through `ON_DELIVERY` and `DELIVERED`; no batch delivery-completion action was introduced.
+
+### Driver and grouped COD presentation
+
+- Driver order UI now includes a responsive trip summary for active load, ready orders, picked-up orders, and authoritative grouped COD amount.
+- Contextual actions expose `Ambil Semua Pesanan`, `Pickup Semua`, and `Setoran COD`; the first two call one atomic server operation rather than a client-side loop.
+- Per-order Driver cash amount/reference inputs and per-order COD submission buttons were removed. Delivered COD cards retain read-only settlement status.
+- The existing grouped COD settlement model and center remain authoritative. The Driver center groups every eligible delivered/unverified COD order automatically, uses the server-calculated expected amount, and excludes QRIS.
+- Existing Admin grouped verification, per-order payment transition, loyalty idempotency, and the locked `cod_max_order_amount = 150000` rule remain unchanged.
+
+### Verification
+
+- Driver multi-order, wait-notice, dispatch, delivery communications, and grouped COD targeted suite: **30/30 PASS**.
+- Final Driver/COD focused retest after cleanup: **25/25 PASS**.
+- Admin filtering/stabilization, COD settlement, idempotency, loyalty, payment, and QRIS relevant regression: **38/38 PASS**.
+- Full unit suite: **159/159 PASS**.
+- Production build with Next.js 16.3.6: **PASS**.
+- Critical defects: **0**.
+- High defects: **0**.
 
 ## Batch COD Settlement Backend
 
