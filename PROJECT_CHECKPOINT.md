@@ -2,7 +2,7 @@
 
 ## Active baseline
 
-- Branch: `session/2a-customer-ui-polish`
+- Branch: `ui/admin-operasional-v1`
 - Accepted Customer UI baseline: `42fc282cad623492413b33db849f5765c7a4e50d`
 - Shipping core implementation commit: `f2007d5d02376981c8d7d402cba048ca651e398a`
 - Shipping core checkpoint: `b1c5c27b4f3f016a48fea7a80dab543da9b597e1`
@@ -27,9 +27,40 @@
 - Admin + Driver Operational Flow hotfix implementation: `72d2685295d5a86c587a4aa09373f4925a193db9`
 - Admin UI Final Regression Stabilization implementation: `5db3642804c4cb264410ae24e245da8064cae6eb`
 - COD Payment Integrity + Cash Settlement implementation: `acfd4ad440b1af996f68df2284d0be3bdd219849`
-- Current milestone: COD Payment Integrity + Cash Settlement
-- Current status: **IMPLEMENTED / AUTOMATED VERIFIED / MANUAL UAT REQUIRED**
-- Verification date: 2026-10-07
+- Admin Order Filter Architecture implementation: `4456119cee6fb5e0d62eb9c1564f4daf75aa8c9c`
+- Current milestone: Admin Order Filter Architecture
+- Current status: **VERIFIED**
+- Verification date: 2026-10-08
+
+## Admin Order Filter Architecture
+
+### Root cause and final architecture
+
+- React previously rendered every Admin order while `AdminUiEnhancer` attempted to hide cards after render, leaving two competing filter owners and allowing stale `DELIVERED` cards under `Menunggu (0)`.
+- Admin now has dedicated React state for status filter and search, separate from Customer order filters.
+- `filterAdminOrders` computes the exact order array before React `.map()` renders cards; counts use the same order data and status mapping.
+- Search covers numeric/order display ID (`#id` and `WBxxxxxx`), customer name, and address, and combines with the selected status filter.
+- A refreshed order that leaves a status group immediately disappears from that React view and appears under its new group without a browser refresh.
+
+### Removed legacy mechanism
+
+- Removed imperative tool creation, DOM-owned `activeFilter/query`, `ensureTools`, `applyFilter`, filter listeners, and card visibility mutation from `AdminUiEnhancer`.
+- Removed `AdminOrderFilterGuard` and its root layout mount.
+- Removed legacy `[hidden]` CSS overrides used to force filter visibility.
+- `AdminUiEnhancer` retains presentation-only card decoration; it no longer owns filtering or search.
+- COD settlement shortcut resets the React-owned filter through an event contract and no longer edits the search/filter DOM.
+
+### Verification
+
+- Focused Admin filter architecture tests: **6/6 PASS**.
+- Combined Admin filter + Admin UI stabilization + COD regression: **15/15 PASS**.
+- Three complete `Semua → Menunggu → Selesai → Menunggu → Semua` cycles: **PASS**.
+- Delivered-only count/visibility contract, combined search, live status movement, detail contract, and COD settlement contract: **PASS**.
+- Full unit suite: **139/139 PASS**.
+- Production build with Next.js 16.3.6: **PASS**.
+- Playwright Chromium executable: **UNAVAILABLE**; browser dependencies were not downloaded.
+- Critical defects: **0**.
+- High defects: **0**.
 
 ## COD Payment Integrity + Cash Settlement
 
