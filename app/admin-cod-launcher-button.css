@@ -1,0 +1,120 @@
+.admin-operations-view .admin-ui-heading::after {
+  display: none !important;
+  content: none !important;
+}
+
+.admin-cod-launcher-button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 300px;
+  max-width: 390px;
+  margin-left: auto;
+  padding: 13px 14px;
+  border: 1px solid #eadbc9;
+  border-radius: 16px;
+  color: #4b2a1f;
+  background: linear-gradient(135deg, #fff9f1, #fbeee1);
+  box-shadow: 0 12px 34px rgba(103, 57, 29, 0.06);
+  text-align: left;
+  cursor: pointer;
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+
+.admin-cod-launcher-button:hover {
+  transform: translateY(-1px);
+  border-color: #dfc7ae;
+  box-shadow: 0 14px 36px rgba(103, 57, 29, 0.1);
+}
+
+.admin-cod-launcher-button:focus-visible {
+  outline: 3px solid rgba(132, 55, 34, .18);
+  outline-offset: 2px;
+}
+
+.admin-cod-launcher-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 50%;
+  color: #7e3a22;
+  background: #f7dba9;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.admin-cod-launcher-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.admin-cod-launcher-copy strong {
+  color: #5b2d20;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: .02em;
+}
+
+.admin-cod-launcher-copy small {
+  overflow: hidden;
+  color: #765d52;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-cod-launcher-badge {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 9px;
+  border-radius: 999px;
+  color: #7c4a36;
+  background: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.admin-cod-launcher-badge.has-pending {
+  color: #fff;
+  background: #8a3825;
+}
+
+@media (max-width: 900px) {
+  .admin-ui-mode .admin-ui-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-cod-launcher-button {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .admin-cod-launcher-button {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 11px 12px;
+  }
+
+  .admin-cod-launcher-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .admin-cod-launcher-badge {
+    grid-column: 2;
+    width: fit-content;
+    margin-top: 2px;
+  }
+}
