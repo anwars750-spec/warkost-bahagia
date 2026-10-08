@@ -546,7 +546,8 @@ export default function CodBatchSettlementCenter() {
         badge.className = "cod-batch-launcher-badge";
         card.appendChild(badge);
       }
-      badge.textContent = adminPending > 0 ? `${adminPending} menunggu` : "Buka";
+      const nextBadgeText = adminPending > 0 ? `${adminPending} menunggu` : "Buka";
+      if (badge.textContent !== nextBadgeText) badge.textContent = nextBadgeText;
     };
 
     const onClick = (event) => {
@@ -557,7 +558,7 @@ export default function CodBatchSettlementCenter() {
     };
     const onKey = (event) => {
       if (!event.target.closest(".cod-batch-admin-launcher")) return;
-      if (!['Enter', ' '].includes(event.key)) return;
+      if (!["Enter", " "].includes(event.key)) return;
       event.preventDefault();
       setOpen(true);
     };
