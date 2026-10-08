@@ -8,6 +8,7 @@ import "./admin-order-modal-close-fix.css";
 import "./admin-order-modal-fallback.css";
 import "./admin-cod-settlement.css";
 import "./cod-batch-settlement-center.css";
+import "./admin-cod-launcher-button.css";
 import "./admin-operational-hotfix.css";
 import "./admin-customers.css";
 import "./admin-customers-polish.css";
@@ -25,6 +26,7 @@ import "./admin-ui-stability.css";
 import CodBatchSettlementCenter from "./CodBatchSettlementCenter";
 import DriverCodBatchEventBridge from "./DriverCodBatchEventBridge";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
+import AdminCodLauncherButton from "./AdminCodLauncherButton";
 
 export const metadata = {
   title: "Warkost Bahagia",
@@ -39,6 +41,7 @@ export default function RootLayout({ children }) {
         <CodBatchSettlementCenter />
         <DriverCodBatchEventBridge />
         <AdminCodBatchEventBridge />
+        <AdminCodLauncherButton />
         <div id="admin-ui-portal-root" />
       </body>
     </html>
