@@ -1212,40 +1212,40 @@ export default function App() {
                     ? "Notifikasi"
                     : view === "admin-stock" && role === "ADMIN"
                       ? "Stok Minuman"
-                    : view === "promotions" &&
-                        ["MANAGER", "OWNER"].includes(role)
-                      ? "Kelola promo"
-                      : view === "customers" &&
-                          ["ADMIN", "OWNER"].includes(role)
-                        ? "Kelola pelanggan"
-                        : view === "reports" && role === "OWNER"
-                          ? "Laporan harian"
-                          : view === "stock" &&
-                              ["MANAGER", "OWNER"].includes(role)
-                            ? "Kontrol stok"
-                            : view === "staff" && role === "OWNER"
-                              ? "Kelola staf"
-                              : view === "audit" && role === "OWNER"
-                                ? "Audit aktivitas"
-                                : view === "loyalty-rules" && role === "OWNER"
-                                  ? "Aturan Loyalty Reward"
-                                  : role === "KITCHEN"
-                                    ? "Antrean makanan"
-                                    : role === "OWNER"
-                                      ? "Ringkasan usaha"
-                                      : role === "ADMIN"
-                                        ? "Pantau pesanan hari ini"
-                                        : role === "MANAGER"
-                                          ? "Kelola operasional komersial"
-                                          : role === "DRIVER"
-                                            ? "Tugas pengantaran"
-                                            : view === "menu"
-                                              ? "Mau makan apa hari ini?"
-                                              : view === "orders"
-                                                ? "Pesanan saya"
-                                                : view === "account"
-                                                  ? "Akun saya"
-                                                  : "Selamat datang"}
+                      : view === "promotions" &&
+                          ["MANAGER", "OWNER"].includes(role)
+                        ? "Kelola promo"
+                        : view === "customers" &&
+                            ["ADMIN", "OWNER"].includes(role)
+                          ? "Kelola pelanggan"
+                          : view === "reports" && role === "OWNER"
+                            ? "Laporan harian"
+                            : view === "stock" &&
+                                ["MANAGER", "OWNER"].includes(role)
+                              ? "Kontrol stok"
+                              : view === "staff" && role === "OWNER"
+                                ? "Kelola staf"
+                                : view === "audit" && role === "OWNER"
+                                  ? "Audit aktivitas"
+                                  : view === "loyalty-rules" && role === "OWNER"
+                                    ? "Aturan Loyalty Reward"
+                                    : role === "KITCHEN"
+                                      ? "Antrean makanan"
+                                      : role === "OWNER"
+                                        ? "Ringkasan usaha"
+                                        : role === "ADMIN"
+                                          ? "Pantau pesanan hari ini"
+                                          : role === "MANAGER"
+                                            ? "Kelola operasional komersial"
+                                            : role === "DRIVER"
+                                              ? "Tugas pengantaran"
+                                              : view === "menu"
+                                                ? "Mau makan apa hari ini?"
+                                                : view === "orders"
+                                                  ? "Pesanan saya"
+                                                  : view === "account"
+                                                    ? "Akun saya"
+                                                    : "Selamat datang"}
                 </h1>
               </div>
               {role === "CUSTOMER" && view === "menu" && (
@@ -3792,6 +3792,22 @@ export default function App() {
                 </div>
               </section>
             )}
+            {role === "DRIVER" && (
+              <DriverTripControls
+                orders={visibleOrders}
+                busy={busy}
+                action={(route) =>
+                  run(async () => {
+                    const result = await api(route, {});
+                    setMessage(
+                      route === "claim-all-deliveries"
+                        ? `${result.count} pesanan berhasil diambil untuk trip ini`
+                        : `${result.count} pesanan berhasil di-pickup`,
+                    );
+                  })
+                }
+              />
+            )}
             <div
               className={
                 role === "CUSTOMER"
@@ -3820,6 +3836,10 @@ export default function App() {
                   action={(route, body) =>
                     run(async () => {
                       await api(route, body);
+                      if (role === "DRIVER")
+                        window.dispatchEvent(
+                          new CustomEvent("warkost:cod-batch-updated"),
+                        );
                       setMessage("Pesanan #" + o.id + " diperbarui");
                     })
                   }
@@ -3837,12 +3857,12 @@ export default function App() {
                         ? "Belum ada pesanan"
                         : `Tidak ada pesanan ${ADMIN_ORDER_FILTERS.find(({ key }) => key === adminOrderFilter)?.label.toLowerCase() || "pada filter ini"}`
                     : orderFilter === "completed"
-                    ? "Belum ada pesanan selesai"
-                    : orderFilter === "process"
-                      ? "Tidak ada pesanan yang sedang berjalan"
-                      : orderFilter === "cancelled"
-                        ? "Belum ada pesanan dibatalkan"
-                        : "Belum ada pesanan"}
+                      ? "Belum ada pesanan selesai"
+                      : orderFilter === "process"
+                        ? "Tidak ada pesanan yang sedang berjalan"
+                        : orderFilter === "cancelled"
+                          ? "Belum ada pesanan dibatalkan"
+                          : "Belum ada pesanan"}
                 </h2>
                 <p>
                   {role === "ADMIN"
@@ -4691,9 +4711,7 @@ function AdminNavIcon({ name }) {
     ),
   };
   return (
-    <SvgIcon className="admin-svg-icon admin-nav-icon">
-      {paths[name]}
-    </SvgIcon>
+    <SvgIcon className="admin-svg-icon admin-nav-icon">{paths[name]}</SvgIcon>
   );
 }
 function SvgIcon({ children, className = "ui-icon" }) {
@@ -5012,10 +5030,10 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
             <OrderProgress status={order.status} />
             {order.driver_delay_notice === 1 && (
               <div className="driver-delay-notice">
-                <strong>Mohon maaf, driver sedang penuh.</strong>
+                <strong>Driver sedang mengantar pesanan lain</strong>
                 <span>
-                  Pesanan tetap diproses, namun waktu pengantaran mungkin lebih
-                  lama dari biasanya.
+                  Pesananmu tetap diproses. Waktu pengantaran mungkin sedikit
+                  lebih lama dari biasanya.
                 </span>
               </div>
             )}
@@ -5194,10 +5212,6 @@ function Order({
   const [details, setDetails] = useState(null);
   const [detailError, setDetailError] = useState("");
   const [expanded, setExpanded] = useState(false);
-  const [settlementAmount, setSettlementAmount] = useState(
-    String(o.expected_amount ?? o.payment_amount ?? o.total ?? ""),
-  );
-  const [settlementReference, setSettlementReference] = useState("");
   const adminNext = {
     PENDING: "CONFIRMED",
   };
@@ -5269,8 +5283,11 @@ function Order({
         </div>
         {o.driver_delay_notice === 1 && (
           <div className="driver-delay-notice compact">
-            <strong>Pengantaran mungkin lebih lama</strong>
-            <span>Semua driver sedang bertugas.</span>
+            <strong>Driver sedang mengantar pesanan lain</strong>
+            <span>
+              Pesananmu tetap diproses. Waktu pengantaran mungkin sedikit lebih
+              lama dari biasanya.
+            </span>
           </div>
         )}
         <div className="customer-order-actions">
@@ -5534,50 +5551,111 @@ function Order({
           </button>
         </div>
       )}
-      {role === "DRIVER" &&
-        o.method === "CASH" &&
-        o.status === "DELIVERED" &&
-        ["AWAITING_COD_SETTLEMENT", "NEEDS_REVIEW"].includes(
-          o.settlement_status,
-        ) && (
-          <form
-            className="order-details"
-            onSubmit={(event) => {
-              event.preventDefault();
-              action("cod-settlement-submit", {
-                orderId: o.id,
-                cashAmount: settlementAmount,
-                evidenceReference: settlementReference,
-              });
-            }}
-          >
-            <strong>Serahkan tunai ke Admin</strong>
-            <label>
-              Jumlah tunai
-              <input
-                type="number"
-                min="0"
-                step="1"
-                required
-                value={settlementAmount}
-                onChange={(event) => setSettlementAmount(event.target.value)}
-              />
-            </label>
-            <label>
-              Referensi serah terima (opsional)
-              <input
-                maxLength="191"
-                value={settlementReference}
-                onChange={(event) => setSettlementReference(event.target.value)}
-                placeholder="Contoh: diterima Admin Rina"
-              />
-            </label>
-            <button className="primary" disabled={busy} type="submit">
-              Kirim setoran COD
-            </button>
-          </form>
-        )}
     </article>
+  );
+}
+
+function DriverTripControls({ orders, busy, action }) {
+  const [codBatch, setCodBatch] = useState(null);
+  const active = orders.filter((order) =>
+    ["ASSIGNED", "PICKED_UP", "ON_DELIVERY"].includes(order.status),
+  );
+  const ready = orders.filter((order) => Boolean(order.available_to_claim));
+  const assigned = active.filter((order) => order.status === "ASSIGNED");
+  const pickedUp = active.filter((order) => order.status === "PICKED_UP");
+  const codOutstanding = orders.filter(
+    (order) =>
+      order.method === "CASH" &&
+      order.status === "DELIVERED" &&
+      order.settlement_status !== "VERIFIED",
+  );
+  const codAmount = codOutstanding.reduce(
+    (sum, order) =>
+      sum +
+      Number(order.expected_amount ?? order.payment_amount ?? order.total ?? 0),
+    0,
+  );
+  useEffect(() => {
+    let active = true;
+    const load = () =>
+      api("cod-batch-driver")
+        .then((result) => active && setCodBatch(result))
+        .catch(() => active && setCodBatch(null));
+    load();
+    window.addEventListener("warkost:cod-batch-updated", load);
+    return () => {
+      active = false;
+      window.removeEventListener("warkost:cod-batch-updated", load);
+    };
+  }, []);
+  const serverCodCount = codBatch?.eligible_orders?.length;
+  const serverCodAmount = codBatch?.eligible_expected_amount;
+  return (
+    <section
+      className="panel driver-trip-workspace"
+      aria-label="Kontrol trip Driver"
+    >
+      <div className="driver-trip-heading">
+        <div>
+          <small>TRIP PENGANTARAN</small>
+          <h2>Kelola pesanan satu perjalanan</h2>
+          <p>
+            Ambil dan pickup bersama, lalu selesaikan setiap alamat satu per
+            satu.
+          </p>
+        </div>
+        <span>Maksimal 5 pesanan aktif</span>
+      </div>
+      <div className="driver-trip-stats">
+        <div>
+          <small>Tugas aktif</small>
+          <strong>{active.length} / 5</strong>
+        </div>
+        <div>
+          <small>Siap diambil</small>
+          <strong>{ready.length}</strong>
+        </div>
+        <div>
+          <small>Sudah di-pickup</small>
+          <strong>{pickedUp.length}</strong>
+        </div>
+        <div>
+          <small>COD belum setor</small>
+          <strong>{money(serverCodAmount ?? codAmount)}</strong>
+        </div>
+      </div>
+      <div className="actions driver-trip-actions">
+        {ready.length > 0 && (
+          <button
+            className="primary"
+            disabled={busy}
+            onClick={() => action("claim-all-deliveries")}
+          >
+            Ambil Semua Pesanan
+          </button>
+        )}
+        {assigned.length > 0 && (
+          <button
+            className="primary"
+            disabled={busy}
+            onClick={() => action("pickup-all-deliveries")}
+          >
+            Pickup Semua
+          </button>
+        )}
+        <button
+          disabled={busy}
+          onClick={() =>
+            window.dispatchEvent(new CustomEvent("warkost:open-cod-batch"))
+          }
+        >
+          Setoran COD
+          {(serverCodCount ?? codOutstanding.length)
+            ? ` (${serverCodCount ?? codOutstanding.length})`
+            : ""}
+        </button>
+      </div>
+    </section>
   );
 }
 

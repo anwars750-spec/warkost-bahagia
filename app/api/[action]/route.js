@@ -15,7 +15,11 @@ import {
   updateStationStatus,
   acceptDelivery,
   claimDelivery,
+  claimReadyDeliveries,
+  customerDriverWaitNotice,
+  deliveryAvailability,
   listDriverOrders,
+  pickupAllDeliveries,
   DomainError,
   requiredCapability,
 } from "../../../lib/domain.mjs";
@@ -150,20 +154,13 @@ export async function GET(request, { params }) {
       return out({ jobs: await listPrintJobs(user) });
     if (action === "delivery-capacity") {
       required(user, ["CUSTOMER", "ADMIN", "OWNER"]);
-      const result = await store.get(
-        "SELECT COUNT(*) available_drivers,COALESCE(SUM(5-active_load),0) available_slots FROM (SELECT u.id,(SELECT COUNT(*) FROM deliveries d JOIN orders o ON o.id=d.order_id WHERE d.driver_id=u.id AND o.status IN ('ASSIGNED','PICKED_UP','ON_DELIVERY')) active_load FROM users u WHERE u.role='DRIVER' AND u.active=1) capacity WHERE active_load<5",
-      );
-      const availableDrivers = nonNegativeInteger(
-        result.available_drivers,
-        "Driver tersedia",
-      );
+      const availability = await deliveryAvailability();
       return out({
-        availableDrivers,
-        availableSlots: nonNegativeInteger(
-          result.available_slots,
-          "Slot tersedia",
-        ),
-        delayed: availableDrivers === 0,
+        availableDrivers: availability.availableAtStore,
+        onlineDrivers: availability.onlineDrivers,
+        awayDrivers: availability.awayDrivers,
+        availableSlots: availability.availableSlots,
+        delayed: availability.delayed,
       });
     }
     if (action === "report")
@@ -290,6 +287,7 @@ export async function GET(request, { params }) {
       const hasMore = orders.length > 25;
       const page = orders.slice(0, 25);
       if (user.role === "CUSTOMER") {
+        const availability = await deliveryAvailability();
         const businessWhatsApp =
           (
             await store.get(
@@ -297,6 +295,10 @@ export async function GET(request, { params }) {
             )
           )?.value || "6281546407856";
         for (const order of page) {
+          order.driver_delay_notice = customerDriverWaitNotice(
+            order,
+            availability,
+          );
           order.admin_whatsapp = businessWhatsApp;
           order.driver_whatsapp = driverContactIsVisible(
             order.accepted_at,
@@ -613,6 +615,10 @@ export async function POST(request, { params }) {
       return out(await acceptDelivery(user, integer(body.orderId)));
     if (action === "claim-delivery")
       return out(await claimDelivery(user, integer(body.orderId)));
+    if (action === "claim-all-deliveries")
+      return out(await claimReadyDeliveries(user));
+    if (action === "pickup-all-deliveries")
+      return out(await pickupAllDeliveries(user));
     if (action === "payment")
       return out(await verifyPayment(user, integer(body.orderId), body.status));
     if (action === "cod-settlement-submit")

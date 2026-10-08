@@ -107,6 +107,9 @@ test("COD tidak dapat ditandai PAID/FAILED sebelum terminal delivery", async () 
       .get(inDelivery.id).status,
     "UNPAID",
   );
+  // Tutup trip fixture sebelum test berikutnya. Driver yang masih ON_DELIVERY
+  // memang tidak boleh mengambil grup pickup baru.
+  await changeStatus(driver, inDelivery.id, "DELIVERED");
 });
 
 test("delivery membuat settlement awaiting dan hanya assigned driver dapat submit", async () => {
