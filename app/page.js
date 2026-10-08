@@ -10,6 +10,11 @@ import AdminOrderCardEnhancer from "./AdminOrderCardEnhancer";
 import AdminOrderModalEnhancer from "./AdminOrderModalEnhancer";
 import AdminPrinterController from "./AdminPrinterController";
 import AdminUiEnhancer from "./AdminUiEnhancer";
+import {
+  ADMIN_ORDER_FILTERS,
+  adminOrderCounts,
+  filterAdminOrders,
+} from "../lib/admin-order-filter.mjs";
 const money = (n) => "Rp" + Number(n || 0).toLocaleString("id-ID");
 const whatsappLink = (number, text) =>
   `https://wa.me/${String(number || "").replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
@@ -197,6 +202,8 @@ export default function App() {
     [overlay, setOverlay] = useState(null),
     [supportTopic, setSupportTopic] = useState(null),
     [orderFilter, setOrderFilter] = useState("all"),
+    [adminOrderFilter, setAdminOrderFilter] = useState("all"),
+    [adminOrderSearch, setAdminOrderSearch] = useState(""),
     [notificationFilter, setNotificationFilter] = useState("all"),
     [lastCreatedOrderId, setLastCreatedOrderId] = useState(null),
     [focusedOrderId, setFocusedOrderId] = useState(null),
@@ -557,6 +564,22 @@ export default function App() {
     setCart((old) => ({ ...old, [id]: Math.max(0, (old[id] || 0) + n) }));
   }
   const role = user?.role;
+  useEffect(() => {
+    if (role !== "ADMIN") return;
+    const resetAdminOrderView = () => {
+      setAdminOrderFilter("all");
+      setAdminOrderSearch("");
+    };
+    window.addEventListener(
+      "warkost:admin-order-filter-reset",
+      resetAdminOrderView,
+    );
+    return () =>
+      window.removeEventListener(
+        "warkost:admin-order-filter-reset",
+        resetAdminOrderView,
+      );
+  }, [role]);
   const activePromotions = menu.promotions || [];
   const activePromo = activePromotions.length
     ? activePromotions[promoIndex % activePromotions.length]
@@ -572,8 +595,8 @@ export default function App() {
         .includes(search);
     return categoryMatches && searchMatches;
   });
-  const visibleOrders =
-    role !== "CUSTOMER" || orderFilter === "all"
+  const customerVisibleOrders =
+    orderFilter === "all"
       ? orders
       : orders.filter((order) => {
           if (orderFilter === "process")
@@ -582,6 +605,18 @@ export default function App() {
           if (orderFilter === "cancelled") return order.status === "CANCELLED";
           return true;
         });
+  const adminCounts = adminOrderCounts(orders);
+  const adminVisibleOrders = filterAdminOrders(
+    orders,
+    adminOrderFilter,
+    adminOrderSearch,
+  );
+  const visibleOrders =
+    role === "CUSTOMER"
+      ? customerVisibleOrders
+      : role === "ADMIN"
+        ? adminVisibleOrders
+        : orders;
   const customerOrderCounts = {
     all: orders.length,
     process: orders.filter(
@@ -3722,6 +3757,41 @@ export default function App() {
                 ))}
               </div>
             )}
+            {role === "ADMIN" && (
+              <section id="admin-order-tools" className="admin-order-tools">
+                <label className="admin-order-search">
+                  <span className="admin-svg-icon admin-search-icon">
+                    <SearchIcon />
+                  </span>
+                  <span className="sr-only">Cari pesanan</span>
+                  <input
+                    type="search"
+                    placeholder="Cari nomor pesanan, pelanggan, atau alamat..."
+                    value={adminOrderSearch}
+                    onChange={(event) =>
+                      setAdminOrderSearch(event.target.value)
+                    }
+                  />
+                </label>
+                <div
+                  className="admin-order-filters"
+                  aria-label="Filter operasional"
+                >
+                  {ADMIN_ORDER_FILTERS.map(({ key, label }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      data-filter={key}
+                      className={adminOrderFilter === key ? "active" : ""}
+                      aria-pressed={adminOrderFilter === key}
+                      onClick={() => setAdminOrderFilter(key)}
+                    >
+                      {label} ({adminCounts[key]})
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
             <div
               className={
                 role === "CUSTOMER"
@@ -3760,7 +3830,13 @@ export default function App() {
               <div className="panel empty-state">
                 <ReceiptIcon />
                 <h2>
-                  {orderFilter === "completed"
+                  {role === "ADMIN"
+                    ? adminOrderSearch.trim()
+                      ? "Pesanan tidak ditemukan"
+                      : adminOrderFilter === "all"
+                        ? "Belum ada pesanan"
+                        : `Tidak ada pesanan ${ADMIN_ORDER_FILTERS.find(({ key }) => key === adminOrderFilter)?.label.toLowerCase() || "pada filter ini"}`
+                    : orderFilter === "completed"
                     ? "Belum ada pesanan selesai"
                     : orderFilter === "process"
                       ? "Tidak ada pesanan yang sedang berjalan"
@@ -3768,7 +3844,11 @@ export default function App() {
                         ? "Belum ada pesanan dibatalkan"
                         : "Belum ada pesanan"}
                 </h2>
-                <p>Pesananmu akan tampil di sini.</p>
+                <p>
+                  {role === "ADMIN"
+                    ? "Ubah filter atau pencarian untuk melihat pesanan lain."
+                    : "Pesananmu akan tampil di sini."}
+                </p>
               </div>
             )}
             {nextOrderCursor && (

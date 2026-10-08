@@ -50,30 +50,22 @@ export default function AdminCodSettlementShortcut() {
     let currentCard = null;
 
     const showAllOrders = () => {
-      const allButton = document.querySelector(
-        '#admin-order-tools [data-filter="all"]',
-      );
-      if (allButton instanceof HTMLElement) allButton.click();
-
-      const search = document.querySelector(
-        '#admin-order-tools input[type="search"]',
-      );
-      if (search instanceof HTMLInputElement && search.value) {
-        search.value = "";
-        search.dispatchEvent(new Event("input", { bubbles: true }));
-      }
+      window.dispatchEvent(new CustomEvent("warkost:admin-order-filter-reset"));
     };
 
     const openOrder = (orderId) => {
       showAllOrders();
       window.setTimeout(() => {
-        const card = [...document.querySelectorAll("main .order-list > .order")].find(
-          (item) => orderIdFromCard(item) === Number(orderId),
-        );
+        const card = [
+          ...document.querySelectorAll("main .order-list > .order"),
+        ].find((item) => orderIdFromCard(item) === Number(orderId));
         if (!card) return;
         card.scrollIntoView({ behavior: "smooth", block: "center" });
         const detailButton = [...card.querySelectorAll(":scope > button")].find(
-          (button) => /(?:lihat|tutup)\s+(?:detail|item\s*&\s*riwayat)/i.test(button.textContent || ""),
+          (button) =>
+            /(?:lihat|tutup)\s+(?:detail|item\s*&\s*riwayat)/i.test(
+              button.textContent || "",
+            ),
         );
         detailButton?.click();
       }, 80);
@@ -142,10 +134,7 @@ export default function AdminCodSettlementShortcut() {
         "aria-label",
         "Buka setoran COD yang perlu ditinjau",
       );
-      currentCard.setAttribute(
-        "title",
-        "Buka setoran COD yang perlu ditinjau",
-      );
+      currentCard.setAttribute("title", "Buka setoran COD yang perlu ditinjau");
       currentCard.addEventListener("click", onClick);
       currentCard.addEventListener("keydown", onKeyDown);
     };

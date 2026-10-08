@@ -313,7 +313,6 @@
   overflow: visible;
 }
 
-.admin-ui-mode .admin-order-card[hidden] { display: none !important; }
 .admin-ui-mode .admin-order-card[data-order-group="preparing"] { border-left-color: var(--admin-blue); }
 .admin-ui-mode .admin-order-card[data-order-group="ready"] { border-left-color: var(--admin-green); }
 .admin-ui-mode .admin-order-card[data-order-group="delivery"] { border-left-color: var(--admin-purple); }

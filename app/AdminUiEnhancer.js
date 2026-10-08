@@ -2,34 +2,38 @@
 
 import { useEffect } from "react";
 
-const FILTERS = [
-  ["all", "Semua"],
-  ["waiting", "Menunggu"],
-  ["preparing", "Disiapkan"],
-  ["ready", "Siap antar"],
-  ["delivery", "Dalam pengantaran"],
-  ["done", "Selesai"],
-];
-
 const ICONS = {
   home: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.8 12 3l9 7.8"/><path d="M5.5 9.5V21h13V9.5"/><path d="M9.5 21v-6h5v6"/></svg>',
-  users: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-  printer: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/><path d="M18 12h.01"/></svg>',
+  users:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  printer:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/><path d="M18 12h.01"/></svg>',
   bell: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>',
-  logout: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M21 19V5a2 2 0 0 0-2-2h-6"/></svg>',
-  receipt: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2Z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>',
-  wallet: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h15a3 3 0 0 1 3 3v10H5a2 2 0 0 1-2-2V6Z"/><path d="M3 6l12-3v3"/><path d="M16 12h5"/><circle cx="16" cy="12" r="1"/></svg>',
-  clock: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
-  preparing: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12"/><path d="M7 2c0 5 2 6 5 8-3 2-5 3-5 8"/><path d="M17 2c0 5-2 6-5 8 3 2 5 3 5 8"/><path d="M6 22h12"/></svg>',
-  scooter: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/><path d="M9 18h6l2-7h-7l-2 4"/><path d="M15 7h3l2 4"/><path d="M5 15h2"/></svg>',
-  truck: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h11v10H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>',
-  check: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg>',
-  customer: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
-  driver: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="3"/><path d="M6 21v-3a6 6 0 0 1 12 0v3"/><path d="M8 13h8"/><path d="M9 4h6"/></svg>',
+  logout:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M21 19V5a2 2 0 0 0-2-2h-6"/></svg>',
+  receipt:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2Z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>',
+  wallet:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h15a3 3 0 0 1 3 3v10H5a2 2 0 0 1-2-2V6Z"/><path d="M3 6l12-3v3"/><path d="M16 12h5"/><circle cx="16" cy="12" r="1"/></svg>',
+  clock:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  preparing:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12"/><path d="M7 2c0 5 2 6 5 8-3 2-5 3-5 8"/><path d="M17 2c0 5-2 6-5 8 3 2 5 3 5 8"/><path d="M6 22h12"/></svg>',
+  scooter:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/><path d="M9 18h6l2-7h-7l-2 4"/><path d="M15 7h3l2 4"/><path d="M5 15h2"/></svg>',
+  truck:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h11v10H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>',
+  check:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg>',
+  customer:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+  driver:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="3"/><path d="M6 21v-3a6 6 0 0 1 12 0v3"/><path d="M8 13h8"/><path d="M9 4h6"/></svg>',
   star: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z"/></svg>',
-  search: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>',
-  refresh: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0 2 5"/><path d="M20 4v7h-7"/></svg>',
-  calendar: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
+  refresh:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0 2 5"/><path d="M20 4v7h-7"/></svg>',
+  calendar:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
   chat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-9 8 9 9 0 0 1-4-1l-5 2 2-5a8 8 0 1 1 16-4Z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg>',
   pin: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>',
 };
@@ -109,8 +113,6 @@ const driverCopyForStatus = (status) => {
 
 export default function AdminUiEnhancer({ view }) {
   useEffect(() => {
-    let activeFilter = "all";
-    let query = "";
     let timer = null;
 
     const getOrders = () => [
@@ -123,12 +125,13 @@ export default function AdminUiEnhancer({ view }) {
       card
         .querySelector(":scope > .actions .admin-detail-action-summary")
         ?.remove();
-      card.querySelector(":scope > .admin-detail-toggle")?.classList.remove("admin-detail-toggle");
+      card
+        .querySelector(":scope > .admin-detail-toggle")
+        ?.classList.remove("admin-detail-toggle");
     };
 
     const resetOrderCards = () => {
       getOrders().forEach((card) => {
-        card.hidden = false;
         removeOrderDetailEnhancement(card);
         card.classList.remove("admin-order-card");
         delete card.dataset.orderStatus;
@@ -137,24 +140,19 @@ export default function AdminUiEnhancer({ view }) {
       });
     };
 
-    const removeAdminTools = () => {
-      document.getElementById("admin-order-tools")?.remove();
-      activeFilter = "all";
-      query = "";
-      resetOrderCards();
-    };
-
     const removeSummary = () => {
       document.getElementById("admin-daily-summary")?.remove();
     };
 
     const clearAdminDecorations = () => {
-      removeAdminTools();
+      resetOrderCards();
       removeSummary();
       document.body.classList.remove("admin-ui-mode", "admin-operations-view");
       document.querySelector("header.top")?.classList.remove("admin-ui-header");
       document.querySelector("main")?.classList.remove("admin-ui-main");
-      document.querySelector("main .heading")?.classList.remove("admin-ui-heading");
+      document
+        .querySelector("main .heading")
+        ?.classList.remove("admin-ui-heading");
       document.querySelector("header.top nav")?.classList.remove("admin-nav");
       document
         .querySelector("main .stats.admin-kpi-grid")
@@ -188,30 +186,48 @@ export default function AdminUiEnhancer({ view }) {
         return;
       }
 
-      const headMeta = card.querySelector(".order-head small")?.textContent?.trim() || "";
-      const customer = card.querySelector(".order-head h2")?.textContent?.trim() || "Pelanggan";
+      const headMeta =
+        card.querySelector(".order-head small")?.textContent?.trim() || "";
+      const customer =
+        card.querySelector(".order-head h2")?.textContent?.trim() ||
+        "Pelanggan";
       const status = card.dataset.orderStatus || "";
-      const address = card.querySelector(":scope > p")?.textContent?.trim() || "Alamat belum tersedia";
-      const total = card.querySelector(":scope > .line strong")?.textContent?.trim() || "Rp0";
-      const payment = card.querySelector(":scope > .line span")?.textContent?.trim() || "";
-      const stationNodes = [...card.querySelectorAll(".station-statuses .badge")];
+      const address =
+        card.querySelector(":scope > p")?.textContent?.trim() ||
+        "Alamat belum tersedia";
+      const total =
+        card.querySelector(":scope > .line strong")?.textContent?.trim() ||
+        "Rp0";
+      const payment =
+        card.querySelector(":scope > .line span")?.textContent?.trim() || "";
+      const stationNodes = [
+        ...card.querySelectorAll(".station-statuses .badge"),
+      ];
       const stations = stationNodes.map((node) => node.textContent.trim());
       const idMatch = headMeta.match(/#(\d+)/);
       const orderId = idMatch ? idMatch[1] : "";
-      const displayOrder = orderId ? `WB${String(orderId).padStart(6, "0")}` : "Pesanan";
-      const dateText = headMeta.includes("·") ? headMeta.split("·").slice(1).join("·").trim() : headMeta;
+      const displayOrder = orderId
+        ? `WB${String(orderId).padStart(6, "0")}`
+        : "Pesanan";
+      const dateText = headMeta.includes("·")
+        ? headMeta.split("·").slice(1).join("·").trim()
+        : headMeta;
 
-      const itemRows = [...details.querySelectorAll(":scope > .line")].map((line) => {
-        const text = line.querySelector("span")?.textContent?.trim() || "Item";
-        const amount = line.querySelector("strong")?.textContent?.trim() || "";
-        const match = text.match(/^(\d+)\s*×\s*(.*?)(?:\s*·\s*(.*))?$/);
-        return {
-          qty: match?.[1] || "",
-          name: match?.[2] || text,
-          station: match?.[3] || "",
-          amount,
-        };
-      });
+      const itemRows = [...details.querySelectorAll(":scope > .line")].map(
+        (line) => {
+          const text =
+            line.querySelector("span")?.textContent?.trim() || "Item";
+          const amount =
+            line.querySelector("strong")?.textContent?.trim() || "";
+          const match = text.match(/^(\d+)\s*×\s*(.*?)(?:\s*·\s*(.*))?$/);
+          return {
+            qty: match?.[1] || "",
+            name: match?.[2] || text,
+            station: match?.[3] || "",
+            amount,
+          };
+        },
+      );
 
       const eventMap = new Map();
       [...details.querySelectorAll(":scope > p")].forEach((node) => {
@@ -251,8 +267,8 @@ export default function AdminUiEnhancer({ view }) {
         ?.remove();
       card.classList.add("admin-order-expanded");
 
-      const toggle = [...card.querySelectorAll(":scope > button")].find((button) =>
-        /detail|riwayat/i.test(button.textContent),
+      const toggle = [...card.querySelectorAll(":scope > button")].find(
+        (button) => /detail|riwayat/i.test(button.textContent),
       );
       toggle?.classList.add("admin-detail-toggle");
 
@@ -260,7 +276,11 @@ export default function AdminUiEnhancer({ view }) {
       const timeline = ORDER_STEPS.map(([key, label], index) => {
         const eventTime = eventMap.get(key) || "";
         const state =
-          index < currentIndex ? "complete" : index === currentIndex ? "current" : "upcoming";
+          index < currentIndex
+            ? "complete"
+            : index === currentIndex
+              ? "current"
+              : "upcoming";
         return `
           <div class="admin-detail-step ${state}">
             <span class="admin-detail-step-dot">${index < currentIndex ? ICONS.check : index + 1}</span>
@@ -353,8 +373,10 @@ export default function AdminUiEnhancer({ view }) {
       const actions = card.querySelector(":scope > .actions");
       if (actions) {
         const stationMarkup = stations.length
-          ? stations.map((station) => `<span>${escapeHtml(station)}</span>`).join("")
-          : '<span>Belum ada station aktif</span>';
+          ? stations
+              .map((station) => `<span>${escapeHtml(station)}</span>`)
+              .join("")
+          : "<span>Belum ada station aktif</span>";
         actions.insertAdjacentHTML(
           "afterbegin",
           `
@@ -371,80 +393,11 @@ export default function AdminUiEnhancer({ view }) {
       }
     };
 
-    const applyFilter = () => {
-      const tools = document.getElementById("admin-order-tools");
-      if (!tools || !document.body.classList.contains("admin-operations-view")) {
-        resetOrderCards();
-        return;
-      }
-
-      const cards = getOrders();
-      cards.forEach(annotateOrder);
-      cards.forEach((card) => {
+    const decorateOrders = () => {
+      getOrders().forEach((card) => {
+        annotateOrder(card);
         decorateOrderDetail(card);
-        const matchesGroup =
-          activeFilter === "all" || card.dataset.orderGroup === activeFilter;
-        const haystack = card.textContent.toLowerCase();
-        const matchesQuery = !query || haystack.includes(query);
-        card.hidden = !(matchesGroup && matchesQuery);
       });
-
-      FILTERS.forEach(([key]) => {
-        const button = tools.querySelector(`[data-filter="${key}"]`);
-        if (!button) return;
-        const count =
-          key === "all"
-            ? cards.length
-            : cards.filter((card) => card.dataset.orderGroup === key).length;
-        const label = FILTERS.find(([item]) => item === key)?.[1] || key;
-        button.textContent = `${label} (${count})`;
-        button.classList.toggle("active", activeFilter === key);
-      });
-    };
-
-    const ensureTools = (main) => {
-      const orderList = main.querySelector(".order-list");
-      if (!orderList) return;
-
-      const existing = document.getElementById("admin-order-tools");
-      if (existing) {
-        if (existing.nextElementSibling !== orderList) orderList.before(existing);
-        applyFilter();
-        return;
-      }
-
-      const tools = document.createElement("section");
-      tools.id = "admin-order-tools";
-      tools.className = "admin-order-tools";
-      tools.innerHTML = `
-        <label class="admin-order-search">
-          ${iconMarkup("search", "admin-svg-icon admin-search-icon")}
-          <span class="sr-only">Cari pesanan</span>
-          <input type="search" placeholder="Cari nomor pesanan, pelanggan, atau alamat..." />
-        </label>
-        <div class="admin-order-filters" aria-label="Filter operasional"></div>
-      `;
-
-      const filterWrap = tools.querySelector(".admin-order-filters");
-      FILTERS.forEach(([key, label]) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.dataset.filter = key;
-        button.textContent = label;
-        button.addEventListener("click", () => {
-          activeFilter = key;
-          applyFilter();
-        });
-        filterWrap.appendChild(button);
-      });
-
-      tools.querySelector("input").addEventListener("input", (event) => {
-        query = event.currentTarget.value.trim().toLowerCase();
-        applyFilter();
-      });
-
-      orderList.before(tools);
-      applyFilter();
     };
 
     const decorateNavigation = (header) => {
@@ -458,12 +411,17 @@ export default function AdminUiEnhancer({ view }) {
       if (!grid) return;
       [...grid.querySelectorAll(":scope > .stat")].forEach((stat, index) => {
         const label = stat.querySelector("small");
-        if (label) label.dataset.mobileLabel = KPI_MOBILE_LABELS[index] || label.textContent;
+        if (label)
+          label.dataset.mobileLabel =
+            KPI_MOBILE_LABELS[index] || label.textContent;
         if (stat.querySelector(".admin-kpi-icon")) return;
         const name = KPI_ICONS[index] || "receipt";
         stat.insertAdjacentHTML(
           "afterbegin",
-          iconMarkup(name, `admin-svg-icon admin-kpi-icon admin-kpi-icon-${index + 1}`),
+          iconMarkup(
+            name,
+            `admin-svg-icon admin-kpi-icon admin-kpi-icon-${index + 1}`,
+          ),
         );
       });
     };
@@ -479,10 +437,15 @@ export default function AdminUiEnhancer({ view }) {
 
     const statValue = (main, labelPrefix) => {
       const stats = [
-        ...main.querySelectorAll(".admin-kpi-grid .stat, .admin-payment-grid .stat"),
+        ...main.querySelectorAll(
+          ".admin-kpi-grid .stat, .admin-payment-grid .stat",
+        ),
       ];
       const stat = stats.find((item) =>
-        item.querySelector("small")?.textContent?.trim().startsWith(labelPrefix),
+        item
+          .querySelector("small")
+          ?.textContent?.trim()
+          .startsWith(labelPrefix),
       );
       return stat?.querySelector("strong")?.textContent?.trim() || "0";
     };
@@ -525,13 +488,21 @@ export default function AdminUiEnhancer({ view }) {
       }
 
       setSummaryValue(summary, "orders", statValue(main, "Order hari ini"));
-      setSummaryValue(summary, "revenue", statValue(main, "Revenue terverifikasi"));
+      setSummaryValue(
+        summary,
+        "revenue",
+        statValue(main, "Revenue terverifikasi"),
+      );
       setSummaryValue(summary, "paid", statValue(main, "Pembayaran PAID"));
       setSummaryValue(summary, "done", statValue(main, "Selesai"));
       setSummaryValue(summary, "waiting", statValue(main, "Menunggu"));
       setSummaryValue(summary, "preparing", statValue(main, "Disiapkan"));
       setSummaryValue(summary, "ready", statValue(main, "Siap antar"));
-      setSummaryValue(summary, "delivery", statValue(main, "Dalam pengantaran"));
+      setSummaryValue(
+        summary,
+        "delivery",
+        statValue(main, "Dalam pengantaran"),
+      );
     };
 
     const decorate = () => {
@@ -554,7 +525,7 @@ export default function AdminUiEnhancer({ view }) {
       document.body.classList.toggle("admin-operations-view", onOperations);
 
       if (!onOperations) {
-        removeAdminTools();
+        resetOrderCards();
         removeSummary();
         return;
       }
@@ -568,8 +539,7 @@ export default function AdminUiEnhancer({ view }) {
       decorateKpis(main);
       decorateRefresh(main);
       ensureSummary(main);
-      ensureTools(main);
-      applyFilter();
+      decorateOrders();
       window.dispatchEvent(new CustomEvent("warkost:admin-orders-rendered"));
     };
 

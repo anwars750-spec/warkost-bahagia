@@ -1,9 +1,4 @@
-/* Focused Admin Operasional hotfix: filter visibility + COD shortcut affordance */
-
-.admin-ui-mode .admin-order-list > .order[hidden],
-.admin-ui-mode .admin-order-list > .admin-order-card-v2[hidden] {
-  display: none !important;
-}
+/* Focused Admin Operasional COD shortcut affordance */
 
 .admin-cod-settlement-shortcut {
   cursor: pointer !important;
