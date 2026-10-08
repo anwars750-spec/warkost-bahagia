@@ -9,6 +9,7 @@ import "./admin-order-modal-fallback.css";
 import "./admin-cod-settlement.css";
 import "./cod-batch-settlement-center.css";
 import "./admin-cod-launcher-button.css";
+import "./communication.css";
 import "./admin-operational-hotfix.css";
 import "./admin-customers.css";
 import "./admin-customers-polish.css";

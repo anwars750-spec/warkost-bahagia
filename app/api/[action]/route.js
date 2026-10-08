@@ -60,6 +60,13 @@ import {
   readNotification,
 } from "../../../lib/notifications.mjs";
 import {
+  getConversation,
+  listAdminConversations,
+  openConversation,
+  sendConversationMessage,
+  updateConversationStatus,
+} from "../../../lib/communications.mjs";
+import {
   addAddress,
   getCustomerAccount,
   replaceAddress,
@@ -128,6 +135,20 @@ export async function GET(request, { params }) {
     const user = await currentUser(request);
     if (action === "me") return out({ user });
     if (action === "notifications") return out(await listNotifications(user));
+    if (action === "chat-inbox")
+      return out(
+        await listAdminConversations(user, {
+          filter: request.nextUrl.searchParams.get("filter") || "all",
+          query: request.nextUrl.searchParams.get("q") || "",
+        }),
+      );
+    if (action === "chat")
+      return out(
+        await getConversation(
+          user,
+          integer(request.nextUrl.searchParams.get("conversationId")),
+        ),
+      );
     if (action === "menu") return out(await listCatalog(false));
     if (action === "inventory") {
       requiredCapability(user, CAPABILITIES.CATALOG_READ);
@@ -541,6 +562,29 @@ export async function POST(request, { params }) {
     }
     if (action === "notification-read")
       return out(await readNotification(user, integer(body.id)));
+    if (action === "chat-open")
+      return out(
+        await openConversation(user, {
+          type: body.type,
+          orderId: integer(body.orderId),
+        }),
+      );
+    if (action === "chat-message")
+      return out(
+        await sendConversationMessage(user, {
+          conversationId: integer(body.conversationId),
+          message: body.message,
+        }),
+        201,
+      );
+    if (action === "chat-status")
+      return out(
+        await updateConversationStatus(
+          user,
+          integer(body.conversationId),
+          body.status,
+        ),
+      );
     if (action === "address") return out(await addAddress(user, body));
     if (action === "address-replace")
       return out(await replaceAddress(user, integer(body.id), body));

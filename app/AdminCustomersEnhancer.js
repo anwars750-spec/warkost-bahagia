@@ -113,6 +113,20 @@ export default function AdminCustomersEnhancer() {
     const selectedCustomer = () =>
       customers.find((customer) => Number(customer.id) === Number(selectedCustomerId));
 
+    const openCustomerService = (customerId = null) => {
+      const customer = customers.find(
+        (item) => Number(item.id) === Number(customerId),
+      );
+      window.dispatchEvent(
+        new CustomEvent("warkost:open-admin-customer-service", {
+          detail: {
+            customerId: customer ? Number(customer.id) : null,
+            customerName: customer?.name || "",
+          },
+        }),
+      );
+    };
+
     const renderSummary = () => {
       const visible = customers;
       const active = visible.filter((item) => Number(item.active) === 1).length;
@@ -287,7 +301,7 @@ export default function AdminCustomersEnhancer() {
             <span>${customerIcon}</span><div><strong>Data Pelanggan</strong><small>Cari & lihat profil</small></div>
           </button>
           <button type="button" data-customer-tab="service" class="${activeTab === "service" ? "active" : ""}">
-            <span>${chatIcon}</span><div><strong>Customer Service</strong><small>Pusat chat customer</small></div><em>0</em>
+            <span>${chatIcon}</span><div><strong>Customer Service</strong><small>Pusat chat customer</small></div>
           </button>
         </nav>
         <div class="admin-customers-content">
@@ -368,8 +382,7 @@ export default function AdminCustomersEnhancer() {
         if (support) {
           selectedCustomerId = Number(support.dataset.customerModalSupport);
           closeModal();
-          activeTab = "service";
-          render();
+          openCustomerService(selectedCustomerId);
         }
       });
       document.body.appendChild(modal);
@@ -385,6 +398,10 @@ export default function AdminCustomersEnhancer() {
     function bindEvents() {
       root?.querySelectorAll("[data-customer-tab]").forEach((button) => {
         button.addEventListener("click", () => {
+          if (button.dataset.customerTab === "service") {
+            openCustomerService(selectedCustomerId);
+            return;
+          }
           activeTab = button.dataset.customerTab;
           render();
         });
@@ -409,8 +426,7 @@ export default function AdminCustomersEnhancer() {
           if (button.dataset.customerAction === "detail") openCustomerModal(id);
           if (button.dataset.customerAction === "support") {
             selectedCustomerId = id;
-            activeTab = "service";
-            render();
+            openCustomerService(id);
           }
         });
       });

@@ -4,12 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import AdminBeverageStockEnhancerV2 from "./AdminBeverageStockEnhancerV2";
 import AdminBeverageStockPolish from "./AdminBeverageStockPolish";
 import AdminCustomersEnhancer from "./AdminCustomersEnhancer";
-import AdminCustomerServiceMobileEnhancer from "./AdminCustomerServiceMobileEnhancer";
+import AdminCustomerService from "./AdminCustomerService";
 import AdminNotificationPopover from "./AdminNotificationPopover";
 import AdminOrderCardEnhancer from "./AdminOrderCardEnhancer";
 import AdminOrderModalEnhancer from "./AdminOrderModalEnhancer";
 import AdminPrinterController from "./AdminPrinterController";
 import AdminUiEnhancer from "./AdminUiEnhancer";
+import ConversationChat from "./ConversationChat";
 import {
   ADMIN_ORDER_FILTERS,
   adminOrderCounts,
@@ -208,6 +209,7 @@ export default function App() {
     [lastCreatedOrderId, setLastCreatedOrderId] = useState(null),
     [focusedOrderId, setFocusedOrderId] = useState(null),
     [supportOrderId, setSupportOrderId] = useState(null),
+    [chatTarget, setChatTarget] = useState(null),
     [checkoutAddressId, setCheckoutAddressId] = useState(""),
     [deliveryQuote, setDeliveryQuote] = useState(null),
     [deliveryQuoteBusy, setDeliveryQuoteBusy] = useState(false),
@@ -574,11 +576,26 @@ export default function App() {
       "warkost:admin-order-filter-reset",
       resetAdminOrderView,
     );
-    return () =>
+    const openAdminOrderContext = (event) => {
+      const orderId = Number(event.detail?.orderId || 0);
+      setView("orders");
+      setAdminOrderFilter("all");
+      setAdminOrderSearch(orderId ? `WB${String(orderId).padStart(6, "0")}` : "");
+    };
+    window.addEventListener(
+      "warkost:open-admin-order-context",
+      openAdminOrderContext,
+    );
+    return () => {
       window.removeEventListener(
         "warkost:admin-order-filter-reset",
         resetAdminOrderView,
       );
+      window.removeEventListener(
+        "warkost:open-admin-order-context",
+        openAdminOrderContext,
+      );
+    };
   }, [role]);
   const activePromotions = menu.promotions || [];
   const activePromo = activePromotions.length
@@ -770,8 +787,8 @@ export default function App() {
     activeCustomerOrder;
   const supportDriverAssigned = Boolean(supportOrder?.driver_id);
   const supportDriverContactEnabled = Boolean(
-    supportOrder?.driver_whatsapp &&
-    ["PICKED_UP", "ON_DELIVERY"].includes(supportOrder.status),
+    supportDriverAssigned &&
+    ["ASSIGNED", "PICKED_UP", "ON_DELIVERY"].includes(supportOrder.status),
   );
   const filteredNotifications = alerts.notifications.filter(
     (notification) =>
@@ -807,6 +824,16 @@ export default function App() {
     );
   }
   function openCustomerSupport(orderId = null, topic = null) {
+    if (orderId && ["admin", "chat-admin"].includes(topic)) {
+      setOverlay(null);
+      setChatTarget({ type: "CUSTOMER_ADMIN", orderId });
+      return;
+    }
+    if (orderId && ["driver", "delivery", "chat-driver"].includes(topic)) {
+      setOverlay(null);
+      setChatTarget({ type: "CUSTOMER_DRIVER", orderId });
+      return;
+    }
     setSupportOrderId(orderId);
     setSupportTopic(topic);
     setOverlay("support");
@@ -3833,6 +3860,7 @@ export default function App() {
                   onTrack={openCustomerTracking}
                   onReorder={reorderItems}
                   onSupport={openCustomerSupport}
+                  onChat={(type, orderId) => setChatTarget({ type, orderId })}
                   action={(route, body) =>
                     run(async () => {
                       await api(route, body);
@@ -4208,6 +4236,51 @@ export default function App() {
                     </div>
                   </div>
                 )}
+                {supportOrder && (
+                  <section
+                    className="support-communication-actions"
+                    aria-label="Komunikasi pesanan"
+                  >
+                    <button
+                      type="button"
+                      className="support-communication-card primary-chat"
+                      onClick={() =>
+                        openCustomerSupport(supportOrder.id, "chat-admin")
+                      }
+                    >
+                      <ChatIcon />
+                      <span>
+                        <strong>Chat dengan Admin</strong>
+                        <small>
+                          Tanyakan status pesanan, pembayaran, atau bantuan
+                          lainnya.
+                        </small>
+                      </span>
+                      <ArrowIcon />
+                    </button>
+                    <button
+                      type="button"
+                      className="support-communication-card"
+                      disabled={!supportDriverContactEnabled}
+                      onClick={() =>
+                        openCustomerSupport(supportOrder.id, "chat-driver")
+                      }
+                    >
+                      <TruckIcon />
+                      <span>
+                        <strong>Chat dengan Driver</strong>
+                        <small>
+                          {supportDriverContactEnabled
+                            ? "Koordinasikan lokasi dan pengantaran dengan driver."
+                            : supportDriverAssigned
+                              ? "Chat aktif saat fase pengantaran berlangsung."
+                              : "Driver belum ditugaskan."}
+                        </small>
+                      </span>
+                      <ArrowIcon />
+                    </button>
+                  </section>
+                )}
                 {!supportTopic ? (
                   <>
                     <div className="support-topics" aria-label="Topik bantuan">
@@ -4287,9 +4360,13 @@ export default function App() {
                     <button
                       className="primary support-admin-action"
                       type="button"
-                      onClick={() => setSupportTopic("admin")}
+                      disabled={!supportOrder}
+                      onClick={() =>
+                        supportOrder &&
+                        openCustomerSupport(supportOrder.id, "chat-admin")
+                      }
                     >
-                      <ChatIcon /> Hubungi Admin
+                      <ChatIcon /> Chat dengan Admin
                     </button>
                   </>
                 ) : (
@@ -4408,9 +4485,15 @@ export default function App() {
                           className="primary support-wide-action"
                           type="button"
                           disabled={!supportDriverContactEnabled}
-                          onClick={() => setSupportTopic("driver")}
+                          onClick={() =>
+                            supportOrder &&
+                            openCustomerSupport(
+                              supportOrder.id,
+                              "chat-driver",
+                            )
+                          }
                         >
-                          <ChatIcon /> Hubungi Driver
+                          <ChatIcon /> Chat dengan Driver
                         </button>
                         {!supportDriverContactEnabled && (
                           <small className="support-disabled-note">
@@ -4642,6 +4725,13 @@ export default function App() {
           </section>
         </div>
       )}
+      {chatTarget && ["CUSTOMER", "DRIVER"].includes(role) && (
+        <ConversationChat
+          target={chatTarget}
+          viewerRole={role}
+          onClose={() => setChatTarget(null)}
+        />
+      )}
       {role === "ADMIN" && <AdminUiRuntime view={view} />}
       <footer>
         Warkost Bahagia · Dibuat untuk operasional yang lebih rapi
@@ -4664,7 +4754,7 @@ function AdminUiRuntime({ view }) {
       {view === "customers" && (
         <>
           <AdminCustomersEnhancer />
-          <AdminCustomerServiceMobileEnhancer />
+          <AdminCustomerService />
         </>
       )}
       {view === "admin-stock" && (
@@ -5045,14 +5135,16 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
               >
                 <ChatIcon /> Hubungi Admin
               </button>
-              {order.driver_whatsapp &&
-              ["PICKED_UP", "ON_DELIVERY"].includes(order.status) ? (
+              {order.driver_id &&
+              ["ASSIGNED", "PICKED_UP", "ON_DELIVERY"].includes(
+                order.status,
+              ) ? (
                 <button
                   className="button-link"
                   type="button"
-                  onClick={() => onSupport(order.id, "delivery")}
+                  onClick={() => onSupport(order.id, "chat-driver")}
                 >
-                  <PhoneIcon /> Hubungi Driver
+                  <ChatIcon /> Chat dengan Driver
                 </button>
               ) : (
                 <button type="button" disabled>
@@ -5208,6 +5300,7 @@ function Order({
   onTrack,
   onReorder,
   onSupport,
+  onChat,
 }) {
   const [details, setDetails] = useState(null);
   const [detailError, setDetailError] = useState("");
@@ -5538,6 +5631,13 @@ function Order({
                   : "Selesaikan pengantaran"}
             </button>
           )}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onChat?.("CUSTOMER_DRIVER", o.id)}
+          >
+            <ChatIcon /> Chat Customer
+          </button>
         </div>
       )}
       {role === "DRIVER" && Boolean(o.available_to_claim) && (
