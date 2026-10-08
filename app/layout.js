@@ -23,6 +23,7 @@ import "./admin-beverage-stock-polish.css";
 import "./admin-beverage-stock-mobile-v3.css";
 import "./admin-beverage-stock-mobile-kpi-center.css";
 import "./admin-ui-stability.css";
+import "./cod-batch-settlement-polish.css";
 import CodBatchSettlementCenter from "./CodBatchSettlementCenter";
 import DriverCodBatchEventBridge from "./DriverCodBatchEventBridge";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
