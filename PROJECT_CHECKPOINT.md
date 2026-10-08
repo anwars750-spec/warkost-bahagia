@@ -28,9 +28,54 @@
 - Admin UI Final Regression Stabilization implementation: `5db3642804c4cb264410ae24e245da8064cae6eb`
 - COD Payment Integrity + Cash Settlement implementation: `acfd4ad440b1af996f68df2284d0be3bdd219849`
 - Admin Order Filter Architecture implementation: `4456119cee6fb5e0d62eb9c1564f4daf75aa8c9c`
-- Current milestone: Admin Order Filter Architecture
+- Batch COD Settlement Backend implementation: `590d56f727f5d1cb2ff47d590678e24b213affed`
+- Current milestone: Batch COD Settlement Backend
 - Current status: **VERIFIED**
 - Verification date: 2026-10-08
+
+## Batch COD Settlement Backend
+
+### Architecture and data integrity
+
+- Added a batch layer over the locked per-order `cod_settlements` records; every batch item references both its authoritative order and existing settlement record.
+- MySQL migration `020_cod_settlement_batches.sql` and the SQLite runtime schema add `cod_settlement_batches` plus `cod_settlement_batch_items`, including unique order/settlement ownership and indexed Driver/status lookups.
+- Driver batch eligibility is computed server-side and includes only assigned, delivered, unpaid/unverified `CASH` orders that are not already owned by another batch.
+- QRIS, bank transfer, undelivered, cancelled/invalid, another Driver's, already paid, and already verified orders are excluded from batch cash totals.
+- The expected batch amount is the sum of authoritative order totals and must remain consistent with payment and per-order settlement amounts.
+
+### Batch lifecycle, concurrency, and compatibility
+
+- Exact Driver submission enters `SUBMITTED`; underpayment or overpayment enters `NEEDS_REVIEW` and leaves every included payment unpaid.
+- A Driver can correct the same unresolved batch; correction never allocates a batch discrepancy arbitrarily to an individual order.
+- Only Admin can verify, and verification revalidates the Driver, every item, payment method/status, delivered status, and all authoritative amounts.
+- Exact verification runs in one database transaction and atomically marks the batch and all per-order settlements `VERIFIED`, moves all included COD payments to `PAID`, records verifier/time, audits every payment transition, and runs loyalty independently/idempotently per order.
+- Duplicate Driver submission and Admin verification are idempotent. Driver-row locking, batch-row locking, unique batch-item ownership, and conditional updates prevent duplicate active ownership and double verification.
+- A forced mid-transaction payment failure rolls back the batch, every settlement/payment mutation, loyalty, and verification audit event.
+- Existing single-order COD settlement remains available for orders not owned by a batch; conflicting individual actions are rejected once an order belongs to a batch.
+
+### COD maximum transaction rule
+
+- Locked setting: `cod_max_order_amount = 150000`.
+- COD is accepted when the server-calculated final payable amount is at most Rp150.000.
+- COD is rejected server-side when final payable exceeds Rp150.000, before order/payment/redemption data is committed.
+- QRIS and other non-cash methods remain available above the COD limit.
+
+### API and audit contract
+
+- Driver backend contract: eligible/current batch (`cod-batch-driver`), batch detail (`cod-batch`), and submit/correct (`cod-batch-submit`).
+- Admin backend contract: pending/history list (`cod-batches`), detail (`cod-batch`), and atomic verification (`cod-batch-verify`).
+- Audit coverage includes `BATCH_CREATED`, `BATCH_SUBMITTED`, `BATCH_DISCREPANCY`, `BATCH_CORRECTED`, `BATCH_VERIFIED`, `BATCH_CLOSED`, per-order COD settlement close, and each payment transition with actor/role, Driver, batch, orders, amounts, and database timestamp.
+- Locked Admin and Customer UI were not redesigned. Batch settlement UI/UAT remains a separate presentation milestone.
+
+### Verification
+
+- Dedicated Batch COD backend tests: **13/13 PASS**.
+- Final Batch COD + existing single-order COD targeted regression: **18/18 PASS**.
+- Payment, QRIS, loyalty, Driver/RBAC, Admin filter/stabilization, and MySQL migration relevant regression: **53/53 PASS**.
+- Full unit suite: **152/152 PASS**.
+- Production build with Next.js 16.3.6: **PASS**.
+- Critical defects: **0**.
+- High defects: **0**.
 
 ## Admin Order Filter Architecture
 
