@@ -18,24 +18,10 @@ async function request(route, body) {
   return data;
 }
 
-function statusLabel(status) {
-  const normalized = String(status || "").toUpperCase();
-  if (normalized === "SUBMITTED") return "Menunggu verifikasi Admin";
-  if (normalized === "NEEDS_REVIEW") return "Perlu koreksi";
-  if (normalized === "VERIFIED") return "Terverifikasi";
-  return "Siap disetorkan";
+function orderNumber(order) {
+  return order.display_number || `WB${String(order.order_id || 0).padStart(6, "0")}`;
 }
 
-/**
- * Fallback bridge for the Driver trip workspace.
- *
- * CodBatchSettlementCenter is mounted in the root layout and may first render
- * while there is no authenticated user. Login in Warkost is client-side, so
- * the root component can retain that initial null user until a page reload.
- * The Driver trip button dispatches `warkost:open-cod-batch`; this bridge
- * resolves the current session at click time and opens the grouped COD view
- * only when the primary settlement launcher is not already mounted.
- */
 export default function DriverCodBatchEventBridge() {
   const [open, setOpen] = useState(false);
   const [snapshot, setSnapshot] = useState(null);
@@ -49,7 +35,13 @@ export default function DriverCodBatchEventBridge() {
     setLoading(true);
     setError("");
     try {
-      const data = await request("cod-batch-driver");
+      const [me, data] = await Promise.all([
+        request("me"),
+        request("cod-batch-driver"),
+      ]);
+      if (me.user?.role !== "DRIVER") {
+        throw new Error("Pusat setoran COD hanya dapat dibuka oleh Driver.");
+      }
       setSnapshot(data);
       const expected =
         data.current_batch?.expected_amount ??
@@ -58,32 +50,41 @@ export default function DriverCodBatchEventBridge() {
       setAmount(String(expected || ""));
       setReference(data.current_batch?.evidence_reference || "");
     } catch (err) {
+      setSnapshot(null);
       setError(err.message);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    const onOpen = async () => {
-      // If the primary Driver launcher exists, CodBatchSettlementCenter already
-      // owns this event. Avoid rendering a second modal.
-      if (document.querySelector(".cod-batch-driver-launcher")) return;
+  const openCenter = useCallback(() => {
+    setOpen(true);
+    load();
+  }, [load]);
 
-      try {
-        const me = await request("me");
-        if (me.user?.role !== "DRIVER") return;
-        setOpen(true);
-        await load();
-      } catch (err) {
-        setError(err.message);
-        setOpen(true);
-      }
+  useEffect(() => {
+    // Own the actual Driver trip button directly. This deliberately avoids a
+    // fragile event chain between independently mounted React roots.
+    const onDocumentClick = (event) => {
+      const button = event.target?.closest?.(".driver-trip-workspace button");
+      if (!button) return;
+      const label = String(button.textContent || "").replace(/\s+/g, " ").trim();
+      if (!/^Setoran COD(?:\s|\(|$)/i.test(label)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      openCenter();
     };
 
-    window.addEventListener("warkost:open-cod-batch", onOpen);
-    return () => window.removeEventListener("warkost:open-cod-batch", onOpen);
-  }, [load]);
+    const onOpenEvent = () => openCenter();
+
+    document.addEventListener("click", onDocumentClick, true);
+    window.addEventListener("warkost:open-cod-batch", onOpenEvent);
+    return () => {
+      document.removeEventListener("click", onDocumentClick, true);
+      window.removeEventListener("warkost:open-cod-batch", onOpenEvent);
+    };
+  }, [openCenter]);
 
   useEffect(() => {
     if (!open) return;
@@ -100,14 +101,13 @@ export default function DriverCodBatchEventBridge() {
   const batch = snapshot?.current_batch || null;
   const eligible = snapshot?.eligible_orders || [];
   const orders = batch?.orders || eligible;
-  const expected =
-    batch?.expected_amount ?? snapshot?.eligible_expected_amount ?? 0;
+  const expected = batch?.expected_amount ?? snapshot?.eligible_expected_amount ?? 0;
   const qris = snapshot?.qris_excluded || { order_count: 0, amount: 0 };
   const editable = !batch || batch.status === "NEEDS_REVIEW";
   const difference = useMemo(() => {
-    if (!batch || batch.submitted_amount == null) return null;
+    if (batch?.submitted_amount == null) return null;
     return Number(batch.submitted_amount) - Number(expected);
-  }, [batch, expected]);
+  }, [batch?.submitted_amount, expected]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -134,9 +134,9 @@ export default function DriverCodBatchEventBridge() {
     <div
       className="cod-batch-overlay"
       role="presentation"
-      onMouseDown={(event) =>
-        event.target === event.currentTarget && setOpen(false)
-      }
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) setOpen(false);
+      }}
     >
       <div
         className="cod-batch-modal"
@@ -149,7 +149,7 @@ export default function DriverCodBatchEventBridge() {
             <div>
               <small>SETORAN COD DRIVER</small>
               <h2>Gabungkan setoran tunai</h2>
-              <p>Semua COD yang sudah selesai digabung. QRIS tidak ikut dihitung.</p>
+              <p>Satu penyerahan untuk seluruh order COD yang sudah selesai.</p>
             </div>
             <button
               className="cod-batch-close"
@@ -173,12 +173,18 @@ export default function DriverCodBatchEventBridge() {
                     <small>{batch ? `BATCH #${batch.id}` : "SIAP DISETORKAN"}</small>
                     <h3>{orders.length} pesanan COD</h3>
                     <p>
-                      {qris.order_count || 0} pesanan QRIS tidak termasuk setoran tunai.
+                      {qris.order_count || 0} pesanan QRIS dikecualikan dari setoran tunai.
                     </p>
                   </div>
                   {orders.length > 0 && (
                     <span className="cod-batch-status large waiting">
-                      {statusLabel(batch?.status)}
+                      {batch?.status === "SUBMITTED"
+                        ? "Menunggu Admin"
+                        : batch?.status === "NEEDS_REVIEW"
+                          ? "Perlu koreksi"
+                          : batch?.status === "VERIFIED"
+                            ? "Terverifikasi"
+                            : "Siap disetor"}
                     </span>
                   )}
                 </div>
@@ -187,7 +193,7 @@ export default function DriverCodBatchEventBridge() {
                   <article>
                     <span>Total COD</span>
                     <strong>{money(expected)}</strong>
-                    <small>Tagihan seluruh order COD</small>
+                    <small>Total server-authoritative</small>
                   </article>
                   <article>
                     <span>Setoran Driver</span>
@@ -197,12 +203,18 @@ export default function DriverCodBatchEventBridge() {
                         : money(batch.submitted_amount)}
                     </strong>
                     <small>
-                      {batch?.submitted_amount == null
-                        ? "Belum diserahkan"
-                        : "Tunai tercatat"}
+                      {batch?.submitted_amount == null ? "Belum diserahkan" : "Tunai tercatat"}
                     </small>
                   </article>
-                  <article className={difference === 0 ? "is-match" : difference == null ? "" : "is-mismatch"}>
+                  <article
+                    className={
+                      difference === 0
+                        ? "is-match"
+                        : difference == null
+                          ? ""
+                          : "is-mismatch"
+                    }
+                  >
                     <span>Selisih</span>
                     <strong>{difference == null ? "—" : money(Math.abs(difference))}</strong>
                     <small>
@@ -219,8 +231,8 @@ export default function DriverCodBatchEventBridge() {
 
                 <div className="cod-batch-section-heading">
                   <div>
-                    <small>ORDER COD</small>
-                    <h4>Pesanan dalam setoran</h4>
+                    <small>RINCIAN SETORAN</small>
+                    <h4>{orders.length} order COD</h4>
                   </div>
                   <strong>{money(expected)}</strong>
                 </div>
@@ -231,9 +243,7 @@ export default function DriverCodBatchEventBridge() {
                       <article className="cod-batch-order-row" key={order.order_id}>
                         <div className="cod-batch-order-number">
                           <small>ORDER</small>
-                          <strong>
-                            #{order.display_number || `WB${String(order.order_id).padStart(6, "0")}`}
-                          </strong>
+                          <strong>#{orderNumber(order)}</strong>
                         </div>
                         <div className="cod-batch-order-customer">
                           <strong>{order.customer || "Pelanggan"}</strong>
@@ -259,7 +269,7 @@ export default function DriverCodBatchEventBridge() {
                 <div className="cod-batch-qris-note">
                   <span>QRIS selesai</span>
                   <strong>{qris.order_count || 0} order</strong>
-                  <small>{money(qris.amount || 0)} · tidak masuk COD</small>
+                  <small>{money(qris.amount || 0)} · tidak masuk setoran COD</small>
                 </div>
 
                 {orders.length > 0 && editable && (
@@ -311,7 +321,7 @@ export default function DriverCodBatchEventBridge() {
 
                 {batch?.status === "VERIFIED" && (
                   <div className="cod-batch-success">
-                    ✓ Setoran batch ini sudah diverifikasi Admin.
+                    ✓ Setoran batch sudah diverifikasi Admin.
                   </div>
                 )}
               </aside>
