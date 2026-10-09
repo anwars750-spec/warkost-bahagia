@@ -35,6 +35,7 @@ import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
 import AdminCodLauncherButton from "./AdminCodLauncherButton";
 import KitchenDashboardFast from "./KitchenDashboardFast";
 import KitchenFlashGuard from "./KitchenFlashGuard";
+import PrinterCenterRuntime from "./PrinterCenterRuntime";
 
 export const metadata = {
   title: "Warkost Bahagia",
@@ -52,6 +53,7 @@ export default function RootLayout({ children }) {
         <DriverCodBatchEventBridge />
         <AdminCodBatchEventBridge />
         <AdminCodLauncherButton />
+        <PrinterCenterRuntime />
         <div id="admin-ui-portal-root" />
       </body>
     </html>
