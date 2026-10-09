@@ -46,7 +46,9 @@ test("file kredensial MySQL berizin terbatas dan dapat dibersihkan", () => {
   const credentials = createMysqlDefaultsFile(
     parseMysqlUrl("mysql://user:secret@127.0.0.1/warkost"),
   );
-  assert.equal(fs.statSync(credentials.file).mode & 0o777, 0o600);
+  assert.equal(fs.existsSync(credentials.file), true);
+  if (process.platform !== "win32")
+    assert.equal(fs.statSync(credentials.file).mode & 0o777, 0o600);
   assert.match(fs.readFileSync(credentials.file, "utf8"), /password="secret"/);
   const directory = path.dirname(credentials.file);
   credentials.cleanup();
@@ -58,11 +60,20 @@ test("backup MySQL membuat checksum dan menolak output dump yang tidak valid", (
     path.join(os.tmpdir(), "warkost-mysql-backup-test-"),
   );
   try {
-    const valid = path.join(directory, "valid-dump.mjs");
-    fs.writeFileSync(
-      valid,
+    const dumpFixture = (name, source) => {
+      const script = path.join(directory, `${name}.mjs`);
+      fs.writeFileSync(script, source, { mode: 0o700 });
+      if (process.platform !== "win32") return script;
+      const wrapper = path.join(directory, `${name}.cmd`);
+      fs.writeFileSync(
+        wrapper,
+        `@echo off\r\n"${process.execPath}" "${script}" %*\r\n`,
+      );
+      return wrapper;
+    };
+    const valid = dumpFixture(
+      "valid-dump",
       "#!/usr/bin/env node\nprocess.stdout.write('-- MySQL dump 8.0\\n-- Host: test\\nCREATE TABLE users(id BIGINT);\\n');\n",
-      { mode: 0o700 },
     );
     const env = {
       ...process.env,
@@ -77,7 +88,8 @@ test("backup MySQL membuat checksum dan menolak output dump yang tidak valid", (
     assert.equal(result.status, 0, result.stderr);
     const backup = result.stdout.trim();
     assert.ok(fs.existsSync(backup + ".sha256"));
-    assert.equal(fs.statSync(backup).mode & 0o777, 0o600);
+    if (process.platform !== "win32")
+      assert.equal(fs.statSync(backup).mode & 0o777, 0o600);
 
     fs.writeFileSync(backup + ".sha256", "0".repeat(64) + "\n");
     const restore = spawnSync(
@@ -88,11 +100,9 @@ test("backup MySQL membuat checksum dan menolak output dump yang tidak valid", (
     assert.notEqual(restore.status, 0);
     assert.match(restore.stderr, /Checksum backup MySQL tidak cocok/);
 
-    const invalid = path.join(directory, "invalid-dump.mjs");
-    fs.writeFileSync(
-      invalid,
+    const invalid = dumpFixture(
+      "invalid-dump",
       "#!/usr/bin/env node\nprocess.stdout.write('not a database dump');\n",
-      { mode: 0o700 },
     );
     const rejected = spawnSync(process.execPath, ["scripts/backup-mysql.mjs"], {
       encoding: "utf8",

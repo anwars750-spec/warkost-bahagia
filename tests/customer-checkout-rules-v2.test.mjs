@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 process.env.DATABASE_PATH = path.join(
   fs.mkdtempSync(path.join(os.tmpdir(), "checkout-rules-v2-test-")),
@@ -235,7 +236,7 @@ test("customer payment labels dan UI contract memakai istilah final", () => {
     assert.equal(paymentMethodLabel(method), "TRANSFER BANK");
 
   const page = fs.readFileSync(
-    path.resolve(new URL("../app/page.js", import.meta.url).pathname),
+    fileURLToPath(new URL("../app/page.js", import.meta.url)),
     "utf8",
   );
   assert.match(page, /Masuk[\s\S]*Daftar[\s\S]*Guest/);

@@ -4,8 +4,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-const projectRoot = path.resolve(new URL("..", import.meta.url).pathname);
+const projectRoot = fileURLToPath(new URL("..", import.meta.url));
 const fixtureRoot = fs.mkdtempSync(
   path.join(os.tmpdir(), "warkost-local-uat-"),
 );
