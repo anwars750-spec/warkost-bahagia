@@ -11,16 +11,26 @@ body.kitchen-dashboard-transition:not(.kitchen-dashboard-active) main > * {
 }
 
 body.kitchen-dashboard-transition:not(.kitchen-dashboard-active) main::before {
-  content: "Menyiapkan Kitchen Dashboard...";
+  content: "";
   position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  min-height: calc(100vh - 88px);
-  padding: 32px;
-  color: #6f432f;
-  font-size: 14px;
-  font-weight: 760;
-  letter-spacing: 0.01em;
+  top: 0;
+  left: 0;
+  width: 34%;
+  height: 3px;
+  border-radius: 0 999px 999px 0;
+  background: linear-gradient(90deg, #b86843, #7a3b24, #d39a73);
+  box-shadow: 0 2px 8px rgba(122, 59, 36, 0.18);
   visibility: visible;
+  animation: kitchen-transition-progress 0.55s ease-in-out infinite alternate;
+}
+
+@keyframes kitchen-transition-progress {
+  from {
+    width: 18%;
+    opacity: 0.65;
+  }
+  to {
+    width: 62%;
+    opacity: 1;
+  }
 }
