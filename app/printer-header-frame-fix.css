@@ -47,47 +47,10 @@ body.admin-printer-stable-view #admin-printer-center-v1 {
   max-width: none;
 }
 
-/* Smooth Kitchen <-> Printer navigation.
-   Mask the legacy React view for the few milliseconds while the enhanced
-   workspace swaps in, so users never see the old screen flash between views. */
-body.printer-center-transition:not(.admin-printer-stable-view) main {
-  position: relative;
-  min-height: calc(100vh - 88px);
-  background:
-    radial-gradient(circle at 8% 0%, rgba(192, 108, 67, 0.08), transparent 24rem),
-    linear-gradient(180deg, #fffaf4 0%, #f7f1e9 100%);
-}
-
-body.printer-center-transition:not(.admin-printer-stable-view) main > * {
-  visibility: hidden !important;
-}
-
-body.printer-center-transition:not(.admin-printer-stable-view) main::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto auto 0;
-  width: 34%;
-  height: 3px;
-  border-radius: 0 999px 999px 0;
-  background: linear-gradient(90deg, #b86843, #7a3b24, #d39a73);
-  box-shadow: 0 2px 8px rgba(122, 59, 36, 0.18);
-  visibility: visible;
-  animation: printer-transition-progress 0.42s ease-in-out infinite alternate;
-}
-
-body.printer-center-transition .kitchen-dashboard-shell {
-  visibility: hidden !important;
-}
-
-@keyframes printer-transition-progress {
-  from {
-    width: 18%;
-    opacity: 0.65;
-  }
-  to {
-    width: 62%;
-    opacity: 1;
-  }
+/* Do not hide main content during Dapur <-> Printer switching.
+   PrinterCenterRuntime now swaps the enhanced view without a blocking mask. */
+body.printer-center-transition {
+  /* compatibility cleanup for clients that still carry the old class */
 }
 
 @media (max-width: 900px) {
