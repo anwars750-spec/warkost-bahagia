@@ -325,7 +325,7 @@ test("checkout quick address menyimpan, memilih, dan memicu ulang quote tanpa me
   assert.match(handler, /setCheckoutAddressId\(String\(created\.id\)\)/);
   assert.match(
     handler,
-    /showTransientMessage\("Alamat berhasil ditambahkan\."\)/,
+    /isGuest[\s\S]*?"Lokasi pengantaran siap digunakan\."[\s\S]*?: "Alamat berhasil ditambahkan\."/,
   );
   assert.doesNotMatch(
     handler,

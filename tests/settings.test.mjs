@@ -70,15 +70,15 @@ test("pengaturan global hanya Owner, brand tersimpan dan earn rate tetap Rp10.00
       deliveryFeePerKm,
       deliveryMaxKm,
     }))(await getSettings(owner)),
-    { deliveryFreeKm: 5, deliveryFeePerKm: 3000, deliveryMaxKm: 15 },
+    { deliveryFreeKm: 3, deliveryFeePerKm: 3000, deliveryMaxKm: 10 },
   );
   await assert.rejects(
     saveSettings(owner, {
       brandName: "Kafe Test",
       rupiahPerPoint: 5000,
-      deliveryFreeKm: 16,
-      deliveryFeePerKm: 3000,
-      deliveryMaxKm: 15,
+      deliveryFreeKm: 3,
+      deliveryFeePerKm: -1,
+      deliveryMaxKm: 10,
     }),
     /Konfigurasi ongkir tidak valid/,
   );

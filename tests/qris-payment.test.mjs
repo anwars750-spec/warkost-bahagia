@@ -41,7 +41,7 @@ database.exec(`
     (3,1,'Stok Terbatas QRIS',30000,1);
   INSERT INTO addresses(id,user_id,label,detail,latitude,longitude) VALUES
     (1,3,'Rumah','Alamat gratis ongkir',0,0),
-    (2,3,'Kantor','Alamat ongkir tambahan',0.049462,0),
+    (2,3,'Kantor','Alamat ongkir tambahan',0.027887,0),
     (3,4,'Rumah B','Alamat customer lain',0,0);
   INSERT INTO settings(key,value) VALUES
     ('business_latitude','0'),

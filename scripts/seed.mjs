@@ -22,9 +22,9 @@ async function seed() {
     ["business_whatsapp", "6281546407856"],
     ["business_latitude", "-6.9217"],
     ["business_longitude", "106.9272"],
-    ["delivery_free_km", "5"],
+    ["delivery_free_km", "3"],
     ["delivery_fee_per_km", "2500"],
-    ["delivery_max_km", "15"],
+    ["delivery_max_km", "10"],
     ["payment_expiry_minutes", "15"],
     ["cod_max_order_amount", "150000"],
     ["printer_simulation", "true"],
@@ -84,7 +84,7 @@ async function seed() {
   if (
     !(await store.get(
       "SELECT id FROM promotions WHERE title=?",
-      "Gratis Ongkir 5 KM",
+      "Gratis Ongkir 3 KM",
     ))
   ) {
     const startsAt = new Date(Date.now() - 86400000)
@@ -97,10 +97,10 @@ async function seed() {
         .replace("T", " ");
     await store.run(
       "INSERT INTO promotions(title,description,badge,terms,cta_label,starts_at,ends_at,active,created_by,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?)",
-      "Gratis Ongkir 5 KM",
-      "Pesan menu favoritmu dan nikmati gratis ongkir untuk alamat dalam radius 5 km.",
+      "Gratis Ongkir 3 KM",
+      "Pesan menu favoritmu dan nikmati gratis ongkir untuk alamat dalam radius 3 km.",
       "PROMO BERLANGSUNG",
-      "Berlaku untuk alamat yang terverifikasi dalam radius maksimal 5 km.",
+      "Berlaku untuk alamat yang terverifikasi dalam radius maksimal 3 km.",
       "Pilih Menu",
       startsAt,
       endsAt,
@@ -155,7 +155,7 @@ async function seed() {
       "UPDATE promotions SET starts_at=?,ends_at=?,active=1,updated_at=CURRENT_TIMESTAMP WHERE title IN (?,?)",
       startsAt,
       endsAt,
-      "Gratis Ongkir 5 KM",
+      "Gratis Ongkir 3 KM",
       "Voucher Hemat 10%",
     );
   }

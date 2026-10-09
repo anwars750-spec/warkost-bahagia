@@ -30,8 +30,8 @@ database.exec(`
     (1,1,'Menu 20K',20000),
     (2,1,'Menu 50K',50000);
   INSERT INTO addresses(id,user_id,label,detail,latitude,longitude) VALUES
-    (10,10,'Rumah A','Alamat Customer A',0.049462,0),
-    (11,11,'Rumah B','Alamat Customer B',0.049462,0);
+    (10,10,'Rumah A','Alamat Customer A',0.027887,0),
+    (11,11,'Rumah B','Alamat Customer B',0.027887,0);
   INSERT INTO settings(key,value) VALUES
     ('business_latitude','0'),
     ('business_longitude','0'),
@@ -83,7 +83,7 @@ function addVoucher({
 function orderInput(customer, promotionId, overrides = {}) {
   return {
     addressId: customer.id,
-    method: "CASH",
+    method: "BANK_TRANSFER",
     promotionId,
     items: [{ productId: 2, quantity: 1 }],
     ...overrides,

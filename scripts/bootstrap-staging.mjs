@@ -31,9 +31,9 @@ try {
       ["business_whatsapp", "6281546407856"],
       ["business_latitude", "-6.9217"],
       ["business_longitude", "106.9272"],
-      ["delivery_free_km", "5"],
+      ["delivery_free_km", "3"],
       ["delivery_fee_per_km", "2500"],
-      ["delivery_max_km", "15"],
+      ["delivery_max_km", "10"],
       ["cod_max_order_amount", "150000"],
       ["printer_simulation", "true"],
       ["printer_admin", "LAN 80mm Admin (simulasi)"],
@@ -64,7 +64,7 @@ try {
     if (
       !(await tx.get(
         "SELECT id FROM promotions WHERE title=?",
-        "Gratis Ongkir 5 KM",
+        "Gratis Ongkir 3 KM",
       ))
     ) {
       const startsAt = new Date(Date.now() - 86400000)
@@ -77,10 +77,10 @@ try {
           .replace("T", " ");
       await tx.run(
         "INSERT INTO promotions(title,description,badge,terms,cta_label,starts_at,ends_at,active,created_by,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?)",
-        "Gratis Ongkir 5 KM",
-        "Pesan menu favoritmu dan nikmati gratis ongkir untuk alamat dalam radius 5 km.",
+        "Gratis Ongkir 3 KM",
+        "Pesan menu favoritmu dan nikmati gratis ongkir untuk alamat dalam radius 3 km.",
         "PROMO BERLANGSUNG",
-        "Berlaku untuk alamat yang terverifikasi dalam radius maksimal 5 km.",
+        "Berlaku untuk alamat yang terverifikasi dalam radius maksimal 3 km.",
         "Pilih Menu",
         startsAt,
         endsAt,

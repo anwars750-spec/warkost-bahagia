@@ -16,6 +16,10 @@ import {
   adminOrderCounts,
   filterAdminOrders,
 } from "../lib/admin-order-filter.mjs";
+import {
+  paymentMethodLabel,
+  paymentStatusLabel,
+} from "./conversationDisplay.mjs";
 const money = (n) => "Rp" + Number(n || 0).toLocaleString("id-ID");
 const whatsappLink = (number, text) =>
   `https://wa.me/${String(number || "").replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
@@ -174,9 +178,9 @@ export default function App() {
       businessWhatsApp: "6281546407856",
       businessLatitude: -6.9217,
       businessLongitude: 106.9272,
-      deliveryFreeKm: 5,
+      deliveryFreeKm: 3,
       deliveryFeePerKm: 2500,
-      deliveryMaxKm: 15,
+      deliveryMaxKm: 10,
       printerSimulation: true,
       adminPrinter: "LAN 80mm Admin (simulasi)",
       kitchenPrinter: "LAN 80mm Kitchen (simulasi)",
@@ -221,6 +225,7 @@ export default function App() {
     [voucherQuoteBusy, setVoucherQuoteBusy] = useState(false),
     [voucherQuoteError, setVoucherQuoteError] = useState(""),
     [selectedRewardId, setSelectedRewardId] = useState(null),
+    [selectedPaymentMethod, setSelectedPaymentMethod] = useState("CASH"),
     [loyaltyQuote, setLoyaltyQuote] = useState(null),
     [loyaltyQuoteBusy, setLoyaltyQuoteBusy] = useState(false),
     [loyaltyQuoteError, setLoyaltyQuoteError] = useState("");
@@ -452,6 +457,15 @@ export default function App() {
       );
     }, action !== "register");
   }
+  function submitGuest(e) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    run(async () => {
+      const data = await api("guest", { name: form.get("name") });
+      setUser(data.user);
+      setView(count ? "cart" : "menu");
+    });
+  }
   function submitForgotPassword(e) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
@@ -566,6 +580,7 @@ export default function App() {
     setCart((old) => ({ ...old, [id]: Math.max(0, (old[id] || 0) + n) }));
   }
   const role = user?.role;
+  const isGuest = Boolean(user?.isGuest);
   useEffect(() => {
     if (role !== "ADMIN") return;
     const resetAdminOrderView = () => {
@@ -657,6 +672,21 @@ export default function App() {
   const selectedVoucherMinimumOrder = Number(
     selectedVoucher?.minimum_order || 0,
   );
+  const selectedVoucherIsBirthday =
+    selectedVoucher?.voucher_category === "BIRTHDAY";
+  useEffect(() => {
+    if (
+      selectedPaymentMethod === "CASH" &&
+      selectedVoucherId &&
+      !selectedVoucherIsBirthday
+    ) {
+      setSelectedVoucherId(null);
+      setVoucherQuote(null);
+      setVoucherQuoteError(
+        "Voucher reguler tidak berlaku untuk pembayaran COD.",
+      );
+    }
+  }, [selectedPaymentMethod, selectedVoucherId, selectedVoucherIsBirthday]);
   useEffect(() => {
     if (
       role !== "CUSTOMER" ||
@@ -727,7 +757,11 @@ export default function App() {
     setVoucherQuoteBusy(true);
     api(
       "voucher-quote",
-      { promotionId: selectedVoucherId, items: checkoutItems },
+      {
+        promotionId: selectedVoucherId,
+        paymentMethod: selectedPaymentMethod,
+        items: checkoutItems,
+      },
       controller.signal,
     )
       .then(setVoucherQuote)
@@ -748,6 +782,7 @@ export default function App() {
     selectedVoucherMinimumOrder,
     checkoutItems.length,
     checkoutItemsSignature,
+    selectedPaymentMethod,
     total,
   ]);
   useEffect(() => {
@@ -934,7 +969,11 @@ export default function App() {
       setDeliveryQuote(null);
       setDeliveryQuoteError("");
       setQuickAddressOpen(false);
-      showTransientMessage("Alamat berhasil ditambahkan.");
+      showTransientMessage(
+        isGuest
+          ? "Lokasi pengantaran siap digunakan."
+          : "Alamat berhasil ditambahkan.",
+      );
     } catch (saveError) {
       setError(saveError.message);
     } finally {
@@ -1300,7 +1339,7 @@ export default function App() {
             className="auth-onboarding"
             aria-label="Onboarding pelanggan Warkost"
           >
-            {["login", "register"].includes(mode) ? (
+            {["login", "register", "guest"].includes(mode) ? (
               <div
                 className="auth-mobile-switch"
                 aria-label="Pilih formulir akun"
@@ -1318,6 +1357,13 @@ export default function App() {
                   onClick={() => setMode("register")}
                 >
                   Daftar
+                </button>
+                <button
+                  className={mode === "guest" ? "active" : ""}
+                  type="button"
+                  onClick={() => setMode("guest")}
+                >
+                  Guest
                 </button>
               </div>
             ) : (
@@ -1376,6 +1422,58 @@ export default function App() {
                 />
                 <span>Hangat · Lezat · Bahagia</span>
               </div>
+            </article>
+
+            <article
+              className={`auth-card auth-guest-card ${mode === "guest" ? "active" : ""}`}
+            >
+              <div className="auth-card-heading compact">
+                <Image
+                  className="auth-card-logo"
+                  src="/warkost-bahagia-logo-clean.png"
+                  alt="Warkost Bahagia"
+                  width={1672}
+                  height={941}
+                />
+                <span className="auth-card-kicker">CHECKOUT TANPA AKUN</span>
+                <h2>Lanjut sebagai Guest</h2>
+                <p>
+                  Pesan tanpa membuat akun. Voucher dan loyalty khusus member
+                  tidak tersedia.
+                </p>
+              </div>
+              <form onSubmit={submitGuest}>
+                <label>
+                  Nama Pemesan
+                  <input
+                    name="name"
+                    required
+                    minLength="2"
+                    maxLength="80"
+                    autoComplete="name"
+                    placeholder="Nama penerima pesanan"
+                  />
+                </label>
+                <div className="guest-benefit-note">
+                  <TruckIcon />
+                  <span>
+                    <strong>Benefit ongkir tetap berlaku</strong>
+                    <small>
+                      Gratis hingga 3 km dan berbayar sampai maksimal 10 km.
+                    </small>
+                  </span>
+                </div>
+                <button className="primary auth-submit" disabled={busy}>
+                  {busy ? "Menyiapkan…" : "Lanjut sebagai Guest"}
+                </button>
+                <button
+                  className="auth-secondary"
+                  type="button"
+                  onClick={() => setMode("login")}
+                >
+                  Sudah punya akun? Masuk
+                </button>
+              </form>
             </article>
 
             <article
@@ -1444,6 +1542,13 @@ export default function App() {
                   onClick={() => setMode("register")}
                 >
                   Belum punya akun? Daftar Akun
+                </button>
+                <button
+                  className="auth-secondary auth-guest-link"
+                  type="button"
+                  onClick={() => setMode("guest")}
+                >
+                  Lanjut sebagai Guest
                 </button>
               </form>
             </article>
@@ -1563,6 +1668,13 @@ export default function App() {
                   onClick={() => setMode("login")}
                 >
                   Sudah punya akun? Masuk
+                </button>
+                <button
+                  className="auth-secondary auth-guest-link"
+                  type="button"
+                  onClick={() => setMode("guest")}
+                >
+                  Checkout sebagai Guest
                 </button>
               </form>
             </article>
@@ -1789,7 +1901,7 @@ export default function App() {
                     <TruckIcon />
                     <strong>
                       Gratis Ongkir
-                      <br />5 KM
+                      <br />3 KM
                     </strong>
                   </span>
                   <span>
@@ -2114,7 +2226,7 @@ export default function App() {
                   run(async () => {
                     const payload = {
                       addressId: Number(f.get("address")),
-                      method: f.get("method"),
+                      method: selectedPaymentMethod,
                       promotionId: selectedVoucherId,
                       loyaltyRewardId: selectedRewardId,
                       items: checkoutItems,
@@ -2206,6 +2318,23 @@ export default function App() {
                     </div>
                   </section>
 
+                  {isGuest && (
+                    <section className="checkout-card guest-checkout-benefits">
+                      <div className="checkout-card-heading">
+                        <span className="section-icon">
+                          <UserIcon />
+                        </span>
+                        <h2>Checkout Guest</h2>
+                      </div>
+                      <p>
+                        Guest tetap mendapat benefit ongkir. Voucher, birthday
+                        voucher, serta earn/redeem loyalty hanya tersedia untuk
+                        member.
+                      </p>
+                    </section>
+                  )}
+
+                  {!isGuest && (
                   <section className="checkout-card loyalty-checkout-card">
                     <div className="checkout-card-heading">
                       <span className="section-icon">
@@ -2292,7 +2421,9 @@ export default function App() {
                       </p>
                     )}
                   </section>
+                  )}
 
+                  {!isGuest && (
                   <section className="checkout-card voucher-checkout-card">
                     <div className="checkout-card-heading">
                       <span className="section-icon">
@@ -2304,7 +2435,11 @@ export default function App() {
                       {(account.vouchers || []).map((voucher) => {
                         const selected =
                           Number(selectedVoucherId) === voucher.id;
-                        const selectable = voucher.state === "CLAIMED";
+                        const codBlocked =
+                          selectedPaymentMethod === "CASH" &&
+                          voucher.voucher_category !== "BIRTHDAY";
+                        const selectable =
+                          voucher.state === "CLAIMED" && !codBlocked;
                         return (
                           <article
                             className={`voucher-option ${selected ? "selected" : ""}`}
@@ -2354,6 +2489,10 @@ export default function App() {
                               >
                                 {selected ? "Dipilih" : "Pakai"}
                               </button>
+                            ) : voucher.state === "CLAIMED" && codBlocked ? (
+                              <span className="voucher-state">
+                                Tidak berlaku untuk COD
+                              </span>
                             ) : (
                               <span className="voucher-state">
                                 {voucher.state}
@@ -2390,6 +2529,7 @@ export default function App() {
                       </p>
                     )}
                   </section>
+                  )}
 
                   <section className="checkout-card delivery-checkout-card">
                     <div className="checkout-card-heading">
@@ -2439,8 +2579,9 @@ export default function App() {
                           <span>
                             <strong>Lokasi pengantaran baru</strong>
                             <small>
-                              Alamat disimpan ke akun dan langsung dipakai untuk
-                              checkout ini.
+                              {isGuest
+                                ? "Lokasi hanya dipakai untuk checkout guest ini."
+                                : "Alamat disimpan ke akun dan langsung dipakai untuk checkout ini."}
                             </small>
                           </span>
                         </div>
@@ -2491,7 +2632,9 @@ export default function App() {
                           >
                             {quickAddressBusy
                               ? "Menyimpan…"
-                              : "Simpan dan gunakan alamat"}
+                              : isGuest
+                                ? "Gunakan alamat"
+                                : "Simpan dan gunakan alamat"}
                           </button>
                           <button
                             type="button"
@@ -2521,9 +2664,9 @@ export default function App() {
                       <span>
                         <strong>Jarak dan ongkir dihitung otomatis</strong>
                         <small>
-                          Gratis hingga {deliveryQuote?.free_radius_km ?? 5} km.
+                          Gratis hingga {deliveryQuote?.free_radius_km ?? 3} km.
                           Di atasnya mengikuti konfigurasi pengiriman dan radius
-                          layanan maksimal {deliveryQuote?.max_radius_km ?? 15}{" "}
+                          layanan maksimal {deliveryQuote?.max_radius_km ?? 10}{" "}
                           km.
                         </small>
                       </span>
@@ -2563,16 +2706,57 @@ export default function App() {
                       </span>
                       <h2>Metode Pembayaran</h2>
                     </div>
-                    <label className="checkout-select-label sr-label">
-                      Metode pembayaran
-                      <select name="method">
-                        <option value="CASH">Tunai saat diterima</option>
-                        <option value="BANK_TRANSFER">
-                          Transfer bank · verifikasi admin
-                        </option>
-                        <option value="QRIS">QRIS</option>
-                      </select>
-                    </label>
+                    <div
+                      className="payment-method-options"
+                      role="radiogroup"
+                      aria-label="Metode pembayaran"
+                    >
+                      {[
+                        {
+                          value: "CASH",
+                          label: "COD",
+                          description:
+                            "Bayar tunai saat pesanan diterima. Voucher reguler tidak berlaku.",
+                        },
+                        {
+                          value: "QRIS",
+                          label: "QRIS",
+                          description:
+                            "Bayar non-tunai melalui QRIS dan nikmati benefit member yang eligible.",
+                        },
+                        {
+                          value: "BANK_TRANSFER",
+                          label: "TRANSFER BANK",
+                          description:
+                            "Transfer dan tunggu verifikasi pembayaran oleh Admin.",
+                        },
+                      ].map((method) => (
+                        <label
+                          className={`payment-method-option ${selectedPaymentMethod === method.value ? "selected" : ""}`}
+                          key={method.value}
+                        >
+                          <input
+                            type="radio"
+                            name="method"
+                            value={method.value}
+                            checked={selectedPaymentMethod === method.value}
+                            onChange={() =>
+                              setSelectedPaymentMethod(method.value)
+                            }
+                          />
+                          <span className="payment-method-icon">
+                            <WalletIcon />
+                          </span>
+                          <span>
+                            <strong>{method.label}</strong>
+                            <small>{method.description}</small>
+                          </span>
+                          <span className="payment-method-check">
+                            <CheckIcon />
+                          </span>
+                        </label>
+                      ))}
+                    </div>
                   </section>
                 </div>
 
@@ -4605,7 +4789,7 @@ export default function App() {
                         <div className="support-fact-list">
                           <div>
                             <span>Kapan ongkir gratis?</span>
-                            <strong>Hingga radius 5 km</strong>
+                            <strong>Hingga radius 3 km</strong>
                           </div>
                           <div>
                             <span>Bisakah voucher dan poin digabung?</span>
@@ -4688,6 +4872,37 @@ export default function App() {
             )}
             {overlay === "account" && (
               <div className="quick-account-menu">
+                {isGuest ? (
+                  <>
+                    <div className="guest-account-prompt">
+                      <UserIcon />
+                      <span>
+                        <strong>Kamu sedang checkout sebagai Guest</strong>
+                        <small>
+                          Masuk atau daftar untuk voucher, loyalty, alamat
+                          tersimpan, dan riwayat akun.
+                        </small>
+                      </span>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        await api("logout", {});
+                        setUser(null);
+                        setOverlay(null);
+                        setMode("login");
+                        setView("auth");
+                      }}
+                    >
+                      <UserIcon />
+                      <span>Masuk / Daftar Member</span>
+                    </button>
+                    <button className="danger-text" onClick={logout}>
+                      <LogoutIcon />
+                      <span>Akhiri sesi Guest</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
                 <button onClick={() => goToCustomerOrders("all")}>
                   <ReceiptIcon />
                   <span>Pesanan Aktif</span>
@@ -4720,6 +4935,8 @@ export default function App() {
                   <LogoutIcon />
                   <span>Keluar</span>
                 </button>
+                  </>
+                )}
               </div>
             )}
           </section>
@@ -5181,19 +5398,13 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
               </span>
               <div>
                 <small>Metode Pembayaran</small>
-                <h2>
-                  {order.method === "QRIS"
-                    ? "QRIS"
-                    : order.method === "BANK_TRANSFER"
-                      ? "Transfer bank"
-                      : "Tunai saat diterima"}
-                </h2>
+                <h2>{paymentMethodLabel(order.method)}</h2>
               </div>
             </div>
             <span
               className={`payment-status ${String(payment?.status || order.payment_status || "").toLowerCase()}`}
             >
-              {payment?.status || order.payment_status}
+              {paymentStatusLabel(payment?.status || order.payment_status)}
             </span>
             {order.method === "QRIS" && payment && (
               <div className="qris-payment-panel">

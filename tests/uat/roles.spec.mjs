@@ -248,7 +248,7 @@ test("customer dapat membuka menu, pesanan, dan akun", async ({
   ).toBeVisible();
   const promo = page.getByRole("region", { name: "Promo berlangsung" });
   await expect(promo).toBeVisible();
-  await expect(promo).toContainText("Gratis Ongkir 5 KM");
+  await expect(promo).toContainText("Gratis Ongkir 3 KM");
   await expect(promo.getByRole("button", { name: "Pilih Menu" })).toBeVisible();
   await expect(
     page

@@ -43,7 +43,7 @@ database.exec(`
     (6,1,'Menu 50.000',50000);
   INSERT INTO addresses(id,user_id,label,detail,latitude,longitude) VALUES
     (10,10,'Gratis','Alamat gratis ongkir',0,0),
-    (12,10,'Berbayar','Alamat ongkir berbayar',0.049462,0),
+    (12,10,'Berbayar','Alamat ongkir berbayar',0.027887,0),
     (11,11,'Rumah B','Alamat Customer B',0,0);
   INSERT INTO settings(key,value) VALUES
     ('business_latitude','0'),

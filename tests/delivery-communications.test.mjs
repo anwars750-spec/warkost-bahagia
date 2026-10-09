@@ -47,20 +47,20 @@ database.exec(`
 const customer = { id: 5, role: "CUSTOMER" };
 const latitudeAtMeters = (meters) => (meters / 6371000) * (180 / Math.PI);
 
-test("ongkir memiliki boundary 5/15 km dan nomor WhatsApp dinormalisasi", () => {
+test("ongkir memiliki boundary 3/10 km dan nomor WhatsApp dinormalisasi", () => {
   assert.deepEqual(calculateDelivery(0), {
     distanceMeters: 0,
     deliveryFee: 0,
     freeDelivery: true,
   });
-  assert.deepEqual(calculateDelivery(5000), {
-    distanceMeters: 5000,
+  assert.deepEqual(calculateDelivery(3000), {
+    distanceMeters: 3000,
     deliveryFee: 0,
     freeDelivery: true,
   });
-  assert.equal(calculateDelivery(5001).deliveryFee, 2500);
-  assert.equal(calculateDelivery(15000).deliveryFee, 25000);
-  assert.throws(() => calculateDelivery(15001), /di luar radius/);
+  assert.equal(calculateDelivery(3001).deliveryFee, 2500);
+  assert.equal(calculateDelivery(10000).deliveryFee, 17500);
+  assert.throws(() => calculateDelivery(10001), /di luar radius/);
   assert.throws(() => calculateDelivery(-1), /Jarak pengantaran/);
   assert.throws(
     () => validateDeliveryRules({ freeKm: 16, feePerKm: 2500, maxKm: 15 }),
@@ -76,10 +76,10 @@ test("ongkir memiliki boundary 5/15 km dan nomor WhatsApp dinormalisasi", () => 
 test("quote ongkir memakai koordinat tersimpan, config terbaru, dan boundary yang stabil", async () => {
   for (const [id, meters] of [
     [10, 0],
-    [11, 5000],
-    [12, 5001],
-    [13, 15000],
-    [14, 15001],
+    [11, 3000],
+    [12, 3001],
+    [13, 10000],
+    [14, 10001],
   ])
     database
       .prepare(
@@ -106,11 +106,11 @@ test("quote ongkir memakai koordinat tersimpan, config terbaru, dan boundary yan
   );
   assert.equal((await quoteDelivery(customer, 11)).delivery_fee, 0);
   assert.equal((await quoteDelivery(customer, 12)).delivery_fee, 2500);
-  assert.equal((await quoteDelivery(customer, 13)).delivery_fee, 25000);
+  assert.equal((await quoteDelivery(customer, 13)).delivery_fee, 17500);
   const outside = await quoteDelivery(customer, 14);
   assert.equal(outside.available, false);
   assert.equal(outside.delivery_fee, null);
-  assert.match(outside.message, /di luar radius delivery maksimal 15 km/);
+  assert.match(outside.message, /di luar radius delivery maksimal 10 km/);
 
   database
     .prepare("UPDATE settings SET value='3000' WHERE key='delivery_fee_per_km'")
@@ -155,8 +155,8 @@ test("checkout menghitung ongkir di server dan print job idempotent per station"
   };
   const created = await createOrder(customer, input);
   assert.equal(created.subtotal, 30000);
-  assert.equal(created.deliveryFee, 2500);
-  assert.equal(created.total, 32500);
+  assert.equal(created.deliveryFee, 7500);
+  assert.equal(created.total, 37500);
   assert.equal(
     database
       .prepare("SELECT delivery_fee,distance_meters,total FROM orders WHERE id=?")
@@ -166,8 +166,8 @@ test("checkout menghitung ongkir di server dan print job idempotent per station"
   const storedDelivery = database
     .prepare("SELECT delivery_fee,total FROM orders WHERE id=?")
     .get(created.id);
-  assert.equal(storedDelivery.delivery_fee, 2500);
-  assert.equal(storedDelivery.total, 32500);
+  assert.equal(storedDelivery.delivery_fee, 7500);
+  assert.equal(storedDelivery.total, 37500);
   assert.equal(
     database.prepare("SELECT COUNT(*) n FROM print_jobs").get().n,
     2,

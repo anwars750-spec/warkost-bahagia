@@ -106,6 +106,8 @@ import {
   saveRewardRule,
 } from "../../../lib/loyalty.mjs";
 import { CAPABILITIES } from "../../../lib/rbac.mjs";
+import { createGuestCustomer } from "../../../lib/guest.mjs";
+import { isGuestCustomer } from "../../../lib/customer-kind.mjs";
 export const runtime = "nodejs";
 const out = (data, status = 200) =>
   NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
@@ -358,6 +360,16 @@ export async function GET(request, { params }) {
     if (action === "account") {
       required(user, ["CUSTOMER"]);
       const { profile, addresses } = await getCustomerAccount(user);
+      if (isGuestCustomer(user))
+        return out({
+          profile: { ...profile, email: "" },
+          addresses,
+          loyalty: 0,
+          transactions: [],
+          vouchers: [],
+          rewards: [],
+          guest: true,
+        });
       const loyalty =
         (
           await store.get(
@@ -447,6 +459,7 @@ export async function POST(request, { params }) {
     if (
       [
         "login",
+        "guest",
         "register",
         "otp-verify",
         "otp-resend",
@@ -462,6 +475,7 @@ export async function POST(request, { params }) {
               body.identifier ||
               body.email ||
               body.phone ||
+              body.name ||
               "",
           )
             .trim()
@@ -487,6 +501,27 @@ export async function POST(request, { params }) {
       sessionSecret();
       const result = await registerCustomer(body);
       return out(result, 201);
+    }
+    if (action === "guest") {
+      sessionSecret();
+      const account = await createGuestCustomer(body);
+      const response = out(
+        {
+          user: {
+            id: account.id,
+            name: account.name,
+            role: account.role,
+            isGuest: true,
+          },
+        },
+        201,
+      );
+      response.cookies.set(
+        "wb_session",
+        await issueSession(account),
+        cookieOptions(request),
+      );
+      return response;
     }
     if (action === "otp-resend") {
       return out(
@@ -625,6 +660,7 @@ export async function POST(request, { params }) {
         await quoteVoucher(user, {
           promotionId: integer(body.promotionId),
           items: body.items,
+          paymentMethod: body.paymentMethod,
         }),
       );
     if (action === "loyalty-quote")

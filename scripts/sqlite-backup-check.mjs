@@ -65,6 +65,7 @@ const requiredSchema = {
     "starts_at",
     "ends_at",
     "active",
+    "voucher_category",
     "created_by",
     "updated_by",
   ],
