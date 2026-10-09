@@ -1,0 +1,87 @@
+.kitchen-dashboard-head h1 {
+  font-size: clamp(28px, 2.35vw, 36px);
+  letter-spacing: -0.035em;
+}
+
+.kitchen-dashboard-head p {
+  margin-top: 5px;
+  font-size: 14px;
+}
+
+.kitchen-column.tone-ready .kitchen-column-body {
+  gap: 7px;
+  max-height: 520px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #d8c6b7 transparent;
+}
+
+.kitchen-column.tone-ready .kitchen-order-card {
+  padding: 10px;
+  border-radius: 12px;
+}
+
+.kitchen-column.tone-ready .kitchen-order-topline strong {
+  font-size: 13px;
+}
+
+.kitchen-column.tone-ready .kitchen-order-topline small {
+  font-size: 9px;
+}
+
+.kitchen-column.tone-ready .kitchen-time-chip {
+  min-height: 22px;
+  padding: 3px 7px;
+  font-size: 9px;
+}
+
+.kitchen-column.tone-ready .kitchen-order-meta {
+  margin: 6px 0 7px;
+}
+
+.kitchen-column.tone-ready .kitchen-order-meta span {
+  min-height: 22px;
+  padding: 3px 7px;
+  font-size: 9px;
+}
+
+.kitchen-column.tone-ready .kitchen-item {
+  padding: 6px 0;
+}
+
+.kitchen-column.tone-ready .kitchen-item-line > span,
+.kitchen-column.tone-ready .kitchen-item-line strong {
+  font-size: 11px;
+}
+
+.kitchen-column.tone-ready .kitchen-item-note {
+  margin-top: 3px;
+  font-size: 9px;
+}
+
+.kitchen-column.tone-ready .kitchen-station-note {
+  margin-top: 6px;
+  padding: 5px 7px;
+  font-size: 9px;
+}
+
+.kitchen-column.tone-ready .kitchen-ready-state {
+  min-height: 30px;
+  margin-top: 6px;
+  padding: 6px 8px;
+  font-size: 9.5px;
+}
+
+.kitchen-order-card.is-overdue {
+  border-color: #edc2b8;
+}
+
+@media (max-width: 680px) {
+  .kitchen-dashboard-head h1 {
+    font-size: 27px;
+  }
+
+  .kitchen-filter-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
