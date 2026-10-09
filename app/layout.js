@@ -28,11 +28,12 @@ import "./cod-batch-settlement-polish.css";
 import "./kitchen-dashboard.css";
 import "./kitchen-dashboard-queue-polish.css";
 import "./kitchen-flash-guard.css";
+import "./kitchen-dashboard-mobile-v2.css";
 import CodBatchSettlementCenter from "./CodBatchSettlementCenter";
 import DriverCodBatchEventBridge from "./DriverCodBatchEventBridge";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
 import AdminCodLauncherButton from "./AdminCodLauncherButton";
-import KitchenDashboard from "./KitchenDashboard";
+import KitchenDashboardFast from "./KitchenDashboardFast";
 import KitchenFlashGuard from "./KitchenFlashGuard";
 
 export const metadata = {
@@ -46,7 +47,7 @@ export default function RootLayout({ children }) {
       <body>
         {children}
         <KitchenFlashGuard />
-        <KitchenDashboard />
+        <KitchenDashboardFast />
         <CodBatchSettlementCenter />
         <DriverCodBatchEventBridge />
         <AdminCodBatchEventBridge />
