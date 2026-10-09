@@ -1,0 +1,26 @@
+body.kitchen-dashboard-transition:not(.kitchen-dashboard-active) main {
+  position: relative;
+  min-height: calc(100vh - 88px);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(192, 108, 67, 0.08), transparent 24rem),
+    linear-gradient(180deg, #fffaf4 0%, #f7f1e9 100%);
+}
+
+body.kitchen-dashboard-transition:not(.kitchen-dashboard-active) main > * {
+  visibility: hidden !important;
+}
+
+body.kitchen-dashboard-transition:not(.kitchen-dashboard-active) main::before {
+  content: "Menyiapkan Kitchen Dashboard...";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  min-height: calc(100vh - 88px);
+  padding: 32px;
+  color: #6f432f;
+  font-size: 14px;
+  font-weight: 760;
+  letter-spacing: 0.01em;
+  visibility: visible;
+}
