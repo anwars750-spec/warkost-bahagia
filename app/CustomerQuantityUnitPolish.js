@@ -30,6 +30,14 @@ function normalizeVisibleQuantity(text, stockUnit) {
   return current.replace(/\s*pcs\b/gi, "").trim();
 }
 
+function compactRawMaterialMeta(card) {
+  for (const node of card.querySelectorAll(".product-price-stack > small")) {
+    const text = cleanText(node.textContent);
+    const minimal = text.match(/^Minimal\s+([\d.,]+)\s*g$/i);
+    if (minimal) node.textContent = `Minimal ${minimal[1]}g`;
+  }
+}
+
 function applyQuantityPolish(menuData) {
   const catalog = document.querySelector(".customer-catalog");
   if (!catalog) return;
@@ -50,24 +58,39 @@ function applyQuantityPolish(menuData) {
     const valueNode = quantity.querySelector(":scope > span");
     const actionNode = quantity.querySelector(":scope > small");
     const stockUnit = product?.stock_unit || (valueNode?.textContent?.toLowerCase().includes("g") ? "GRAM" : "PCS");
+    const weighted = stockUnit === "GRAM";
 
-    quantity.classList.toggle("weighted-qty", stockUnit === "GRAM");
-    quantity.classList.toggle("piece-qty", stockUnit !== "GRAM");
+    card.classList.toggle("weighted-product", weighted);
+    quantity.classList.toggle("weighted-qty", weighted);
+    quantity.classList.toggle("piece-qty", !weighted);
 
     if (valueNode) {
       const next = normalizeVisibleQuantity(valueNode.textContent, stockUnit);
       if (next && valueNode.textContent !== next) valueNode.textContent = next;
-      valueNode.setAttribute("aria-label", stockUnit === "GRAM" ? `Jumlah ${next}` : `Jumlah ${next}`);
+      valueNode.setAttribute("aria-label", `Jumlah ${next}`);
     }
 
-    if (stockUnit === "GRAM") {
-      const step = Number(product?.order_step_quantity || 100);
-      const stepLabel = `+${compactWeight(step)}`;
-      quantity.dataset.stepLabel = stepLabel;
-      if (actionNode) actionNode.setAttribute("aria-label", `Tambah ${compactWeight(step)}`);
-    } else {
-      delete quantity.dataset.stepLabel;
-      if (actionNode) actionNode.setAttribute("aria-label", "Tambah 1");
+    if (weighted) compactRawMaterialMeta(card);
+
+    if (actionNode) {
+      const empty = quantity.classList.contains("is-empty");
+      const label = weighted
+        ? empty
+          ? "Pesan"
+          : `+${compactWeight(Number(product?.order_step_quantity || 100))}`
+        : empty
+          ? "Pesan"
+          : "+1";
+      actionNode.textContent = label;
+      actionNode.dataset.actionLabel = label;
+      actionNode.setAttribute(
+        "aria-label",
+        weighted && !empty
+          ? `Tambah ${compactWeight(Number(product?.order_step_quantity || 100))}`
+          : empty
+            ? `Pesan ${product?.name || "produk"}`
+            : "Tambah 1",
+      );
     }
   }
 }
