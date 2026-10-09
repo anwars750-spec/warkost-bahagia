@@ -1,5 +1,80 @@
-/* Customer catalog grouping polish. Visual-only, scoped to storefront catalog. */
+/* Customer catalog polish — scoped to storefront only. */
 
+.customer-catalog,
+.customer-catalog .catalog-tools,
+.customer-catalog .catalog-heading,
+.customer-catalog .customer-products {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.customer-catalog {
+  overflow: clip;
+}
+
+/* Search + category filter stay precise and never require horizontal scrolling. */
+.customer-catalog .catalog-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.95fr);
+  align-items: stretch;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.customer-catalog .catalog-tools > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.customer-catalog .catalog-tools .menu-search {
+  min-height: 58px;
+  margin: 0;
+}
+
+.customer-catalog .filters[aria-label="Kategori produk"] {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  overflow: visible;
+}
+
+.customer-catalog .filters[aria-label="Kategori produk"] > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  width: 100%;
+  min-height: 58px;
+  padding: 8px 9px;
+  border: 1px solid #e4d7cd;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #321d16;
+  font-size: 13px;
+  font-weight: 760;
+  line-height: 1.1;
+  white-space: nowrap;
+  box-shadow: 0 7px 20px rgba(68, 43, 22, 0.035);
+}
+
+.customer-catalog .filters[aria-label="Kategori produk"] > button:hover {
+  border-color: #b96a4d;
+  background: #fffaf6;
+}
+
+.customer-catalog .filters[aria-label="Kategori produk"] > button.active,
+.customer-catalog .filters[aria-label="Kategori produk"] > .catalog-all-filter.active {
+  border-color: #9d3c20;
+  background: linear-gradient(145deg, #a64022, #873019);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(132, 48, 25, 0.16);
+}
+
+.catalog-filter-icon,
 .material-category-icon,
 .catalog-group-category-icon {
   display: inline-flex;
@@ -8,115 +83,362 @@
   flex: 0 0 auto;
 }
 
-.material-category-icon {
-  width: 20px;
-  height: 20px;
+.catalog-filter-icon,
+.material-category-icon,
+.customer-catalog .filters[aria-label="Kategori produk"] .ui-icon {
+  width: 18px;
+  height: 18px;
 }
 
+.catalog-filter-icon svg,
 .material-category-icon svg,
 .catalog-group-category-icon svg {
   width: 100%;
   height: 100%;
 }
 
+/* Subcategories wrap naturally; never become a sideways scroller. */
+.customer-catalog .subcategory-filters {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  margin: 4px 0 0;
+  overflow: visible;
+}
+
+.customer-catalog .subcategory-filters > button {
+  min-height: 36px;
+  padding: 8px 14px;
+  border-color: #e8dcd3;
+  border-radius: 999px;
+  background: #fff;
+  color: #69483b;
+  font-size: 12px;
+  font-weight: 740;
+  white-space: nowrap;
+}
+
+.customer-catalog .subcategory-filters > button.active {
+  border-color: #9a3b21;
+  background: #9a3b21;
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(154, 59, 33, 0.15);
+}
+
+/* Catalog title hierarchy. The old detached 'Lihat Semua' button is replaced by the first filter. */
+.customer-catalog .catalog-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 22px 0 18px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid rgba(105, 66, 48, 0.11);
+}
+
+.customer-catalog .catalog-heading > button {
+  display: none !important;
+}
+
+.customer-catalog .catalog-heading > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.catalog-heading-kicker {
+  width: fit-content;
+  color: #a04427;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+  line-height: 1;
+}
+
+.customer-catalog .catalog-heading h2 {
+  margin: 2px 0 0;
+  color: #2c160f;
+  font-size: clamp(24px, 2.35vw, 32px);
+  font-weight: 820;
+  line-height: 1.06;
+  letter-spacing: -0.035em;
+}
+
+.customer-catalog .catalog-heading p {
+  margin: 4px 0 0;
+  max-width: 680px;
+  color: #7b675e;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* Grouped catalog hierarchy: category -> subcategory -> cards. */
 .customer-products.catalog-grouped-view {
   align-items: stretch;
+  min-width: 0;
 }
 
 .catalog-group-category-heading {
   grid-column: 1 / -1;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
-  margin: 30px 0 4px;
-  padding-top: 22px;
-  border-top: 1px solid rgba(116, 64, 42, 0.13);
+  gap: 13px;
+  min-width: 0;
+  margin: 26px 0 2px;
+  padding: 15px 17px;
+  border: 1px solid rgba(133, 76, 49, 0.12);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(255, 251, 246, 0.98), rgba(247, 235, 225, 0.82));
 }
 
 .catalog-group-category-heading:first-child {
-  margin-top: 2px;
-  padding-top: 0;
-  border-top: 0;
+  margin-top: 0;
 }
 
 .catalog-group-category-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  background: #f5e6dc;
-  color: #8e371d;
-  font-size: 18px;
-  font-weight: 800;
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  background: #fff;
+  color: #963a20;
+  box-shadow: inset 0 0 0 1px rgba(150, 58, 32, 0.11), 0 7px 18px rgba(87, 46, 29, 0.06);
 }
 
 .catalog-group-category-icon svg {
-  width: 19px;
-  height: 19px;
+  width: 21px;
+  height: 21px;
+}
+
+.catalog-group-category-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.catalog-group-kicker {
+  color: #aa6045;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+  line-height: 1;
 }
 
 .catalog-group-category-heading h3 {
-  margin: 0;
-  color: #2e160e;
-  font-size: clamp(21px, 2vw, 27px);
-  line-height: 1.1;
+  margin: 1px 0 0;
+  color: #2f180f;
+  font-size: clamp(20px, 1.9vw, 26px);
+  font-weight: 830;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
 }
 
 .catalog-group-category-heading p {
-  margin: 4px 0 0;
-  color: #806b62;
-  font-size: 13px;
+  margin: 3px 0 0;
+  color: #806c62;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.catalog-group-count {
+  align-self: center;
+  padding: 7px 10px;
+  border: 1px solid rgba(154, 59, 33, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.76);
+  color: #7d3b27;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .catalog-group-subcategory-heading {
   grid-column: 1 / -1;
   display: flex;
-  align-items: center;
-  gap: 9px;
-  margin: 14px 0 1px;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  margin: 15px 0 2px;
+  padding: 0 2px 8px;
+  border-bottom: 1px solid rgba(109, 70, 53, 0.1);
 }
 
-.catalog-group-subcategory-heading::before {
+.catalog-group-subcategory-copy {
+  position: relative;
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  padding-left: 12px;
+}
+
+.catalog-group-subcategory-copy::before {
   content: "";
-  width: 4px;
-  height: 18px;
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 1px;
+  width: 3px;
   border-radius: 999px;
-  background: #a33f21;
+  background: #a64326;
+}
+
+.catalog-group-subcategory-kicker {
+  color: #a87865;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.15em;
+  line-height: 1;
 }
 
 .catalog-group-subcategory-heading h4 {
-  margin: 0;
-  color: #6f2f1e;
+  margin: 2px 0 0;
+  color: #5e2c1d;
   font-size: 15px;
-  font-weight: 800;
-  letter-spacing: 0.01em;
+  font-weight: 810;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+
+.catalog-group-subcategory-count {
+  flex: 0 0 auto;
+  color: #978279;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Group headings already carry category metadata, so cards are visually cleaner. */
+.catalog-grouped-view .customer-product .product-body > small:not(.product-subcategory),
+.catalog-grouped-view .customer-product .product-subcategory {
+  display: none;
+}
+
+.customer-catalog .customer-product,
+.customer-catalog .customer-product .product-body,
+.customer-catalog .customer-product .product-foot,
+.customer-catalog .product-price-stack {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.customer-catalog .customer-product {
+  width: 100%;
 }
 
 .customer-catalog .product-price-stack > strong {
   white-space: nowrap;
 }
 
+.customer-catalog .customer-product h2,
+.customer-catalog .customer-product p {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .customer-catalog .catalog-tools {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .customer-catalog .subcategory-filters {
+    margin-top: 0;
+  }
+}
+
 @media (max-width: 620px) {
-  .material-category-icon {
-    width: 17px;
-    height: 17px;
+  .customer-catalog {
+    overflow: hidden;
+  }
+
+  .customer-catalog .catalog-tools {
+    gap: 9px;
+    margin-bottom: 6px;
+  }
+
+  .customer-catalog .catalog-tools .menu-search {
+    min-height: 42px;
+  }
+
+  .customer-catalog .filters[aria-label="Kategori produk"] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .customer-catalog .filters[aria-label="Kategori produk"] > button {
+    gap: 3px;
+    min-width: 0;
+    min-height: 42px;
+    padding: 5px 3px;
+    border-radius: 12px;
+    font-size: 9.5px;
+    font-weight: 790;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    box-shadow: none;
+  }
+
+  .catalog-filter-icon,
+  .material-category-icon,
+  .customer-catalog .filters[aria-label="Kategori produk"] .ui-icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .customer-catalog .subcategory-filters {
+    gap: 5px;
+  }
+
+  .customer-catalog .subcategory-filters > button {
+    min-height: 31px;
+    padding: 6px 10px;
+    font-size: 9.5px;
+  }
+
+  .customer-catalog .catalog-heading {
+    margin: 16px 0 12px;
+    padding-bottom: 10px;
+  }
+
+  .catalog-heading-kicker {
+    font-size: 8px;
+    letter-spacing: 0.14em;
+  }
+
+  .customer-catalog .catalog-heading h2 {
+    font-size: 21px;
+    line-height: 1.08;
+  }
+
+  .customer-catalog .catalog-heading p {
+    max-width: 100%;
+    font-size: 10px;
+    line-height: 1.4;
+  }
+
+  .customer-products.catalog-grouped-view {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+    width: 100%;
   }
 
   .catalog-group-category-heading {
     gap: 9px;
-    margin-top: 22px;
-    padding-top: 17px;
+    margin: 18px 0 1px;
+    padding: 11px 10px;
+    border-radius: 14px;
   }
 
   .catalog-group-category-heading:first-child {
     margin-top: 0;
-    padding-top: 0;
   }
 
   .catalog-group-category-icon {
-    width: 31px;
-    height: 31px;
-    border-radius: 10px;
-    font-size: 15px;
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
   }
 
   .catalog-group-category-icon svg {
@@ -124,25 +446,88 @@
     height: 17px;
   }
 
+  .catalog-group-kicker {
+    font-size: 7px;
+    letter-spacing: 0.13em;
+  }
+
   .catalog-group-category-heading h3 {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .catalog-group-category-heading p {
-    margin-top: 2px;
-    font-size: 10px;
-    line-height: 1.35;
+    margin-top: 1px;
+    font-size: 8.5px;
+    line-height: 1.3;
+  }
+
+  .catalog-group-count {
+    padding: 5px 7px;
+    font-size: 8px;
   }
 
   .catalog-group-subcategory-heading {
-    margin: 10px 0 0;
+    gap: 8px;
+    margin: 10px 0 1px;
+    padding: 0 1px 6px;
   }
 
-  .catalog-group-subcategory-heading::before {
-    height: 15px;
+  .catalog-group-subcategory-copy {
+    padding-left: 9px;
+  }
+
+  .catalog-group-subcategory-copy::before {
+    width: 2px;
+  }
+
+  .catalog-group-subcategory-kicker {
+    font-size: 6.5px;
   }
 
   .catalog-group-subcategory-heading h4 {
+    font-size: 11px;
+  }
+
+  .catalog-group-subcategory-count {
+    font-size: 8px;
+  }
+
+  .customer-catalog .customer-product,
+  .customer-catalog .customer-product .product-body {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .catalog-grouped-view .customer-product h2 {
     font-size: 12px;
+    line-height: 1.22;
+  }
+
+  .catalog-grouped-view .customer-product p {
+    font-size: 8px;
+    line-height: 1.35;
+  }
+
+  .catalog-grouped-view .customer-product .product-foot strong {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .customer-catalog .filters[aria-label="Kategori produk"] > button {
+    font-size: 8.5px;
+    padding-inline: 2px;
+  }
+
+  .catalog-filter-icon,
+  .material-category-icon,
+  .customer-catalog .filters[aria-label="Kategori produk"] .ui-icon {
+    width: 12px;
+    height: 12px;
+  }
+
+  .catalog-group-category-heading p {
+    display: none;
   }
 }
