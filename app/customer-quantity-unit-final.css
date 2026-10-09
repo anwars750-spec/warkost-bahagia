@@ -23,114 +23,202 @@
   min-width: 18px;
 }
 
-.customer-catalog .customer-product .qty.weighted-qty {
-  display: inline-grid;
-  grid-template-columns: 32px minmax(42px, auto) minmax(46px, auto);
+/* Weighted products get a dedicated, structured footer instead of squeezing
+   price, stock and weight controls onto one crowded row. */
+.customer-catalog .customer-product.weighted-product .product-foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+  margin-top: auto;
+}
+
+.customer-catalog .customer-product.weighted-product .product-price-stack {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 5px;
+  gap: 5px 8px;
+  min-width: 0;
+  width: 100%;
+}
+
+.customer-catalog .customer-product.weighted-product .product-price-stack > strong {
+  flex: 0 0 100%;
+  display: block;
+  margin: 0 0 2px;
+  color: #2b1711;
+  font-size: 18px;
+  font-weight: 850;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
+.customer-catalog .customer-product.weighted-product .product-price-stack > small {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  min-height: 24px;
+  padding: 4px 7px;
+  border: 1px solid rgba(95, 122, 86, 0.12);
+  border-radius: 999px;
+  background: #f4f8f1;
+  color: #58724f;
+  font-size: 9px;
+  font-weight: 750;
+  line-height: 1;
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
+.customer-catalog .customer-product .qty.weighted-qty {
+  display: grid;
+  grid-template-columns: 36px minmax(58px, auto) minmax(64px, auto);
+  align-items: center;
+  justify-content: start;
+  gap: 7px;
   flex: 0 0 auto;
+  width: max-content;
+  max-width: 100%;
   min-width: max-content;
+  padding: 6px;
+  border: 1px solid rgba(139, 79, 52, 0.12);
+  border-radius: 14px;
+  background: #fffaf6;
 }
 
 .customer-catalog .customer-product .qty.weighted-qty > button {
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
-  min-height: 32px;
+  width: 36px;
+  min-width: 36px;
+  height: 34px;
+  min-height: 34px;
   padding: 0;
+  border-radius: 10px;
 }
 
 .customer-catalog .customer-product .qty.weighted-qty > span {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 42px;
-  height: 32px;
-  padding: 0 3px;
+  min-width: 58px;
+  height: 34px;
+  padding: 0 7px;
+  border-radius: 9px;
+  background: #fff;
+  color: #351d15;
   font-size: 11px;
   font-weight: 850;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .customer-catalog .customer-product .qty.weighted-qty > small {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 46px;
-  min-height: 32px;
-  padding: 5px 7px;
-  border: 1px solid #dfc7b7;
+  min-width: 64px;
+  min-height: 34px;
+  padding: 5px 9px;
+  border: 1px solid #dcbca9;
   border-radius: 10px;
-  background: #fff9f4;
+  background: #fff;
   color: #843923;
+  font-size: 9px !important;
+  font-weight: 850;
   line-height: 1;
+  box-shadow: 0 4px 10px rgba(126, 66, 40, 0.06);
 }
 
-.customer-catalog .customer-product.weighted-product .product-price-stack > small {
-  white-space: nowrap;
-  word-break: keep-all;
-  overflow-wrap: normal;
+.customer-catalog .customer-product .qty.weighted-qty > small:hover {
+  border-color: #b96d4d;
+  background: #fff4eb;
 }
 
 @media (max-width: 620px) {
-  /* Raw-material cards need a dedicated footer rhythm so weight never wraps. */
   .customer-catalog .customer-product.weighted-product .product-foot {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    align-items: start;
-    gap: 6px;
+    gap: 7px;
   }
 
   .customer-catalog .customer-product.weighted-product .product-price-stack {
-    min-width: 0;
+    gap: 4px 5px;
   }
 
   .customer-catalog .customer-product.weighted-product .product-price-stack > strong {
-    display: block;
-    margin-bottom: 2px;
+    font-size: 12px;
+    margin-bottom: 0;
   }
 
   .customer-catalog .customer-product.weighted-product .product-price-stack > small {
-    display: block;
-    width: max-content;
-    max-width: 100%;
-    font-size: 8px;
-    line-height: 1.25;
+    min-height: 19px;
+    padding: 3px 5px;
+    font-size: 7px;
   }
 
   .customer-catalog .customer-product .qty.weighted-qty {
-    grid-template-columns: 28px minmax(40px, auto) minmax(44px, auto);
+    grid-template-columns: 27px minmax(42px, auto) minmax(48px, auto);
     gap: 4px;
-    justify-self: start;
+    width: max-content;
     max-width: 100%;
+    min-width: 0;
+    padding: 4px;
+    border-radius: 11px;
   }
 
   .customer-catalog .customer-product .qty.weighted-qty > button {
-    width: 28px;
-    min-width: 28px;
-    height: 28px;
-    min-height: 28px;
-    border-radius: 9px;
+    width: 27px;
+    min-width: 27px;
+    height: 27px;
+    min-height: 27px;
+    border-radius: 8px;
+    font-size: 13px;
   }
 
   .customer-catalog .customer-product .qty.weighted-qty > span {
-    min-width: 40px;
-    height: 28px;
-    padding-inline: 2px;
-    font-size: 9px;
+    min-width: 42px;
+    height: 27px;
+    padding-inline: 3px;
+    border-radius: 8px;
+    font-size: 8px;
   }
 
   .customer-catalog .customer-product .qty.weighted-qty > small {
-    min-width: 44px;
-    min-height: 28px;
+    min-width: 48px;
+    min-height: 27px;
     padding: 4px 5px;
-    border-radius: 9px;
-    font-size: 8px !important;
+    border-radius: 8px;
+    font-size: 7px !important;
   }
 
   .customer-catalog .customer-product .qty.piece-qty > span {
     min-width: 14px;
     font-size: 9px;
+  }
+}
+
+@media (max-width: 380px) {
+  .customer-catalog .customer-product .qty.weighted-qty {
+    grid-template-columns: 25px minmax(38px, auto) minmax(43px, auto);
+    gap: 3px;
+  }
+
+  .customer-catalog .customer-product .qty.weighted-qty > button {
+    width: 25px;
+    min-width: 25px;
+    height: 25px;
+    min-height: 25px;
+  }
+
+  .customer-catalog .customer-product .qty.weighted-qty > span {
+    min-width: 38px;
+    height: 25px;
+    font-size: 7.5px;
+  }
+
+  .customer-catalog .customer-product .qty.weighted-qty > small {
+    min-width: 43px;
+    min-height: 25px;
+    font-size: 6.5px !important;
   }
 }
