@@ -4,17 +4,40 @@ import { useEffect } from "react";
 
 const CATEGORY_ORDER = ["Makanan", "Minuman", "Bahan Baku"];
 const CATEGORY_COPY = {
-  Makanan: "Hidangan utama dan menu siap santap.",
-  Minuman: "Pilihan minuman untuk menemani pesananmu.",
+  Makanan: "Menu utama dan hidangan siap santap.",
+  Minuman: "Pilihan minuman untuk melengkapi pesananmu.",
   "Bahan Baku": "Bahan pilihan untuk kebutuhan rumah atau usaha.",
 };
 
+const allIcon = `
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <rect x="4" y="4" width="6" height="6" rx="1.5" />
+    <rect x="14" y="4" width="6" height="6" rx="1.5" />
+    <rect x="4" y="14" width="6" height="6" rx="1.5" />
+    <rect x="14" y="14" width="6" height="6" rx="1.5" />
+  </svg>`;
+const foodIcon = `
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M4 12h16a8 8 0 0 1-16 0Z" />
+    <path d="M7 20h10M8 8c0-2 2-2 2-4M13 8c0-2 2-2 2-4" />
+  </svg>`;
+const drinkIcon = `
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M7 8h10l-1 13H8L7 8Z" />
+    <path d="M9 4h8M15 4l-2 5" />
+  </svg>`;
 const packageIcon = `
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z" />
     <path d="m4.5 7.5 7.5 4 7.5-4M12 11.5V21" />
     <path d="m8 5.2 8 4.5" />
   </svg>`;
+
+function iconForCategory(name) {
+  if (name === "Minuman") return drinkIcon;
+  if (name === "Bahan Baku") return packageIcon;
+  return foodIcon;
+}
 
 function cleanText(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -42,31 +65,54 @@ function buildSubcategoryRank(data) {
   return ranks;
 }
 
-function makeCategoryHeading(name) {
+function makeCategoryHeading(name, count) {
   const heading = document.createElement("div");
-  heading.className = "catalog-group-category-heading customer-catalog-polish-node";
+  heading.className =
+    "catalog-group-category-heading customer-catalog-polish-node";
 
   const icon = document.createElement("span");
   icon.className = "catalog-group-category-icon";
-  if (name === "Bahan Baku") icon.innerHTML = packageIcon;
-  else icon.textContent = name === "Minuman" ? "◌" : "•";
+  icon.innerHTML = iconForCategory(name);
 
   const copy = document.createElement("div");
+  copy.className = "catalog-group-category-copy";
+  const kicker = document.createElement("span");
+  kicker.className = "catalog-group-kicker";
+  kicker.textContent = "KATEGORI";
   const title = document.createElement("h3");
   title.textContent = name;
   const description = document.createElement("p");
-  description.textContent = CATEGORY_COPY[name] || "Pilihan produk Warkost Bahagia.";
-  copy.append(title, description);
-  heading.append(icon, copy);
+  description.textContent =
+    CATEGORY_COPY[name] || "Pilihan produk Warkost Bahagia.";
+  copy.append(kicker, title, description);
+
+  const badge = document.createElement("span");
+  badge.className = "catalog-group-count";
+  badge.textContent = `${count} ${count === 1 ? "menu" : "menu"}`;
+
+  heading.append(icon, copy, badge);
   return heading;
 }
 
-function makeSubcategoryHeading(name) {
+function makeSubcategoryHeading(name, count) {
   const heading = document.createElement("div");
-  heading.className = "catalog-group-subcategory-heading customer-catalog-polish-node";
+  heading.className =
+    "catalog-group-subcategory-heading customer-catalog-polish-node";
+
+  const copy = document.createElement("div");
+  copy.className = "catalog-group-subcategory-copy";
+  const kicker = document.createElement("span");
+  kicker.className = "catalog-group-subcategory-kicker";
+  kicker.textContent = "SUBKATEGORI";
   const title = document.createElement("h4");
   title.textContent = name || "Lainnya";
-  heading.append(title);
+  copy.append(kicker, title);
+
+  const badge = document.createElement("span");
+  badge.className = "catalog-group-subcategory-count";
+  badge.textContent = `${count} item`;
+
+  heading.append(copy, badge);
   return heading;
 }
 
@@ -77,9 +123,31 @@ function applyCatalogPolish(data) {
   const categoryFilter = catalog.querySelector(
     '.filters[aria-label="Kategori produk"]',
   );
-  const categoryButtons = categoryFilter
-    ? [...categoryFilter.querySelectorAll(":scope > button")]
-    : [];
+  if (!categoryFilter) return;
+
+  const catalogHeading = catalog.querySelector(".catalog-heading");
+  const legacyAllButton = catalogHeading?.querySelector(":scope > button");
+
+  let allButton = categoryFilter.querySelector(":scope > .catalog-all-filter");
+  if (!allButton) {
+    allButton = document.createElement("button");
+    allButton.type = "button";
+    allButton.className = "catalog-all-filter";
+    allButton.setAttribute("aria-label", "Tampilkan semua kategori");
+    allButton.innerHTML = `<span class="catalog-filter-icon">${allIcon}</span><span>Semua</span>`;
+    allButton.addEventListener("click", () => legacyAllButton?.click());
+    categoryFilter.prepend(allButton);
+  }
+
+  const categoryButtons = [
+    ...categoryFilter.querySelectorAll(":scope > button:not(.catalog-all-filter)"),
+  ];
+  const activeCategoryButton = categoryButtons.find((button) =>
+    button.classList.contains("active"),
+  );
+  const allCategoriesVisible = !activeCategoryButton;
+  allButton.classList.toggle("active", allCategoriesVisible);
+  allButton.setAttribute("aria-pressed", allCategoriesVisible ? "true" : "false");
 
   const rawMaterialButton = categoryButtons.find(
     (button) => cleanText(button.textContent) === "Bahan Baku",
@@ -98,7 +166,10 @@ function applyCatalogPolish(data) {
   const allSubcategoryButton = subcategoryFilter?.querySelector(
     ":scope > button:first-child",
   );
-  if (allSubcategoryButton && cleanText(allSubcategoryButton.textContent) !== "Semua")
+  if (
+    allSubcategoryButton &&
+    cleanText(allSubcategoryButton.textContent) !== "Semua"
+  )
     allSubcategoryButton.textContent = "Semua";
 
   for (const price of catalog.querySelectorAll(
@@ -109,6 +180,40 @@ function applyCatalogPolish(data) {
     price.textContent = current.split("/")[0].trim();
   }
 
+  const headingCopy = catalogHeading?.querySelector(":scope > div");
+  const headingTitle = catalogHeading?.querySelector("h2");
+  const headingDescription = catalogHeading?.querySelector("p");
+  let headingKicker = headingCopy?.querySelector(".catalog-heading-kicker");
+  if (headingCopy && !headingKicker) {
+    headingKicker = document.createElement("span");
+    headingKicker.className = "catalog-heading-kicker";
+    headingCopy.insertBefore(headingKicker, headingTitle || headingCopy.firstChild);
+  }
+
+  const activeSubcategoryButton = subcategoryFilter?.querySelector(
+    ":scope > button.active:not(:first-child)",
+  );
+  const activeCategoryName = cleanText(activeCategoryButton?.textContent);
+  const activeSubcategoryName = cleanText(activeSubcategoryButton?.textContent);
+
+  if (headingTitle && headingDescription && headingKicker) {
+    if (allCategoriesVisible) {
+      headingKicker.textContent = "KATALOG WARKOST";
+      headingTitle.textContent = "Semua Menu";
+      headingDescription.textContent =
+        "Pilih menu dengan lebih cepat berdasarkan kategori dan subkategori.";
+    } else if (activeSubcategoryName) {
+      headingKicker.textContent = "SUBKATEGORI";
+      headingTitle.textContent = activeSubcategoryName;
+      headingDescription.textContent = `${activeCategoryName} · pilihan yang tersedia saat ini.`;
+    } else {
+      headingKicker.textContent = "KATEGORI";
+      headingTitle.textContent = activeCategoryName || "Menu Pilihan";
+      headingDescription.textContent =
+        CATEGORY_COPY[activeCategoryName] || "Pilih menu favoritmu.";
+    }
+  }
+
   const grid = catalog.querySelector("#menu-grid.customer-products");
   if (!grid) return;
 
@@ -116,38 +221,21 @@ function applyCatalogPolish(data) {
     .querySelectorAll(":scope > .customer-catalog-polish-node")
     .forEach((node) => node.remove());
 
-  const allCategoriesVisible =
-    categoryButtons.length > 0 &&
-    !categoryButtons.some((button) => button.classList.contains("active"));
-
-  const catalogHeading = catalog.querySelector(".catalog-heading");
-  const headingTitle = catalogHeading?.querySelector("h2");
-  const headingDescription = catalogHeading?.querySelector("p");
-  if (headingTitle && !headingTitle.dataset.defaultText)
-    headingTitle.dataset.defaultText = headingTitle.textContent;
-  if (headingDescription && !headingDescription.dataset.defaultText)
-    headingDescription.dataset.defaultText = headingDescription.textContent;
-
   if (!allCategoriesVisible) {
-    if (headingTitle?.dataset.defaultText)
-      headingTitle.textContent = headingTitle.dataset.defaultText;
-    if (headingDescription?.dataset.defaultText)
-      headingDescription.textContent = headingDescription.dataset.defaultText;
     grid.classList.remove("catalog-grouped-view");
     return;
   }
 
-  if (headingTitle) headingTitle.textContent = "Semua Menu";
-  if (headingDescription)
-    headingDescription.textContent =
-      "Jelajahi pilihan Warkost berdasarkan kategori dan subkategori.";
   grid.classList.add("catalog-grouped-view");
 
   const subcategoryRanks = buildSubcategoryRank(data);
   const cards = [...grid.querySelectorAll(":scope > article.customer-product")];
   const cardMeta = cards.map((card, originalIndex) => {
     const body = card.querySelector(".product-body");
-    const categoryName = cleanText(body?.querySelector(":scope > small:not(.product-subcategory)")?.textContent);
+    const categoryName = cleanText(
+      body?.querySelector(":scope > small:not(.product-subcategory)")
+        ?.textContent,
+    );
     const subcategoryName = cleanText(
       body?.querySelector(".product-subcategory")?.textContent,
     );
@@ -155,25 +243,47 @@ function applyCatalogPolish(data) {
   });
 
   cardMeta.sort((a, b) => {
-    const categoryDelta = categoryRank(a.categoryName) - categoryRank(b.categoryName);
+    const categoryDelta =
+      categoryRank(a.categoryName) - categoryRank(b.categoryName);
     if (categoryDelta) return categoryDelta;
-    const aSub = subcategoryRanks.get(`${a.categoryName}::${a.subcategoryName}`) ?? 999;
-    const bSub = subcategoryRanks.get(`${b.categoryName}::${b.subcategoryName}`) ?? 999;
+    const aSub =
+      subcategoryRanks.get(`${a.categoryName}::${a.subcategoryName}`) ?? 999;
+    const bSub =
+      subcategoryRanks.get(`${b.categoryName}::${b.subcategoryName}`) ?? 999;
     if (aSub !== bSub) return aSub - bSub;
     return a.originalIndex - b.originalIndex;
   });
 
+  const categoryCounts = new Map();
+  const subcategoryCounts = new Map();
+  for (const item of cardMeta) {
+    const category = item.categoryName || "Lainnya";
+    const subcategory = item.subcategoryName || "Lainnya";
+    categoryCounts.set(category, (categoryCounts.get(category) || 0) + 1);
+    const subKey = `${category}::${subcategory}`;
+    subcategoryCounts.set(subKey, (subcategoryCounts.get(subKey) || 0) + 1);
+  }
+
   let lastCategory = null;
   let lastSubcategory = null;
   for (const item of cardMeta) {
-    if (item.categoryName !== lastCategory) {
-      grid.appendChild(makeCategoryHeading(item.categoryName || "Lainnya"));
-      lastCategory = item.categoryName;
+    const category = item.categoryName || "Lainnya";
+    const subcategory = item.subcategoryName || "Lainnya";
+    if (category !== lastCategory) {
+      grid.appendChild(
+        makeCategoryHeading(category, categoryCounts.get(category) || 0),
+      );
+      lastCategory = category;
       lastSubcategory = null;
     }
-    if (item.subcategoryName !== lastSubcategory) {
-      grid.appendChild(makeSubcategoryHeading(item.subcategoryName || "Lainnya"));
-      lastSubcategory = item.subcategoryName;
+    if (subcategory !== lastSubcategory) {
+      grid.appendChild(
+        makeSubcategoryHeading(
+          subcategory,
+          subcategoryCounts.get(`${category}::${subcategory}`) || 0,
+        ),
+      );
+      lastSubcategory = subcategory;
     }
     grid.appendChild(item.card);
   }
