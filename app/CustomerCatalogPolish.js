@@ -4,9 +4,9 @@ import { useEffect } from "react";
 
 const CATEGORY_ORDER = ["Makanan", "Minuman", "Bahan Baku"];
 const CATEGORY_COPY = {
-  Makanan: "Menu utama dan hidangan siap santap.",
-  Minuman: "Pilihan minuman untuk melengkapi pesananmu.",
-  "Bahan Baku": "Bahan pilihan untuk kebutuhan rumah atau usaha.",
+  Makanan: "Menu favorit yang siap dipesan.",
+  Minuman: "Temani pesananmu dengan minuman pilihan.",
+  "Bahan Baku": "Pilihan bahan berkualitas untuk kebutuhanmu.",
 };
 
 const allIcon = `
@@ -88,31 +88,20 @@ function makeCategoryHeading(name, count) {
 
   const badge = document.createElement("span");
   badge.className = "catalog-group-count";
-  badge.textContent = `${count} ${count === 1 ? "menu" : "menu"}`;
+  badge.textContent = `${count} menu`;
 
   heading.append(icon, copy, badge);
   return heading;
 }
 
-function makeSubcategoryHeading(name, count) {
+function makeSubcategoryHeading(name) {
   const heading = document.createElement("div");
   heading.className =
     "catalog-group-subcategory-heading customer-catalog-polish-node";
 
-  const copy = document.createElement("div");
-  copy.className = "catalog-group-subcategory-copy";
-  const kicker = document.createElement("span");
-  kicker.className = "catalog-group-subcategory-kicker";
-  kicker.textContent = "SUBKATEGORI";
   const title = document.createElement("h4");
   title.textContent = name || "Lainnya";
-  copy.append(kicker, title);
-
-  const badge = document.createElement("span");
-  badge.className = "catalog-group-subcategory-count";
-  badge.textContent = `${count} item`;
-
-  heading.append(copy, badge);
+  heading.append(title);
   return heading;
 }
 
@@ -201,13 +190,13 @@ function applyCatalogPolish(data) {
       headingKicker.textContent = "KATALOG WARKOST";
       headingTitle.textContent = "Semua Menu";
       headingDescription.textContent =
-        "Pilih menu dengan lebih cepat berdasarkan kategori dan subkategori.";
+        "Temukan favoritmu, tambahkan ke keranjang, lalu pesan dengan cepat.";
     } else if (activeSubcategoryName) {
-      headingKicker.textContent = "SUBKATEGORI";
+      headingKicker.textContent = activeCategoryName || "MENU";
       headingTitle.textContent = activeSubcategoryName;
-      headingDescription.textContent = `${activeCategoryName} · pilihan yang tersedia saat ini.`;
+      headingDescription.textContent = "Pilihan yang tersedia dan siap dipesan.";
     } else {
-      headingKicker.textContent = "KATEGORI";
+      headingKicker.textContent = "PILIHAN MENU";
       headingTitle.textContent = activeCategoryName || "Menu Pilihan";
       headingDescription.textContent =
         CATEGORY_COPY[activeCategoryName] || "Pilih menu favoritmu.";
@@ -255,13 +244,9 @@ function applyCatalogPolish(data) {
   });
 
   const categoryCounts = new Map();
-  const subcategoryCounts = new Map();
   for (const item of cardMeta) {
     const category = item.categoryName || "Lainnya";
-    const subcategory = item.subcategoryName || "Lainnya";
     categoryCounts.set(category, (categoryCounts.get(category) || 0) + 1);
-    const subKey = `${category}::${subcategory}`;
-    subcategoryCounts.set(subKey, (subcategoryCounts.get(subKey) || 0) + 1);
   }
 
   let lastCategory = null;
@@ -277,12 +262,7 @@ function applyCatalogPolish(data) {
       lastSubcategory = null;
     }
     if (subcategory !== lastSubcategory) {
-      grid.appendChild(
-        makeSubcategoryHeading(
-          subcategory,
-          subcategoryCounts.get(`${category}::${subcategory}`) || 0,
-        ),
-      );
+      grid.appendChild(makeSubcategoryHeading(subcategory));
       lastSubcategory = subcategory;
     }
     grid.appendChild(item.card);
