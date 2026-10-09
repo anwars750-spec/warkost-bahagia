@@ -1029,3 +1029,61 @@ Status: **VERIFIED — NOT YET ACCEPTED/LOCKED**
 - No payment logic, customer locked UI redesign, OTP, Maps, Birthday Promo, BTN QRIS adapter, deployment, dependency upgrade, or unrelated milestone work.
 - Manager Product, Promo, Stock, and Notification access remains unchanged; Owner Settings remains unchanged.
 - No bundle was created and Manager/RBAC was not marked accepted/locked.
+
+---
+
+## Unified Catalog + Category + Subcategory + Stock V1
+
+Date: 2026-10-09
+
+Status: **VERIFIED**
+
+### Source-control baseline
+
+- Required and verified ancestor: `c1f8dc189f5ff7b7eb5d74f4294ef7b9cef6e846`.
+- Implementation commit: `ad30ec1dcd22307b0c4f151e54dde3fade1d7022`.
+- All newer Customer quantity-control work present in the baseline was preserved.
+
+### Catalog and unit model
+
+- Customer catalog now exposes the three data-backed business categories `Makanan`, `Minuman`, and `Bahan Baku`; `Semua` is no longer a primary category chip.
+- Real configurable subcategories are stored in `product_subcategories`; Manager can create, edit, sort, activate, deactivate, and assign them without destructive deletion.
+- Products support `PCS` and integer-base `GRAM` stock with price basis, minimum order, order step, and low-stock threshold.
+- Existing food and drink semantics remain `PCS`; routing is derived safely as Makanan to Kitchen and Minuman/Bahan Baku to Admin while the internal legacy `CASHIER` station identifier remains compatible.
+- The local demo catalog includes `Biji Kopi Arabica Sukabumi – Medium Roast`, priced Rp18.000 per 100 g, minimum/step 100 g, initial stock 10 kg, low-stock threshold 2 kg, and a local raw-coffee SVG asset.
+
+### Unified inventory and role boundary
+
+- `products`, `stock_reservations`, and `stock_movements` remain the single inventory engine for food, drinks, and raw materials; no parallel stock subsystem was introduced.
+- Manager can view and adjust all categories. Adjustment requires a non-empty reason, locks the product transactionally, rejects negative/over-reserved availability, and records movement plus audit data.
+- Admin receives a server-scoped read-only view of Minuman and Bahan Baku only.
+- Kitchen receives a server-scoped read-only `Stok Makanan` view only.
+- Owner receives read-only visibility over all inventory plus movement actor/reason history; Owner is not the normal stock or catalog editor.
+- Customer and every unauthorized role are rejected by the internal stock endpoint; UI hiding is not the security boundary.
+
+### Order synchronization and fulfillment
+
+- All checkout payment methods reserve inventory server-side before commit; concurrent orders cannot exceed available inventory.
+- Confirmation commits exactly the reserved base-unit quantity, cancellation releases pending reservations, and supported post-commit cancellation restores stock with auditable movements.
+- Weighted item totals use integer arithmetic. Examples verified: 500 g = Rp90.000 and 1 kg = Rp180.000 at Rp18.000/100 g.
+- Quantity below 100 g, a non-100 g step such as 150 g, inactive product/subcategory, wrong category/subcategory relation, invalid unit/step, and quantity above availability are rejected server-side.
+- Kitchen tickets contain Makanan only. Admin tickets contain Minuman and Bahan Baku only and include raw-material weight, price basis, subtotal, and item note.
+
+### Migration and verification
+
+- MySQL 8 migration `024_unified_catalog_stock.sql` adds the subcategory and unit model, migrates demo category assignments safely, and adds the raw-coffee demo record.
+- SQLite runtime/static schema upgrade has matching tables, columns, constraints, snapshot fields, and backup verification requirements.
+- Focused unified inventory coverage: **12/12 PASS**.
+- Final affected targeted regression (inventory/RBAC/Cart UX/Checkout/QRIS/Kitchen/Admin/Windows migration contracts): **60/60 PASS**.
+- Full unit suite: **198/198 PASS**.
+- Customer Cart UX V2 regression: **PASS**.
+- Customer Checkout Business Rules V2 regression: **PASS**.
+- Kitchen and Admin relevant regression: **PASS**.
+- Production build: **PASS**.
+- `git diff --check`: **PASS**.
+- Critical defects: **0**. High defects: **0**.
+
+### Guardrails preserved
+
+- No realtime, ringtone, Kitchen history, Android/PWA work, new loyalty/voucher logic, unrelated UI redesign, or dependency upgrade.
+- Locked Customer, payment, communication, Driver, COD settlement, and Admin operational flows remain covered by the passing full suite.
