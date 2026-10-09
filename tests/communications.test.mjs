@@ -19,6 +19,12 @@ const {
   sendConversationMessage,
   updateConversationStatus,
 } = await import("../lib/communications.mjs");
+const {
+  orderStatusLabel,
+  paymentGuidance,
+  paymentMethodLabel,
+  paymentStatusLabel,
+} = await import("../app/conversationDisplay.mjs");
 
 const database = db();
 database.exec(`
@@ -339,4 +345,63 @@ test("UI menghubungkan Customer, Admin, dan Driver ke chat React nyata", () => {
   assert.match(adminChat, /Buka kembali/);
   assert.doesNotMatch(adminChat, /MutationObserver/);
   assert.match(enhancer, /warkost:open-admin-customer-service/);
+});
+
+test("Customer Chat memetakan metode dan status pembayaran ke label operasional", () => {
+  for (const method of ["cash", "COD", "cash_on_delivery"])
+    assert.equal(paymentMethodLabel(method), "COD");
+  assert.equal(paymentMethodLabel("qris"), "QRIS");
+  for (const method of ["transfer", "bank_transfer", "transfer_bank"])
+    assert.equal(paymentMethodLabel(method), "TRANSFER BANK");
+
+  assert.equal(paymentStatusLabel("PAID"), "LUNAS");
+  assert.equal(paymentStatusLabel("UNPAID"), "BELUM DIBAYAR");
+  assert.equal(paymentStatusLabel("PENDING"), "MENUNGGU PEMBAYARAN");
+  assert.equal(orderStatusLabel("ON_DELIVERY"), "DALAM PENGANTARAN");
+
+  assert.equal(paymentGuidance("CASH", "UNPAID"), "Driver menagih tunai");
+  assert.equal(
+    paymentGuidance("QRIS", "PAID"),
+    "Tidak perlu menagih tunai",
+  );
+  assert.equal(
+    paymentGuidance("BANK_TRANSFER", "PAID"),
+    "Tidak perlu menagih tunai",
+  );
+});
+
+test("Customer Chat memakai ikon SVG dan sumber ASCII-safe tanpa mojibake", () => {
+  const customerChat = fs.readFileSync(
+    path.join(process.cwd(), "app/ConversationChat.js"),
+    "utf8",
+  );
+  const customerStyles = fs.readFileSync(
+    path.join(process.cwd(), "app/communication.css"),
+    "utf8",
+  );
+  const displayMapping = fs.readFileSync(
+    path.join(process.cwd(), "app/conversationDisplay.mjs"),
+    "utf8",
+  );
+  const combined = `${customerChat}\n${customerStyles}\n${displayMapping}`;
+
+  assert.match(customerChat, /const BackIcon/);
+  assert.match(customerChat, /const CloseIcon/);
+  assert.match(customerChat, /const ChatIcon/);
+  assert.match(customerChat, /METODE BAYAR/);
+  assert.match(
+    customerStyles,
+    /grid-template-columns: 42px 46px minmax\(0, 1fr\) 42px/,
+  );
+  assert.match(customerStyles, /@media \(max-width: 760px\)/);
+  assert.match(
+    customerStyles,
+    /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/,
+  );
+  assert.doesNotMatch(
+    customerStyles,
+    /\.conversation-header > button,\s*\.admin-service-global-head/,
+  );
+  assert.doesNotMatch(combined, /[^\x00-\x7F]/);
+  assert.doesNotMatch(combined, /(?:Ã|Â|â|ð|�)/);
 });

@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import {
+  orderStatusLabel,
+  paymentGuidance,
+  paymentMethodLabel,
+  paymentStatusLabel,
+} from "./conversationDisplay.mjs";
 
 const money = (value) => `Rp${Number(value || 0).toLocaleString("id-ID")}`;
 
@@ -11,6 +17,25 @@ const timeLabel = (value) => {
     ? String(value)
     : date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 };
+
+const BackIcon = () => (
+  <svg aria-hidden="true" viewBox="0 0 24 24">
+    <path d="M19 12H5M11 18l-6-6 6-6" />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg aria-hidden="true" viewBox="0 0 24 24">
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+);
+
+const ChatIcon = () => (
+  <svg aria-hidden="true" viewBox="0 0 24 24">
+    <path d="M7 18l-4 3v-5.5A8 8 0 0 1 3 4h12a6 6 0 0 1 6 6v1a7 7 0 0 1-7 7H7Z" />
+    <path d="M8 10h.01M12 10h.01M16 10h.01" />
+  </svg>
+);
 
 async function request(route, body) {
   const response = await fetch(`/api/${route}`, {
@@ -37,7 +62,7 @@ export default function ConversationChat({ target, viewerRole, onClose }) {
   const prompts = isDriverChat
     ? [
         "Saya sudah di lokasi",
-        "Patokan rumah saya…",
+        "Patokan rumah saya...",
         "Mohon hubungi saat sudah dekat",
       ]
     : [
@@ -111,23 +136,33 @@ export default function ConversationChat({ target, viewerRole, onClose }) {
         aria-label={isDriverChat ? "Chat dengan Driver" : "Chat dengan Admin"}
       >
         <header className="conversation-header">
-          <button type="button" onClick={onClose} aria-label="Kembali">
-            ←
+          <button
+            className="conversation-header-action"
+            type="button"
+            onClick={onClose}
+            aria-label="Kembali"
+          >
+            <BackIcon />
           </button>
           <div className="conversation-avatar">
             {isDriverChat ? "DR" : "AD"}
           </div>
-          <div>
+          <div className="conversation-identity">
             <strong>{title}</strong>
             <span>
               {isDriverChat ? "Koordinasi pengantaran" : "Customer Support"}
               {conversation?.order?.display_number
-                ? ` · ${conversation.order.display_number}`
+                ? ` - ${conversation.order.display_number}`
                 : ""}
             </span>
           </div>
-          <button type="button" onClick={onClose} aria-label="Tutup">
-            ×
+          <button
+            className="conversation-header-action"
+            type="button"
+            onClick={onClose}
+            aria-label="Tutup"
+          >
+            <CloseIcon />
           </button>
         </header>
 
@@ -139,11 +174,26 @@ export default function ConversationChat({ target, viewerRole, onClose }) {
             </div>
             <div>
               <small>STATUS</small>
-              <strong>{conversation.order.status.replaceAll("_", " ")}</strong>
+              <strong>{orderStatusLabel(conversation.order.status)}</strong>
             </div>
-            <div>
-              <small>PEMBAYARAN</small>
-              <strong>{conversation.order.payment_status}</strong>
+            <div className="conversation-payment-fact">
+              <small>METODE BAYAR</small>
+              <strong>
+                {paymentMethodLabel(conversation.order.payment_method)}
+              </strong>
+              <span
+                className={`conversation-payment-status payment-${String(
+                  conversation.order.payment_status || "unknown",
+                ).toLowerCase()}`}
+              >
+                {paymentStatusLabel(conversation.order.payment_status)}
+              </span>
+              <em>
+                {paymentGuidance(
+                  conversation.order.payment_method,
+                  conversation.order.payment_status,
+                )}
+              </em>
             </div>
             <div>
               <small>TOTAL</small>
@@ -153,10 +203,12 @@ export default function ConversationChat({ target, viewerRole, onClose }) {
         )}
 
         <div className="conversation-messages" aria-live="polite">
-          {loading && <p className="conversation-state">Memuat percakapan…</p>}
+          {loading && <p className="conversation-state">Memuat percakapan...</p>}
           {!loading && !conversation?.messages?.length && !error && (
             <div className="conversation-empty">
-              <span>💬</span>
+              <span className="conversation-empty-icon">
+                <ChatIcon />
+              </span>
               <strong>Belum ada pesan</strong>
               <p>Mulai percakapan terkait pesanan ini.</p>
             </div>
@@ -198,7 +250,7 @@ export default function ConversationChat({ target, viewerRole, onClose }) {
             maxLength="1000"
             placeholder={
               conversation?.can_send
-                ? "Tulis pesan…"
+                ? "Tulis pesan..."
                 : "Percakapan hanya dapat dibaca"
             }
             disabled={!conversation?.can_send || sending}
@@ -208,7 +260,7 @@ export default function ConversationChat({ target, viewerRole, onClose }) {
             className="primary"
             disabled={!draft.trim() || !conversation?.can_send || sending}
           >
-            {sending ? "Mengirim…" : "Kirim"}
+            {sending ? "Mengirim..." : "Kirim"}
           </button>
         </form>
       </section>
