@@ -339,7 +339,7 @@ test("UI menghubungkan Customer, Admin, dan Driver ke chat React nyata", () => {
   assert.match(customerChat, /setInterval/);
   assert.doesNotMatch(customerChat, /MutationObserver/);
   assert.match(adminChat, /Semua/);
-  assert.match(adminChat, /Belum dibaca/);
+  assert.match(adminChat, /\["unread", "Baru"\]/);
   assert.match(adminChat, /Tandai ditangani/);
   assert.match(adminChat, /Selesaikan percakapan/);
   assert.match(adminChat, /Buka kembali/);
@@ -404,4 +404,35 @@ test("Customer Chat memakai ikon SVG dan sumber ASCII-safe tanpa mojibake", () =
   );
   assert.doesNotMatch(combined, /[^\x00-\x7F]/);
   assert.doesNotMatch(combined, /(?:Ã|Â|â|ð|�)/);
+});
+
+test("Admin Customer Service memakai payment labels dan kontrol SVG yang stabil", () => {
+  const adminChat = fs.readFileSync(
+    path.join(process.cwd(), "app/AdminCustomerService.js"),
+    "utf8",
+  );
+  const customerStyles = fs.readFileSync(
+    path.join(process.cwd(), "app/communication.css"),
+    "utf8",
+  );
+  const layout = fs.readFileSync(
+    path.join(process.cwd(), "app/layout.js"),
+    "utf8",
+  );
+
+  assert.match(adminChat, /paymentMethodLabel/);
+  assert.match(adminChat, /paymentStatusLabel/);
+  assert.match(adminChat, /paymentGuidance/);
+  assert.match(adminChat, /const CloseIcon/);
+  assert.match(adminChat, /const BackIcon/);
+  assert.match(adminChat, /const SearchIcon/);
+  assert.match(adminChat, /admin-service-payment-fact/);
+  assert.match(customerStyles, /\.admin-service-close svg/);
+  assert.match(customerStyles, /\.admin-service-payment-fact\.payment-paid/);
+  assert.ok(
+    layout.indexOf('import "./communication.css"') >
+      layout.indexOf('import "./admin-customer-service-mobile-final.css"'),
+  );
+  assert.doesNotMatch(adminChat, /[^\x00-\x7F]/);
+  assert.doesNotMatch(`${adminChat}\n${customerStyles}`, /(?:Ã|Â|â|ð|�)/);
 });

@@ -1,10 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  orderStatusLabel,
+  paymentGuidance,
+  paymentMethodLabel,
+  paymentStatusLabel,
+} from "./conversationDisplay.mjs";
 
 const money = (value) => `Rp${Number(value || 0).toLocaleString("id-ID")}`;
 const dateTime = (value) => {
-  if (!value) return "—";
+  if (!value) return "-";
   const date = new Date(String(value).replace(" ", "T") + "Z");
   return Number.isNaN(date.getTime())
     ? String(value)
@@ -22,6 +28,30 @@ const initials = (name) =>
     .map((part) => part[0] || "")
     .join("")
     .toUpperCase();
+
+const conversationStatusLabel = (status) =>
+  ({ OPEN: "BARU", HANDLED: "AKTIF", CLOSED: "SELESAI" })[
+    String(status || "").toUpperCase()
+  ] || "AKTIF";
+
+const CloseIcon = () => (
+  <svg aria-hidden="true" viewBox="0 0 24 24">
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+);
+
+const BackIcon = () => (
+  <svg aria-hidden="true" viewBox="0 0 24 24">
+    <path d="M19 12H5M11 18l-6-6 6-6" />
+  </svg>
+);
+
+const SearchIcon = () => (
+  <svg aria-hidden="true" viewBox="0 0 24 24">
+    <circle cx="11" cy="11" r="7" />
+    <path d="m16 16 5 5" />
+  </svg>
+);
 
 async function request(route, body) {
   const response = await fetch(`/api/${route}`, {
@@ -196,11 +226,12 @@ export default function AdminCustomerService() {
             <h2>Inbox bantuan pelanggan</h2>
           </div>
           <button
+            className="admin-service-close"
             type="button"
             onClick={() => setOpen(false)}
             aria-label="Tutup"
           >
-            ×
+            <CloseIcon />
           </button>
         </header>
 
@@ -214,18 +245,20 @@ export default function AdminCustomerService() {
               <span>{inbox.totals?.unread || 0} baru</span>
             </div>
             <label className="admin-service-search">
-              <span>⌕</span>
+              <span>
+                <SearchIcon />
+              </span>
               <input
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Cari customer / order…"
+                placeholder="Cari customer / order..."
               />
             </label>
             <div className="admin-service-filters">
               {[
                 ["all", "Semua"],
-                ["unread", "Belum dibaca"],
+                ["unread", "Baru"],
                 ["active", "Aktif"],
                 ["closed", "Selesai"],
               ].map(([key, label]) => (
@@ -260,14 +293,18 @@ export default function AdminCustomerService() {
                     {conversation.unread_count > 0 && (
                       <em>{conversation.unread_count}</em>
                     )}
-                    <small>{conversation.status}</small>
+                    <small
+                      className={`admin-service-thread-status ${conversation.status.toLowerCase()}`}
+                    >
+                      {conversationStatusLabel(conversation.status)}
+                    </small>
                   </span>
                 </button>
               ))}
               {!loading && !inbox.conversations.length && (
                 <div className="admin-service-empty-inbox">
                   <strong>Belum ada percakapan</strong>
-                  <p>Chat Customer ↔ Admin akan muncul di sini.</p>
+                  <p>Chat Customer dan Admin akan muncul di sini.</p>
                 </div>
               )}
             </div>
@@ -283,7 +320,7 @@ export default function AdminCustomerService() {
                     onClick={() => setMobileScreen("inbox")}
                     aria-label="Kembali ke inbox"
                   >
-                    ←
+                    <BackIcon />
                   </button>
                   <div className="admin-service-avatar">
                     {initials(detail.customer.name)}
@@ -295,7 +332,7 @@ export default function AdminCustomerService() {
                   <span
                     className={`admin-service-status ${detail.status.toLowerCase()}`}
                   >
-                    {detail.status}
+                    {conversationStatusLabel(detail.status)}
                   </span>
                 </header>
                 <div className="admin-service-message-list">
@@ -331,7 +368,7 @@ export default function AdminCustomerService() {
                     onChange={(event) => setDraft(event.target.value)}
                     maxLength="1000"
                     placeholder={
-                      detail.can_send ? "Tulis balasan…" : "Percakapan selesai"
+                      detail.can_send ? "Tulis balasan..." : "Percakapan selesai"
                     }
                     disabled={!detail.can_send || busy}
                   />
@@ -339,7 +376,7 @@ export default function AdminCustomerService() {
                     className="send"
                     disabled={!draft.trim() || !detail.can_send || busy}
                   >
-                    {busy ? "Mengirim…" : "Kirim"}
+                    {busy ? "Mengirim..." : "Kirim"}
                   </button>
                 </form>
               </>
@@ -370,11 +407,25 @@ export default function AdminCustomerService() {
                 <div className="admin-service-context-facts">
                   <div>
                     <span>Status order</span>
-                    <strong>{detail.order.status.replaceAll("_", " ")}</strong>
+                    <strong>{orderStatusLabel(detail.order.status)}</strong>
                   </div>
-                  <div>
+                  <div
+                    className={`admin-service-payment-fact payment-${String(
+                      detail.order.payment_status || "unknown",
+                    ).toLowerCase()}`}
+                  >
                     <span>Pembayaran</span>
-                    <strong>{detail.order.payment_status}</strong>
+                    <strong>
+                      <b>{paymentMethodLabel(detail.order.payment_method)}</b>
+                      <i aria-hidden="true" />
+                      <b>{paymentStatusLabel(detail.order.payment_status)}</b>
+                    </strong>
+                    <small>
+                      {paymentGuidance(
+                        detail.order.payment_method,
+                        detail.order.payment_status,
+                      )}
+                    </small>
                   </div>
                   <div>
                     <span>Total</span>
