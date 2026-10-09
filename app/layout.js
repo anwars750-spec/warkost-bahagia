@@ -1,4 +1,5 @@
 import "./style.css";
+import "./customer-quantity-mobile-polish.css";
 import "./admin-ui.css";
 import "./admin-icons.css";
 import "./admin-detail.css";
