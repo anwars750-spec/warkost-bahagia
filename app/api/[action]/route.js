@@ -436,7 +436,7 @@ export async function GET(request, { params }) {
         throw new DomainError("Akses ditolak", 403);
       return out({
         items: await store.all(
-          "SELECT name,price,quantity,prep_station FROM order_items WHERE order_id=?" +
+          "SELECT name,price,quantity,note,prep_station FROM order_items WHERE order_id=?" +
             (user.role === "KITCHEN" ? " AND prep_station='KITCHEN'" : ""),
           id,
         ),

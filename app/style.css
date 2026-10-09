@@ -4492,3 +4492,119 @@ footer {
     padding: 8px 0;
   }
 }
+
+/* Customer Cart UX V2 */
+.customer-product[role="button"] {
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+.customer-product[role="button"]:hover,
+.customer-product[role="button"]:focus-visible {
+  border-color: #c99779;
+  box-shadow: 0 13px 30px rgba(89, 48, 29, 0.13);
+  outline: none;
+  transform: translateY(-2px);
+}
+.customer-product[role="button"]:active {
+  transform: scale(0.985);
+}
+.customer-product.has-quantity {
+  border-color: #b97551;
+  box-shadow: 0 0 0 2px rgba(137, 65, 38, 0.08);
+}
+.customer-product .qty small {
+  max-width: 72px;
+  color: #8b4a31;
+  font-size: 9px;
+  font-weight: 750;
+  line-height: 1.15;
+  text-align: center;
+}
+.customer-product .qty.is-empty small {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  padding: 6px 9px;
+  border: 1px solid #d8bda9;
+  border-radius: 10px;
+  background: #fff8ef;
+}
+.checkout-item-copy {
+  gap: 3px;
+}
+.checkout-item-note,
+.quick-cart-note,
+.order-item-note {
+  color: #70402d !important;
+  font-weight: 650;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.item-note-toggle {
+  width: max-content;
+  margin-top: 3px;
+  padding: 4px 0;
+  border: 0;
+  color: #8a3d25;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 750;
+  text-align: left;
+}
+.item-note-editor {
+  display: grid;
+  gap: 7px;
+  margin-top: 5px;
+  padding: 9px;
+  border: 1px solid #e5d5c8;
+  border-radius: 12px;
+  background: #fffaf4;
+}
+.item-note-editor textarea {
+  width: 100%;
+  min-height: 58px;
+  resize: vertical;
+  border-color: #d9c5b6;
+  background: #fff;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.item-note-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+.item-note-actions small {
+  margin-right: auto;
+}
+.item-note-actions button {
+  min-height: 30px;
+  padding: 5px 9px;
+  font-size: 10px;
+}
+.order-item-note {
+  display: block;
+  margin-top: 3px;
+}
+
+@media (max-width: 620px) {
+  .customer-product .qty small {
+    max-width: 52px;
+    font-size: 8px;
+  }
+  .customer-product .qty.is-empty small {
+    min-height: 30px;
+    padding: 5px 7px;
+    border-radius: 9px;
+  }
+  .item-note-editor {
+    padding: 8px;
+  }
+  .item-note-actions {
+    flex-wrap: wrap;
+  }
+}

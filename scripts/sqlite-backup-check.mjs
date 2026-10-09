@@ -23,7 +23,7 @@ const requiredSchema = {
     "checkout_key",
     "checkout_fingerprint",
   ],
-  order_items: ["order_id", "product_id", "price", "quantity"],
+  order_items: ["order_id", "product_id", "price", "quantity", "note"],
   deliveries: ["order_id", "driver_id", "accepted_at", "delivered_at"],
   payments: [
     "order_id",

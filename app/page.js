@@ -20,6 +20,13 @@ import {
   paymentMethodLabel,
   paymentStatusLabel,
 } from "./conversationDisplay.mjs";
+import {
+  MAX_ITEM_NOTE_LENGTH,
+  normalizeItemNote,
+  removeItemNote,
+  updateCartQuantity,
+  updateItemNote,
+} from "../lib/customer-cart.mjs";
 const money = (n) => "Rp" + Number(n || 0).toLocaleString("id-ID");
 const whatsappLink = (number, text) =>
   `https://wa.me/${String(number || "").replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
@@ -186,6 +193,8 @@ export default function App() {
       kitchenPrinter: "LAN 80mm Kitchen (simulasi)",
     }),
     [cart, setCart] = useState({}),
+    [itemNotes, setItemNotes] = useState({}),
+    [noteEditorId, setNoteEditorId] = useState(null),
     [view, setView] = useState("menu"),
     [mode, setMode] = useState("login"),
     [passwordVisibility, setPasswordVisibility] = useState({
@@ -574,13 +583,44 @@ export default function App() {
     total = menu.products.reduce((s, p) => s + p.price * (cart[p.id] || 0), 0);
   const checkoutItems = menu.products
     .filter((product) => cart[product.id] > 0)
-    .map((product) => ({ productId: product.id, quantity: cart[product.id] }));
+    .map((product) => ({
+      productId: product.id,
+      quantity: cart[product.id],
+      note: normalizeItemNote(itemNotes[product.id]),
+    }));
   const checkoutItemsSignature = JSON.stringify(checkoutItems);
   function step(id, n) {
-    setCart((old) => ({ ...old, [id]: Math.max(0, (old[id] || 0) + n) }));
+    setCart((current) => updateCartQuantity(current, id, n));
+  }
+  function saveItemNote(id, value) {
+    setItemNotes((notes) => updateItemNote(notes, id, value));
+  }
+  function activateProductCard(event, product) {
+    if (event.target?.closest?.("button,a,input,textarea,select")) return;
+    if (role === "CUSTOMER") {
+      step(product.id, 1);
+      return;
+    }
+    setMode("login");
+    setView("auth");
+  }
+  function productCardKeyDown(event, product) {
+    if (!["Enter", " "].includes(event.key)) return;
+    if (event.target?.closest?.("button,a,input,textarea,select")) return;
+    event.preventDefault();
+    activateProductCard(event, product);
   }
   const role = user?.role;
   const isGuest = Boolean(user?.isGuest);
+  useEffect(() => {
+    setItemNotes((notes) => {
+      let next = notes;
+      for (const id of Object.keys(notes))
+        if (!cart[id]) next = removeItemNote(next, id);
+      return next;
+    });
+    setNoteEditorId((id) => (id && !cart[id] ? null : id));
+  }, [cart]);
   useEffect(() => {
     if (role !== "ADMIN") return;
     const resetAdminOrderView = () => {
@@ -2071,7 +2111,15 @@ export default function App() {
                 {filteredMenuProducts.map((p, index) => {
                   const badge = demoProductBadges[index];
                   return (
-                    <article className="product customer-product" key={p.id}>
+                    <article
+                      className={`product customer-product ${cart[p.id] ? "has-quantity" : ""}`}
+                      key={p.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${p.name}. ${money(p.price)}. ${role === "CUSTOMER" ? "Ketuk untuk menambah ke keranjang" : "Ketuk untuk masuk dan memesan"}`}
+                      onClick={(event) => activateProductCard(event, p)}
+                      onKeyDown={(event) => productCardKeyDown(event, p)}
+                    >
                       <div className="food-visual">
                         <Image
                           src={p.image_url || demoProductImage(p.name)}
@@ -2100,25 +2148,31 @@ export default function App() {
                           {role === "CUSTOMER" ? (
                             <div
                               className={`qty ${cart[p.id] ? "" : "is-empty"}`}
+                              aria-live="polite"
                             >
-                              <button
-                                onClick={() => step(p.id, -1)}
-                                aria-label={"Kurangi " + p.name}
-                              >
-                                −
-                              </button>
-                              <span>{cart[p.id] || 0}</span>
-                              <button
-                                onClick={() => step(p.id, 1)}
-                                aria-label={"Tambah " + p.name}
-                              >
-                                +
-                              </button>
+                              {cart[p.id] ? (
+                                <>
+                                  <button
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      step(p.id, -1);
+                                    }}
+                                    aria-label={"Kurangi " + p.name}
+                                  >
+                                    −
+                                  </button>
+                                  <span>{cart[p.id]}</span>
+                                  <small>Ketuk +1</small>
+                                </>
+                              ) : (
+                                <small>Ketuk untuk tambah</small>
+                              )}
                             </div>
                           ) : (
                             <button
                               className="guest-product-cta"
-                              onClick={() => {
+                              onClick={(event) => {
+                                event.stopPropagation();
                                 setMode("login");
                                 setView("auth");
                               }}
@@ -2245,6 +2299,8 @@ export default function App() {
                     setLastCreatedOrderId(result.id);
                     setFocusedOrderId(result.id);
                     setCart({});
+                    setItemNotes({});
+                    setNoteEditorId(null);
                     setSelectedVoucherId(null);
                     setVoucherQuote(null);
                     setSelectedRewardId(null);
@@ -2280,12 +2336,81 @@ export default function App() {
                               height={68}
                               unoptimized={Boolean(p.image_url)}
                             />
-                            <span className="checkout-item-copy">
+                            <div className="checkout-item-copy">
                               <strong>{p.name}</strong>
                               <small>
                                 {cart[p.id]} × {money(p.price)}
                               </small>
-                            </span>
+                              {normalizeItemNote(itemNotes[p.id]) && (
+                                <small className="checkout-item-note">
+                                  Catatan: {normalizeItemNote(itemNotes[p.id])}
+                                </small>
+                              )}
+                              <button
+                                className="item-note-toggle"
+                                type="button"
+                                onClick={() =>
+                                  setNoteEditorId((current) =>
+                                    Number(current) === Number(p.id)
+                                      ? null
+                                      : p.id,
+                                  )
+                                }
+                              >
+                                {normalizeItemNote(itemNotes[p.id])
+                                  ? "Ubah catatan"
+                                  : "+ Tambah catatan"}
+                              </button>
+                              {Number(noteEditorId) === Number(p.id) && (
+                                <div className="item-note-editor">
+                                  <textarea
+                                    aria-label={`Catatan untuk ${p.name}`}
+                                    maxLength={MAX_ITEM_NOTE_LENGTH}
+                                    rows="2"
+                                    value={itemNotes[p.id] || ""}
+                                    placeholder="Contoh: pedas, tanpa timun"
+                                    onChange={(event) =>
+                                      setItemNotes((notes) => ({
+                                        ...notes,
+                                        [p.id]: event.target.value,
+                                      }))
+                                    }
+                                    onBlur={(event) =>
+                                      saveItemNote(p.id, event.target.value)
+                                    }
+                                  />
+                                  <div className="item-note-actions">
+                                    <small>
+                                      {(itemNotes[p.id] || "").length}/
+                                      {MAX_ITEM_NOTE_LENGTH}
+                                    </small>
+                                    {normalizeItemNote(itemNotes[p.id]) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setItemNotes((notes) =>
+                                            removeItemNote(notes, p.id),
+                                          );
+                                          setNoteEditorId(null);
+                                        }}
+                                      >
+                                        Hapus
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      className="primary"
+                                      onClick={() => {
+                                        saveItemNote(p.id, itemNotes[p.id]);
+                                        setNoteEditorId(null);
+                                      }}
+                                    >
+                                      Simpan catatan
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                             <div
                               className="qty checkout-qty"
                               aria-label={`Jumlah ${p.name}`}
@@ -4250,6 +4375,11 @@ export default function App() {
                         <small>
                           {cart[product.id]} × {money(product.price)}
                         </small>
+                        {normalizeItemNote(itemNotes[product.id]) && (
+                          <small className="quick-cart-note">
+                            Catatan: {normalizeItemNote(itemNotes[product.id])}
+                          </small>
+                        )}
                       </span>
                       <div className="qty compact-qty">
                         <button
@@ -5712,6 +5842,11 @@ function Order({
                 {item.quantity} × {item.name}
                 {item.prep_station &&
                   ` · ${item.prep_station === "KITCHEN" ? "Dapur" : "Admin · minuman"}`}
+                {item.note && (
+                  <small className="order-item-note">
+                    Catatan: {item.note}
+                  </small>
+                )}
               </span>
               <strong>{money(item.quantity * item.price)}</strong>
             </div>
