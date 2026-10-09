@@ -1,5 +1,4 @@
 import "./style.css";
-import "./customer-quantity-mobile-polish.css";
 import "./admin-ui.css";
 import "./admin-icons.css";
 import "./admin-detail.css";
@@ -32,6 +31,7 @@ import "./kitchen-flash-guard.css";
 import "./kitchen-dashboard-mobile-v2.css";
 import "./printer-header-frame-fix.css";
 import "./kitchen-header-actions.css";
+import "./customer-quantity-mobile-polish.css";
 import CodBatchSettlementCenter from "./CodBatchSettlementCenter";
 import DriverCodBatchEventBridge from "./DriverCodBatchEventBridge";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
@@ -49,7 +49,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="id">
+    <html lang="id">">
       <body>
         {children}
         <KitchenFlashGuard />
