@@ -74,6 +74,8 @@ test("model role final tidak memuat Cashier/Kasir dan permission map terpisah", 
   assert.equal(hasCapability("MANAGER", CAPABILITIES.SETTINGS_WRITE), false);
   assert.equal(hasCapability("OWNER", CAPABILITIES.SETTINGS_READ), true);
   assert.equal(hasCapability("OWNER", CAPABILITIES.SETTINGS_WRITE), true);
+  assert.equal(hasCapability("OWNER", CAPABILITIES.CATALOG_WRITE), false);
+  assert.equal(hasCapability("OWNER", CAPABILITIES.STOCK_WRITE), false);
   assert.equal(hasCapability("ADMIN", CAPABILITIES.CATALOG_WRITE), false);
   assert.equal(hasCapability("ADMIN", CAPABILITIES.ORDERS_OPERATE), true);
   assert.equal(hasCapability("ADMIN", CAPABILITIES.PAYMENTS_VERIFY), true);
@@ -107,7 +109,7 @@ test("endpoint global settings meneruskan user ke guard server", () => {
   );
 });
 
-test("Manager dan Owner mengelola komersial sementara Admin ditolak server", async () => {
+test("Manager mengelola katalog dan stok sementara Owner/Admin tidak menjadi editor", async () => {
   await saveCategory(manager, { name: "Makanan RBAC" });
   await saveProduct(manager, {
     name: "Menu RBAC",
@@ -117,25 +119,30 @@ test("Manager dan Owner mengelola komersial sementara Admin ditolak server", asy
     prepStation: "KITCHEN",
     active: true,
   });
-  await saveProduct(owner, {
-    id: 1,
-    name: "Menu RBAC",
-    description: "Harga diperbarui Owner",
-    price: 27000,
-    categoryId: 1,
-    prepStation: "KITCHEN",
-    active: true,
-  });
+  await assert.rejects(
+    saveProduct(owner, {
+      id: 1,
+      name: "Menu RBAC",
+      description: "Harga diperbarui Owner",
+      price: 27000,
+      categoryId: 1,
+      active: true,
+    }),
+    /Akses/,
+  );
   await adjustStock(manager, {
     productId: 1,
     quantity: 10,
     reason: "Stok Manager",
   });
-  await adjustStock(owner, {
-    productId: 1,
-    quantity: -2,
-    reason: "Koreksi Owner",
-  });
+  await assert.rejects(
+    adjustStock(owner, {
+      productId: 1,
+      quantity: -2,
+      reason: "Koreksi Owner",
+    }),
+    /Akses/,
+  );
   await savePromotion(manager, promotion());
   assert.equal((await listPromotions(owner)).length, 1);
   assert.deepEqual(await listNotifications(manager), {
@@ -165,12 +172,12 @@ test("Manager dan Owner mengelola komersial sementara Admin ditolak server", asy
   await assert.rejects(savePromotion(admin, promotion()), /Akses/);
   assert.equal(
     database.prepare("SELECT price FROM products WHERE id=1").get().price,
-    27000,
+    25000,
   );
   assert.equal(
     database.prepare("SELECT stock_quantity FROM products WHERE id=1").get()
       .stock_quantity,
-    8,
+    10,
   );
 });
 

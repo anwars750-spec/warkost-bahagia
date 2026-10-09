@@ -14,7 +14,10 @@ async function loginAdmin(page) {
   await form.getByLabel("Email atau Nomor HP").fill("admin@warkost.local");
   await form.getByLabel("Password").fill(password);
   await form.getByRole("button", { name: "Masuk", exact: true }).click();
-  await expect(page.locator("main")).toHaveAttribute("data-admin-view", "orders");
+  await expect(page.locator("main")).toHaveAttribute(
+    "data-admin-view",
+    "orders",
+  );
 }
 
 function adminNav(page) {
@@ -41,7 +44,10 @@ async function openOperations(page) {
   await adminNav(page)
     .getByRole("button", { name: "Operasional", exact: true })
     .click();
-  await expect(page.locator("main")).toHaveAttribute("data-admin-view", "orders");
+  await expect(page.locator("main")).toHaveAttribute(
+    "data-admin-view",
+    "orders",
+  );
   await expect(
     page.getByRole("heading", { name: "Pantau pesanan hari ini", exact: true }),
   ).toBeVisible();
@@ -57,7 +63,10 @@ async function openCustomers(page) {
   await adminNav(page)
     .getByRole("button", { name: "Pelanggan", exact: true })
     .click();
-  await expect(page.locator("main")).toHaveAttribute("data-admin-view", "customers");
+  await expect(page.locator("main")).toHaveAttribute(
+    "data-admin-view",
+    "customers",
+  );
   await expect(
     page.getByRole("heading", { name: "Kelola pelanggan", exact: true }),
   ).toBeVisible();
@@ -73,11 +82,14 @@ async function openStock(page) {
   await adminNav(page)
     .getByRole("button", { name: "Stok", exact: true })
     .click();
-  await expect(page.locator("main")).toHaveAttribute("data-admin-view", "admin-stock");
+  await expect(page.locator("main")).toHaveAttribute(
+    "data-admin-view",
+    "admin-stock",
+  );
   await expect(page.locator("#admin-beverage-stock-v1")).toBeVisible();
   await expect(
     page.locator("#admin-beverage-stock-v1").getByRole("heading", {
-      name: "Stok Minuman",
+      name: "Stok Minuman & Bahan Baku",
       exact: true,
     }),
   ).toBeVisible();
@@ -90,7 +102,10 @@ async function openPrinter(page) {
   await adminNav(page)
     .getByRole("button", { name: "Printer", exact: true })
     .click();
-  await expect(page.locator("main")).toHaveAttribute("data-admin-view", "printing");
+  await expect(page.locator("main")).toHaveAttribute(
+    "data-admin-view",
+    "printing",
+  );
   await expect(page.locator("#admin-printer-center-v1")).toBeVisible();
   await expect(
     page.locator("#admin-printer-center-v1").getByRole("heading", {
@@ -109,7 +124,9 @@ async function openNotifications(page) {
     .click();
   const dialog = page.getByRole("dialog", { name: "Notifikasi Admin" });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole("heading", { name: "Notifikasi" })).toBeVisible();
+  await expect(
+    dialog.getByRole("heading", { name: "Notifikasi" }),
+  ).toBeVisible();
   await expect(page.locator(".admin-notification-popover")).toHaveCount(1);
 }
 

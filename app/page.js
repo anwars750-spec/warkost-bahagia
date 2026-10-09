@@ -27,7 +27,20 @@ import {
   updateCartQuantity,
   updateItemNote,
 } from "../lib/customer-cart.mjs";
+import {
+  formatStockQuantity,
+  productLineTotal,
+  productPriceLabel,
+  productQuantityRules,
+} from "../lib/product-units.mjs";
 const money = (n) => "Rp" + Number(n || 0).toLocaleString("id-ID");
+const orderItemQuantityLabel = (item) =>
+  item.stock_unit === "GRAM"
+    ? formatStockQuantity(item.quantity, item.stock_unit)
+    : item.quantity;
+const orderItemPriceLabel = (item) =>
+  item.stock_unit === "GRAM" ? productPriceLabel(item, money) : money(item.price);
+const orderItemTotal = (item) => productLineTotal(item, item.quantity);
 const whatsappLink = (number, text) =>
   `https://wa.me/${String(number || "").replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
 const localDateTime = (value) => {
@@ -54,6 +67,7 @@ const demoProductImage = (name) => {
     return "/demo/nasi-goreng-warkost.webp";
   if (normalized.includes("mie ayam")) return "/demo/mie-ayam-bahagia.webp";
   if (normalized.includes("kopi susu")) return "/demo/kopi-susu-rumah.webp";
+  if (normalized.includes("biji kopi")) return "/demo/bahan-baku-kopi.svg";
   return "/demo/promo-warkost.webp";
 };
 const demoProductBadges = [
@@ -211,6 +225,8 @@ export default function App() {
     [busy, setBusy] = useState(false),
     [editingAddress, setEditingAddress] = useState(null),
     [selectedCategory, setSelectedCategory] = useState(0),
+    [selectedSubcategory, setSelectedSubcategory] = useState(0),
+    [stockCategoryFilter, setStockCategoryFilter] = useState("all"),
     [productSearch, setProductSearch] = useState(""),
     [promoIndex, setPromoIndex] = useState(0),
     [overlay, setOverlay] = useState(null),
@@ -279,6 +295,7 @@ export default function App() {
         api("me", undefined, signal),
       ]);
       setMenu(m);
+      setSelectedCategory((current) => current || m.categories[0]?.id || 0);
       setUser(me.user);
       if (me.user && me.user.role !== "CUSTOMER")
         setView((prev) =>
@@ -322,11 +339,12 @@ export default function App() {
         }
         if (["MANAGER", "OWNER"].includes(me.user.role)) {
           setInventory(await api("inventory", undefined, signal));
-          setStock(await api("stock", undefined, signal));
           setPromotions(
             (await api("promotions", undefined, signal)).promotions,
           );
         }
+        if (["MANAGER", "OWNER", "ADMIN", "KITCHEN"].includes(me.user.role))
+          setStock(await api("stock", undefined, signal));
         if (["ADMIN", "KITCHEN", "OWNER"].includes(me.user.role))
           setPrintJobs((await api("print-jobs", undefined, signal)).jobs);
       } else {
@@ -579,8 +597,18 @@ export default function App() {
   const otpResendRemaining = otpFlow
     ? Math.max(0, Math.ceil((otpFlow.resendAt - authClock) / 1000))
     : 0;
-  const count = Object.values(cart).reduce((s, n) => s + n, 0),
-    total = menu.products.reduce((s, p) => s + p.price * (cart[p.id] || 0), 0);
+  const count = menu.products.reduce((sum, product) => {
+      const quantity = Number(cart[product.id] || 0);
+      if (!quantity) return sum;
+      const { orderStepQuantity } = productQuantityRules(product);
+      return sum + quantity / orderStepQuantity;
+    }, 0),
+    total = menu.products.reduce(
+      (sum, product) =>
+        sum +
+        (cart[product.id] ? productLineTotal(product, cart[product.id]) : 0),
+      0,
+    );
   const checkoutItems = menu.products
     .filter((product) => cart[product.id] > 0)
     .map((product) => ({
@@ -589,8 +617,21 @@ export default function App() {
       note: normalizeItemNote(itemNotes[product.id]),
     }));
   const checkoutItemsSignature = JSON.stringify(checkoutItems);
-  function step(id, n) {
-    setCart((current) => updateCartQuantity(current, id, n));
+  function step(product, direction) {
+    const { minimumOrderQuantity, orderStepQuantity } =
+      productQuantityRules(product);
+    setCart((current) => {
+      const currentQuantity = Number(current[product.id] || 0);
+      const delta =
+        direction > 0
+          ? currentQuantity
+            ? orderStepQuantity
+            : minimumOrderQuantity
+          : currentQuantity <= minimumOrderQuantity
+            ? -currentQuantity
+            : -orderStepQuantity;
+      return updateCartQuantity(current, product.id, delta);
+    });
   }
   function saveItemNote(id, value) {
     setItemNotes((notes) => updateItemNote(notes, id, value));
@@ -598,7 +639,7 @@ export default function App() {
   function activateProductCard(event, product) {
     if (event.target?.closest?.("button,a,input,textarea,select")) return;
     if (role === "CUSTOMER") {
-      step(product.id, 1);
+      step(product, 1);
       return;
     }
     setMode("login");
@@ -635,7 +676,9 @@ export default function App() {
       const orderId = Number(event.detail?.orderId || 0);
       setView("orders");
       setAdminOrderFilter("all");
-      setAdminOrderSearch(orderId ? `WB${String(orderId).padStart(6, "0")}` : "");
+      setAdminOrderSearch(
+        orderId ? `WB${String(orderId).padStart(6, "0")}` : "",
+      );
     };
     window.addEventListener(
       "warkost:open-admin-order-context",
@@ -659,13 +702,18 @@ export default function App() {
   const filteredMenuProducts = menu.products.filter((product) => {
     const categoryMatches =
       !selectedCategory || product.category_id === selectedCategory;
+    const subcategoryMatches =
+      !selectedSubcategory || product.subcategory_id === selectedSubcategory;
     const search = productSearch.trim().toLowerCase();
+    const subcategoryName =
+      menu.subcategories?.find((item) => item.id === product.subcategory_id)
+        ?.name || "";
     const searchMatches =
       !search ||
-      `${product.name} ${product.description || ""}`
+      `${product.name} ${product.description || ""} ${subcategoryName}`
         .toLowerCase()
         .includes(search);
-    return categoryMatches && searchMatches;
+    return categoryMatches && subcategoryMatches && searchMatches;
   });
   const customerVisibleOrders =
     orderFilter === "all"
@@ -1207,7 +1255,10 @@ export default function App() {
                 </>
               )}
               {role === "KITCHEN" && (
-                <button onClick={() => setView("printing")}>Printer</button>
+                <>
+                  <button onClick={() => setView("stock")}>Stok Makanan</button>
+                  <button onClick={() => setView("printing")}>Printer</button>
+                </>
               )}
             </>
           ) : null}
@@ -1317,7 +1368,7 @@ export default function App() {
                   {view === "notifications"
                     ? "Notifikasi"
                     : view === "admin-stock" && role === "ADMIN"
-                      ? "Stok Minuman"
+                      ? "Stok Minuman & Bahan Baku"
                       : view === "promotions" &&
                           ["MANAGER", "OWNER"].includes(role)
                         ? "Kelola promo"
@@ -1327,8 +1378,10 @@ export default function App() {
                           : view === "reports" && role === "OWNER"
                             ? "Laporan harian"
                             : view === "stock" &&
-                                ["MANAGER", "OWNER"].includes(role)
-                              ? "Kontrol stok"
+                                ["MANAGER", "OWNER", "KITCHEN"].includes(role)
+                              ? role === "KITCHEN"
+                                ? "Stok Makanan"
+                                : "Kontrol stok"
                               : view === "staff" && role === "OWNER"
                                 ? "Kelola staf"
                                 : view === "audit" && role === "OWNER"
@@ -2063,27 +2116,25 @@ export default function App() {
                     type="search"
                     value={productSearch}
                     onChange={(event) => setProductSearch(event.target.value)}
-                    placeholder="Cari makanan atau minuman..."
+                    placeholder="Cari makanan, minuman, atau bahan baku..."
                   />
                 </label>
-                <div className="filters" aria-label="Kategori menu">
-                  <button
-                    className={!selectedCategory ? "active" : ""}
-                    onClick={() => setSelectedCategory(0)}
-                  >
-                    <FoodIcon />
-                    Semua
-                  </button>
+                <div className="filters" aria-label="Kategori produk">
                   {menu.categories.map((category) => (
                     <button
                       key={category.id}
                       className={
                         selectedCategory === category.id ? "active" : ""
                       }
-                      onClick={() => setSelectedCategory(category.id)}
+                      onClick={() => {
+                        setSelectedCategory(category.id);
+                        setSelectedSubcategory(0);
+                      }}
                     >
                       {category.name.toLowerCase().includes("minum") ? (
                         <DrinkIcon />
+                      ) : category.name.toLowerCase().includes("bahan") ? (
+                        <span aria-hidden="true">◆</span>
                       ) : (
                         <BowlIcon />
                       )}
@@ -2091,6 +2142,34 @@ export default function App() {
                     </button>
                   ))}
                 </div>
+                {!!menu.subcategories?.filter(
+                  (item) => item.category_id === selectedCategory,
+                ).length && (
+                  <div
+                    className="filters subcategory-filters"
+                    aria-label="Subkategori produk"
+                  >
+                    <button
+                      className={!selectedSubcategory ? "active" : ""}
+                      onClick={() => setSelectedSubcategory(0)}
+                    >
+                      Semua subkategori
+                    </button>
+                    {menu.subcategories
+                      .filter((item) => item.category_id === selectedCategory)
+                      .map((item) => (
+                        <button
+                          key={item.id}
+                          className={
+                            selectedSubcategory === item.id ? "active" : ""
+                          }
+                          onClick={() => setSelectedSubcategory(item.id)}
+                        >
+                          {item.name}
+                        </button>
+                      ))}
+                  </div>
+                )}
               </div>
               <div className="catalog-heading">
                 <div>
@@ -2100,6 +2179,7 @@ export default function App() {
                 <button
                   onClick={() => {
                     setSelectedCategory(0);
+                    setSelectedSubcategory(0);
                     setProductSearch("");
                   }}
                 >
@@ -2116,7 +2196,7 @@ export default function App() {
                       key={p.id}
                       role="button"
                       tabIndex={0}
-                      aria-label={`${p.name}. ${money(p.price)}. ${role === "CUSTOMER" ? "Ketuk untuk menambah ke keranjang" : "Ketuk untuk masuk dan memesan"}`}
+                      aria-label={`${p.name}. ${productPriceLabel(p, money)}. ${role === "CUSTOMER" ? "Ketuk untuk menambah ke keranjang" : "Ketuk untuk masuk dan memesan"}`}
                       onClick={(event) => activateProductCard(event, p)}
                       onKeyDown={(event) => productCardKeyDown(event, p)}
                     >
@@ -2141,10 +2221,37 @@ export default function App() {
                               ?.name
                           }
                         </small>
+                        {p.subcategory_id && (
+                          <small className="product-subcategory">
+                            {
+                              menu.subcategories?.find(
+                                (item) => item.id === p.subcategory_id,
+                              )?.name
+                            }
+                          </small>
+                        )}
                         <h2>{p.name}</h2>
                         <p>{p.description}</p>
                         <div className="product-foot">
-                          <strong>{money(p.price)}</strong>
+                          <span className="product-price-stack">
+                            <strong>{productPriceLabel(p, money)}</strong>
+                            <small>
+                              Stok{" "}
+                              {formatStockQuantity(
+                                p.available_quantity,
+                                p.stock_unit,
+                              )}
+                            </small>
+                            {p.stock_unit === "GRAM" && (
+                              <small>
+                                Minimal{" "}
+                                {formatStockQuantity(
+                                  p.minimum_order_quantity,
+                                  p.stock_unit,
+                                )}
+                              </small>
+                            )}
+                          </span>
                           {role === "CUSTOMER" ? (
                             <div
                               className={`qty ${cart[p.id] ? "" : "is-empty"}`}
@@ -2155,14 +2262,23 @@ export default function App() {
                                   <button
                                     onClick={(event) => {
                                       event.stopPropagation();
-                                      step(p.id, -1);
+                                      step(p, -1);
                                     }}
                                     aria-label={"Kurangi " + p.name}
                                   >
                                     −
                                   </button>
-                                  <span>{cart[p.id]}</span>
-                                  <small>Ketuk +1</small>
+                                  <span>
+                                    {formatStockQuantity(
+                                      cart[p.id],
+                                      p.stock_unit,
+                                    )}
+                                  </span>
+                                  <small>
+                                    {p.stock_unit === "GRAM"
+                                      ? `+${formatStockQuantity(p.order_step_quantity, p.stock_unit)}`
+                                      : "Ketuk +1"}
+                                  </small>
                                 </>
                               ) : (
                                 <small>Ketuk untuk tambah</small>
@@ -2192,6 +2308,7 @@ export default function App() {
                   <button
                     onClick={() => {
                       setSelectedCategory(0);
+                      setSelectedSubcategory(0);
                       setProductSearch("");
                     }}
                   >
@@ -2339,7 +2456,8 @@ export default function App() {
                             <div className="checkout-item-copy">
                               <strong>{p.name}</strong>
                               <small>
-                                {cart[p.id]} × {money(p.price)}
+                                {formatStockQuantity(cart[p.id], p.stock_unit)}{" "}
+                                × {productPriceLabel(p, money)}
                               </small>
                               {normalizeItemNote(itemNotes[p.id]) && (
                                 <small className="checkout-item-note">
@@ -2418,21 +2536,23 @@ export default function App() {
                               <button
                                 type="button"
                                 aria-label={`Kurangi ${p.name}`}
-                                onClick={() => step(p.id, -1)}
+                                onClick={() => step(p, -1)}
                               >
                                 −
                               </button>
-                              <span>{cart[p.id]}</span>
+                              <span>
+                                {formatStockQuantity(cart[p.id], p.stock_unit)}
+                              </span>
                               <button
                                 type="button"
                                 aria-label={`Tambah ${p.name}`}
-                                onClick={() => step(p.id, 1)}
+                                onClick={() => step(p, 1)}
                               >
                                 +
                               </button>
                             </div>
                             <strong className="checkout-item-total">
-                              {money(p.price * cart[p.id])}
+                              {money(productLineTotal(p, cart[p.id]))}
                             </strong>
                           </div>
                         ))}
@@ -2460,200 +2580,203 @@ export default function App() {
                   )}
 
                   {!isGuest && (
-                  <section className="checkout-card loyalty-checkout-card">
-                    <div className="checkout-card-heading">
-                      <span className="section-icon">
+                    <section className="checkout-card loyalty-checkout-card">
+                      <div className="checkout-card-heading">
+                        <span className="section-icon">
+                          <StarIcon />
+                        </span>
+                        <h2>Poin Loyalty</h2>
+                      </div>
+                      <div className="loyalty-summary">
                         <StarIcon />
-                      </span>
-                      <h2>Poin Loyalty</h2>
-                    </div>
-                    <div className="loyalty-summary">
-                      <StarIcon />
-                      <p>
-                        Poin Anda saat ini:{" "}
-                        <strong>{account.loyalty} poin</strong>
-                        <small>
-                          Kumpulkan poin dari setiap pembelian dan tukarkan
-                          sesuai reward yang tersedia.
-                        </small>
-                      </p>
-                    </div>
-                    <div className="voucher-list loyalty-reward-list">
-                      {(account.rewards || []).map((reward) => {
-                        const selected = Number(selectedRewardId) === reward.id;
-                        const unavailable =
-                          !reward.eligible_balance ||
-                          Boolean(selectedVoucherId);
-                        return (
-                          <article
-                            className={`voucher-option ${selected ? "selected" : ""}`}
-                            key={reward.id}
-                          >
-                            <StarIcon />
-                            <span>
-                              <strong>{reward.name}</strong>
-                              <small>
-                                {reward.points_required} poin · minimum{" "}
-                                {money(reward.minimum_order)}
-                              </small>
-                              <small>
-                                {reward.reward_type === "PERCENT"
-                                  ? `${reward.reward_value}% diskon`
-                                  : `${money(reward.reward_value)} diskon`}
-                                {reward.maximum_discount
-                                  ? ` · maks. ${money(reward.maximum_discount)}`
-                                  : ""}
-                              </small>
-                            </span>
-                            <button
-                              type="button"
-                              className={selected ? "primary" : ""}
-                              disabled={unavailable}
-                              title={
-                                selectedVoucherId
-                                  ? "Tidak dapat digabung dengan voucher"
-                                  : reward.ineligible_reason || ""
-                              }
-                              onClick={() =>
-                                setSelectedRewardId(selected ? null : reward.id)
-                              }
+                        <p>
+                          Poin Anda saat ini:{" "}
+                          <strong>{account.loyalty} poin</strong>
+                          <small>
+                            Kumpulkan poin dari setiap pembelian dan tukarkan
+                            sesuai reward yang tersedia.
+                          </small>
+                        </p>
+                      </div>
+                      <div className="voucher-list loyalty-reward-list">
+                        {(account.rewards || []).map((reward) => {
+                          const selected =
+                            Number(selectedRewardId) === reward.id;
+                          const unavailable =
+                            !reward.eligible_balance ||
+                            Boolean(selectedVoucherId);
+                          return (
+                            <article
+                              className={`voucher-option ${selected ? "selected" : ""}`}
+                              key={reward.id}
                             >
-                              {selected
-                                ? "Dipilih"
-                                : unavailable
-                                  ? reward.ineligible_reason ||
-                                    "Voucher dipilih"
-                                  : "Pakai"}
-                            </button>
-                          </article>
-                        );
-                      })}
-                    </div>
-                    {loyaltyQuoteBusy && (
-                      <p className="voucher-feedback">
-                        Memvalidasi Loyalty Reward…
-                      </p>
-                    )}
-                    {loyaltyQuoteError && (
-                      <p className="voucher-feedback error" role="alert">
-                        {loyaltyQuoteError}
-                      </p>
-                    )}
-                    {loyaltyQuote && (
-                      <p className="voucher-feedback success">
-                        Reward valid · {loyaltyQuote.points_redeemed} poin ·
-                        hemat {money(loyaltyQuote.loyalty_discount)}
-                      </p>
-                    )}
-                  </section>
-                  )}
-
-                  {!isGuest && (
-                  <section className="checkout-card voucher-checkout-card">
-                    <div className="checkout-card-heading">
-                      <span className="section-icon">
-                        <TicketIcon />
-                      </span>
-                      <h2>Voucher</h2>
-                    </div>
-                    <div className="voucher-list">
-                      {(account.vouchers || []).map((voucher) => {
-                        const selected =
-                          Number(selectedVoucherId) === voucher.id;
-                        const codBlocked =
-                          selectedPaymentMethod === "CASH" &&
-                          voucher.voucher_category !== "BIRTHDAY";
-                        const selectable =
-                          voucher.state === "CLAIMED" && !codBlocked;
-                        return (
-                          <article
-                            className={`voucher-option ${selected ? "selected" : ""}`}
-                            key={voucher.id}
-                          >
-                            <TicketIcon />
-                            <span>
-                              <strong>{voucher.title}</strong>
-                              <small>{voucher.terms}</small>
-                              <small>
-                                Minimum {money(voucher.minimum_order)} ·{" "}
-                                {voucher.voucher_type === "PERCENT"
-                                  ? `${voucher.discount_value}%`
-                                  : money(voucher.discount_value)}
-                                {voucher.max_discount
-                                  ? ` · maks. ${money(voucher.max_discount)}`
-                                  : ""}
-                              </small>
-                            </span>
-                            {voucher.state === "AVAILABLE" ? (
+                              <StarIcon />
+                              <span>
+                                <strong>{reward.name}</strong>
+                                <small>
+                                  {reward.points_required} poin · minimum{" "}
+                                  {money(reward.minimum_order)}
+                                </small>
+                                <small>
+                                  {reward.reward_type === "PERCENT"
+                                    ? `${reward.reward_value}% diskon`
+                                    : `${money(reward.reward_value)} diskon`}
+                                  {reward.maximum_discount
+                                    ? ` · maks. ${money(reward.maximum_discount)}`
+                                    : ""}
+                                </small>
+                              </span>
                               <button
                                 type="button"
-                                disabled={busy || Boolean(selectedRewardId)}
-                                onClick={() =>
-                                  run(async () => {
-                                    await api("voucher-claim", {
-                                      promotionId: voucher.id,
-                                    });
-                                    showTransientMessage(
-                                      "Voucher berhasil diklaim.",
-                                    );
-                                  })
-                                }
-                              >
-                                Klaim
-                              </button>
-                            ) : selectable ? (
-                              <button
-                                type="button"
-                                disabled={Boolean(selectedRewardId)}
                                 className={selected ? "primary" : ""}
+                                disabled={unavailable}
+                                title={
+                                  selectedVoucherId
+                                    ? "Tidak dapat digabung dengan voucher"
+                                    : reward.ineligible_reason || ""
+                                }
                                 onClick={() =>
-                                  setSelectedVoucherId(
-                                    selected ? null : voucher.id,
+                                  setSelectedRewardId(
+                                    selected ? null : reward.id,
                                   )
                                 }
                               >
-                                {selected ? "Dipilih" : "Pakai"}
+                                {selected
+                                  ? "Dipilih"
+                                  : unavailable
+                                    ? reward.ineligible_reason ||
+                                      "Voucher dipilih"
+                                    : "Pakai"}
                               </button>
-                            ) : voucher.state === "CLAIMED" && codBlocked ? (
-                              <span className="voucher-state">
-                                Tidak berlaku untuk COD
-                              </span>
-                            ) : (
-                              <span className="voucher-state">
-                                {voucher.state}
-                              </span>
-                            )}
-                          </article>
-                        );
-                      })}
-                      {!account.vouchers?.length && (
-                        <div className="voucher-empty-state">
-                          <TicketIcon />
-                          <span>
-                            <strong>Belum ada voucher tersedia</strong>
-                            <small>
-                              Voucher aktif yang dapat diklaim akan tampil di
-                              sini.
-                            </small>
-                          </span>
-                        </div>
+                            </article>
+                          );
+                        })}
+                      </div>
+                      {loyaltyQuoteBusy && (
+                        <p className="voucher-feedback">
+                          Memvalidasi Loyalty Reward…
+                        </p>
                       )}
-                    </div>
-                    {voucherQuoteBusy && (
-                      <p className="voucher-feedback">Memvalidasi voucher…</p>
-                    )}
-                    {voucherQuoteError && (
-                      <p className="voucher-feedback error" role="alert">
-                        {voucherQuoteError}
-                      </p>
-                    )}
-                    {voucherQuote && (
-                      <p className="voucher-feedback success">
-                        Voucher valid · hemat{" "}
-                        {money(voucherQuote.voucher_discount)}
-                      </p>
-                    )}
-                  </section>
+                      {loyaltyQuoteError && (
+                        <p className="voucher-feedback error" role="alert">
+                          {loyaltyQuoteError}
+                        </p>
+                      )}
+                      {loyaltyQuote && (
+                        <p className="voucher-feedback success">
+                          Reward valid · {loyaltyQuote.points_redeemed} poin ·
+                          hemat {money(loyaltyQuote.loyalty_discount)}
+                        </p>
+                      )}
+                    </section>
+                  )}
+
+                  {!isGuest && (
+                    <section className="checkout-card voucher-checkout-card">
+                      <div className="checkout-card-heading">
+                        <span className="section-icon">
+                          <TicketIcon />
+                        </span>
+                        <h2>Voucher</h2>
+                      </div>
+                      <div className="voucher-list">
+                        {(account.vouchers || []).map((voucher) => {
+                          const selected =
+                            Number(selectedVoucherId) === voucher.id;
+                          const codBlocked =
+                            selectedPaymentMethod === "CASH" &&
+                            voucher.voucher_category !== "BIRTHDAY";
+                          const selectable =
+                            voucher.state === "CLAIMED" && !codBlocked;
+                          return (
+                            <article
+                              className={`voucher-option ${selected ? "selected" : ""}`}
+                              key={voucher.id}
+                            >
+                              <TicketIcon />
+                              <span>
+                                <strong>{voucher.title}</strong>
+                                <small>{voucher.terms}</small>
+                                <small>
+                                  Minimum {money(voucher.minimum_order)} ·{" "}
+                                  {voucher.voucher_type === "PERCENT"
+                                    ? `${voucher.discount_value}%`
+                                    : money(voucher.discount_value)}
+                                  {voucher.max_discount
+                                    ? ` · maks. ${money(voucher.max_discount)}`
+                                    : ""}
+                                </small>
+                              </span>
+                              {voucher.state === "AVAILABLE" ? (
+                                <button
+                                  type="button"
+                                  disabled={busy || Boolean(selectedRewardId)}
+                                  onClick={() =>
+                                    run(async () => {
+                                      await api("voucher-claim", {
+                                        promotionId: voucher.id,
+                                      });
+                                      showTransientMessage(
+                                        "Voucher berhasil diklaim.",
+                                      );
+                                    })
+                                  }
+                                >
+                                  Klaim
+                                </button>
+                              ) : selectable ? (
+                                <button
+                                  type="button"
+                                  disabled={Boolean(selectedRewardId)}
+                                  className={selected ? "primary" : ""}
+                                  onClick={() =>
+                                    setSelectedVoucherId(
+                                      selected ? null : voucher.id,
+                                    )
+                                  }
+                                >
+                                  {selected ? "Dipilih" : "Pakai"}
+                                </button>
+                              ) : voucher.state === "CLAIMED" && codBlocked ? (
+                                <span className="voucher-state">
+                                  Tidak berlaku untuk COD
+                                </span>
+                              ) : (
+                                <span className="voucher-state">
+                                  {voucher.state}
+                                </span>
+                              )}
+                            </article>
+                          );
+                        })}
+                        {!account.vouchers?.length && (
+                          <div className="voucher-empty-state">
+                            <TicketIcon />
+                            <span>
+                              <strong>Belum ada voucher tersedia</strong>
+                              <small>
+                                Voucher aktif yang dapat diklaim akan tampil di
+                                sini.
+                              </small>
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      {voucherQuoteBusy && (
+                        <p className="voucher-feedback">Memvalidasi voucher…</p>
+                      )}
+                      {voucherQuoteError && (
+                        <p className="voucher-feedback error" role="alert">
+                          {voucherQuoteError}
+                        </p>
+                      )}
+                      {voucherQuote && (
+                        <p className="voucher-feedback success">
+                          Voucher valid · hemat{" "}
+                          {money(voucherQuote.voucher_discount)}
+                        </p>
+                      )}
+                    </section>
                   )}
 
                   <section className="checkout-card delivery-checkout-card">
@@ -3713,7 +3836,7 @@ export default function App() {
             />
           </section>
         )}
-        {["MANAGER", "OWNER"].includes(role) && view === "products" && (
+        {role === "MANAGER" && view === "products" && (
           <section className="panel">
             <h2>Kelola kategori</h2>
             <form
@@ -3755,12 +3878,79 @@ export default function App() {
                 </button>
               </div>
             ))}
+            <h2>Kelola subkategori</h2>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                const form = new FormData(event.currentTarget);
+                run(async () => {
+                  await api("subcategory", {
+                    name: form.get("name"),
+                    categoryId: Number(form.get("categoryId")),
+                    sortOrder: Number(form.get("sortOrder")),
+                  });
+                  event.target.reset();
+                });
+              }}
+            >
+              <label>
+                Kategori utama
+                <select name="categoryId" required>
+                  {inventory.categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Nama subkategori
+                <input name="name" minLength="2" required />
+              </label>
+              <label>
+                Urutan
+                <input
+                  name="sortOrder"
+                  type="number"
+                  min="0"
+                  defaultValue="10"
+                />
+              </label>
+              <button className="primary" disabled={busy}>
+                Tambah subkategori
+              </button>
+            </form>
+            {inventory.subcategories?.map((subcategory) => (
+              <div className="line" key={subcategory.id}>
+                <span>
+                  {subcategory.category_name} · {subcategory.name} ·{" "}
+                  {subcategory.active ? "Aktif" : "Nonaktif"}
+                </span>
+                <button
+                  disabled={busy}
+                  onClick={() =>
+                    run(() =>
+                      api("subcategory", {
+                        id: subcategory.id,
+                        categoryId: subcategory.category_id,
+                        name: subcategory.name,
+                        sortOrder: subcategory.sort_order,
+                        active: !subcategory.active,
+                      }),
+                    )
+                  }
+                >
+                  {subcategory.active ? "Nonaktifkan" : "Aktifkan"}
+                </button>
+              </div>
+            ))}
             <h2>Kelola produk</h2>
             {inventory.products.map((p) => (
               <ProductEditor
                 key={p.id}
                 product={p}
                 categories={inventory.categories}
+                subcategories={inventory.subcategories || []}
                 busy={busy}
                 onSave={saveProductWithImage}
               />
@@ -3768,9 +3958,30 @@ export default function App() {
             <h2>Tambah menu</h2>
             <ProductEditor
               categories={inventory.categories}
+              subcategories={inventory.subcategories || []}
               busy={busy}
               onSave={saveProductWithImage}
             />
+          </section>
+        )}
+        {role === "OWNER" && view === "products" && (
+          <section className="panel">
+            <h2>Katalog produk · read only</h2>
+            <p>
+              Owner dapat memantau seluruh katalog. Pengelolaan harian dilakukan
+              Manager.
+            </p>
+            {inventory.products.map((product) => (
+              <div className="line" key={product.id}>
+                <span>
+                  <strong>{product.name}</strong>
+                  <br />
+                  {product.category_name} ·{" "}
+                  {product.subcategory_name || "Tanpa subkategori"}
+                </span>
+                <strong>{productPriceLabel(product, money)}</strong>
+              </div>
+            ))}
           </section>
         )}
         {role === "OWNER" && view === "loyalty-rules" && (
@@ -3806,58 +4017,116 @@ export default function App() {
             />
           </section>
         )}
-        {["MANAGER", "OWNER"].includes(role) && view === "stock" && (
+        {["MANAGER", "OWNER", "KITCHEN"].includes(role) && view === "stock" && (
           <section className="panel">
-            <h2>Stok produk</h2>
+            <h2>{role === "KITCHEN" ? "Stok Makanan" : "Stok produk"}</h2>
             <p>
-              Manager dan Owner dapat menyesuaikan stok. Semua perubahan selalu
-              dicatat pada ledger dan audit log.
+              {role === "MANAGER"
+                ? "Manager dapat menyesuaikan stok. Semua perubahan dicatat pada ledger dan audit log."
+                : "Tampilan stok read-only sesuai tanggung jawab role."}
             </p>
-            {stock.products.map((product) => (
-              <form
-                className="stock-row"
-                key={product.id + ":" + product.stock_quantity}
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const form = new FormData(event.currentTarget);
-                  run(async () => {
-                    await api("stock", {
-                      productId: product.id,
-                      quantity: Number(form.get("quantity")),
-                      reason: form.get("reason"),
-                    });
-                    setMessage("Stok " + product.name + " diperbarui");
-                  });
-                }}
+            {role !== "KITCHEN" && (
+              <div
+                className="filters stock-category-filters"
+                aria-label="Filter kategori stok"
               >
-                <div>
-                  <strong>{product.name}</strong>
-                  <small className="notification-date">
-                    {product.prep_station === "KITCHEN"
-                      ? "Dapur"
-                      : "Admin · minuman"}
-                    {" · "}stok {product.stock_quantity}
-                  </small>
-                </div>
-                <input
-                  name="quantity"
-                  type="number"
-                  placeholder="+ / − jumlah"
-                  required
-                />
-                <input
-                  name="reason"
-                  minLength="3"
-                  maxLength="240"
-                  placeholder="Alasan perubahan"
-                  required
-                />
-                <button className="primary" disabled={busy}>
-                  Simpan
-                </button>
-              </form>
-            ))}
-            <h2>100 pergerakan terakhir</h2>
+                {["all", "Makanan", "Minuman", "Bahan Baku"].map((name) => (
+                  <button
+                    key={name}
+                    className={stockCategoryFilter === name ? "active" : ""}
+                    onClick={() => setStockCategoryFilter(name)}
+                  >
+                    {name === "all" ? "Semua" : name}
+                  </button>
+                ))}
+              </div>
+            )}
+            {role === "MANAGER" && (
+              <datalist id="stock-adjustment-reasons">
+                <option value="Restock supplier" />
+                <option value="Stock opname" />
+                <option value="Waste" />
+                <option value="Damaged" />
+                <option value="Correction" />
+                <option value="Other" />
+              </datalist>
+            )}
+            {stock.products
+              .filter(
+                (product) =>
+                  stockCategoryFilter === "all" ||
+                  product.category_name === stockCategoryFilter,
+              )
+              .map((product) => (
+                <form
+                  className={`stock-row ${role === "MANAGER" ? "" : "stock-row-readonly"}`}
+                  key={product.id + ":" + product.stock_quantity}
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const form = new FormData(event.currentTarget);
+                    run(async () => {
+                      await api("stock", {
+                        productId: product.id,
+                        quantity: Number(form.get("quantity")),
+                        reason: form.get("reason"),
+                      });
+                      setMessage("Stok " + product.name + " diperbarui");
+                    });
+                  }}
+                >
+                  <div>
+                    <strong>{product.name}</strong>
+                    <small className="notification-date">
+                      {product.category_name} ·{" "}
+                      {product.subcategory_name || "Umum"}
+                      {" · total "}
+                      {formatStockQuantity(
+                        product.stock_quantity,
+                        product.stock_unit,
+                      )}
+                      {" · reservasi "}
+                      {formatStockQuantity(
+                        product.reserved_quantity,
+                        product.stock_unit,
+                      )}
+                      {" · tersedia "}
+                      {formatStockQuantity(
+                        product.available_quantity,
+                        product.stock_unit,
+                      )}
+                      {" · "}
+                      {product.stock_status}
+                    {" · "}
+                    {product.active ? "Aktif" : "Nonaktif"}
+                    </small>
+                  </div>
+                  {role === "MANAGER" && (
+                    <>
+                      <input
+                        name="quantity"
+                        type="number"
+                        step={product.order_step_quantity || 1}
+                        placeholder={`+ / − ${product.stock_unit === "GRAM" ? "gram" : "jumlah"}`}
+                        required
+                      />
+                      <input
+                        name="reason"
+                      list="stock-adjustment-reasons"
+                        minLength="3"
+                        maxLength="240"
+                        placeholder="Alasan perubahan"
+                        required
+                      />
+                      <button className="primary" disabled={busy}>
+                        Simpan
+                      </button>
+                    </>
+                  )}
+                </form>
+              ))}
+            {["MANAGER", "OWNER"].includes(role) && (
+              <h2>100 pergerakan terakhir</h2>
+            )}
             {stock.movements.map((movement) => (
               <div className="line" key={movement.id}>
                 <span>
@@ -3867,9 +4136,15 @@ export default function App() {
                 </span>
                 <strong>
                   {movement.quantity_delta > 0 ? "+" : ""}
-                  {movement.quantity_delta}
+                  {formatStockQuantity(
+                    movement.quantity_delta,
+                    movement.stock_unit,
+                  )}
                   {" → "}
-                  {movement.balance_after}
+                  {formatStockQuantity(
+                    movement.balance_after,
+                    movement.stock_unit,
+                  )}
                 </strong>
               </div>
             ))}
@@ -3921,8 +4196,10 @@ export default function App() {
         )}
         {role === "ADMIN" && view === "admin-stock" && (
           <section className="panel admin-stock-native-placeholder">
-            <h2>Stok Minuman</h2>
-            <p>Memuat inventori minuman read-only untuk Admin…</p>
+            <h2>Stok Minuman &amp; Bahan Baku</h2>
+            <p>
+              Memuat inventori Minuman dan Bahan Baku read-only untuk Admin…
+            </p>
           </section>
         )}
         {["ADMIN", "KITCHEN", "OWNER"].includes(role) &&
@@ -3930,8 +4207,8 @@ export default function App() {
             <section className="panel">
               <h2>Antrean cetak struk 80mm</h2>
               <p>
-                Admin menerima seluruh item; Kitchen hanya menerima makanan.
-                Owner memiliki akses pantau saja.
+                Admin menerima item Minuman/Bahan Baku; Kitchen hanya menerima
+                Makanan. Owner memiliki akses pantau saja.
               </p>
               {printJobs.map((job) => (
                 <div className="line" key={job.id}>
@@ -4387,7 +4664,11 @@ export default function App() {
                       <span>
                         <strong>{product.name}</strong>
                         <small>
-                          {cart[product.id]} × {money(product.price)}
+                          {formatStockQuantity(
+                            cart[product.id],
+                            product.stock_unit,
+                          )}{" "}
+                          × {productPriceLabel(product, money)}
                         </small>
                         {normalizeItemNote(itemNotes[product.id]) && (
                           <small className="quick-cart-note">
@@ -4398,13 +4679,13 @@ export default function App() {
                       <div className="qty compact-qty">
                         <button
                           aria-label={`Kurangi ${product.name} dari keranjang`}
-                          onClick={() => step(product.id, -1)}
+                          onClick={() => step(product, -1)}
                         >
                           −
                         </button>
                         <button
                           aria-label={`Tambah ${product.name} dari keranjang`}
-                          onClick={() => step(product.id, 1)}
+                          onClick={() => step(product, 1)}
                         >
                           +
                         </button>
@@ -4815,10 +5096,7 @@ export default function App() {
                           disabled={!supportDriverContactEnabled}
                           onClick={() =>
                             supportOrder &&
-                            openCustomerSupport(
-                              supportOrder.id,
-                              "chat-driver",
-                            )
+                            openCustomerSupport(supportOrder.id, "chat-driver")
                           }
                         >
                           <ChatIcon /> Chat dengan Driver
@@ -5047,38 +5325,44 @@ export default function App() {
                   </>
                 ) : (
                   <>
-                <button onClick={() => goToCustomerOrders("all")}>
-                  <ReceiptIcon />
-                  <span>Pesanan Aktif</span>
-                </button>
-                <button onClick={() => goToCustomerOrders("history")}>
-                  <HistoryIcon />
-                  <span>Riwayat</span>
-                </button>
-                <button onClick={() => goToCustomerOrders("tracking")}>
-                  <LocationIcon />
-                  <span>Tracking</span>
-                </button>
-                <button onClick={() => openAccountSection("account-loyalty")}>
-                  <TicketIcon />
-                  <span>Voucher &amp; Loyalty</span>
-                </button>
-                <button onClick={() => openAccountSection("account-address")}>
-                  <LocationIcon />
-                  <span>Alamat</span>
-                </button>
-                <button onClick={() => openAccountSection("account-settings")}>
-                  <UserIcon />
-                  <span>Pengaturan Akun</span>
-                </button>
-                <button onClick={openCustomerHelp}>
-                  <HelpIcon />
-                  <span>Bantuan</span>
-                </button>
-                <button className="danger-text" onClick={logout}>
-                  <LogoutIcon />
-                  <span>Keluar</span>
-                </button>
+                    <button onClick={() => goToCustomerOrders("all")}>
+                      <ReceiptIcon />
+                      <span>Pesanan Aktif</span>
+                    </button>
+                    <button onClick={() => goToCustomerOrders("history")}>
+                      <HistoryIcon />
+                      <span>Riwayat</span>
+                    </button>
+                    <button onClick={() => goToCustomerOrders("tracking")}>
+                      <LocationIcon />
+                      <span>Tracking</span>
+                    </button>
+                    <button
+                      onClick={() => openAccountSection("account-loyalty")}
+                    >
+                      <TicketIcon />
+                      <span>Voucher &amp; Loyalty</span>
+                    </button>
+                    <button
+                      onClick={() => openAccountSection("account-address")}
+                    >
+                      <LocationIcon />
+                      <span>Alamat</span>
+                    </button>
+                    <button
+                      onClick={() => openAccountSection("account-settings")}
+                    >
+                      <UserIcon />
+                      <span>Pengaturan Akun</span>
+                    </button>
+                    <button onClick={openCustomerHelp}>
+                      <HelpIcon />
+                      <span>Bantuan</span>
+                    </button>
+                    <button className="danger-text" onClick={logout}>
+                      <LogoutIcon />
+                      <span>Keluar</span>
+                    </button>
                   </>
                 )}
               </div>
@@ -5620,10 +5904,10 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
               <span>
                 <strong>{item.name}</strong>
                 <small>
-                  {item.quantity} × {money(item.price)}
+                  {orderItemQuantityLabel(item)} × {orderItemPriceLabel(item)}
                 </small>
               </span>
-              <strong>{money(item.quantity * item.price)}</strong>
+              <strong>{money(orderItemTotal(item))}</strong>
             </div>
           ))}
           {!details && !detailError && <p>Memuat detail menu…</p>}
@@ -5766,9 +6050,9 @@ function Order({
             {details.items.map((item, index) => (
               <div className="line" key={`${item.name}-${index}`}>
                 <span>
-                  {item.quantity} × {item.name}
+                  {orderItemQuantityLabel(item)} × {item.name}
                 </span>
-                <strong>{money(item.quantity * item.price)}</strong>
+                <strong>{money(orderItemTotal(item))}</strong>
               </div>
             ))}
             <small>Riwayat status</small>
@@ -5853,16 +6137,16 @@ function Order({
           {details.items.map((item, i) => (
             <div className="line" key={i}>
               <span>
-                {item.quantity} × {item.name}
+                {orderItemQuantityLabel(item)} × {item.name}
                 {item.prep_station &&
-                  ` · ${item.prep_station === "KITCHEN" ? "Dapur" : "Admin · minuman"}`}
+                  ` · ${item.prep_station === "KITCHEN" ? "Dapur" : "Admin"}`}
                 {item.note && (
                   <small className="order-item-note">
                     Catatan: {item.note}
                   </small>
                 )}
               </span>
-              <strong>{money(item.quantity * item.price)}</strong>
+              <strong>{money(orderItemTotal(item))}</strong>
             </div>
           ))}
           <small>Riwayat status</small>
@@ -6403,7 +6687,19 @@ function PromotionEditor({ promotion, busy, onSave }) {
   );
 }
 
-function ProductEditor({ product: p, categories, busy, onSave }) {
+function ProductEditor({
+  product: p,
+  categories,
+  subcategories,
+  busy,
+  onSave,
+}) {
+  const [categoryId, setCategoryId] = useState(
+    Number(p?.category_id || categories[0]?.id || 0),
+  );
+  const categorySubcategories = subcategories.filter(
+    (subcategory) => Number(subcategory.category_id) === categoryId,
+  );
   return (
     <form
       className="product-editor"
@@ -6418,8 +6714,15 @@ function ProductEditor({ product: p, categories, busy, onSave }) {
             description: f.get("description"),
             price: Number(f.get("price")),
             categoryId: Number(f.get("categoryId")),
+            subcategoryId: f.get("subcategoryId")
+              ? Number(f.get("subcategoryId"))
+              : null,
             imageUrl: f.get("imageUrl"),
-            prepStation: f.get("prepStation"),
+            stockUnit: f.get("stockUnit"),
+            priceUnitQuantity: Number(f.get("priceUnitQuantity")),
+            minimumOrderQuantity: Number(f.get("minimumOrderQuantity")),
+            orderStepQuantity: Number(f.get("orderStepQuantity")),
+            lowStockThreshold: Number(f.get("lowStockThreshold")),
             active: f.get("active") === "on",
           },
           f.get("image"),
@@ -6453,7 +6756,8 @@ function ProductEditor({ product: p, categories, busy, onSave }) {
         Kategori
         <select
           name="categoryId"
-          defaultValue={p?.category_id || categories[0]?.id}
+          value={categoryId}
+          onChange={(event) => setCategoryId(Number(event.target.value))}
         >
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
@@ -6463,12 +6767,72 @@ function ProductEditor({ product: p, categories, busy, onSave }) {
         </select>
       </label>
       <label>
-        Stasiun persiapan
-        <select name="prepStation" defaultValue={p?.prep_station || "KITCHEN"}>
-          <option value="KITCHEN">Dapur · makanan</option>
-          <option value="CASHIER">Admin · minuman</option>
+        Subkategori
+        <select name="subcategoryId" defaultValue={p?.subcategory_id || ""}>
+          <option value="">Tanpa subkategori</option>
+          {categorySubcategories.map((subcategory) => (
+            <option key={subcategory.id} value={subcategory.id}>
+              {subcategory.name}
+            </option>
+          ))}
         </select>
       </label>
+      <p className="editor-routing-note">
+        Fulfillment:{" "}
+        {categories.find((category) => Number(category.id) === categoryId)
+          ?.name === "Makanan"
+          ? "Kitchen"
+          : "Admin"}
+      </p>
+      <div className="form-grid">
+        <label>
+          Satuan stok
+          <select name="stockUnit" defaultValue={p?.stock_unit || "PCS"}>
+            <option value="PCS">PCS</option>
+            <option value="GRAM">GRAM</option>
+          </select>
+        </label>
+        <label>
+          Harga berlaku per kuantitas
+          <input
+            name="priceUnitQuantity"
+            type="number"
+            min="1"
+            defaultValue={p?.price_unit_quantity || 1}
+            required
+          />
+        </label>
+        <label>
+          Minimum order
+          <input
+            name="minimumOrderQuantity"
+            type="number"
+            min="1"
+            defaultValue={p?.minimum_order_quantity || 1}
+            required
+          />
+        </label>
+        <label>
+          Kelipatan order
+          <input
+            name="orderStepQuantity"
+            type="number"
+            min="1"
+            defaultValue={p?.order_step_quantity || 1}
+            required
+          />
+        </label>
+        <label>
+          Batas stok menipis
+          <input
+            name="lowStockThreshold"
+            type="number"
+            min="0"
+            defaultValue={p?.low_stock_threshold ?? 5}
+            required
+          />
+        </label>
+      </div>
       <label>
         URL gambar HTTPS atau unggahan (opsional)
         <input

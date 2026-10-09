@@ -15,13 +15,13 @@ const projectRoot = fileURLToPath(new URL("..", import.meta.url));
 
 test("migration MySQL memiliki urutan dan checksum stabil", () => {
   const migrations = loadMysqlMigrations();
-  assert.equal(migrations.length, 23);
+  assert.equal(migrations.length, 24);
   assert.equal(migrations[0].version, "001_mysql.sql");
-  assert.equal(migrations.at(-1).version, "023_customer_cart_item_notes.sql");
+  assert.equal(migrations.at(-1).version, "024_unified_catalog_stock.sql");
   assert.ok(
     migrations.every(({ checksum }) => /^[0-9a-f]{64}$/.test(checksum)),
   );
-  assert.equal(new Set(migrations.map(({ checksum }) => checksum)).size, 23);
+  assert.equal(new Set(migrations.map(({ checksum }) => checksum)).size, 24);
 });
 
 test("DATABASE_URL MySQL diparsing tanpa kehilangan karakter kredensial", () => {
@@ -63,11 +63,7 @@ test("backup MySQL membuat checksum dan menolak output dump yang tidak valid", (
     path.join(os.tmpdir(), "warkost-mysql-backup-test-"),
   );
   try {
-    const backupScript = path.join(
-      projectRoot,
-      "scripts",
-      "backup-mysql.mjs",
-    );
+    const backupScript = path.join(projectRoot, "scripts", "backup-mysql.mjs");
     const restoreScript = path.join(
       projectRoot,
       "scripts",
@@ -114,11 +110,10 @@ await import(pathToFileURL(process.env.BACKUP_SCRIPT_PATH).href);
       assert.equal(fs.statSync(backup).mode & 0o777, 0o600);
 
     fs.writeFileSync(backup + ".sha256", "0".repeat(64) + "\n");
-    const restore = spawnSync(
-      process.execPath,
-      [restoreScript, backup],
-      { encoding: "utf8", env },
-    );
+    const restore = spawnSync(process.execPath, [restoreScript, backup], {
+      encoding: "utf8",
+      env,
+    });
     assert.notEqual(restore.status, 0);
     assert.match(restore.stderr, /Checksum backup MySQL tidak cocok/);
 

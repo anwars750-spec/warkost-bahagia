@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-labelledby="title description">
+  <title id="title">Biji Kopi Arabica Sukabumi</title>
+  <desc id="description">Ilustrasi kemasan dan biji kopi medium roast</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7ead6"/>
+      <stop offset="1" stop-color="#dcbf91"/>
+    </linearGradient>
+    <linearGradient id="bag" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7b4a2e"/>
+      <stop offset="1" stop-color="#4b2b1b"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" rx="44" fill="url(#background)"/>
+  <circle cx="650" cy="115" r="85" fill="#fff7e9" opacity=".55"/>
+  <path d="M250 126h300l38 350c4 38-26 72-65 72H277c-39 0-69-34-65-72z" fill="url(#bag)"/>
+  <path d="M260 126h280l-19 60H279z" fill="#a6754f"/>
+  <rect x="285" y="238" width="230" height="145" rx="24" fill="#f7ead6"/>
+  <text x="400" y="292" text-anchor="middle" font-family="Arial,sans-serif" font-size="27" font-weight="700" fill="#4b2b1b">WARKOST</text>
+  <text x="400" y="326" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#7b4a2e">ARABICA SUKABUMI</text>
+  <text x="400" y="354" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" fill="#7b4a2e">MEDIUM ROAST</text>
+  <g fill="#6b3822" stroke="#3e2116" stroke-width="5">
+    <ellipse cx="154" cy="454" rx="44" ry="65" transform="rotate(-24 154 454)"/>
+    <ellipse cx="635" cy="473" rx="44" ry="65" transform="rotate(24 635 473)"/>
+    <ellipse cx="703" cy="418" rx="35" ry="53" transform="rotate(43 703 418)"/>
+  </g>
+  <g fill="none" stroke="#d29c6c" stroke-width="6" stroke-linecap="round">
+    <path d="M139 399c25 35 29 71 28 116"/>
+    <path d="M649 416c-25 35-29 71-28 116"/>
+    <path d="M721 381c-30 21-43 48-48 79"/>
+  </g>
+</svg>

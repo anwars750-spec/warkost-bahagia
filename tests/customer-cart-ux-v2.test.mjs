@@ -98,7 +98,7 @@ test("UI card memakai click dan keyboard tanpa bubbling dari minus", () => {
     page,
     /onKeyDown=\{\(event\) => productCardKeyDown\(event, p\)\}/,
   );
-  assert.match(page, /event\.stopPropagation\(\);[\s\S]*?step\(p\.id, -1\)/);
+  assert.match(page, /event\.stopPropagation\(\);[\s\S]*?step\(p, -1\)/);
   assert.match(page, /Ketuk untuk tambah/);
   assert.match(page, /Ketuk \+1/);
   assert.match(page, /maxLength=\{MAX_ITEM_NOTE_LENGTH\}/);
@@ -165,8 +165,8 @@ test("checkout menyimpan note terpisah dan print job merutekannya per station", 
       .get(order.id).payload_json,
   );
   assert.equal(
-    admin.items.find((item) => item.name === "Nasi Goreng Warkost").note,
-    null,
+    admin.items.some((item) => item.name === "Nasi Goreng Warkost"),
+    false,
   );
   assert.equal(
     admin.items.find((item) => item.name === "Kopi Susu Rumah").note,
@@ -232,6 +232,6 @@ test("operational API mempertahankan station filter dan mengirim note", () => {
     /user\.role === "KITCHEN" \? " AND prep_station='KITCHEN'"/,
   );
   const printer = source("lib/print-queue.mjs");
-  assert.match(printer, /item\.prep_station === "CASHIER"/);
+  assert.match(printer, /item\.prep_station !== "KITCHEN"/);
   assert.match(printer, /item\.note \|\| null/);
 });

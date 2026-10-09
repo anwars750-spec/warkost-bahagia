@@ -11,6 +11,12 @@ const esc = (value) =>
     .replaceAll("'", "&#039;");
 
 const money = (value) => `Rp${Number(value || 0).toLocaleString("id-ID")}`;
+const stockQuantity = (value, unit) =>
+  String(unit || "PCS").toUpperCase() === "GRAM"
+    ? Number(value || 0) >= 1000
+      ? `${(Number(value || 0) / 1000).toLocaleString("id-ID", { maximumFractionDigits: 1 })} kg`
+      : `${Number(value || 0).toLocaleString("id-ID")} g`
+    : `${Number(value || 0).toLocaleString("id-ID")} pcs`;
 
 const ICONS = {
   search: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>`,
@@ -22,7 +28,9 @@ const ICONS = {
 };
 
 const drinkCategory = (name) =>
-  /minum|drink|beverage|kopi|coffee|teh|tea|jus|juice/i.test(String(name || ""));
+  /minum|drink|beverage|kopi|coffee|teh|tea|jus|juice/i.test(
+    String(name || ""),
+  );
 
 const itemPromoPrice = (product) => {
   const candidates = [
@@ -51,6 +59,12 @@ const stockLabel = (quantity) => {
   if (tone === "safe") return "Aman";
   return "Belum tersambung";
 };
+const productStockTone = (product) => {
+  if (product?.stock_status === "OUT") return "empty";
+  if (product?.stock_status === "LOW") return "low";
+  if (product?.stock_status === "OK") return "safe";
+  return stockTone(Number(product?.available_quantity));
+};
 
 export default function AdminBeverageStockEnhancerV2() {
   useEffect(() => {
@@ -64,6 +78,7 @@ export default function AdminBeverageStockEnhancerV2() {
     let dataError = "";
     let query = "";
     let filter = "all";
+    let categoryFilter = "all";
 
     const ensurePortal = () => {
       portal = document.getElementById("admin-ui-portal-root");
@@ -79,6 +94,15 @@ export default function AdminBeverageStockEnhancerV2() {
 
     const beverages = () => {
       const byStock = stockMap();
+      const byMenu = new Map(
+        menuProducts.map((item) => [String(item.id), item]),
+      );
+      if (stockProducts.length)
+        return stockProducts.map((stockItem) => ({
+          ...byMenu.get(String(stockItem.id)),
+          ...stockItem,
+          promo_price: itemPromoPrice(byMenu.get(String(stockItem.id))),
+        }));
       return menuProducts
         .filter((product) => {
           const stockItem = byStock.get(String(product.id));
@@ -87,13 +111,17 @@ export default function AdminBeverageStockEnhancerV2() {
         })
         .map((product) => {
           const stockItem = byStock.get(String(product.id));
-          const stockQuantity = stockItem
-            ? Number(stockItem.stock_quantity)
+          const availableQuantity = stockItem
+            ? Number(stockItem.available_quantity)
             : Number.NaN;
           return {
             ...product,
             category_name: stockItem?.category_name || categoryName(product),
-            stock_quantity: stockQuantity,
+            ...stockItem,
+            stock_quantity: stockItem
+              ? Number(stockItem.stock_quantity)
+              : Number.NaN,
+            available_quantity: availableQuantity,
             promo_price: itemPromoPrice(product),
           };
         });
@@ -102,7 +130,7 @@ export default function AdminBeverageStockEnhancerV2() {
     const filteredProducts = () => {
       const needle = query.trim().toLowerCase();
       return beverages().filter((product) => {
-        const tone = stockTone(product.stock_quantity);
+        const tone = productStockTone(product);
         const searchMatch =
           !needle ||
           `${product.name} ${product.category_name}`
@@ -114,7 +142,9 @@ export default function AdminBeverageStockEnhancerV2() {
           (filter === "safe" && tone === "safe") ||
           (filter === "low" && tone === "low") ||
           (filter === "empty" && tone === "empty");
-        return searchMatch && filterMatch;
+        const categoryMatch =
+          categoryFilter === "all" || product.category_name === categoryFilter;
+        return searchMatch && filterMatch && categoryMatch;
       });
     };
 
@@ -122,18 +152,17 @@ export default function AdminBeverageStockEnhancerV2() {
       const products = beverages();
       return {
         total: products.length,
-        safe: products.filter((item) => stockTone(item.stock_quantity) === "safe")
+        safe: products.filter((item) => productStockTone(item) === "safe")
           .length,
-        low: products.filter((item) => stockTone(item.stock_quantity) === "low")
-          .length,
-        empty: products.filter((item) => stockTone(item.stock_quantity) === "empty")
+        low: products.filter((item) => productStockTone(item) === "low").length,
+        empty: products.filter((item) => productStockTone(item) === "empty")
           .length,
       };
     };
 
     const cardMarkup = (product) => {
-      const quantity = product.stock_quantity;
-      const tone = stockTone(quantity);
+      const quantity = product.available_quantity;
+      const tone = productStockTone(product);
       const promo = product.promo_price;
       return `
         <article class="admin-beverage-stock-card">
@@ -149,9 +178,11 @@ export default function AdminBeverageStockEnhancerV2() {
           </div>
           <div class="admin-beverage-stock-quantity ${tone}">
             <span>Stok tersedia</span>
-            <strong>${Number.isFinite(quantity) ? esc(quantity) : "—"}</strong>
+            <strong>${Number.isFinite(quantity) ? esc(stockQuantity(quantity, product.stock_unit)) : "—"}</strong>
             <small>${
-              Number.isFinite(quantity) ? "unit" : "menunggu data stok"
+              Number.isFinite(quantity)
+                ? `Total ${esc(stockQuantity(product.stock_quantity, product.stock_unit))} · reservasi ${esc(stockQuantity(product.reserved_quantity, product.stock_unit))}`
+                : "menunggu data stok"
             }</small>
           </div>
           <div class="admin-beverage-stock-meta">
@@ -182,13 +213,13 @@ export default function AdminBeverageStockEnhancerV2() {
           <header class="admin-beverage-stock-hero">
             <div>
               <small>PUSAT STOK ADMIN</small>
-              <h1>Stok Minuman</h1>
-              <p>Pantau stok minuman yang disiapkan Admin tanpa mengubah data produk.</p>
+              <h1>Stok Minuman &amp; Bahan Baku</h1>
+              <p>Pantau stok minuman dan bahan baku yang ditangani Admin tanpa mengubah data.</p>
             </div>
             <span class="admin-beverage-readonly">${ICONS.lock}<span>Read only</span></span>
           </header>
           <section class="admin-beverage-stock-stats">
-            <article><span class="total">${ICONS.cup}</span><small>Total minuman</small><strong>${summary.total}</strong></article>
+            <article><span class="total">${ICONS.cup}</span><small>Total item</small><strong>${summary.total}</strong></article>
             <article><span class="safe">${ICONS.check}</span><small>Stok aman</small><strong>${
               stockAvailable ? summary.safe : "—"
             }</strong></article>
@@ -215,8 +246,20 @@ export default function AdminBeverageStockEnhancerV2() {
           <section class="admin-beverage-stock-toolbar">
             <label><span>${ICONS.search}</span><input type="search" value="${esc(
               query,
-            )}" placeholder="Cari minuman..." aria-label="Cari minuman" /></label>
+            )}" placeholder="Cari minuman atau bahan baku..." aria-label="Cari stok Admin" /></label>
             <div class="admin-beverage-stock-filters" role="group" aria-label="Filter stok minuman">
+              ${[
+                ["all", "Semua kategori"],
+                ["Minuman", "Minuman"],
+                ["Bahan Baku", "Bahan Baku"],
+              ]
+                .map(
+                  ([key, label]) =>
+                    `<button type="button" data-category-filter="${esc(key)}" class="${
+                      categoryFilter === key ? "active" : ""
+                    }">${label}</button>`,
+                )
+                .join("")}
               ${[
                 ["all", "Semua"],
                 ["safe", "Aman"],
@@ -260,6 +303,12 @@ export default function AdminBeverageStockEnhancerV2() {
           render();
         }),
       );
+      root.querySelectorAll("[data-category-filter]").forEach((item) =>
+        item.addEventListener("click", () => {
+          categoryFilter = item.dataset.categoryFilter;
+          render();
+        }),
+      );
     };
 
     const load = async () => {
@@ -271,9 +320,13 @@ export default function AdminBeverageStockEnhancerV2() {
         const menuResponse = await fetch("/api/menu", { cache: "no-store" });
         const menuData = await menuResponse.json();
         if (!menuResponse.ok)
-          throw new Error(menuData.error || "Gagal memuat daftar minuman");
-        menuProducts = Array.isArray(menuData.products) ? menuData.products : [];
-        categories = Array.isArray(menuData.categories) ? menuData.categories : [];
+          throw new Error(menuData.error || "Gagal memuat daftar stok");
+        menuProducts = Array.isArray(menuData.products)
+          ? menuData.products
+          : [];
+        categories = Array.isArray(menuData.categories)
+          ? menuData.categories
+          : [];
 
         try {
           const stockResponse = await fetch("/api/admin-beverage-stock", {
@@ -294,7 +347,7 @@ export default function AdminBeverageStockEnhancerV2() {
           stockAvailable = false;
         }
       } catch (error) {
-        dataError = error.message || "Data minuman belum dapat dimuat";
+        dataError = error.message || "Data stok belum dapat dimuat";
       } finally {
         loading = false;
         render();

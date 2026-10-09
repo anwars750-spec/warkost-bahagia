@@ -56,17 +56,24 @@ after(async () => {
 
 test("guest storefront menerima produk, kategori, dan promo aktif yang public-safe", async () => {
   const catalog = await listCatalog(false);
-  assert.equal(catalog.products.length, 3);
-  assert.equal(catalog.categories.length, 2);
+  assert.equal(catalog.products.length, 4);
+  assert.equal(catalog.categories.length, 3);
   assert.ok(catalog.promotions.length >= 1);
   for (const product of catalog.products) {
     assert.deepEqual(Object.keys(product).sort(), [
+      "available_quantity",
       "category_id",
       "description",
       "id",
       "image_url",
+      "in_stock",
+      "minimum_order_quantity",
       "name",
+      "order_step_quantity",
       "price",
+      "price_unit_quantity",
+      "stock_unit",
+      "subcategory_id",
     ]);
     assert.equal("stock_quantity" in product, false);
     assert.equal("prep_station" in product, false);
@@ -381,10 +388,7 @@ test("CTA produk dan ringkasan cart mobile memakai hierarchy compact tanpa overl
     page,
     /count > 0 && \([\s\S]*?className="floating-cart customer-floating-cart"/,
   );
-  assert.match(
-    page,
-    /className="floating-cart-status"[\s\S]*?Siap dipesan/,
-  );
+  assert.match(page, /className="floating-cart-status"[\s\S]*?Siap dipesan/);
   assert.match(style, /\.guest-product-cta\s*{[\s\S]*?min-width:\s*68px/);
   assert.match(
     style,

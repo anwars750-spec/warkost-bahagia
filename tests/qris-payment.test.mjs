@@ -171,7 +171,7 @@ test("provider PAID commit stock/fulfillment/notifikasi tepat sekali", async () 
     database
       .prepare("SELECT COUNT(*) count FROM print_jobs WHERE order_id=?")
       .get(created.id).count,
-    2,
+    1,
   );
   assert.equal(
     database
@@ -195,7 +195,7 @@ test("provider PAID commit stock/fulfillment/notifikasi tepat sekali", async () 
     database
       .prepare("SELECT COUNT(*) count FROM print_jobs WHERE order_id=?")
       .get(created.id).count,
-    2,
+    1,
   );
   assert.equal(
     database
@@ -394,13 +394,12 @@ test("reservasi QRIS melindungi stok dan PAID yang melewati expires_at ditolak",
     customer,
     input({ items: [{ productId: 3, quantity: 1 }] }),
   );
-  const cashOrder = await createOrder(otherCustomer, {
-    addressId: 3,
-    method: "CASH",
-    items: [{ productId: 3, quantity: 1 }],
-  });
   await assert.rejects(
-    changeStatus(admin, cashOrder.id, "CONFIRMED"),
+    createOrder(otherCustomer, {
+      addressId: 3,
+      method: "CASH",
+      items: [{ productId: 3, quantity: 1 }],
+    }),
     /tidak mencukupi/,
   );
   await webhook(reserved.payment, "PAID", "evt-limited-stock-paid");

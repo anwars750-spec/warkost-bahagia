@@ -27,6 +27,7 @@ import {
   listCatalog,
   saveProduct,
   saveCategory,
+  saveSubcategory,
 } from "../../../lib/catalog.mjs";
 import {
   createDriver,
@@ -156,7 +157,8 @@ export async function GET(request, { params }) {
       requiredCapability(user, CAPABILITIES.CATALOG_READ);
       return out(await listCatalog(true));
     }
-    if (action === "stock") return out(await listStock(user));
+    if (action === "stock" || action === "admin-beverage-stock")
+      return out(await listStock(user));
     if (action === "audit") {
       const rawBefore = request.nextUrl.searchParams.get("before");
       return out(
@@ -436,7 +438,7 @@ export async function GET(request, { params }) {
         throw new DomainError("Akses ditolak", 403);
       return out({
         items: await store.all(
-          "SELECT name,price,quantity,note,prep_station FROM order_items WHERE order_id=?" +
+          "SELECT name,price,quantity,note,prep_station,stock_unit,price_unit_quantity FROM order_items WHERE order_id=?" +
             (user.role === "KITCHEN" ? " AND prep_station='KITCHEN'" : ""),
           id,
         ),
@@ -738,6 +740,7 @@ export async function POST(request, { params }) {
     if (action === "loyalty-reward")
       return out(await saveRewardRule(user, body));
     if (action === "category") return out(await saveCategory(user, body));
+    if (action === "subcategory") return out(await saveSubcategory(user, body));
     throw new DomainError("Endpoint tidak ditemukan", 404);
   } catch (e) {
     return error(e);

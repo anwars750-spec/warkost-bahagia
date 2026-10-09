@@ -159,20 +159,50 @@ async function seed() {
       "Voucher Hemat 10%",
     );
   }
-  for (const name of ["Makanan", "Minuman"])
+  for (const name of ["Makanan", "Minuman", "Bahan Baku"])
     await store.run("INSERT OR IGNORE INTO categories(name) VALUES(?)", name);
   const food = (
       await store.get("SELECT id FROM categories WHERE name=?", "Makanan")
     ).id,
     drink = (
       await store.get("SELECT id FROM categories WHERE name=?", "Minuman")
+    ).id,
+    raw = (
+      await store.get("SELECT id FROM categories WHERE name=?", "Bahan Baku")
     ).id;
-  for (const [name, description, price, category, station] of [
+  for (const [categoryId, name, sortOrder] of [
+    [food, "Makanan Berat", 10],
+    [food, "Mie", 20],
+    [drink, "Coffee", 10],
+    [drink, "Non Coffee", 20],
+    [raw, "Kopi", 10],
+    [raw, "Susu & Dairy", 20],
+    [raw, "Sirup & Powder", 30],
+    [raw, "Lainnya", 40],
+  ])
+    await store.run(
+      "INSERT OR IGNORE INTO product_subcategories(category_id,name,sort_order) VALUES(?,?,?)",
+      categoryId,
+      name,
+      sortOrder,
+    );
+  const subcategoryIds = new Map(
+    (
+      await store.all(
+        "SELECT id,name FROM product_subcategories WHERE category_id IN (?,?,?)",
+        food,
+        drink,
+        raw,
+      )
+    ).map((row) => [row.name, row.id]),
+  );
+  for (const [name, description, price, category, subcategory, station] of [
     [
       "Nasi Goreng Warkost",
       "Nasi goreng hangat dengan telur dan kerupuk",
       25000,
       food,
+      subcategoryIds.get("Makanan Berat"),
       "KITCHEN",
     ],
     [
@@ -180,6 +210,7 @@ async function seed() {
       "Mie ayam gurih dengan sayuran segar",
       22000,
       food,
+      subcategoryIds.get("Mie"),
       "KITCHEN",
     ],
     [
@@ -187,25 +218,50 @@ async function seed() {
       "Espresso, susu, dan gula aren",
       18000,
       drink,
+      subcategoryIds.get("Coffee"),
       "CASHIER",
     ],
   ]) {
     if (!(await store.get("SELECT id FROM products WHERE name=?", name)))
       await store.run(
-        "INSERT INTO products(name,description,price,category_id,prep_station,stock_quantity) VALUES(?,?,?,?,?,50)",
+        "INSERT INTO products(name,description,price,category_id,subcategory_id,prep_station,stock_quantity) VALUES(?,?,?,?,?,?,50)",
         name,
         description,
         price,
         category,
+        subcategory,
         station,
       );
+    else
+      await store.run(
+        "UPDATE products SET category_id=?,subcategory_id=?,prep_station=? WHERE name=?",
+        category,
+        subcategory,
+        station,
+        name,
+      );
   }
+  const rawCoffeeName = "Biji Kopi Arabica Sukabumi – Medium Roast";
+  if (!(await store.get("SELECT id FROM products WHERE name=?", rawCoffeeName)))
+    await store.run(
+      `INSERT INTO products(name,description,price,category_id,subcategory_id,image_url,prep_station,stock_quantity,
+       stock_unit,price_unit_quantity,minimum_order_quantity,order_step_quantity,low_stock_threshold)
+       VALUES(?,?,?,?,?,?,?,?,'GRAM',100,100,100,2000)`,
+      rawCoffeeName,
+      "Biji kopi Arabica pilihan dengan profil medium roast. Memiliki karakter rasa cokelat, caramel, dan nutty. Cocok digunakan untuk espresso, milk-based coffee, maupun manual brew. Dijual mulai 100 gram dengan kelipatan 100 gram.",
+      18000,
+      raw,
+      subcategoryIds.get("Kopi"),
+      "/demo/bahan-baku-kopi.svg",
+      "CASHIER",
+      10000,
+    );
   if (resetLocalUat) {
     await store.run(
-      "UPDATE categories SET active=1 WHERE name IN ('Makanan','Minuman')",
+      "UPDATE categories SET active=1 WHERE name IN ('Makanan','Minuman','Bahan Baku')",
     );
     await store.run(
-      "UPDATE products SET active=1 WHERE name IN ('Nasi Goreng Warkost','Mie Ayam Bahagia','Kopi Susu Rumah')",
+      "UPDATE products SET active=1 WHERE name IN ('Nasi Goreng Warkost','Mie Ayam Bahagia','Kopi Susu Rumah','Biji Kopi Arabica Sukabumi – Medium Roast')",
     );
   }
   const customer = await store.get(

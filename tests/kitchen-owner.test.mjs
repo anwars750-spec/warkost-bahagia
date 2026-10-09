@@ -116,7 +116,7 @@ test("mixed order menunggu kedua stasiun dan stok tercatat serta pulih saat bata
   );
 });
 
-test("RBAC stok memberi Manager/Owner akses dan menolak Admin", async () => {
+test("RBAC stok memberi Manager hak adjustment, Owner audit, dan menolak role lain", async () => {
   await assert.rejects(
     adjustStock(admin, {
       productId: 1,
@@ -135,11 +135,14 @@ test("RBAC stok memberi Manager/Owner akses dan menolak Admin", async () => {
     quantity: -1,
     reason: "Koreksi",
   });
-  await adjustStock(owner, {
-    productId: 1,
-    quantity: -2,
-    reason: "Bahan rusak",
-  });
+  await assert.rejects(
+    adjustStock(owner, {
+      productId: 1,
+      quantity: -2,
+      reason: "Bahan rusak",
+    }),
+    /Akses ditolak/,
+  );
   assert.equal((await listStock(owner)).products[1]?.stock_quantity >= 0, true);
   const audit = await listAuditLogs(owner);
   assert.ok(audit.logs.some((row) => row.action === "STOCK_ADJUSTED"));
