@@ -39,6 +39,7 @@ import KitchenDashboardFast from "./KitchenDashboardFast";
 import KitchenFlashGuard from "./KitchenFlashGuard";
 import PrinterCenterRuntime from "./PrinterCenterRuntime";
 import KitchenHeaderActions from "./KitchenHeaderActions";
+import RoleLogoutConfirmation from "./RoleLogoutConfirmation";
 
 export const metadata = {
   title: "Warkost Bahagia",
@@ -58,6 +59,7 @@ export default function RootLayout({ children }) {
         <AdminCodLauncherButton />
         <PrinterCenterRuntime />
         <KitchenHeaderActions />
+        <RoleLogoutConfirmation />
         <div id="admin-ui-portal-root" />
       </body>
     </html>
