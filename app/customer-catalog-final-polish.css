@@ -1,0 +1,274 @@
+/* Final storefront catalog polish — visual-only and scoped to Customer catalog. */
+
+.customer-catalog {
+  --catalog-ink: #24140f;
+  --catalog-ink-soft: #5f4439;
+  --catalog-muted: #8a7469;
+  --catalog-accent: #a64224;
+  --catalog-accent-dark: #7f2f1b;
+  --catalog-accent-soft: #fff2e8;
+  --catalog-line: rgba(102, 62, 45, 0.11);
+  --catalog-success: #5f7a56;
+}
+
+/* Main title hierarchy: compact, premium, conversion-focused. */
+.customer-catalog .catalog-heading {
+  margin: 18px 0 14px;
+  padding-bottom: 12px;
+  border-bottom-color: var(--catalog-line);
+}
+
+.customer-catalog .catalog-heading > div {
+  gap: 2px;
+}
+
+.customer-catalog .catalog-heading-kicker {
+  color: #b05b37;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.15em;
+}
+
+.customer-catalog .catalog-heading h2 {
+  margin-top: 3px;
+  color: var(--catalog-ink);
+  font-size: clamp(22px, 2vw, 28px);
+  font-weight: 840;
+  letter-spacing: -0.035em;
+}
+
+.customer-catalog .catalog-heading p {
+  margin-top: 4px;
+  color: var(--catalog-muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+/* Category section header: deliberately smaller than before. */
+.customer-catalog .catalog-group-category-heading {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  margin: 20px 0 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(145, 76, 47, 0.11);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fffaf5 0%, #fff5ec 100%);
+  box-shadow: 0 8px 22px rgba(87, 46, 29, 0.035);
+}
+
+.customer-catalog .catalog-group-category-heading:first-child {
+  margin-top: 0;
+}
+
+.customer-catalog .catalog-group-category-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  color: var(--catalog-accent);
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgba(166, 66, 36, 0.1);
+}
+
+.customer-catalog .catalog-group-category-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.customer-catalog .catalog-group-kicker {
+  color: #b36a4d;
+  font-size: 7.5px;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+}
+
+.customer-catalog .catalog-group-category-heading h3 {
+  margin-top: 1px;
+  color: var(--catalog-ink);
+  font-size: clamp(17px, 1.5vw, 20px);
+  font-weight: 840;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+}
+
+.customer-catalog .catalog-group-category-heading p {
+  margin-top: 2px;
+  color: var(--catalog-muted);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+.customer-catalog .catalog-group-count {
+  padding: 5px 8px;
+  border-color: rgba(166, 66, 36, 0.1);
+  background: rgba(255, 255, 255, 0.84);
+  color: #8d4a32;
+  font-size: 8.5px;
+  font-weight: 780;
+}
+
+/* Subcategory: name only. No administrative-looking label/count. */
+.customer-catalog .catalog-group-subcategory-heading {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0;
+  margin: 12px 0 2px;
+  padding: 0 0 7px;
+  border-bottom: 1px solid var(--catalog-line);
+}
+
+.customer-catalog .catalog-group-subcategory-heading::before {
+  content: "";
+  width: 3px;
+  height: 14px;
+  margin-right: 8px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #c85f32, #8f321c);
+}
+
+.customer-catalog .catalog-group-subcategory-heading h4 {
+  margin: 0;
+  color: var(--catalog-ink-soft);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.012em;
+}
+
+.customer-catalog .catalog-group-subcategory-kicker,
+.customer-catalog .catalog-group-subcategory-count,
+.customer-catalog .catalog-group-subcategory-copy::before {
+  display: none !important;
+}
+
+.customer-catalog .catalog-group-subcategory-copy {
+  padding-left: 0;
+}
+
+/* Product text hierarchy: title -> price -> CTA, with supporting text muted. */
+.customer-catalog .customer-product h2 {
+  color: var(--catalog-ink);
+  font-weight: 830;
+  letter-spacing: -0.025em;
+}
+
+.customer-catalog .customer-product p {
+  color: #806f66;
+}
+
+.customer-catalog .customer-product .product-price-stack > strong,
+.customer-catalog .customer-product .product-foot > strong {
+  color: #2b1711;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+}
+
+.customer-catalog .customer-product .product-price-stack > small {
+  color: var(--catalog-success);
+  font-weight: 700;
+}
+
+.customer-catalog .customer-product .primary {
+  border-color: var(--catalog-accent);
+  background: linear-gradient(145deg, #ad4827, #91351d);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(145, 53, 29, 0.16);
+}
+
+.customer-catalog .customer-product .primary:hover {
+  border-color: var(--catalog-accent-dark);
+  background: linear-gradient(145deg, #ba512e, #84301b);
+}
+
+/* Keep subcategory filter modern and compact. */
+.customer-catalog .subcategory-filters > button {
+  color: #67473b;
+  background: #fffdfa;
+}
+
+.customer-catalog .subcategory-filters > button.active {
+  border-color: var(--catalog-accent);
+  background: var(--catalog-accent);
+  color: #fff;
+}
+
+@media (max-width: 620px) {
+  .customer-catalog .catalog-heading {
+    margin: 13px 0 10px;
+    padding-bottom: 9px;
+  }
+
+  .customer-catalog .catalog-heading-kicker {
+    font-size: 7px;
+  }
+
+  .customer-catalog .catalog-heading h2 {
+    font-size: 18px;
+  }
+
+  .customer-catalog .catalog-heading p {
+    font-size: 9px;
+    line-height: 1.35;
+  }
+
+  .customer-catalog .catalog-group-category-heading {
+    gap: 7px;
+    margin-top: 13px;
+    padding: 8px 8px;
+    border-radius: 12px;
+  }
+
+  .customer-catalog .catalog-group-category-icon {
+    width: 27px;
+    height: 27px;
+    border-radius: 9px;
+  }
+
+  .customer-catalog .catalog-group-category-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .customer-catalog .catalog-group-kicker {
+    font-size: 6px;
+    letter-spacing: 0.12em;
+  }
+
+  .customer-catalog .catalog-group-category-heading h3 {
+    font-size: 13.5px;
+  }
+
+  .customer-catalog .catalog-group-category-heading p {
+    max-width: 180px;
+    font-size: 7.5px;
+    line-height: 1.25;
+  }
+
+  .customer-catalog .catalog-group-count {
+    padding: 4px 6px;
+    font-size: 7px;
+  }
+
+  .customer-catalog .catalog-group-subcategory-heading {
+    margin: 8px 0 1px;
+    padding-bottom: 5px;
+  }
+
+  .customer-catalog .catalog-group-subcategory-heading::before {
+    width: 2px;
+    height: 11px;
+    margin-right: 6px;
+  }
+
+  .customer-catalog .catalog-group-subcategory-heading h4 {
+    font-size: 10.5px;
+  }
+
+  .customer-catalog .catalog-grouped-view .customer-product h2 {
+    color: var(--catalog-ink);
+  }
+
+  .customer-catalog .catalog-grouped-view .customer-product p {
+    color: #87776e;
+  }
+}
