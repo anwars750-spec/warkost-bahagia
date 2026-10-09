@@ -1,0 +1,770 @@
+body.kitchen-dashboard-active {
+  background: #f7f1e9;
+}
+
+body.kitchen-dashboard-active .top {
+  max-width: none;
+  padding-inline: clamp(24px, 3vw, 56px);
+  border-bottom-color: #eadbca;
+  background: rgba(255, 252, 247, 0.96);
+}
+
+body.kitchen-dashboard-active .top nav > button:first-child {
+  border-radius: 14px;
+  background: #f4e2d2;
+  color: #6f321e;
+}
+
+body.kitchen-dashboard-active main {
+  max-width: none;
+  padding: 0;
+  min-height: calc(100vh - 88px);
+}
+
+body.kitchen-dashboard-active main > *:not(.kitchen-dashboard-shell) {
+  display: none !important;
+}
+
+body.kitchen-dashboard-active footer {
+  display: none;
+}
+
+.kitchen-dashboard-shell {
+  --k-brown: #7a3b24;
+  --k-brown-dark: #4f2418;
+  --k-terracotta: #a95d3b;
+  --k-cream: #fffaf4;
+  --k-line: #ead8c7;
+  --k-muted: #877568;
+  --k-waiting: #d9624e;
+  --k-cooking: #c58b24;
+  --k-ready: #4f9b67;
+  width: 100%;
+  min-height: calc(100vh - 88px);
+  padding: 28px clamp(22px, 3vw, 48px) 42px;
+  background:
+    radial-gradient(circle at 5% 0%, rgba(192, 108, 67, 0.08), transparent 25rem),
+    linear-gradient(180deg, #fffaf4 0%, #f7f1e9 100%);
+  color: #2d1f19;
+}
+
+.kitchen-dashboard-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.kitchen-eyebrow {
+  display: inline-block;
+  margin-bottom: 4px;
+  color: #a35d36;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.19em;
+}
+
+.kitchen-dashboard-head h1 {
+  margin: 0;
+  color: #2a1711;
+  font-size: clamp(30px, 3vw, 42px);
+  font-weight: 830;
+  letter-spacing: -0.045em;
+}
+
+.kitchen-dashboard-head p {
+  margin: 7px 0 0;
+  color: #7b6a5f;
+  font-size: 15px;
+}
+
+.kitchen-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.kitchen-filter-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid #ead8c8;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 8px 24px rgba(92, 53, 29, 0.05);
+}
+
+.kitchen-filter-tabs button,
+.kitchen-refresh {
+  min-height: 40px;
+  border: 0;
+  border-radius: 11px;
+  padding: 9px 14px;
+  background: transparent;
+  color: #6c594e;
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.kitchen-filter-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.kitchen-filter-tabs button svg,
+.kitchen-refresh svg {
+  width: 17px;
+  height: 17px;
+}
+
+.kitchen-filter-tabs button.active {
+  background: var(--k-brown);
+  color: #fff;
+  box-shadow: 0 7px 16px rgba(122, 59, 36, 0.2);
+}
+
+.kitchen-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e7d4c3;
+  background: #fff;
+  color: #70432f;
+}
+
+.kitchen-refresh:hover {
+  border-color: #c99d7d;
+  background: #fffaf4;
+}
+
+.kitchen-alert {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid #edc6bc;
+  border-radius: 13px;
+  background: #fff0eb;
+  color: #9b3f2e;
+  font-size: 13px;
+  font-weight: 680;
+}
+
+.kitchen-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.kitchen-kpi {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--k-line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.83);
+  box-shadow: 0 8px 28px rgba(67, 40, 25, 0.045);
+}
+
+.kitchen-kpi > span {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border-radius: 14px;
+  background: #f8eee6;
+  color: var(--k-brown);
+}
+
+.kitchen-kpi > span svg {
+  width: 25px;
+  height: 25px;
+}
+
+.kitchen-kpi.waiting > span {
+  background: #fff0ed;
+  color: var(--k-waiting);
+}
+
+.kitchen-kpi.cooking > span {
+  background: #fff6df;
+  color: var(--k-cooking);
+}
+
+.kitchen-kpi.ready > span {
+  background: #eaf7ee;
+  color: var(--k-ready);
+}
+
+.kitchen-kpi > div {
+  display: grid;
+  min-width: 0;
+}
+
+.kitchen-kpi small {
+  color: #705f55;
+  font-size: 12px;
+  font-weight: 730;
+}
+
+.kitchen-kpi strong {
+  color: #2c1b15;
+  font-size: 25px;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+}
+
+.kitchen-kpi em {
+  margin-top: 2px;
+  color: #99897d;
+  font-size: 11px;
+  font-style: normal;
+}
+
+.kitchen-workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 290px;
+  gap: 16px;
+  align-items: start;
+}
+
+.kitchen-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  min-width: 0;
+}
+
+.kitchen-column {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--k-line);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 10px 30px rgba(73, 42, 25, 0.045);
+}
+
+.kitchen-column-header {
+  display: flex;
+  gap: 11px;
+  padding: 14px;
+  border-bottom: 1px solid #eadfd4;
+  background: #fff8f2;
+}
+
+.kitchen-column.tone-waiting .kitchen-column-header {
+  background: linear-gradient(180deg, #fff4f1, #ffebe7);
+}
+
+.kitchen-column.tone-cooking .kitchen-column-header {
+  background: linear-gradient(180deg, #fff9eb, #fff2cf);
+}
+
+.kitchen-column.tone-ready .kitchen-column-header {
+  background: linear-gradient(180deg, #f3fbf5, #e7f6eb);
+}
+
+.kitchen-column-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--k-brown);
+  box-shadow: 0 4px 14px rgba(62, 39, 25, 0.07);
+}
+
+.kitchen-column.tone-waiting .kitchen-column-icon {
+  color: var(--k-waiting);
+}
+
+.kitchen-column.tone-cooking .kitchen-column-icon {
+  color: var(--k-cooking);
+}
+
+.kitchen-column.tone-ready .kitchen-column-icon {
+  color: var(--k-ready);
+}
+
+.kitchen-column-icon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.kitchen-column-header > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.kitchen-column-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kitchen-column-title h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 820;
+  letter-spacing: -0.02em;
+}
+
+.kitchen-column-title b {
+  display: grid;
+  place-items: center;
+  min-width: 25px;
+  height: 25px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #fff;
+  color: #674332;
+  font-size: 11px;
+}
+
+.kitchen-column-header p {
+  margin: 3px 0 0;
+  color: #8e7c70;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.kitchen-column-body {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+}
+
+.kitchen-order-card {
+  overflow: hidden;
+  padding: 13px;
+  border: 1px solid #eadfd5;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(61, 36, 23, 0.045);
+}
+
+.kitchen-order-card.is-priority {
+  border-color: #efb2a6;
+  box-shadow: 0 7px 22px rgba(190, 71, 46, 0.08);
+}
+
+.kitchen-order-topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kitchen-order-topline > div:first-child {
+  display: grid;
+  gap: 1px;
+}
+
+.kitchen-order-topline strong {
+  color: #2e211b;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+.kitchen-order-topline small {
+  color: #9a8a7f;
+  font-size: 10px;
+}
+
+.kitchen-order-badges {
+  display: flex;
+  justify-content: flex-end;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.kitchen-time-chip,
+.kitchen-priority-chip,
+.kitchen-order-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 25px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 760;
+}
+
+.kitchen-time-chip {
+  background: #f7f2ed;
+  color: #755f53;
+}
+
+.kitchen-time-chip.urgent,
+.kitchen-priority-chip {
+  background: #ffebe7;
+  color: #bd4833;
+}
+
+.kitchen-time-chip svg,
+.kitchen-priority-chip svg {
+  width: 13px;
+  height: 13px;
+}
+
+.kitchen-order-meta {
+  display: flex;
+  gap: 6px;
+  margin: 9px 0 10px;
+}
+
+.kitchen-order-meta span {
+  background: #f8efe8;
+  color: #76503b;
+}
+
+.kitchen-order-meta span.mixed {
+  background: #eef2fb;
+  color: #526486;
+}
+
+.kitchen-item-list {
+  border-top: 1px dashed #eaded4;
+}
+
+.kitchen-item {
+  padding: 9px 0;
+  border-bottom: 1px dashed #eee4dc;
+}
+
+.kitchen-item-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kitchen-item-line > span {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  color: #3b2b24;
+  font-size: 12px;
+  font-weight: 730;
+}
+
+.kitchen-item-line i {
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: #5b9e69;
+}
+
+.kitchen-item-line strong {
+  color: #33231c;
+  font-size: 12px;
+}
+
+.kitchen-item-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 5px 0 0 14px;
+  color: #8a7669;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.kitchen-item-note svg {
+  width: 12px;
+  height: 12px;
+  margin-top: 1px;
+  flex: 0 0 12px;
+}
+
+.kitchen-detail-loading {
+  padding: 14px 4px;
+  color: #9c8d83;
+  font-size: 11px;
+  text-align: center;
+}
+
+.kitchen-station-note {
+  margin-top: 9px;
+  padding: 7px 9px;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 720;
+}
+
+.kitchen-station-note.waiting {
+  background: #fff5df;
+  color: #886119;
+}
+
+.kitchen-station-note.ready {
+  background: #eaf7ee;
+  color: #3d7950;
+}
+
+.kitchen-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  margin-top: 10px;
+  border: 0;
+  border-radius: 11px;
+  background: linear-gradient(180deg, #934728, #7a3822);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 810;
+  box-shadow: 0 8px 16px rgba(116, 51, 31, 0.16);
+}
+
+.kitchen-action:hover {
+  background: linear-gradient(180deg, #a14e2c, #823b23);
+}
+
+.kitchen-action.ready-action {
+  background: linear-gradient(180deg, #f5d98c, #ecc76b);
+  color: #5d4216;
+  box-shadow: 0 8px 16px rgba(173, 122, 31, 0.12);
+}
+
+.kitchen-action svg,
+.kitchen-ready-state svg {
+  width: 16px;
+  height: 16px;
+}
+
+.kitchen-ready-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 10px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: #eaf5ed;
+  color: #3f7750;
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.kitchen-empty-column {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 36px 15px;
+  color: #aa9b91;
+  text-align: center;
+  font-size: 11px;
+}
+
+.kitchen-empty-column svg {
+  width: 27px;
+  height: 27px;
+}
+
+.kitchen-side {
+  display: grid;
+  gap: 14px;
+}
+
+.kitchen-side-card {
+  padding: 16px;
+  border: 1px solid var(--k-line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 9px 28px rgba(72, 42, 25, 0.045);
+}
+
+.kitchen-side-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 13px;
+}
+
+.kitchen-side-title > svg {
+  width: 22px;
+  height: 22px;
+  color: #995136;
+}
+
+.kitchen-side-title small {
+  color: #a26a4d;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.13em;
+}
+
+.kitchen-side-title h2 {
+  margin: 1px 0 0;
+  font-size: 14px;
+  font-weight: 810;
+}
+
+.kitchen-focus-order {
+  display: grid;
+  gap: 4px;
+  padding: 13px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #fff0e9, #fff8f2);
+}
+
+.kitchen-focus-order strong {
+  color: #7a3824;
+  font-size: 17px;
+}
+
+.kitchen-focus-order span {
+  color: #b24c39;
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.kitchen-focus-order small,
+.kitchen-side-empty {
+  color: #8d7c70;
+  font-size: 10px;
+}
+
+.kitchen-rule-list {
+  display: grid;
+  gap: 9px;
+}
+
+.kitchen-rule-list > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.kitchen-rule-list b {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  border-radius: 8px;
+  background: #f5e7dc;
+  color: #8b472d;
+  font-size: 10px;
+}
+
+.kitchen-rule-list span {
+  display: grid;
+}
+
+.kitchen-rule-list strong {
+  color: #49342a;
+  font-size: 11px;
+}
+
+.kitchen-rule-list small {
+  margin-top: 1px;
+  color: #8c7b70;
+  font-size: 9.5px;
+  line-height: 1.35;
+}
+
+@media (max-width: 1180px) {
+  .kitchen-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kitchen-side {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 960px) {
+  .kitchen-dashboard-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .kitchen-head-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .kitchen-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kitchen-board {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  body.kitchen-dashboard-active .top {
+    padding-inline: 14px;
+  }
+
+  .kitchen-dashboard-shell {
+    padding: 20px 14px 32px;
+  }
+
+  .kitchen-dashboard-head h1 {
+    font-size: 30px;
+  }
+
+  .kitchen-head-actions,
+  .kitchen-filter-tabs {
+    width: 100%;
+  }
+
+  .kitchen-filter-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .kitchen-filter-tabs button {
+    justify-content: center;
+    padding-inline: 8px;
+    font-size: 11px;
+  }
+
+  .kitchen-refresh {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .kitchen-kpis {
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+  }
+
+  .kitchen-kpi {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .kitchen-kpi > span {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+
+  .kitchen-kpi strong {
+    font-size: 20px;
+  }
+
+  .kitchen-side {
+    grid-template-columns: 1fr;
+  }
+}
