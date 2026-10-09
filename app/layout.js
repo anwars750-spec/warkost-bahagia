@@ -33,6 +33,7 @@ import "./printer-header-frame-fix.css";
 import "./kitchen-header-actions.css";
 import "./customer-quantity-mobile-polish.css";
 import "./customer-catalog-polish.css";
+import "./customer-catalog-final-polish.css";
 import CodBatchSettlementCenter from "./CodBatchSettlementCenter";
 import DriverCodBatchEventBridge from "./DriverCodBatchEventBridge";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
