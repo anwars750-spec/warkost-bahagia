@@ -1,0 +1,148 @@
+/* Customer catalog grouping polish. Visual-only, scoped to storefront catalog. */
+
+.material-category-icon,
+.catalog-group-category-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.material-category-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.material-category-icon svg,
+.catalog-group-category-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.customer-products.catalog-grouped-view {
+  align-items: stretch;
+}
+
+.catalog-group-category-heading {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 30px 0 4px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(116, 64, 42, 0.13);
+}
+
+.catalog-group-category-heading:first-child {
+  margin-top: 2px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.catalog-group-category-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: #f5e6dc;
+  color: #8e371d;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.catalog-group-category-icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.catalog-group-category-heading h3 {
+  margin: 0;
+  color: #2e160e;
+  font-size: clamp(21px, 2vw, 27px);
+  line-height: 1.1;
+}
+
+.catalog-group-category-heading p {
+  margin: 4px 0 0;
+  color: #806b62;
+  font-size: 13px;
+}
+
+.catalog-group-subcategory-heading {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 14px 0 1px;
+}
+
+.catalog-group-subcategory-heading::before {
+  content: "";
+  width: 4px;
+  height: 18px;
+  border-radius: 999px;
+  background: #a33f21;
+}
+
+.catalog-group-subcategory-heading h4 {
+  margin: 0;
+  color: #6f2f1e;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.customer-catalog .product-price-stack > strong {
+  white-space: nowrap;
+}
+
+@media (max-width: 620px) {
+  .material-category-icon {
+    width: 17px;
+    height: 17px;
+  }
+
+  .catalog-group-category-heading {
+    gap: 9px;
+    margin-top: 22px;
+    padding-top: 17px;
+  }
+
+  .catalog-group-category-heading:first-child {
+    margin-top: 0;
+    padding-top: 0;
+  }
+
+  .catalog-group-category-icon {
+    width: 31px;
+    height: 31px;
+    border-radius: 10px;
+    font-size: 15px;
+  }
+
+  .catalog-group-category-icon svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .catalog-group-category-heading h3 {
+    font-size: 18px;
+  }
+
+  .catalog-group-category-heading p {
+    margin-top: 2px;
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
+  .catalog-group-subcategory-heading {
+    margin: 10px 0 0;
+  }
+
+  .catalog-group-subcategory-heading::before {
+    height: 15px;
+  }
+
+  .catalog-group-subcategory-heading h4 {
+    font-size: 12px;
+  }
+}
