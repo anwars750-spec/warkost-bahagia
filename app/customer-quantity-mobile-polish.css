@@ -1,16 +1,92 @@
-/* Customer mobile quantity polish — scoped to product cards only. */
+/* Customer product quantity polish — compact, professional ordering controls. */
+.customer-product .qty > span {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 28px;
+  padding: 0 2px;
+  color: #4e2b20;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Replace instructional copy such as “Ketuk untuk tambah” / “Ketuk +1”
+   with compact visual actions while preserving the existing cart behavior. */
+.customer-product .qty > small {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 1px solid #d9bba8;
+  border-radius: 10px;
+  color: #7d3523;
+  background: #fff8f1;
+  font-size: 0 !important;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.customer-product .qty.is-empty > small::after {
+  content: "Pesan";
+  font-size: 10px;
+}
+
+.customer-product .qty:not(.is-empty) > small::after {
+  content: "+1";
+  font-size: 11px;
+}
+
+.customer-product .qty:not(.is-empty) > small {
+  min-width: 30px;
+  padding-inline: 7px;
+  border-color: #e2cdbf;
+  color: #8a3e28;
+  background: #fffaf5;
+}
+
 @media (max-width: 620px) {
+  .customer-product .qty {
+    gap: 3px;
+  }
+
   .customer-product .qty > span {
-    display: inline-grid;
-    place-items: center;
-    min-width: 14px;
-    height: 22px;
+    min-width: 16px;
+    height: 28px;
     padding: 0 1px;
-    color: #573225;
-    font-size: 10px;
-    font-weight: 800;
+    font-size: 9px;
+  }
+
+  .customer-product .qty > button {
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    min-height: 28px;
+    padding: 0;
+    border-radius: 9px;
+    font-size: 14px;
     line-height: 1;
-    text-align: center;
-    font-variant-numeric: tabular-nums;
+  }
+
+  .customer-product .qty > small,
+  .customer-product .qty.is-empty > small {
+    min-width: 30px;
+    min-height: 28px;
+    padding: 4px 6px;
+    border-radius: 9px;
+  }
+
+  .customer-product .qty.is-empty > small::after {
+    font-size: 9px;
+  }
+
+  .customer-product .qty:not(.is-empty) > small::after {
+    font-size: 9px;
   }
 }
