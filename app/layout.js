@@ -26,6 +26,7 @@ import "./admin-beverage-stock-mobile-kpi-center.css";
 import "./admin-ui-stability.css";
 import "./cod-batch-settlement-polish.css";
 import "./kitchen-dashboard.css";
+import "./kitchen-dashboard-queue-polish.css";
 import "./kitchen-flash-guard.css";
 import CodBatchSettlementCenter from "./CodBatchSettlementCenter";
 import DriverCodBatchEventBridge from "./DriverCodBatchEventBridge";
