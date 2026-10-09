@@ -45,7 +45,7 @@ export default function PrinterCenterRuntime() {
 
       if (!printing) {
         lastPrinting = false;
-        if (active) setActive(false);
+        setActive(false);
         finishPrinterTransition();
         return;
       }
@@ -86,7 +86,6 @@ export default function PrinterCenterRuntime() {
         document.body.classList.add("printer-center-transition");
         document.body.classList.remove("kitchen-dashboard-transition");
         lastPrinting = false;
-        if (ALLOWED_ROLES.has(cachedRole)) setActive(true);
         return;
       }
 
@@ -139,7 +138,7 @@ export default function PrinterCenterRuntime() {
       window.removeEventListener("warkost:view-changed", onViewChange);
       document.body.classList.remove("printer-center-transition");
     };
-  }, [active]);
+  }, []);
 
   if (!active) return null;
   return <AdminPrinterController />;
