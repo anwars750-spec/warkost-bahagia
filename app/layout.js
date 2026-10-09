@@ -26,11 +26,13 @@ import "./admin-beverage-stock-mobile-kpi-center.css";
 import "./admin-ui-stability.css";
 import "./cod-batch-settlement-polish.css";
 import "./kitchen-dashboard.css";
+import "./kitchen-flash-guard.css";
 import CodBatchSettlementCenter from "./CodBatchSettlementCenter";
 import DriverCodBatchEventBridge from "./DriverCodBatchEventBridge";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
 import AdminCodLauncherButton from "./AdminCodLauncherButton";
 import KitchenDashboard from "./KitchenDashboard";
+import KitchenFlashGuard from "./KitchenFlashGuard";
 
 export const metadata = {
   title: "Warkost Bahagia",
@@ -42,6 +44,7 @@ export default function RootLayout({ children }) {
     <html lang="id">
       <body>
         {children}
+        <KitchenFlashGuard />
         <KitchenDashboard />
         <CodBatchSettlementCenter />
         <DriverCodBatchEventBridge />
