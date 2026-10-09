@@ -29,6 +29,7 @@ import "./kitchen-dashboard.css";
 import "./kitchen-dashboard-queue-polish.css";
 import "./kitchen-flash-guard.css";
 import "./kitchen-dashboard-mobile-v2.css";
+import "./printer-header-frame-fix.css";
 import CodBatchSettlementCenter from "./CodBatchSettlementCenter";
 import DriverCodBatchEventBridge from "./DriverCodBatchEventBridge";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
