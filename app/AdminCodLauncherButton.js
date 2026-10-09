@@ -17,6 +17,13 @@ export default function AdminCodLauncherButton() {
   const [pending, setPending] = useState(0);
 
   const refresh = useCallback(async () => {
+    const adminMain = document.querySelector("main[data-admin-view]");
+
+    if (adminMain?.dataset.adminView === "customers") {
+      setTarget(null);
+      setPending(0);
+      return;
+    }
     const heading = document.querySelector(
       "body.admin-operations-view main .heading.admin-ui-heading",
     );
@@ -48,9 +55,11 @@ export default function AdminCodLauncherButton() {
     const onRendered = () => refresh();
     const onUpdated = () => refresh();
     window.addEventListener("warkost:admin-orders-rendered", onRendered);
+    window.addEventListener("warkost:admin-customers-rendered", onRendered);
     window.addEventListener("warkost:cod-batch-updated", onUpdated);
     return () => {
       window.removeEventListener("warkost:admin-orders-rendered", onRendered);
+      window.removeEventListener("warkost:admin-customers-rendered", onRendered);
       window.removeEventListener("warkost:cod-batch-updated", onUpdated);
     };
   }, [refresh]);
