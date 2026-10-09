@@ -32,6 +32,7 @@ import "./kitchen-dashboard-mobile-v2.css";
 import "./printer-header-frame-fix.css";
 import "./kitchen-header-actions.css";
 import "./customer-quantity-mobile-polish.css";
+import "./customer-catalog-polish.css";
 import CodBatchSettlementCenter from "./CodBatchSettlementCenter";
 import DriverCodBatchEventBridge from "./DriverCodBatchEventBridge";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
@@ -41,6 +42,7 @@ import KitchenFlashGuard from "./KitchenFlashGuard";
 import PrinterCenterRuntime from "./PrinterCenterRuntime";
 import KitchenHeaderActions from "./KitchenHeaderActions";
 import RoleLogoutConfirmation from "./RoleLogoutConfirmation";
+import CustomerCatalogPolish from "./CustomerCatalogPolish";
 
 export const metadata = {
   title: "Warkost Bahagia",
@@ -61,6 +63,7 @@ export default function RootLayout({ children }) {
         <PrinterCenterRuntime />
         <KitchenHeaderActions />
         <RoleLogoutConfirmation />
+        <CustomerCatalogPolish />
         <div id="admin-ui-portal-root" />
       </body>
     </html>
