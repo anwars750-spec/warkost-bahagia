@@ -1,0 +1,136 @@
+/* Final customer quantity/unit polish. Scoped to storefront cards only. */
+
+.customer-catalog .customer-product .qty > small {
+  font-size: 10px !important;
+  font-weight: 850;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.customer-catalog .customer-product .qty > small::after {
+  content: none !important;
+  display: none !important;
+}
+
+.customer-catalog .customer-product .qty.piece-qty > span,
+.customer-catalog .customer-product .qty.weighted-qty > span {
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
+.customer-catalog .customer-product .qty.piece-qty > span {
+  min-width: 18px;
+}
+
+.customer-catalog .customer-product .qty.weighted-qty {
+  display: inline-grid;
+  grid-template-columns: 32px minmax(42px, auto) minmax(46px, auto);
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  min-width: max-content;
+}
+
+.customer-catalog .customer-product .qty.weighted-qty > button {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+}
+
+.customer-catalog .customer-product .qty.weighted-qty > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  height: 32px;
+  padding: 0 3px;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.customer-catalog .customer-product .qty.weighted-qty > small {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  min-height: 32px;
+  padding: 5px 7px;
+  border: 1px solid #dfc7b7;
+  border-radius: 10px;
+  background: #fff9f4;
+  color: #843923;
+  line-height: 1;
+}
+
+.customer-catalog .customer-product.weighted-product .product-price-stack > small {
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
+@media (max-width: 620px) {
+  /* Raw-material cards need a dedicated footer rhythm so weight never wraps. */
+  .customer-catalog .customer-product.weighted-product .product-foot {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 6px;
+  }
+
+  .customer-catalog .customer-product.weighted-product .product-price-stack {
+    min-width: 0;
+  }
+
+  .customer-catalog .customer-product.weighted-product .product-price-stack > strong {
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .customer-catalog .customer-product.weighted-product .product-price-stack > small {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    font-size: 8px;
+    line-height: 1.25;
+  }
+
+  .customer-catalog .customer-product .qty.weighted-qty {
+    grid-template-columns: 28px minmax(40px, auto) minmax(44px, auto);
+    gap: 4px;
+    justify-self: start;
+    max-width: 100%;
+  }
+
+  .customer-catalog .customer-product .qty.weighted-qty > button {
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    min-height: 28px;
+    border-radius: 9px;
+  }
+
+  .customer-catalog .customer-product .qty.weighted-qty > span {
+    min-width: 40px;
+    height: 28px;
+    padding-inline: 2px;
+    font-size: 9px;
+  }
+
+  .customer-catalog .customer-product .qty.weighted-qty > small {
+    min-width: 44px;
+    min-height: 28px;
+    padding: 4px 5px;
+    border-radius: 9px;
+    font-size: 8px !important;
+  }
+
+  .customer-catalog .customer-product .qty.piece-qty > span {
+    min-width: 14px;
+    font-size: 9px;
+  }
+}
