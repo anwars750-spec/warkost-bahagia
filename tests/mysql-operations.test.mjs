@@ -4,11 +4,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import {
   createMysqlDefaultsFile,
   loadMysqlMigrations,
   parseMysqlUrl,
 } from "../lib/mysql-operations.mjs";
+
+const projectRoot = fileURLToPath(new URL("..", import.meta.url));
 
 test("migration MySQL memiliki urutan dan checksum stabil", () => {
   const migrations = loadMysqlMigrations();
@@ -60,28 +63,47 @@ test("backup MySQL membuat checksum dan menolak output dump yang tidak valid", (
     path.join(os.tmpdir(), "warkost-mysql-backup-test-"),
   );
   try {
-    const dumpFixture = (name, source) => {
-      const script = path.join(directory, `${name}.mjs`);
-      fs.writeFileSync(script, source, { mode: 0o700 });
-      if (process.platform !== "win32") return script;
-      const wrapper = path.join(directory, `${name}.cmd`);
-      fs.writeFileSync(
-        wrapper,
-        `@echo off\r\n"${process.execPath}" "${script}" %*\r\n`,
-      );
-      return wrapper;
-    };
-    const valid = dumpFixture(
-      "valid-dump",
-      "#!/usr/bin/env node\nprocess.stdout.write('-- MySQL dump 8.0\\n-- Host: test\\nCREATE TABLE users(id BIGINT);\\n');\n",
+    const backupScript = path.join(
+      projectRoot,
+      "scripts",
+      "backup-mysql.mjs",
+    );
+    const restoreScript = path.join(
+      projectRoot,
+      "scripts",
+      "restore-mysql.mjs",
+    );
+    const fixtureRunner = path.join(directory, "mysqldump-fixture-runner.mjs");
+    fs.writeFileSync(
+      fixtureRunner,
+      `import fs from "node:fs";
+import childProcess from "node:child_process";
+import { syncBuiltinESMExports } from "node:module";
+import { pathToFileURL } from "node:url";
+
+childProcess.spawnSync = (_command, _args, options) => {
+  const output = fs.readFileSync(process.env.MYSQLDUMP_FIXTURE_FILE);
+  fs.writeSync(options.stdio[1], output);
+  return { status: 0, signal: null, error: undefined, stderr: "" };
+};
+syncBuiltinESMExports();
+await import(pathToFileURL(process.env.BACKUP_SCRIPT_PATH).href);
+`,
+    );
+    const valid = path.join(directory, "valid-dump.sql");
+    fs.writeFileSync(
+      valid,
+      "-- MySQL dump 8.0\n-- Host: test\nCREATE TABLE users(id BIGINT);\n",
     );
     const env = {
       ...process.env,
       DATABASE_URL: "mysql://user:secret@127.0.0.1/warkost",
       BACKUP_DIRECTORY: path.join(directory, "backups"),
-      MYSQLDUMP_BINARY: valid,
+      MYSQLDUMP_BINARY: "mysqldump-test-fixture",
+      MYSQLDUMP_FIXTURE_FILE: valid,
+      BACKUP_SCRIPT_PATH: backupScript,
     };
-    const result = spawnSync(process.execPath, ["scripts/backup-mysql.mjs"], {
+    const result = spawnSync(process.execPath, [fixtureRunner], {
       encoding: "utf8",
       env,
     });
@@ -94,19 +116,17 @@ test("backup MySQL membuat checksum dan menolak output dump yang tidak valid", (
     fs.writeFileSync(backup + ".sha256", "0".repeat(64) + "\n");
     const restore = spawnSync(
       process.execPath,
-      ["scripts/restore-mysql.mjs", backup],
+      [restoreScript, backup],
       { encoding: "utf8", env },
     );
     assert.notEqual(restore.status, 0);
     assert.match(restore.stderr, /Checksum backup MySQL tidak cocok/);
 
-    const invalid = dumpFixture(
-      "invalid-dump",
-      "#!/usr/bin/env node\nprocess.stdout.write('not a database dump');\n",
-    );
-    const rejected = spawnSync(process.execPath, ["scripts/backup-mysql.mjs"], {
+    const invalid = path.join(directory, "invalid-dump.sql");
+    fs.writeFileSync(invalid, "not a database dump");
+    const rejected = spawnSync(process.execPath, [fixtureRunner], {
       encoding: "utf8",
-      env: { ...env, MYSQLDUMP_BINARY: invalid },
+      env: { ...env, MYSQLDUMP_FIXTURE_FILE: invalid },
     });
     assert.notEqual(rejected.status, 0);
     assert.match(rejected.stderr, /Output mysqldump tidak valid/);
@@ -117,6 +137,11 @@ test("backup MySQL membuat checksum dan menolak output dump yang tidak valid", (
       false,
     );
   } finally {
-    fs.rmSync(directory, { recursive: true, force: true });
+    fs.rmSync(directory, {
+      recursive: true,
+      force: true,
+      maxRetries: process.platform === "win32" ? 8 : 2,
+      retryDelay: 100,
+    });
   }
 });

@@ -39,9 +39,18 @@ const { getCustomerAccount } = await import("../lib/account.mjs");
 const { listCatalog } = await import("../lib/catalog.mjs");
 const database = db();
 
+function removeTemporaryDirectory(directory) {
+  fs.rmSync(directory, {
+    recursive: true,
+    force: true,
+    maxRetries: process.platform === "win32" ? 8 : 2,
+    retryDelay: 100,
+  });
+}
+
 after(async () => {
   await close();
-  fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  removeTemporaryDirectory(fixtureRoot);
 });
 
 test("guest storefront menerima produk, kategori, dan promo aktif yang public-safe", async () => {
@@ -142,7 +151,7 @@ test("fixture idempotent dan menolak production mode", () => {
     fs.existsSync(path.join(productionRoot, "data", "warkost.db")),
     false,
   );
-  fs.rmSync(productionRoot, { recursive: true, force: true });
+  removeTemporaryDirectory(productionRoot);
 });
 
 test("customer inactive ditolak dan response login tidak mengekspos hash", async () => {
@@ -390,8 +399,12 @@ test("menu akun menjadi satu-satunya entry point delapan aksi akun", () => {
   assert.doesNotMatch(page, /account-shortcuts/);
 
   const menuStart = page.indexOf('<div className="quick-account-menu">');
-  const menuEnd = page.indexOf("</div>\n            )}", menuStart);
+  const menuEnd = page.indexOf(
+    '{chatTarget && ["CUSTOMER", "DRIVER"].includes(role) && (',
+    menuStart,
+  );
   const menu = page.slice(menuStart, menuEnd);
+  assert.ok(menuStart >= 0 && menuEnd > menuStart);
   for (const label of [
     "Pesanan Aktif",
     "Riwayat",
