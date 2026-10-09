@@ -210,16 +210,20 @@ function applyCatalogPolish(data) {
     .querySelectorAll(":scope > .customer-catalog-polish-node")
     .forEach((node) => node.remove());
 
+  const existingCards = [
+    ...grid.querySelectorAll(":scope > article.customer-product"),
+  ];
+
   if (!allCategoriesVisible) {
     grid.classList.remove("catalog-grouped-view");
+    existingCards.forEach((card) => card.style.removeProperty("order"));
     return;
   }
 
   grid.classList.add("catalog-grouped-view");
 
   const subcategoryRanks = buildSubcategoryRank(data);
-  const cards = [...grid.querySelectorAll(":scope > article.customer-product")];
-  const cardMeta = cards.map((card, originalIndex) => {
+  const cardMeta = existingCards.map((card, originalIndex) => {
     const body = card.querySelector(".product-body");
     const categoryName = cleanText(
       body?.querySelector(":scope > small:not(.product-subcategory)")
@@ -249,23 +253,35 @@ function applyCatalogPolish(data) {
     categoryCounts.set(category, (categoryCounts.get(category) || 0) + 1);
   }
 
+  // IMPORTANT: never move React-owned product cards in the DOM. Moving them with
+  // appendChild breaks the live React interaction contract in the grouped “Semua”
+  // view. We keep every card exactly where React rendered it and use CSS order only.
+  let sequence = 0;
   let lastCategory = null;
   let lastSubcategory = null;
   for (const item of cardMeta) {
     const category = item.categoryName || "Lainnya";
     const subcategory = item.subcategoryName || "Lainnya";
+
     if (category !== lastCategory) {
-      grid.appendChild(
-        makeCategoryHeading(category, categoryCounts.get(category) || 0),
+      const categoryHeading = makeCategoryHeading(
+        category,
+        categoryCounts.get(category) || 0,
       );
+      categoryHeading.style.order = String(sequence++);
+      grid.appendChild(categoryHeading);
       lastCategory = category;
       lastSubcategory = null;
     }
+
     if (subcategory !== lastSubcategory) {
-      grid.appendChild(makeSubcategoryHeading(subcategory));
+      const subcategoryHeading = makeSubcategoryHeading(subcategory);
+      subcategoryHeading.style.order = String(sequence++);
+      grid.appendChild(subcategoryHeading);
       lastSubcategory = subcategory;
     }
-    grid.appendChild(item.card);
+
+    item.card.style.order = String(sequence++);
   }
 }
 
