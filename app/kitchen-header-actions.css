@@ -1,0 +1,209 @@
+/* Kitchen header actions: notification popup + logout confirmation */
+
+body:has(.kitchen-header-notification) .top nav .kitchen-header-notification,
+body:has(.kitchen-header-logout) .top nav .kitchen-header-logout {
+  position: relative;
+}
+
+body:has(.kitchen-header-notification) .top nav .kitchen-header-notification.kitchen-notification-open {
+  border-radius: 14px;
+  background: #f4e2d2;
+  color: #6f321e;
+}
+
+body:has(.kitchen-header-logout) .top nav .kitchen-header-logout.kitchen-logout-open {
+  border-radius: 14px;
+  background: #fff0ea;
+  color: #9b3c25;
+}
+
+.kitchen-notification-popover {
+  z-index: 2200;
+}
+
+.kitchen-notification-card {
+  overflow: hidden;
+}
+
+.kitchen-notification-card .admin-notification-head {
+  align-items: flex-start;
+}
+
+.kitchen-notification-card .admin-notification-head > div:first-child {
+  min-width: 0;
+}
+
+.kitchen-notification-subtitle {
+  max-width: 260px;
+  margin: 5px 0 0;
+  color: #907466;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.kitchen-notification-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 8px 14px;
+  border-top: 1px solid #eadbcf;
+  background: #fffaf6;
+  color: #896d5f;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.kitchen-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #36a66a;
+  box-shadow: 0 0 0 4px rgba(54, 166, 106, 0.12);
+}
+
+.kitchen-logout-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2600;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(48, 29, 20, 0.18);
+  backdrop-filter: blur(7px);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.kitchen-logout-layer.open {
+  opacity: 1;
+}
+
+.kitchen-logout-dialog {
+  width: min(430px, 100%);
+  border: 1px solid #ead8ca;
+  border-radius: 24px;
+  padding: 26px;
+  background: #fffdfa;
+  box-shadow: 0 24px 70px rgba(70, 38, 23, 0.2);
+  transform: translateY(8px) scale(0.985);
+  transition: transform 180ms ease;
+}
+
+.kitchen-logout-layer.open .kitchen-logout-dialog {
+  transform: translateY(0) scale(1);
+}
+
+.kitchen-logout-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 16px;
+  border-radius: 15px;
+  background: #fff0e9;
+  color: #9b3c25;
+}
+
+.kitchen-logout-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.kitchen-logout-copy small {
+  display: block;
+  margin-bottom: 5px;
+  color: #a04e30;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.kitchen-logout-copy h2 {
+  margin: 0;
+  color: #351b13;
+  font-size: 23px;
+  line-height: 1.18;
+}
+
+.kitchen-logout-copy p {
+  margin: 9px 0 0;
+  color: #846c60;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.kitchen-logout-error {
+  margin-top: 14px;
+  border: 1px solid #f0c5b9;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff2ed;
+  color: #943923;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.kitchen-logout-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.kitchen-logout-actions button {
+  min-height: 44px;
+  border-radius: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.kitchen-logout-cancel {
+  border: 1px solid #dfcfc4;
+  background: #fff;
+  color: #5e4032;
+}
+
+.kitchen-logout-confirm {
+  border: 1px solid #8e3a26;
+  background: #8e3a26;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(142, 58, 38, 0.18);
+}
+
+.kitchen-logout-actions button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+@media (max-width: 760px) {
+  .kitchen-notification-card .admin-notification-head {
+    gap: 10px;
+  }
+
+  .kitchen-notification-subtitle {
+    max-width: none;
+    font-size: 11px;
+  }
+
+  .kitchen-logout-layer {
+    align-items: end;
+    padding: 12px;
+  }
+
+  .kitchen-logout-dialog {
+    width: 100%;
+    border-radius: 22px;
+    padding: 22px 18px 18px;
+  }
+
+  .kitchen-logout-copy h2 {
+    font-size: 21px;
+  }
+}
