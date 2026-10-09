@@ -288,14 +288,6 @@ export default function AdminCustomersEnhancer() {
     const render = () => {
       if (!root) return;
       root.innerHTML = `
-        <section class="admin-customers-hero">
-          <div>
-            <small>PUSAT PELANGGAN</small>
-            <h2>Kelola pelanggan & layanan customer</h2>
-            <p>Data pelanggan dipisahkan dari percakapan supaya Admin lebih cepat mencari informasi dan menangani bantuan.</p>
-          </div>
-          <div class="admin-customers-role-note"><strong>Admin</strong><span>Lihat data & support</span></div>
-        </section>
         <nav class="admin-customers-tabs" aria-label="Menu pelanggan">
           <button type="button" data-customer-tab="data" class="${activeTab === "data" ? "active" : ""}">
             <span>${customerIcon}</span><div><strong>Data Pelanggan</strong><small>Cari & lihat profil</small></div>
