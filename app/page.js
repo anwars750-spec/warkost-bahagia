@@ -4239,24 +4239,38 @@ export default function App() {
         )}
       </main>
       {role === "CUSTOMER" && view === "menu" && count > 0 && (
-        <button
+        <aside
           className="floating-cart customer-floating-cart"
-          aria-label={`Buka keranjang, ${count} item, total ${money(total)}`}
-          onClick={() => setOverlay("cart")}
+          aria-label={`Ringkasan keranjang, ${count} item, total ${money(total)}`}
         >
-          <span className="floating-cart-icon">
+          <button
+            type="button"
+            className="floating-cart-icon"
+            aria-label="Buka keranjang"
+            onClick={() => setOverlay("cart")}
+          >
             <CartIcon />
-            <span>{count}</span>
-          </span>
+            <span aria-hidden="true">{count}</span>
+          </button>
+          <span className="floating-cart-divider" aria-hidden="true" />
           <span className="floating-cart-summary">
             <small>{count} item di keranjang</small>
             <strong>{money(total)}</strong>
           </span>
-          <span className="floating-cart-cta">
-            Buka
-            <ArrowIcon />
+          <span className="floating-cart-status">
+            <span aria-hidden="true" />
+            Siap dipesan
           </span>
-        </button>
+          <button
+            type="button"
+            className="floating-cart-cta"
+            aria-label="Lihat keranjang"
+            onClick={() => setOverlay("cart")}
+          >
+            Lihat
+            <ArrowIcon />
+          </button>
+        </aside>
       )}
       {role === "CUSTOMER" && (
         <nav className="mobile-customer-nav" aria-label="Navigasi pelanggan">

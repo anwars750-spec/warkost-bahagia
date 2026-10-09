@@ -39,8 +39,8 @@ const { getCustomerAccount } = await import("../lib/account.mjs");
 const { listCatalog } = await import("../lib/catalog.mjs");
 const database = db();
 
-function removeTemporaryDirectory(directory) {
-  fs.rmSync(directory, {
+async function removeTemporaryDirectory(directory) {
+  await fs.promises.rm(directory, {
     recursive: true,
     force: true,
     maxRetries: process.platform === "win32" ? 8 : 2,
@@ -50,7 +50,8 @@ function removeTemporaryDirectory(directory) {
 
 after(async () => {
   await close();
-  removeTemporaryDirectory(fixtureRoot);
+  database.close();
+  await removeTemporaryDirectory(fixtureRoot);
 });
 
 test("guest storefront menerima produk, kategori, dan promo aktif yang public-safe", async () => {
@@ -122,7 +123,7 @@ test("fixture customer lokal deterministik, aman, dan dapat login", async () => 
   );
 });
 
-test("fixture idempotent dan menolak production mode", () => {
+test("fixture idempotent dan menolak production mode", async () => {
   const before = database
     .prepare(
       "SELECT COUNT(*) users FROM users WHERE email='customer@warkost.local'",
@@ -151,7 +152,7 @@ test("fixture idempotent dan menolak production mode", () => {
     fs.existsSync(path.join(productionRoot, "data", "warkost.db")),
     false,
   );
-  removeTemporaryDirectory(productionRoot);
+  await removeTemporaryDirectory(productionRoot);
 });
 
 test("customer inactive ditolak dan response login tidak mengekspos hash", async () => {
@@ -370,7 +371,19 @@ test("CTA produk dan ringkasan cart mobile memakai hierarchy compact tanpa overl
   );
   assert.match(
     page,
-    /<span className="floating-cart-cta">[\s\S]*?Buka[\s\S]*?<ArrowIcon \/>/,
+    /className="floating-cart-icon"[\s\S]*?aria-label="Buka keranjang"[\s\S]*?<CartIcon \/>/,
+  );
+  assert.match(
+    page,
+    /className="floating-cart-cta"[\s\S]*?aria-label="Lihat keranjang"[\s\S]*?Lihat[\s\S]*?<ArrowIcon \/>/,
+  );
+  assert.match(
+    page,
+    /count > 0 && \([\s\S]*?className="floating-cart customer-floating-cart"/,
+  );
+  assert.match(
+    page,
+    /className="floating-cart-status"[\s\S]*?Siap dipesan/,
   );
   assert.match(style, /\.guest-product-cta\s*{[\s\S]*?min-width:\s*68px/);
   assert.match(
@@ -379,8 +392,10 @@ test("CTA produk dan ringkasan cart mobile memakai hierarchy compact tanpa overl
   );
   assert.match(
     style,
-    /\.customer-floating-cart\s*{[\s\S]*?bottom:\s*calc\(76px \+ env\(safe-area-inset-bottom\)\)[\s\S]*?min-height:\s*58px/,
+    /\.customer-floating-cart\s*{[\s\S]*?bottom:\s*calc\(76px \+ env\(safe-area-inset-bottom\)\)[\s\S]*?min-height:\s*60px/,
   );
+  assert.match(style, /\.floating-cart-icon:focus-visible/);
+  assert.match(style, /\.floating-cart-cta:focus-visible/);
 });
 
 test("menu akun menjadi satu-satunya entry point delapan aksi akun", () => {
