@@ -192,6 +192,39 @@
   color: #fff;
 }
 
+/* Quantity controls: never wrap units. PCS is hidden from customer card quantities,
+   while weighted products stay compact as 100g / 1 kg / 1,5 kg. */
+.customer-catalog .customer-product .qty {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.customer-catalog .customer-product .qty > span {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: normal;
+  font-variant-numeric: tabular-nums;
+}
+
+.customer-catalog .customer-product .qty.weighted-qty > span {
+  min-width: 38px;
+  padding-inline: 3px;
+}
+
+.customer-catalog .customer-product .qty.weighted-qty > small::after {
+  content: attr(data-step-label) !important;
+  white-space: nowrap;
+}
+
+.customer-catalog .customer-product .qty.piece-qty > small::after {
+  content: "+1" !important;
+}
+
+.customer-catalog .customer-product .qty.is-empty > small::after {
+  content: "Pesan" !important;
+}
+
 @media (max-width: 620px) {
   .customer-catalog .catalog-heading {
     margin: 13px 0 10px;
@@ -270,5 +303,35 @@
 
   .customer-catalog .catalog-grouped-view .customer-product p {
     color: #87776e;
+  }
+
+  .customer-catalog .customer-product .qty {
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .customer-catalog .customer-product .qty > span {
+    min-width: 18px;
+    max-width: none;
+    padding-inline: 1px;
+    font-size: 9px;
+    line-height: 1;
+  }
+
+  .customer-catalog .customer-product .qty.weighted-qty > span {
+    min-width: 34px;
+    padding-inline: 2px;
+    font-size: 8.5px;
+  }
+
+  .customer-catalog .customer-product .qty.weighted-qty > small,
+  .customer-catalog .customer-product .qty.weighted-qty:not(.is-empty) > small {
+    min-width: 34px;
+    padding-inline: 5px;
+  }
+
+  .customer-catalog .customer-product .qty.weighted-qty > small::after {
+    font-size: 8px;
+    letter-spacing: -0.02em;
   }
 }
