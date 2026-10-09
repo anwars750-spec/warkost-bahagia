@@ -44,6 +44,7 @@ import PrinterCenterRuntime from "./PrinterCenterRuntime";
 import KitchenHeaderActions from "./KitchenHeaderActions";
 import RoleLogoutConfirmation from "./RoleLogoutConfirmation";
 import CustomerCatalogPolish from "./CustomerCatalogPolish";
+import CustomerQuantityUnitPolish from "./CustomerQuantityUnitPolish";
 
 export const metadata = {
   title: "Warkost Bahagia",
@@ -65,6 +66,7 @@ export default function RootLayout({ children }) {
         <KitchenHeaderActions />
         <RoleLogoutConfirmation />
         <CustomerCatalogPolish />
+        <CustomerQuantityUnitPolish />
         <div id="admin-ui-portal-root" />
       </body>
     </html>
