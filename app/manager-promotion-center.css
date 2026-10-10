@@ -1,0 +1,434 @@
+.manager-promo-center {
+  display: grid;
+  gap: 18px;
+  color: #2f1a12;
+}
+.manager-promo-center .manager-page-title {
+  align-items: center;
+}
+.promo-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+.promo-kpis article {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 12px;
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #eadfd4;
+  border-radius: 17px;
+  box-shadow: 0 8px 24px rgba(68, 40, 24, 0.05);
+}
+.promo-kpis small {
+  font-weight: 700;
+}
+.promo-kpis strong {
+  grid-row: 1/3;
+  grid-column: 2;
+  font-size: 1.75rem;
+}
+.promo-kpis span {
+  font-size: 0.72rem;
+  color: #86766c;
+}
+.promo-kpis .green strong {
+  color: #21865b;
+}
+.promo-kpis .amber strong {
+  color: #c47b0b;
+}
+.promo-kpis .red strong {
+  color: #bf3f31;
+}
+.promo-toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) 200px 200px;
+  gap: 10px;
+}
+.promo-toolbar input,
+.promo-toolbar select,
+.promo-drawer input,
+.promo-drawer select,
+.promo-drawer textarea {
+  width: 100%;
+  border: 1px solid #e1d5ca;
+  border-radius: 11px;
+  background: #fff;
+  padding: 11px 12px;
+  color: #392119;
+}
+.promo-list {
+  overflow: hidden;
+  padding: 0;
+}
+.promo-list-head,
+.promo-list > article {
+  display: grid;
+  grid-template-columns: 1.6fr 0.8fr 1fr 0.6fr 0.8fr;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 16px;
+  border-bottom: 1px solid #eee3d8;
+}
+.promo-list-head {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  background: #fbf6f0;
+}
+.promo-list > article > span {
+  display: grid;
+  gap: 4px;
+}
+.promo-list small {
+  color: #8a776c;
+  font-size: 0.72rem;
+}
+.promo-name {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+.promo-name img {
+  width: 64px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 11px;
+}
+.promo-name span {
+  display: grid;
+  min-width: 0;
+}
+.promo-name small {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.promo-family,
+.promo-status {
+  justify-self: start;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #fff0e6;
+  color: #a43d22;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+.promo-status.active {
+  background: #dff5e8;
+  color: #217a50;
+}
+.promo-status.scheduled {
+  background: #fff1cf;
+  color: #a46b00;
+}
+.promo-status.expired {
+  background: #fee2df;
+  color: #ad3329;
+}
+.promo-status.inactive {
+  background: #ece8e4;
+  color: #6c625c;
+}
+.promo-list article > div:last-child {
+  display: flex;
+  gap: 6px;
+}
+.promo-list button {
+  padding: 8px;
+  border: 1px solid #e4d7cc;
+  border-radius: 9px;
+  background: #fff;
+}
+.promo-family-guide {
+  padding: 18px 4px;
+}
+.promo-family-guide header span {
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  color: #b8492d;
+  font-weight: 800;
+}
+.promo-family-guide header h2 {
+  margin: 5px 0 14px;
+}
+.promo-family-guide > div {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+}
+.promo-family-guide article {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-height: 145px;
+  padding: 15px;
+  background: linear-gradient(145deg, #fff, #fff6ed);
+  border: 1px solid #efdfd0;
+  border-radius: 16px;
+}
+.promo-family-guide i,
+.promo-family-grid i {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #fee8de;
+  color: #bd3d22;
+  font-style: normal;
+  font-weight: 800;
+}
+.promo-family-guide p {
+  margin: 0;
+  color: #75665d;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+.promo-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(39, 24, 17, 0.42);
+  display: flex;
+  justify-content: flex-end;
+}
+.promo-drawer {
+  width: min(680px, 100%);
+  height: 100%;
+  overflow: auto;
+  background: #fffaf5;
+  padding: 22px;
+  box-shadow: -20px 0 50px rgba(38, 20, 12, 0.2);
+}
+.promo-drawer > header {
+  position: sticky;
+  top: -22px;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: -22px -22px 16px;
+  padding: 19px 22px;
+  background: rgba(255, 250, 245, 0.96);
+  border-bottom: 1px solid #eadfd5;
+}
+.promo-drawer header small {
+  color: #b4482d;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+.promo-drawer header h2 {
+  margin: 3px 0;
+}
+.promo-drawer header button {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 12px;
+  font-size: 1.5rem;
+}
+.promo-drawer section {
+  margin: 0 0 14px;
+  padding: 15px;
+  background: #fff;
+  border: 1px solid #eadfd5;
+  border-radius: 16px;
+}
+.promo-drawer h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 13px;
+  font-size: 0.98rem;
+}
+.promo-drawer h3 b {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border-radius: 8px;
+  background: #ba4226;
+  color: white;
+  font-size: 0.75rem;
+}
+.promo-family-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+}
+.promo-family-grid button {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  min-height: 94px;
+  padding: 12px;
+  border: 1px solid #eadfd5;
+  border-radius: 13px;
+  background: #fff;
+  text-align: left;
+}
+.promo-family-grid button.active {
+  border-color: #bd4328;
+  background: #fff4ee;
+  box-shadow: 0 0 0 2px rgba(189, 67, 40, 0.09);
+}
+.promo-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 11px;
+}
+.promo-form-grid label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+.promo-form-grid .wide {
+  grid-column: 1/-1;
+}
+.promo-drawer textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+.promo-rule-note {
+  grid-column: 1/-1;
+  margin: 0;
+  padding: 11px;
+  border-radius: 10px;
+  background: #fff5e6;
+  color: #74533d;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+.promo-weekdays {
+  display: flex !important;
+  gap: 6px;
+}
+.promo-weekdays label {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 6px;
+  border: 1px solid #eadfd5;
+  border-radius: 8px;
+}
+.promo-weekdays input {
+  width: auto;
+}
+.promo-drawer footer {
+  position: sticky;
+  bottom: -22px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin: 10px -22px -22px;
+  padding: 16px 22px;
+  background: #fff;
+  border-top: 1px solid #eadfd5;
+}
+.promo-drawer footer button {
+  min-width: 130px;
+}
+.promo-preview {
+  background: #fff6ed !important;
+}
+@media (max-width: 900px) {
+  .promo-kpis {
+    grid-template-columns: 1fr 1fr;
+  }
+  .promo-family-guide > div {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .promo-list-head {
+    display: none;
+  }
+  .promo-list > article {
+    grid-template-columns: 1fr auto;
+    align-items: start;
+  }
+  .promo-list > article > span,
+  .promo-list > article > div:last-child {
+    grid-column: 1/-1;
+  }
+  .promo-list > article > .promo-status {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .promo-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+  .promo-toolbar input {
+    grid-column: 1/-1;
+  }
+}
+@media (max-width: 600px) {
+  .manager-promo-center {
+    padding-bottom: 78px;
+  }
+  .manager-promo-center .manager-page-title {
+    align-items: flex-start;
+  }
+  .promo-kpis {
+    grid-template-columns: 1fr 1fr;
+  }
+  .promo-kpis article {
+    padding: 13px;
+  }
+  .promo-toolbar {
+    grid-template-columns: 1fr;
+  }
+  .promo-toolbar input {
+    grid-column: auto;
+  }
+  .promo-family-guide > div {
+    display: flex;
+    overflow: auto;
+    scroll-snap-type: x mandatory;
+  }
+  .promo-family-guide article {
+    min-width: 170px;
+    scroll-snap-align: start;
+  }
+  .promo-drawer {
+    padding: 15px;
+  }
+  .promo-drawer > header {
+    top: -15px;
+    margin: -15px -15px 12px;
+    padding: 15px;
+  }
+  .promo-drawer section {
+    padding: 12px;
+  }
+  .promo-family-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .promo-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .promo-form-grid .wide {
+    grid-column: auto;
+  }
+  .promo-drawer footer {
+    bottom: -15px;
+    margin: 8px -15px -15px;
+    padding: 13px 15px;
+  }
+  .promo-drawer footer button {
+    min-width: 0;
+    flex: 1;
+  }
+  .promo-weekdays {
+    overflow: auto;
+  }
+  .promo-list > article {
+    padding: 13px;
+  }
+  .promo-name img {
+    width: 58px;
+  }
+}

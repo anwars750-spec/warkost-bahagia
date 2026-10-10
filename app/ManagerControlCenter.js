@@ -5,6 +5,7 @@ import {
   formatStockQuantity,
   productPriceLabel,
 } from "../lib/product-units.mjs";
+import ManagerPromotionCenter from "./ManagerPromotionCenter";
 
 const money = (value) => "Rp" + Number(value || 0).toLocaleString("id-ID");
 function Delta({ value, suffix = "dari periode sebelumnya" }) {
@@ -1062,6 +1063,8 @@ export default function ManagerControlCenter({
   busy,
   run,
   saveProduct,
+  promotions,
+  refresh,
   logout,
 }) {
   const [initialAdd, setInitialAdd] = useState(false);
@@ -1098,6 +1101,14 @@ export default function ManagerControlCenter({
         <Subcategories inventory={inventory} busy={busy} mutate={mutate} />
       )}
       {view === "stock" && <Stock stock={stock} busy={busy} mutate={mutate} />}
+      {view === "promotions" && (
+        <ManagerPromotionCenter
+          promotions={promotions}
+          inventory={inventory}
+          api={api}
+          onChanged={refresh}
+        />
+      )}
       {moreOpen && (
         <div className="manager-more-menu">
           <button

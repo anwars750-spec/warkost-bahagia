@@ -4718,3 +4718,28 @@ footer {
     flex-wrap: wrap;
   }
 }
+.order-promotion-breakdown,
+.order-financial-breakdown {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #eadbce;
+  border-radius: 12px;
+  background: #fff9f3;
+}
+.order-promotion-breakdown small {
+  color: #ad4329;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.order-financial-breakdown span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.order-financial-breakdown span:last-child {
+  padding-top: 7px;
+  border-top: 1px solid #eadbce;
+  color: #8f321e;
+}

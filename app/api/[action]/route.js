@@ -110,6 +110,10 @@ import { CAPABILITIES } from "../../../lib/rbac.mjs";
 import { createGuestCustomer } from "../../../lib/guest.mjs";
 import { isGuestCustomer } from "../../../lib/customer-kind.mjs";
 import { managerAnalytics } from "../../../lib/manager-analytics.mjs";
+import {
+  listCustomerEnginePromotions,
+  quoteEnginePromotion,
+} from "../../../lib/promotion-engine.mjs";
 export const runtime = "nodejs";
 const out = (data, status = 200) =>
   NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
@@ -393,6 +397,7 @@ export async function GET(request, { params }) {
         user.id,
       );
       const vouchers = await listCustomerVouchers(user);
+      const promotions = await listCustomerEnginePromotions(user);
       const rewards = await listCustomerRewards(user);
       return out({
         profile,
@@ -400,6 +405,7 @@ export async function GET(request, { params }) {
         loyalty,
         transactions,
         vouchers,
+        promotions,
         rewards,
       });
     }
@@ -447,7 +453,7 @@ export async function GET(request, { params }) {
         throw new DomainError("Akses ditolak", 403);
       return out({
         items: await store.all(
-          "SELECT name,price,quantity,note,prep_station,stock_unit,price_unit_quantity FROM order_items WHERE order_id=?" +
+          "SELECT name,price,quantity,note,prep_station,stock_unit,price_unit_quantity,is_promotion_gift,promotion_id FROM order_items WHERE order_id=?" +
             (user.role === "KITCHEN" ? " AND prep_station='KITCHEN'" : ""),
           id,
         ),
@@ -668,11 +674,16 @@ export async function POST(request, { params }) {
       return out(await claimVoucher(user, integer(body.promotionId)));
     if (action === "voucher-quote")
       return out(
-        await quoteVoucher(user, {
+        (await quoteEnginePromotion(user, {
           promotionId: integer(body.promotionId),
           items: body.items,
           paymentMethod: body.paymentMethod,
-        }),
+        })) ||
+          (await quoteVoucher(user, {
+            promotionId: integer(body.promotionId),
+            items: body.items,
+            paymentMethod: body.paymentMethod,
+          })),
       );
     if (action === "loyalty-quote")
       return out(

@@ -456,7 +456,7 @@ test("voucher success auto-dismiss dan quote hanya dipanggil untuk state valid",
   );
   assert.match(
     page,
-    /if \(!checkoutItems\.length\)[\s\S]*?if \(!selectedVoucher \|\| selectedVoucher\.state !== "CLAIMED"\)[\s\S]*?if \(total < selectedVoucherMinimumOrder\)[\s\S]*?const controller = new AbortController\(\)/,
+    /if \(!checkoutItems\.length\)[\s\S]*?if \([\s\S]*?!\["CLAIMED", "ELIGIBLE"\]\.includes\(selectedVoucher\.state\)[\s\S]*?if \(total < selectedVoucherMinimumOrder\)[\s\S]*?const controller = new AbortController\(\)/,
   );
   assert.match(
     page,

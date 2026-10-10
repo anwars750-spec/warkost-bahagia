@@ -182,6 +182,7 @@ export default function App() {
       loyalty: 0,
       transactions: [],
       vouchers: [],
+      promotions: [],
       rewards: [],
     }),
     [staff, setStaff] = useState([]),
@@ -765,14 +766,19 @@ export default function App() {
     Number(voucherQuote?.voucher_discount || 0) -
     Number(loyaltyQuote?.loyalty_discount || 0) +
     (deliveryQuote?.available ? Number(deliveryQuote.delivery_fee || 0) : 0);
-  const selectedVoucher = account.vouchers.find(
+  const customerPromotions = [
+    ...(account.vouchers || []),
+    ...(account.promotions || []),
+  ];
+  const selectedVoucher = customerPromotions.find(
     (voucher) => Number(voucher.id) === Number(selectedVoucherId),
   );
   const selectedVoucherMinimumOrder = Number(
     selectedVoucher?.minimum_order || 0,
   );
   const selectedVoucherIsBirthday =
-    selectedVoucher?.voucher_category === "BIRTHDAY";
+    selectedVoucher?.voucher_category === "BIRTHDAY" ||
+    selectedVoucher?.promotion_family === "BIRTHDAY";
   useEffect(() => {
     if (
       selectedPaymentMethod === "CASH" &&
@@ -822,7 +828,7 @@ export default function App() {
       setVoucherQuoteBusy(false);
       return;
     }
-    if (selectedRewardId) {
+    if (selectedRewardId && !selectedVoucherIsBirthday) {
       setVoucherQuote(null);
       setVoucherQuoteError(
         "Voucher tidak dapat digabung dengan Loyalty Reward.",
@@ -836,7 +842,10 @@ export default function App() {
       setVoucherQuoteBusy(false);
       return;
     }
-    if (!selectedVoucher || selectedVoucher.state !== "CLAIMED") {
+    if (
+      !selectedVoucher ||
+      !["CLAIMED", "ELIGIBLE"].includes(selectedVoucher.state)
+    ) {
       setVoucherQuote(null);
       setVoucherQuoteError("Voucher belum siap digunakan.");
       setVoucherQuoteBusy(false);
@@ -878,6 +887,7 @@ export default function App() {
     selectedVoucherId,
     selectedRewardId,
     selectedVoucher?.state,
+    selectedVoucherIsBirthday,
     selectedVoucherMinimumOrder,
     checkoutItems.length,
     checkoutItemsSignature,
@@ -2629,7 +2639,9 @@ export default function App() {
                             Number(selectedRewardId) === reward.id;
                           const unavailable =
                             !reward.eligible_balance ||
-                            Boolean(selectedVoucherId);
+                            Boolean(
+                              selectedVoucherId && !selectedVoucherIsBirthday,
+                            );
                           return (
                             <article
                               className={`voucher-option ${selected ? "selected" : ""}`}
@@ -2705,14 +2717,18 @@ export default function App() {
                         <h2>Voucher</h2>
                       </div>
                       <div className="voucher-list">
-                        {(account.vouchers || []).map((voucher) => {
+                        {customerPromotions.map((voucher) => {
                           const selected =
                             Number(selectedVoucherId) === voucher.id;
+                          const voucherBirthday =
+                            voucher.voucher_category === "BIRTHDAY" ||
+                            voucher.promotion_family === "BIRTHDAY";
                           const codBlocked =
                             selectedPaymentMethod === "CASH" &&
-                            voucher.voucher_category !== "BIRTHDAY";
+                            !voucherBirthday;
                           const selectable =
-                            voucher.state === "CLAIMED" && !codBlocked;
+                            ["CLAIMED", "ELIGIBLE"].includes(voucher.state) &&
+                            !codBlocked;
                           return (
                             <article
                               className={`voucher-option ${selected ? "selected" : ""}`}
@@ -2724,9 +2740,12 @@ export default function App() {
                                 <small>{voucher.terms}</small>
                                 <small>
                                   Minimum {money(voucher.minimum_order)} ·{" "}
-                                  {voucher.voucher_type === "PERCENT"
+                                  {(voucher.voucher_type ||
+                                    voucher.benefit_type) === "PERCENT"
                                     ? `${voucher.discount_value}%`
-                                    : money(voucher.discount_value)}
+                                    : voucher.benefit_type === "FREE_ITEM"
+                                      ? "Gratis item"
+                                      : money(voucher.discount_value)}
                                   {voucher.max_discount
                                     ? ` · maks. ${money(voucher.max_discount)}`
                                     : ""}
@@ -2752,7 +2771,9 @@ export default function App() {
                               ) : selectable ? (
                                 <button
                                   type="button"
-                                  disabled={Boolean(selectedRewardId)}
+                                  disabled={Boolean(
+                                    selectedRewardId && !voucherBirthday,
+                                  )}
                                   className={selected ? "primary" : ""}
                                   onClick={() =>
                                     setSelectedVoucherId(
@@ -2774,7 +2795,7 @@ export default function App() {
                             </article>
                           );
                         })}
-                        {!account.vouchers?.length && (
+                        {!customerPromotions.length && (
                           <div className="voucher-empty-state">
                             <TicketIcon />
                             <span>
@@ -3838,40 +3859,24 @@ export default function App() {
             busy={busy}
             run={run}
             saveProduct={saveProductWithImage}
+            promotions={promotions}
+            refresh={refresh}
             logout={logout}
           />
         )}
-        {["MANAGER", "OWNER"].includes(role) && view === "promotions" && (
+        {role === "OWNER" && view === "promotions" && (
           <section className="panel">
-            <h2>Promo customer</h2>
+            <h2>Promo customer · read only</h2>
             <p>
-              Promo hanya menjadi materi komunikasi. Harga checkout tidak
-              berubah otomatis dan tetap dihitung server-side.
+              Rule promo dikelola Manager dan divalidasi server pada checkout.
             </p>
             {promotions.map((promotion) => (
-              <PromotionEditor
-                key={promotion.id}
-                promotion={promotion}
-                busy={busy}
-                onSave={(body) =>
-                  run(async () => {
-                    await api("promotion", body);
-                    setMessage("Promo diperbarui");
-                  })
-                }
-              />
+              <div className="line" key={promotion.id}>
+                <strong>{promotion.title}</strong>
+                <span className="badge">{promotion.status}</span>
+              </div>
             ))}
             {!promotions.length && <p>Belum ada promo tersimpan.</p>}
-            <h2>Tambah promo</h2>
-            <PromotionEditor
-              busy={busy}
-              onSave={(body) =>
-                run(async () => {
-                  await api("promotion", body);
-                  setMessage("Promo dibuat");
-                })
-              }
-            />
           </section>
         )}
         {role === "OWNER" && view === "products" && (
@@ -5854,6 +5859,14 @@ function Order({
   const [details, setDetails] = useState(null);
   const [detailError, setDetailError] = useState("");
   const [expanded, setExpanded] = useState(false);
+  let promotionSnapshot = null;
+  try {
+    promotionSnapshot = o.promotion_snapshot
+      ? typeof o.promotion_snapshot === "string"
+        ? JSON.parse(o.promotion_snapshot)
+        : o.promotion_snapshot
+      : null;
+  } catch {}
   const adminNext = {
     PENDING: "CONFIRMED",
   };
@@ -6050,6 +6063,7 @@ function Order({
                 {orderItemQuantityLabel(item)} × {item.name}
                 {item.prep_station &&
                   ` · ${item.prep_station === "KITCHEN" ? "Dapur" : "Admin"}`}
+                {item.is_promotion_gift === 1 && " · HADIAH PROMO"}
                 {item.note && (
                   <small className="order-item-note">
                     Catatan: {item.note}
@@ -6059,6 +6073,45 @@ function Order({
               <strong>{money(orderItemTotal(item))}</strong>
             </div>
           ))}
+          {promotionSnapshot && (
+            <div className="order-promotion-breakdown">
+              <small>PROMO</small>
+              <strong>{promotionSnapshot.name || "Promo Warkost"}</strong>
+              <span>{promotionSnapshot.family?.replaceAll("_", " ")}</span>
+              {promotionSnapshot.gift ? (
+                <span>
+                  Gratis {promotionSnapshot.gift.quantity} ×{" "}
+                  {promotionSnapshot.gift.name}
+                </span>
+              ) : (
+                <span>
+                  Diskon {money(o.promotion_discount || o.voucher_discount)}
+                </span>
+              )}
+            </div>
+          )}
+          {["ADMIN", "OWNER"].includes(role) && (
+            <div className="order-financial-breakdown">
+              <span>
+                Subtotal <strong>{money(o.subtotal)}</strong>
+              </span>
+              <span>
+                Promotion Discount{" "}
+                <strong>
+                  −{money(o.promotion_discount || o.voucher_discount)}
+                </strong>
+              </span>
+              <span>
+                Loyalty <strong>−{money(o.loyalty_discount)}</strong>
+              </span>
+              <span>
+                Delivery <strong>{money(o.delivery_fee)}</strong>
+              </span>
+              <span>
+                Final Total <strong>{money(o.total)}</strong>
+              </span>
+            </div>
+          )}
           <small>Riwayat status</small>
           {details.events.map((event, i) => (
             <p key={i}>
