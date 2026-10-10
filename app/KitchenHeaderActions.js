@@ -100,8 +100,10 @@ export default function KitchenHeaderActions() {
       logoutButton?.classList.add("kitchen-header-logout");
       const badge = notificationButton?.querySelector(".notification-count");
       if (badge) {
-        badge.textContent = unread > 99 ? "99+" : String(unread);
-        badge.style.display = unread > 0 ? "inline-flex" : "none";
+        const nextText = unread > 99 ? "99+" : String(unread);
+        const nextDisplay = unread > 0 ? "inline-flex" : "none";
+        if (badge.textContent !== nextText) badge.textContent = nextText;
+        if (badge.style.display !== nextDisplay) badge.style.display = nextDisplay;
       }
     };
 
