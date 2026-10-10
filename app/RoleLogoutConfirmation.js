@@ -4,7 +4,7 @@ import { useEffect } from "react";
 
 const LOGOUT_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></svg>`;
 
-const TARGET_ROLES = new Set(["ADMIN", "DRIVER", "CUSTOMER"]);
+const TARGET_ROLES = new Set(["ADMIN", "DRIVER", "CUSTOMER", "MANAGER"]);
 
 const COPY = {
   ADMIN: {
@@ -24,6 +24,12 @@ const COPY = {
     title: "Keluar dari akun Customer?",
     description:
       "Pesanan dan riwayat akun tetap tersimpan. Anda dapat masuk kembali kapan saja.",
+  },
+  MANAGER: {
+    kicker: "AKHIRI SESI MANAGER",
+    title: "Keluar dari akun Manager?",
+    description:
+      "Pastikan perubahan produk, stok, promo, dan pengaturan operasional yang sedang dikerjakan sudah tersimpan sebelum mengakhiri sesi.",
   },
 };
 
