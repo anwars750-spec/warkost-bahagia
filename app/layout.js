@@ -46,6 +46,7 @@ import "./manager-subcategory-polish.css";
 import "./manager-subcategory-final-polish.css";
 import "./manager-stock-polish.css";
 import "./manager-stock-action-green.css";
+import "./manager-stock-drawer-v2.css";
 import "./manager-notification-popover.css";
 import "./manager-promotion-center.css";
 import "./manager-promotion-ui-polish.css";
