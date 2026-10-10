@@ -41,6 +41,7 @@ import "./manager-dashboard-title-size.css";
 import "./manager-icon-precision.css";
 import "./manager-products-ui-polish.css";
 import "./manager-products-final-fix.css";
+import "./manager-products-mobile-v2.css";
 import CodBatchSettlementCenter from "./CodBatchSettlementCenter";
 import DriverCodBatchEventBridge from "./DriverCodBatchEventBridge";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
