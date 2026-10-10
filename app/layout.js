@@ -57,7 +57,9 @@ import "./driver-control-center-v2.css";
 import "./driver-home-cod-dedupe.css";
 import "./driver-runtime-transition.css";
 import "./driver-mobile-final.css";
+import "./driver-logo-fix.css";
 import DriverRuntimeBootstrap from "./DriverRuntimeBootstrap";
+import DriverLogoFix from "./DriverLogoFix";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
 import AdminCodLauncherButton from "./AdminCodLauncherButton";
 import KitchenDashboardFast from "./KitchenDashboardFast";
@@ -83,6 +85,7 @@ export default function RootLayout({ children }) {
       <body>
         {children}
         <DriverRuntimeBootstrap />
+        <DriverLogoFix />
         <KitchenFlashGuard />
         <KitchenDashboardFast />
         <AdminCodBatchEventBridge />
