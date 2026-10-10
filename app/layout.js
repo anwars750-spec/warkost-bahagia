@@ -56,6 +56,7 @@ import "./manager-promotion-drawer-v2.css";
 import "./driver-control-center-v2.css";
 import "./driver-home-cod-dedupe.css";
 import "./driver-runtime-transition.css";
+import "./driver-mobile-final.css";
 import DriverRuntimeBootstrap from "./DriverRuntimeBootstrap";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
 import AdminCodLauncherButton from "./AdminCodLauncherButton";
