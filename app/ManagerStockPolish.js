@@ -62,16 +62,15 @@ function imageFor(master, name) {
 
 async function loadMaster() {
   try {
-    const [inventoryResponse, stockResponse] = await Promise.all([
-      fetch("/api/inventory", { cache: "no-store" }),
-      fetch("/api/stock", { cache: "no-store" }),
-    ]);
-    const inventory = inventoryResponse.ok ? await inventoryResponse.json() : { products: [] };
-    const stock = stockResponse.ok ? await stockResponse.json() : { products: [] };
-    return { inventory, stock };
+    const response = await fetch("/api/inventory", { cache: "no-store" });
+    return response.ok ? await response.json() : { products: [] };
   } catch {
-    return { inventory: { products: [] }, stock: { products: [] } };
+    return { products: [] };
   }
+}
+
+function setText(node, value) {
+  if (node && node.textContent !== value) node.textContent = value;
 }
 
 function ensureSummary(page, rows, masterByName) {
@@ -90,12 +89,10 @@ function ensureSummary(page, rows, masterByName) {
   const counts = { total: rows.length, safe: 0, low: 0, out: 0 };
   rows.forEach((row) => {
     const { name } = parseIdentity(row);
-    const state = stockState(row, masterByName.get(normalize(name)));
-    counts[state] += 1;
+    counts[stockState(row, masterByName.get(normalize(name)))] += 1;
   });
-  const values = [counts.total, counts.safe, counts.low, counts.out];
-  summary.querySelectorAll("[data-value]").forEach((node, index) => {
-    node.textContent = String(values[index] ?? 0);
+  [counts.total, counts.safe, counts.low, counts.out].forEach((value, index) => {
+    setText(summary.querySelectorAll("[data-value]")[index], String(value));
   });
 }
 
@@ -105,21 +102,28 @@ function applyFilters(page) {
   const status = page.querySelector("[data-stock-status]")?.value || "all";
   let visible = 0;
   page.querySelectorAll(".manager-stock-row").forEach((row) => {
-    const matchSearch = !search || normalize(row.dataset.search).includes(search);
-    const matchCategory = category === "all" || row.dataset.category === category;
-    const matchStatus = status === "all" || row.dataset.stockState === status;
-    const show = matchSearch && matchCategory && matchStatus;
+    const show =
+      (!search || normalize(row.dataset.search).includes(search)) &&
+      (category === "all" || row.dataset.category === category) &&
+      (status === "all" || row.dataset.stockState === status);
     row.hidden = !show;
     if (show) visible += 1;
   });
-  const counter = page.querySelector("[data-stock-visible]");
-  if (counter) counter.textContent = `${visible} item`;
+  setText(page.querySelector("[data-stock-visible]"), `${visible} item`);
 }
 
 function createDrawer(page, rows, masterByName) {
-  let drawer = page.querySelector(".manager-stock-drawer");
-  if (drawer) return drawer;
+  let drawer = document.querySelector('[data-manager-stock-drawer="true"]');
+  if (drawer) {
+    const previousRows = drawer.__stockRows || [];
+    const sameRows = previousRows.length === rows.length && previousRows.every((row, index) => row === rows[index]);
+    if (sameRows) return drawer;
+    drawer.remove();
+  }
+
   drawer = document.createElement("div");
+  drawer.dataset.managerStockDrawer = "true";
+  drawer.__stockRows = rows;
   drawer.className = "manager-stock-drawer-shell";
   drawer.hidden = true;
   drawer.innerHTML = `
@@ -163,10 +167,13 @@ function createDrawer(page, rows, masterByName) {
     const metrics = metricMap(row);
     const master = masterByName.get(normalize(name));
     const target = drawer.querySelector("[data-stock-selected]");
-    target.innerHTML = "";
+    target.replaceChildren();
     const img = document.createElement("img");
     img.src = imageFor(master, name);
     img.alt = "";
+    img.addEventListener("error", () => {
+      if (!img.src.endsWith(FALLBACK_IMAGE)) img.src = FALLBACK_IMAGE;
+    });
     const info = document.createElement("div");
     const strong = document.createElement("strong");
     strong.textContent = name;
@@ -192,13 +199,11 @@ function createDrawer(page, rows, masterByName) {
     event.preventDefault();
     const row = rows[Number(select.value || 0)];
     if (!row) return;
-    const quantity = drawer.querySelector("[data-stock-quantity]").value;
-    const reason = drawer.querySelector("[data-stock-reason]").value.trim();
     const quantityInput = row.querySelector('input[name="quantity"]');
     const reasonInput = row.querySelector('input[name="reason"]');
     if (!quantityInput || !reasonInput) return;
-    quantityInput.value = quantity;
-    reasonInput.value = reason;
+    quantityInput.value = drawer.querySelector("[data-stock-quantity]").value;
+    reasonInput.value = drawer.querySelector("[data-stock-reason]").value.trim();
     row.requestSubmit();
     close();
     drawer.querySelector("[data-stock-quantity]").value = "";
@@ -232,7 +237,11 @@ function ensureToolbar(page, rows, masterByName) {
     toolbar.querySelectorAll("input, select").forEach((control) => control.addEventListener("input", () => applyFilters(page)));
   }
   const drawer = createDrawer(page, rows, masterByName);
-  toolbar.querySelector(".manager-stock-adjust-all")?.addEventListener("click", () => drawer.openFor(rows[0]));
+  const adjust = toolbar.querySelector(".manager-stock-adjust-all");
+  if (adjust && adjust.dataset.bound !== "1") {
+    adjust.dataset.bound = "1";
+    adjust.addEventListener("click", () => drawer.openFor(rows[0]));
+  }
 }
 
 function decorateRows(page, rows, masterByName) {
@@ -295,36 +304,39 @@ function ensureListHeader(page) {
     const columns = document.createElement("div");
     columns.className = "manager-stock-columns";
     columns.innerHTML = `<span>Produk</span><span>Current / Reserved / Available</span><span>Status</span><span>Aksi</span>`;
-    const heading = list.querySelector(".manager-stock-list-heading");
-    heading?.insertAdjacentElement("afterend", columns);
+    list.querySelector(".manager-stock-list-heading")?.insertAdjacentElement("afterend", columns);
   }
 }
 
 async function enhance(page) {
   if (page.dataset.stockEnhancing === "1") return;
   page.dataset.stockEnhancing = "1";
-  page.classList.add("manager-stock-polished");
-  const title = page.querySelector(".manager-page-title p");
-  if (title) title.textContent = "Pantau dan sesuaikan stok Makanan, Minuman, dan Bahan Baku dari satu ledger. Gambar mengikuti Product Master.";
+  try {
+    page.classList.add("manager-stock-polished");
+    const title = page.querySelector(".manager-page-title p");
+    const subtitle = "Pantau dan sesuaikan stok Makanan, Minuman, dan Bahan Baku dari satu ledger. Gambar mengikuti Product Master.";
+    if (title && title.textContent !== subtitle) title.textContent = subtitle;
 
-  const { inventory } = await loadMaster();
-  const masterByName = new Map((inventory.products || []).map((product) => [normalize(product.name), product]));
-  const rows = [...page.querySelectorAll(".manager-stock-row")];
-  decorateRows(page, rows, masterByName);
-  ensureSummary(page, rows, masterByName);
-  ensureToolbar(page, rows, masterByName);
-  ensureListHeader(page);
+    const inventory = await loadMaster();
+    const masterByName = new Map((inventory.products || []).map((product) => [normalize(product.name), product]));
+    const rows = [...page.querySelectorAll(".manager-stock-row")];
+    decorateRows(page, rows, masterByName);
+    ensureSummary(page, rows, masterByName);
+    ensureToolbar(page, rows, masterByName);
+    ensureListHeader(page);
 
-  const drawer = createDrawer(page, rows, masterByName);
-  rows.forEach((row) => {
-    const action = row.querySelector(".manager-stock-action");
-    if (action && action.dataset.bound !== "1") {
-      action.dataset.bound = "1";
-      action.addEventListener("click", () => drawer.openFor(row));
-    }
-  });
-  applyFilters(page);
-  page.dataset.stockEnhancing = "0";
+    const drawer = createDrawer(page, rows, masterByName);
+    rows.forEach((row) => {
+      const action = row.querySelector(".manager-stock-action");
+      if (action && action.dataset.bound !== "1") {
+        action.dataset.bound = "1";
+        action.addEventListener("click", () => drawer.openFor(row));
+      }
+    });
+    applyFilters(page);
+  } finally {
+    page.dataset.stockEnhancing = "0";
+  }
 }
 
 export default function ManagerStockPolish() {
@@ -342,7 +354,11 @@ export default function ManagerStockPolish() {
     schedule();
     const observer = new MutationObserver(schedule);
     observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      document.querySelector('[data-manager-stock-drawer="true"]')?.remove();
+      document.documentElement.classList.remove("manager-stock-drawer-open");
+    };
   }, []);
   return null;
 }
