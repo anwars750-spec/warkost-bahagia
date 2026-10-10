@@ -37,6 +37,7 @@ import "./customer-catalog-final-polish.css";
 import "./customer-quantity-unit-final.css";
 import "./manager-control-center.css";
 import "./manager-dashboard-ui-polish.css";
+import "./manager-dashboard-title-size.css";
 import CodBatchSettlementCenter from "./CodBatchSettlementCenter";
 import DriverCodBatchEventBridge from "./DriverCodBatchEventBridge";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
