@@ -953,10 +953,46 @@ function Subcategories({ inventory, busy, mutate }) {
 }
 
 function Stock({ stock, busy, mutate }) {
-  const [filter, setFilter] = useState("all");
-  const products = stock.products.filter(
-    (row) => filter === "all" || row.category_name === filter,
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [productStatus, setProductStatus] = useState("all");
+  const [healthFilter, setHealthFilter] = useState("all");
+  const [selectedProductId, setSelectedProductId] = useState(null);
+  const selectedProduct = stock.products.find(
+    (row) => Number(row.id) === Number(selectedProductId),
   );
+  const isActive = (row) => row.active === true || Number(row.active) === 1;
+  const healthLabel = (status) =>
+    status === "OUT" ? "Habis" : status === "LOW" ? "Rendah" : "Aman";
+  const products = stock.products.filter((row) => {
+    const active = isActive(row);
+    return (
+      (categoryFilter === "all" || row.category_name === categoryFilter) &&
+      (productStatus === "all" ||
+        (productStatus === "active" ? active : !active)) &&
+      (healthFilter === "all" || row.stock_status === healthFilter)
+    );
+  });
+  useEffect(() => {
+    if (!selectedProduct) return;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setSelectedProductId(null);
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [selectedProduct]);
+
+  async function submitAdjustment(event) {
+    event.preventDefault();
+    if (!selectedProduct) return;
+    const form = new FormData(event.currentTarget);
+    const succeeded = await mutate("stock", {
+      productId: selectedProduct.id,
+      quantity: Number(form.get("quantity")),
+      reason: form.get("reason"),
+    });
+    if (succeeded) setSelectedProductId(null);
+  }
+
   return (
     <div className="manager-stock-page">
       <div className="manager-page-title">
@@ -972,33 +1008,62 @@ function Stock({ stock, busy, mutate }) {
         {["all", "Makanan", "Minuman", "Bahan Baku"].map((name) => (
           <button
             key={name}
-            className={filter === name ? "active" : ""}
-            onClick={() => setFilter(name)}
+            className={categoryFilter === name ? "active" : ""}
+            onClick={() => setCategoryFilter(name)}
           >
             {name === "all" ? "Semua" : name}
           </button>
         ))}
       </div>
+      <div className="manager-stock-filters">
+        <div aria-label="Filter status produk">
+          {[
+            ["all", "Semua"],
+            ["active", "Aktif"],
+            ["inactive", "Nonaktif"],
+          ].map(([value, label]) => (
+            <button
+              type="button"
+              key={value}
+              className={productStatus === value ? "active" : ""}
+              onClick={() => setProductStatus(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <label>
+          Kondisi stok
+          <select
+            value={healthFilter}
+            onChange={(event) => setHealthFilter(event.target.value)}
+          >
+            <option value="all">Semua kondisi</option>
+            <option value="OK">Aman</option>
+            <option value="LOW">Rendah</option>
+            <option value="OUT">Habis</option>
+          </select>
+        </label>
+      </div>
       <section className="manager-card manager-stock-list">
         {products.map((row) => (
-          <form
+          <article
             key={row.id}
-            className="manager-stock-row"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const form = new FormData(event.currentTarget);
-              mutate("stock", {
-                productId: row.id,
-                quantity: Number(form.get("quantity")),
-                reason: form.get("reason"),
-              });
-            }}
+            className={`manager-stock-row ${isActive(row) ? "" : "inactive"}`}
           >
-            <div>
-              <strong>{row.name}</strong>
-              <small>
-                {row.category_name} · {row.subcategory_name || "Umum"}
-              </small>
+            <div className="manager-stock-product">
+              <img src={row.image_url || "/demo/promo-warkost.webp"} alt="" />
+              <span>
+                <strong>{row.name}</strong>
+                <small>
+                  {row.category_name} · {row.subcategory_name || "Umum"}
+                </small>
+                <span
+                  className={`manager-status ${isActive(row) ? "active" : "inactive"}`}
+                >
+                  {isActive(row) ? "Aktif" : "Nonaktif"}
+                </span>
+              </span>
             </div>
             <dl>
               <div>
@@ -1023,33 +1088,130 @@ function Stock({ stock, busy, mutate }) {
                 <dt>Status</dt>
                 <dd>
                   <span
-                    className={`manager-status ${row.stock_status === "OK" ? "active" : "warning"}`}
+                    className={`manager-status stock-${String(row.stock_status).toLowerCase()}`}
                   >
-                    {row.stock_status}
+                    {healthLabel(row.stock_status)}
                   </span>
                 </dd>
               </div>
             </dl>
-            <input
-              name="quantity"
-              type="number"
-              step={row.order_step_quantity || 1}
-              placeholder="+ / − qty"
-              required
-            />
-            <input
-              name="reason"
-              minLength="3"
-              maxLength="240"
-              placeholder="Alasan penyesuaian"
-              required
-            />
-            <button className="manager-primary" disabled={busy}>
-              Simpan
+            <button
+              type="button"
+              className="manager-stock-action"
+              onClick={() => setSelectedProductId(row.id)}
+            >
+              Atur Stok
             </button>
-          </form>
+          </article>
         ))}
+        {!products.length && (
+          <div className="manager-empty">Tidak ada stok sesuai filter.</div>
+        )}
       </section>
+      {selectedProduct && (
+        <div
+          className="manager-stock-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget)
+              setSelectedProductId(null);
+          }}
+        >
+          <section
+            className="manager-stock-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="manager-stock-drawer-title"
+          >
+            <header>
+              <div>
+                <span>PENYESUAIAN INVENTORI</span>
+                <h2 id="manager-stock-drawer-title">Atur Stok</h2>
+              </div>
+              <button
+                type="button"
+                aria-label="Tutup pengaturan stok"
+                onClick={() => setSelectedProductId(null)}
+              >
+                ×
+              </button>
+            </header>
+            <div
+              className={`manager-stock-drawer-product ${isActive(selectedProduct) ? "" : "inactive"}`}
+            >
+              <img
+                src={selectedProduct.image_url || "/demo/promo-warkost.webp"}
+                alt=""
+              />
+              <div>
+                <strong>{selectedProduct.name}</strong>
+                <small>
+                  {selectedProduct.category_name} ·{" "}
+                  {selectedProduct.subcategory_name || "Umum"}
+                </small>
+                <span
+                  className={`manager-status ${isActive(selectedProduct) ? "active" : "inactive"}`}
+                >
+                  {isActive(selectedProduct) ? "Aktif" : "Nonaktif"}
+                </span>
+              </div>
+            </div>
+            {!isActive(selectedProduct) && (
+              <p className="manager-stock-inactive-note">
+                Produk ini nonaktif untuk penjualan. Penyesuaian hanya mengubah
+                inventori fisik dan tidak mengaktifkan produk.
+              </p>
+            )}
+            <dl className="manager-stock-drawer-metrics">
+              {[
+                ["Current", selectedProduct.stock_quantity],
+                ["Reserved", selectedProduct.reserved_quantity],
+                ["Available", selectedProduct.available_quantity],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <dt>{label}</dt>
+                  <dd>
+                    {formatStockQuantity(value, selectedProduct.stock_unit)}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <form onSubmit={submitAdjustment}>
+              <label>
+                Penyesuaian ({selectedProduct.stock_unit || "PCS"})
+                <input
+                  name="quantity"
+                  type="number"
+                  step="1"
+                  inputMode="numeric"
+                  placeholder="Contoh: +10 atau -5"
+                  required
+                />
+              </label>
+              <label>
+                Alasan
+                <textarea
+                  name="reason"
+                  minLength="3"
+                  maxLength="240"
+                  placeholder="Contoh: Restock supplier"
+                  required
+                />
+              </label>
+              <div className="manager-stock-drawer-actions">
+                <button
+                  type="button"
+                  onClick={() => setSelectedProductId(null)}
+                >
+                  Batal
+                </button>
+                <button className="manager-primary" disabled={busy}>
+                  Simpan Penyesuaian
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
@@ -1069,13 +1231,14 @@ export default function ManagerControlCenter({
 }) {
   const [initialAdd, setInitialAdd] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const mutate = (action, body) =>
-    new Promise((resolve) =>
-      run(async () => {
-        await api(action, body);
-        resolve();
-      }),
-    );
+  const mutate = async (action, body) => {
+    let succeeded = false;
+    await run(async () => {
+      await api(action, body);
+      succeeded = true;
+    });
+    return succeeded;
+  };
   return (
     <div className="manager-control-center">
       {view === "manager-dashboard" && (
