@@ -49,6 +49,7 @@ import "./manager-notification-popover.css";
 import "./manager-promotion-center.css";
 import "./manager-promotion-ui-polish.css";
 import "./manager-promotion-actions-polish.css";
+import "./manager-promotion-icon-single-fix.css";
 import CodBatchSettlementCenter from "./CodBatchSettlementCenter";
 import DriverCodBatchEventBridge from "./DriverCodBatchEventBridge";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
