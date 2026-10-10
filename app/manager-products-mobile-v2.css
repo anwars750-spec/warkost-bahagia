@@ -1,0 +1,300 @@
+/* Manager Products & Menu — mobile layout v2
+ * Focus: readable product cards, zero clipped metadata, clean form flow.
+ * Visual only; does not change Product Master or routing logic.
+ */
+
+@media (max-width: 760px) {
+  .manager-dashboard-polished .manager-products-page,
+  .manager-dashboard-polished .manager-products-page * {
+    box-sizing: border-box;
+  }
+
+  .manager-dashboard-polished .manager-products-page {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: clip;
+    padding-inline: 8px !important;
+    padding-bottom: 22px;
+  }
+
+  /* Toolbar stays compact but never squeezes its children. */
+  .manager-dashboard-polished .manager-product-tools {
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .manager-dashboard-polished .manager-product-tools > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .manager-dashboard-polished .manager-product-tools input {
+    grid-column: 1 / -1;
+  }
+
+  .manager-dashboard-polished .manager-product-tools select {
+    width: 100%;
+    text-overflow: ellipsis;
+  }
+
+  .manager-dashboard-polished .manager-product-tools select:last-of-type {
+    grid-column: 1 / -1 !important;
+  }
+
+  .manager-dashboard-polished .manager-product-tools .manager-primary {
+    grid-column: 1 / -1 !important;
+    width: 100%;
+  }
+
+  /* Product list becomes a deliberate vertical card list on mobile. */
+  .manager-dashboard-polished .manager-product-list {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden !important;
+  }
+
+  .manager-dashboard-polished .manager-product-list .manager-table-wrap {
+    width: 100%;
+    min-width: 0;
+    overflow: visible !important;
+    padding: 10px !important;
+  }
+
+  .manager-dashboard-polished .manager-product-list table {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: auto !important;
+  }
+
+  .manager-dashboard-polished .manager-product-list thead {
+    display: none !important;
+  }
+
+  .manager-dashboard-polished .manager-product-list tbody {
+    display: grid !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 10px;
+  }
+
+  .manager-dashboard-polished .manager-product-list tbody tr {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding: 13px 14px !important;
+    overflow: hidden;
+    border: 1px solid #eaded5 !important;
+    border-radius: 16px;
+    background: #fffdfa !important;
+    box-shadow: 0 7px 20px rgba(64, 34, 20, 0.045);
+  }
+
+  .manager-dashboard-polished .manager-product-list tbody tr:hover {
+    background: #fffdfa !important;
+  }
+
+  .manager-dashboard-polished .manager-product-list tbody td {
+    display: grid !important;
+    grid-template-columns: 88px minmax(0, 1fr) !important;
+    align-items: center;
+    gap: 10px;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    padding: 7px 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    text-overflow: clip !important;
+    border: 0 !important;
+    border-bottom: 1px solid #f2e8e1 !important;
+    color: #4a342b;
+    font-size: 0.75rem;
+    line-height: 1.35;
+  }
+
+  /* Product identity gets its own full-width header row. */
+  .manager-dashboard-polished .manager-product-list tbody td:first-child {
+    display: grid !important;
+    grid-template-columns: 62px minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 11px !important;
+    width: 100% !important;
+    padding: 0 0 12px !important;
+    margin-bottom: 2px !important;
+    border-bottom: 1px solid #eadfd7 !important;
+  }
+
+  .manager-dashboard-polished .manager-product-thumb {
+    width: 62px !important;
+    height: 62px !important;
+    min-width: 62px;
+    border-radius: 13px;
+    object-fit: cover;
+  }
+
+  .manager-dashboard-polished .manager-product-list tbody td:first-child > span {
+    display: block !important;
+    min-width: 0 !important;
+    width: 100%;
+  }
+
+  .manager-dashboard-polished .manager-product-list tbody td:first-child strong {
+    display: block !important;
+    width: 100%;
+    max-width: 100%;
+    overflow: visible !important;
+    -webkit-line-clamp: unset !important;
+    -webkit-box-orient: initial !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    color: #2b170f;
+    font-size: 0.88rem !important;
+    font-weight: 850;
+    line-height: 1.28;
+  }
+
+  .manager-dashboard-polished .manager-product-list tbody td:first-child small {
+    display: block;
+    margin-top: 3px;
+    color: #9a877c;
+    font-size: 0.64rem !important;
+  }
+
+  /* Metadata labels: fixed label column + flexible value column. */
+  .manager-dashboard-polished .manager-product-list tbody td:nth-child(n+2):nth-child(-n+7)::before {
+    display: block !important;
+    min-width: 0;
+    margin: 0 !important;
+    color: #9a7d6e;
+    font-size: 0.59rem !important;
+    font-weight: 850;
+    letter-spacing: 0.045em;
+    line-height: 1.15;
+    text-transform: uppercase;
+  }
+
+  .manager-dashboard-polished .manager-product-list tbody td:nth-child(2)::before { content: "Kategori"; }
+  .manager-dashboard-polished .manager-product-list tbody td:nth-child(3)::before { content: "Subkategori"; }
+  .manager-dashboard-polished .manager-product-list tbody td:nth-child(4)::before { content: "Harga"; }
+  .manager-dashboard-polished .manager-product-list tbody td:nth-child(5)::before { content: "Stok"; }
+  .manager-dashboard-polished .manager-product-list tbody td:nth-child(6)::before { content: "Status"; }
+  .manager-dashboard-polished .manager-product-list tbody td:nth-child(7)::before { content: "Routing"; }
+
+  .manager-dashboard-polished .manager-product-list tbody td:nth-child(4),
+  .manager-dashboard-polished .manager-product-list tbody td:nth-child(5) {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .manager-dashboard-polished .manager-product-list tbody td:nth-child(6) .manager-status {
+    justify-self: start;
+    white-space: nowrap !important;
+  }
+
+  .manager-dashboard-polished .manager-product-list tbody td:nth-child(7) {
+    grid-template-columns: 88px minmax(0, 1fr) !important;
+    padding: 8px 0 !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+    color: #39714d !important;
+  }
+
+  .manager-dashboard-polished .manager-product-list tbody td:nth-child(8) {
+    display: block !important;
+    width: 100% !important;
+    padding: 11px 0 0 !important;
+    border-bottom: 0 !important;
+  }
+
+  .manager-dashboard-polished .manager-product-list tbody td:nth-child(8) button {
+    width: 100% !important;
+    min-height: 40px;
+    margin: 0 !important;
+    border-radius: 11px !important;
+    background: #fff5ee !important;
+    border-color: #ebc8b5 !important;
+    color: #983b21 !important;
+    font-weight: 800;
+  }
+
+  /* Mobile add/edit product flow. */
+  .manager-dashboard-polished .manager-products-page:has(.manager-product-form) {
+    padding-bottom: 108px;
+  }
+
+  .manager-dashboard-polished .manager-product-form {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+  }
+
+  .manager-dashboard-polished .manager-product-form > header {
+    align-items: flex-start;
+  }
+
+  .manager-dashboard-polished .manager-product-form > header > div {
+    min-width: 0;
+    padding-right: 4px;
+  }
+
+  .manager-dashboard-polished .manager-product-form > header h2,
+  .manager-dashboard-polished .manager-product-form > header p {
+    overflow-wrap: break-word;
+  }
+
+  .manager-dashboard-polished .manager-form-grid,
+  .manager-dashboard-polished .manager-form-grid > * {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .manager-dashboard-polished .manager-form-grid input,
+  .manager-dashboard-polished .manager-form-grid select,
+  .manager-dashboard-polished .manager-form-grid textarea {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .manager-dashboard-polished .manager-switch {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .manager-dashboard-polished .manager-product-form > .manager-primary {
+    width: calc(100% - 28px) !important;
+    left: auto;
+    right: auto;
+  }
+}
+
+@media (max-width: 390px) {
+  .manager-dashboard-polished .manager-product-list tbody td {
+    grid-template-columns: 80px minmax(0, 1fr) !important;
+    gap: 8px;
+  }
+
+  .manager-dashboard-polished .manager-product-list tbody td:nth-child(7) {
+    grid-template-columns: 80px minmax(0, 1fr) !important;
+  }
+
+  .manager-dashboard-polished .manager-product-list tbody td:first-child {
+    grid-template-columns: 58px minmax(0, 1fr) !important;
+  }
+
+  .manager-dashboard-polished .manager-product-thumb {
+    width: 58px !important;
+    height: 58px !important;
+    min-width: 58px;
+  }
+}
