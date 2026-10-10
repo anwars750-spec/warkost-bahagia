@@ -1,3 +1,5 @@
+@import "./driver-ux-final-v3.css";
+
 /* Prevent the legacy Driver workspace from flashing while Driver Center V2
    refreshes its session immediately after login. */
 body.driver-v2-transition:not(.driver-v2-active) {
