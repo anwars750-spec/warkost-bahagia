@@ -259,6 +259,10 @@ test("migration MySQL memetakan legacy Cashier ke Admin sebelum enum final", () 
 
 test("UI Manager/Owner tersedia tanpa mengandalkan hiding sebagai guard", () => {
   const page = fs.readFileSync(path.resolve("app/page.js"), "utf8");
+  const manager = fs.readFileSync(
+    path.resolve("app/ManagerControlCenter.js"),
+    "utf8",
+  );
   assert.match(page, /role === "MANAGER"/);
   assert.match(page, /setView\("staff"\)/);
   assert.doesNotMatch(page, />Kasir · minuman</);
@@ -273,9 +277,12 @@ test("UI Manager/Owner tersedia tanpa mengandalkan hiding sebagai guard", () => 
     managerNavigationStart,
     ownerNavigationStart,
   );
-  assert.match(managerNavigation, />Produk</);
+  assert.match(managerNavigation, />\s*Produk &amp; Menu\s*</);
+  assert.match(managerNavigation, />\s*Subkategori\s*</);
   assert.match(managerNavigation, />Promo</);
   assert.match(managerNavigation, />Stok</);
+  assert.match(manager, /manager-dashboard/);
+  assert.match(manager, /manager-mobile-nav/);
   assert.doesNotMatch(managerNavigation, /setView\("settings"\)/);
   assert.match(page.slice(ownerNavigationStart), /setView\("settings"\)/);
   assert.match(page, /role === "OWNER" && view === "settings"/);

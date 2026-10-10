@@ -468,12 +468,14 @@ test("mixed order dirutekan Food ke Kitchen dan Drink/Raw ke Admin", async () =>
 
 test("kontrak UI menyediakan kontrol Manager dan read-only Admin/Kitchen", () => {
   const page = source("app/page.js");
+  const manager = source("app/ManagerControlCenter.js");
   const adminStock = source("app/AdminBeverageStockEnhancerV2.js");
   const seed = source("scripts/seed.mjs");
-  assert.match(page, /Semua subkategori/);
-  assert.match(page, /Bahan Baku/);
-  assert.match(page, /role === "MANAGER" && view === "products"/);
-  assert.match(page, /role === "MANAGER"[\s\S]*?name="quantity"/);
+  assert.match(manager, /Semua subkategori/);
+  assert.match(manager, /Bahan Baku/);
+  assert.match(page, /<ManagerControlCenter/);
+  assert.match(manager, /view === "products"/);
+  assert.match(manager, /name="quantity"/);
   assert.match(page, /Stok Makanan/);
   assert.match(page, /Tampilan stok read-only sesuai tanggung jawab role/);
   assert.match(adminStock, /Stok Minuman &amp; Bahan Baku/);

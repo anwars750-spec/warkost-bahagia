@@ -11,6 +11,7 @@ import AdminOrderModalEnhancer from "./AdminOrderModalEnhancer";
 import AdminPrinterController from "./AdminPrinterController";
 import AdminUiEnhancer from "./AdminUiEnhancer";
 import ConversationChat from "./ConversationChat";
+import ManagerControlCenter from "./ManagerControlCenter";
 import {
   ADMIN_ORDER_FILTERS,
   adminOrderCounts,
@@ -39,7 +40,9 @@ const orderItemQuantityLabel = (item) =>
     ? formatStockQuantity(item.quantity, item.stock_unit)
     : item.quantity;
 const orderItemPriceLabel = (item) =>
-  item.stock_unit === "GRAM" ? productPriceLabel(item, money) : money(item.price);
+  item.stock_unit === "GRAM"
+    ? productPriceLabel(item, money)
+    : money(item.price);
 const orderItemTotal = (item) => productLineTotal(item, item.quantity);
 const whatsappLink = (number, text) =>
   `https://wa.me/${String(number || "").replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
@@ -301,7 +304,7 @@ export default function App() {
         setView((prev) =>
           prev === "menu"
             ? me.user.role === "MANAGER"
-              ? "products"
+              ? "manager-dashboard"
               : "orders"
             : prev,
         );
@@ -412,6 +415,14 @@ export default function App() {
           setDashboard(await api("dashboard", undefined, controller.signal));
         if (user.role === "CUSTOMER")
           setAccount(await api("account", undefined, controller.signal));
+        if (user.role === "CUSTOMER")
+          setMenu(await api("menu", undefined, controller.signal));
+        if (user.role === "MANAGER") {
+          setInventory(await api("inventory", undefined, controller.signal));
+          setStock(await api("stock", undefined, controller.signal));
+        }
+        if (["ADMIN", "KITCHEN"].includes(user.role))
+          setStock(await api("stock", undefined, controller.signal));
       } catch (e) {
         if (!controller.signal.aborted) setError(e.message);
       } finally {
@@ -479,7 +490,7 @@ export default function App() {
         data.user.role === "CUSTOMER"
           ? "menu"
           : data.user.role === "MANAGER"
-            ? "products"
+            ? "manager-dashboard"
             : "orders",
       );
     }, action !== "register");
@@ -1168,14 +1179,14 @@ export default function App() {
                     : undefined
                 }
                 onClick={() =>
-                  setView(role === "MANAGER" ? "products" : "orders")
+                  setView(role === "MANAGER" ? "manager-dashboard" : "orders")
                 }
               >
                 {role === "ADMIN" && <AdminNavIcon name="home" />}
                 {role === "ADMIN"
                   ? "Operasional"
                   : role === "MANAGER"
-                    ? "Kelola menu"
+                    ? "Dashboard"
                     : role === "KITCHEN"
                       ? "Dapur"
                       : role === "OWNER"
@@ -1218,9 +1229,14 @@ export default function App() {
               )}
               {role === "MANAGER" && (
                 <>
-                  <button onClick={() => setView("products")}>Produk</button>
-                  <button onClick={() => setView("promotions")}>Promo</button>
+                  <button onClick={() => setView("products")}>
+                    Produk &amp; Menu
+                  </button>
+                  <button onClick={() => setView("subcategories")}>
+                    Subkategori
+                  </button>
                   <button onClick={() => setView("stock")}>Stok</button>
+                  <button onClick={() => setView("promotions")}>Promo</button>
                 </>
               )}
               {role === "OWNER" && (
@@ -1342,6 +1358,15 @@ export default function App() {
           .join(" ")}
       >
         {!((!role || role === "CUSTOMER") && view === "menu") &&
+          !(
+            role === "MANAGER" &&
+            [
+              "manager-dashboard",
+              "products",
+              "subcategories",
+              "stock",
+            ].includes(view)
+          ) &&
           !customerBatchView && (
             <div className="heading">
               <div>
@@ -3803,6 +3828,19 @@ export default function App() {
             )}
           </section>
         )}
+        {role === "MANAGER" && (
+          <ManagerControlCenter
+            view={view}
+            setView={setView}
+            api={api}
+            inventory={inventory}
+            stock={stock}
+            busy={busy}
+            run={run}
+            saveProduct={saveProductWithImage}
+            logout={logout}
+          />
+        )}
         {["MANAGER", "OWNER"].includes(role) && view === "promotions" && (
           <section className="panel">
             <h2>Promo customer</h2>
@@ -3833,134 +3871,6 @@ export default function App() {
                   setMessage("Promo dibuat");
                 })
               }
-            />
-          </section>
-        )}
-        {role === "MANAGER" && view === "products" && (
-          <section className="panel">
-            <h2>Kelola kategori</h2>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const f = new FormData(e.currentTarget);
-                run(async () => {
-                  await api("category", { name: f.get("name") });
-                  e.target.reset();
-                });
-              }}
-            >
-              <label>
-                Nama kategori baru
-                <input name="name" required minLength="2" />
-              </label>
-              <button className="primary" disabled={busy}>
-                Tambah kategori
-              </button>
-            </form>
-            {inventory.categories.map((c) => (
-              <div className="line" key={c.id}>
-                <span>
-                  {c.name} · {c.active ? "Aktif" : "Nonaktif"}
-                </span>
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    run(() =>
-                      api("category", {
-                        id: c.id,
-                        name: c.name,
-                        active: !c.active,
-                      }),
-                    )
-                  }
-                >
-                  {c.active ? "Nonaktifkan" : "Aktifkan"}
-                </button>
-              </div>
-            ))}
-            <h2>Kelola subkategori</h2>
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                const form = new FormData(event.currentTarget);
-                run(async () => {
-                  await api("subcategory", {
-                    name: form.get("name"),
-                    categoryId: Number(form.get("categoryId")),
-                    sortOrder: Number(form.get("sortOrder")),
-                  });
-                  event.target.reset();
-                });
-              }}
-            >
-              <label>
-                Kategori utama
-                <select name="categoryId" required>
-                  {inventory.categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Nama subkategori
-                <input name="name" minLength="2" required />
-              </label>
-              <label>
-                Urutan
-                <input
-                  name="sortOrder"
-                  type="number"
-                  min="0"
-                  defaultValue="10"
-                />
-              </label>
-              <button className="primary" disabled={busy}>
-                Tambah subkategori
-              </button>
-            </form>
-            {inventory.subcategories?.map((subcategory) => (
-              <div className="line" key={subcategory.id}>
-                <span>
-                  {subcategory.category_name} · {subcategory.name} ·{" "}
-                  {subcategory.active ? "Aktif" : "Nonaktif"}
-                </span>
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    run(() =>
-                      api("subcategory", {
-                        id: subcategory.id,
-                        categoryId: subcategory.category_id,
-                        name: subcategory.name,
-                        sortOrder: subcategory.sort_order,
-                        active: !subcategory.active,
-                      }),
-                    )
-                  }
-                >
-                  {subcategory.active ? "Nonaktifkan" : "Aktifkan"}
-                </button>
-              </div>
-            ))}
-            <h2>Kelola produk</h2>
-            {inventory.products.map((p) => (
-              <ProductEditor
-                key={p.id}
-                product={p}
-                categories={inventory.categories}
-                subcategories={inventory.subcategories || []}
-                busy={busy}
-                onSave={saveProductWithImage}
-              />
-            ))}
-            <h2>Tambah menu</h2>
-            <ProductEditor
-              categories={inventory.categories}
-              subcategories={inventory.subcategories || []}
-              busy={busy}
-              onSave={saveProductWithImage}
             />
           </section>
         )}
@@ -4017,7 +3927,7 @@ export default function App() {
             />
           </section>
         )}
-        {["MANAGER", "OWNER", "KITCHEN"].includes(role) && view === "stock" && (
+        {["OWNER", "KITCHEN"].includes(role) && view === "stock" && (
           <section className="panel">
             <h2>{role === "KITCHEN" ? "Stok Makanan" : "Stok produk"}</h2>
             <p>
@@ -4096,8 +4006,8 @@ export default function App() {
                       )}
                       {" · "}
                       {product.stock_status}
-                    {" · "}
-                    {product.active ? "Aktif" : "Nonaktif"}
+                      {" · "}
+                      {product.active ? "Aktif" : "Nonaktif"}
                     </small>
                   </div>
                   {role === "MANAGER" && (
@@ -4111,7 +4021,7 @@ export default function App() {
                       />
                       <input
                         name="reason"
-                      list="stock-adjustment-reasons"
+                        list="stock-adjustment-reasons"
                         minLength="3"
                         maxLength="240"
                         placeholder="Alasan perubahan"

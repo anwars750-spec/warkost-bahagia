@@ -109,6 +109,7 @@ import {
 import { CAPABILITIES } from "../../../lib/rbac.mjs";
 import { createGuestCustomer } from "../../../lib/guest.mjs";
 import { isGuestCustomer } from "../../../lib/customer-kind.mjs";
+import { managerAnalytics } from "../../../lib/manager-analytics.mjs";
 export const runtime = "nodejs";
 const out = (data, status = 200) =>
   NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
@@ -153,6 +154,14 @@ export async function GET(request, { params }) {
         ),
       );
     if (action === "menu") return out(await listCatalog(false));
+    if (action === "manager-dashboard")
+      return out(
+        await managerAnalytics(user, {
+          preset: request.nextUrl.searchParams.get("preset") || "today",
+          from: request.nextUrl.searchParams.get("from") || "",
+          to: request.nextUrl.searchParams.get("to") || "",
+        }),
+      );
     if (action === "inventory") {
       requiredCapability(user, CAPABILITIES.CATALOG_READ);
       return out(await listCatalog(true));
