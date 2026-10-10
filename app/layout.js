@@ -61,6 +61,7 @@ import ManagerDashboardUiPolish from "./ManagerDashboardUiPolish";
 import ManagerSubcategoryPolish from "./ManagerSubcategoryPolish";
 import ManagerStockPolish from "./ManagerStockPolish";
 import ManagerNotificationPopover from "./ManagerNotificationPopover";
+import ManagerNotificationOutsideClose from "./ManagerNotificationOutsideClose";
 
 export const metadata = {
   title: "Warkost Bahagia",
@@ -87,6 +88,7 @@ export default function RootLayout({ children }) {
         <ManagerSubcategoryPolish />
         <ManagerStockPolish />
         <ManagerNotificationPopover />
+        <ManagerNotificationOutsideClose />
         <div id="admin-ui-portal-root" />
       </body>
     </html>
