@@ -1,0 +1,6 @@
+/* Promotion family icon dedupe — keep only the latest ::before line icon. */
+.promo-family-guide article i::after,
+.promo-family-grid button i::after {
+  content: none !important;
+  display: none !important;
+}
