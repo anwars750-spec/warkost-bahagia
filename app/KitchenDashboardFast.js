@@ -289,8 +289,8 @@ export default function KitchenDashboardFast() {
 
   const syncView = useCallback(() => {
     const { main, visible } = detectKitchenView();
-    setPortalTarget(main || null);
-    setShowDashboard(visible);
+    setPortalTarget((current) => (current === (main || null) ? current : main || null));
+    setShowDashboard((current) => (current === visible ? current : visible));
     document.body.classList.toggle("kitchen-dashboard-active", visible);
   }, []);
 
@@ -327,14 +327,29 @@ export default function KitchenDashboardFast() {
     syncView();
     const main = document.querySelector("main");
     if (!main) return;
-    const observer = new MutationObserver(syncView);
-    observer.observe(main, {
-      subtree: true,
-      childList: true,
-      characterData: true,
-    });
+
+    let frame = 0;
+    const scheduleSync = () => {
+      if (frame) cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(syncView);
+    };
+
+    // Observe only direct view replacements. The previous subtree observer also
+    // watched this dashboard's own portal mutations and could create a very
+    // expensive feedback loop during Kitchen login/rendering.
+    const observer = new MutationObserver(scheduleSync);
+    observer.observe(main, { childList: true });
+
+    const onNavClick = (event) => {
+      if (!event.target.closest?.("header.top nav button")) return;
+      scheduleSync();
+    };
+    document.addEventListener("click", onNavClick, true);
+
     return () => {
       observer.disconnect();
+      if (frame) cancelAnimationFrame(frame);
+      document.removeEventListener("click", onNavClick, true);
       document.body.classList.remove("kitchen-dashboard-active");
     };
   }, [syncView]);
