@@ -53,8 +53,10 @@ import "./manager-promotion-ui-polish.css";
 import "./manager-promotion-actions-polish.css";
 import "./manager-promotion-icon-single-fix.css";
 import "./manager-promotion-drawer-v2.css";
+import "./driver-control-center-v2.css";
 import CodBatchSettlementCenter from "./CodBatchSettlementCenter";
 import DriverCodBatchEventBridge from "./DriverCodBatchEventBridge";
+import DriverControlCenter from "./DriverControlCenter";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
 import AdminCodLauncherButton from "./AdminCodLauncherButton";
 import KitchenDashboardFast from "./KitchenDashboardFast";
@@ -79,6 +81,7 @@ export default function RootLayout({ children }) {
     <html lang="id">
       <body>
         {children}
+        <DriverControlCenter />
         <KitchenFlashGuard />
         <KitchenDashboardFast />
         <CodBatchSettlementCenter />
