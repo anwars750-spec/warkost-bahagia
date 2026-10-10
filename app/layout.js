@@ -44,6 +44,7 @@ import "./manager-products-final-fix.css";
 import "./manager-products-mobile-v2.css";
 import "./manager-subcategory-polish.css";
 import "./manager-subcategory-final-polish.css";
+import "./manager-stock-polish.css";
 import CodBatchSettlementCenter from "./CodBatchSettlementCenter";
 import DriverCodBatchEventBridge from "./DriverCodBatchEventBridge";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
@@ -57,6 +58,7 @@ import CustomerCatalogPolish from "./CustomerCatalogPolish";
 import CustomerQuantityUnitPolish from "./CustomerQuantityUnitPolish";
 import ManagerDashboardUiPolish from "./ManagerDashboardUiPolish";
 import ManagerSubcategoryPolish from "./ManagerSubcategoryPolish";
+import ManagerStockPolish from "./ManagerStockPolish";
 
 export const metadata = {
   title: "Warkost Bahagia",
@@ -81,6 +83,7 @@ export default function RootLayout({ children }) {
         <CustomerQuantityUnitPolish />
         <ManagerDashboardUiPolish />
         <ManagerSubcategoryPolish />
+        <ManagerStockPolish />
         <div id="admin-ui-portal-root" />
       </body>
     </html>
