@@ -36,6 +36,7 @@ import "./customer-catalog-polish.css";
 import "./customer-catalog-final-polish.css";
 import "./customer-quantity-unit-final.css";
 import "./manager-control-center.css";
+import "./manager-dashboard-ui-polish.css";
 import CodBatchSettlementCenter from "./CodBatchSettlementCenter";
 import DriverCodBatchEventBridge from "./DriverCodBatchEventBridge";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
@@ -47,6 +48,7 @@ import KitchenHeaderActions from "./KitchenHeaderActions";
 import RoleLogoutConfirmation from "./RoleLogoutConfirmation";
 import CustomerCatalogPolish from "./CustomerCatalogPolish";
 import CustomerQuantityUnitPolish from "./CustomerQuantityUnitPolish";
+import ManagerDashboardUiPolish from "./ManagerDashboardUiPolish";
 
 export const metadata = {
   title: "Warkost Bahagia",
@@ -69,6 +71,7 @@ export default function RootLayout({ children }) {
         <RoleLogoutConfirmation />
         <CustomerCatalogPolish />
         <CustomerQuantityUnitPolish />
+        <ManagerDashboardUiPolish />
         <div id="admin-ui-portal-root" />
       </body>
     </html>
