@@ -65,8 +65,12 @@ export default function ManagerDashboardUiPolish() {
     const decorate = () => {
       const root = document.querySelector(".manager-control-center");
       const header = document.querySelector("header.top");
+      const navButtons = [...(header?.querySelectorAll("nav button") || [])];
+      const navTexts = navButtons.map((button) => clean(button.textContent));
+      const managerHeader =
+        navTexts.includes("Produk & Menu") && navTexts.includes("Subkategori");
 
-      if (!root) {
+      if (!root && !managerHeader) {
         document.body.classList.remove("manager-dashboard-polished");
         header?.classList.remove("manager-role-header");
         return;
@@ -75,10 +79,13 @@ export default function ManagerDashboardUiPolish() {
       document.body.classList.add("manager-dashboard-polished");
       header?.classList.add("manager-role-header");
 
-      const heading = clean(root.querySelector(".manager-page-title h1")?.textContent);
+      const heading = clean(
+        root?.querySelector(".manager-page-title h1")?.textContent ||
+          document.querySelector("main h1, main h2")?.textContent,
+      );
       const activeNav = activeNavFromHeading(heading);
 
-      header?.querySelectorAll("nav button").forEach((button) => {
+      navButtons.forEach((button) => {
         const text = clean(button.textContent);
         const match = navKeys.find(([label]) => text === label);
         if (!match) return;
@@ -89,6 +96,8 @@ export default function ManagerDashboardUiPolish() {
         if (key === activeNav) button.setAttribute("aria-current", "page");
         else button.removeAttribute("aria-current");
       });
+
+      if (!root) return;
 
       root.querySelectorAll(".manager-period-tabs button").forEach((button) => {
         const label = clean(button.querySelector("span")?.textContent || button.textContent);
