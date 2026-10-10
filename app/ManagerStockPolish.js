@@ -14,6 +14,12 @@ const icons = {
   close: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg>`,
 };
 
+const CATEGORY_ORDER = new Map([
+  ["makanan", 0],
+  ["minuman", 1],
+  ["bahan baku", 2],
+]);
+
 const normalize = (value) => String(value || "").trim().toLowerCase();
 
 function parseIdentity(row) {
@@ -71,6 +77,45 @@ async function loadMaster() {
 
 function setText(node, value) {
   if (node && node.textContent !== value) node.textContent = value;
+}
+
+function sortRows(page, rows, inventory, masterByName) {
+  const subcategoryOrder = new Map(
+    (inventory.subcategories || []).map((row) => [
+      Number(row.id),
+      Number.isFinite(Number(row.sort_order)) ? Number(row.sort_order) : 9999,
+    ]),
+  );
+
+  const sorted = [...rows].sort((left, right) => {
+    const leftIdentity = parseIdentity(left);
+    const rightIdentity = parseIdentity(right);
+    const leftMaster = masterByName.get(normalize(leftIdentity.name));
+    const rightMaster = masterByName.get(normalize(rightIdentity.name));
+
+    const leftCategory = CATEGORY_ORDER.get(normalize(leftIdentity.category)) ?? 99;
+    const rightCategory = CATEGORY_ORDER.get(normalize(rightIdentity.category)) ?? 99;
+    if (leftCategory !== rightCategory) return leftCategory - rightCategory;
+
+    const leftSubcategory = subcategoryOrder.get(Number(leftMaster?.subcategory_id)) ?? 9999;
+    const rightSubcategory = subcategoryOrder.get(Number(rightMaster?.subcategory_id)) ?? 9999;
+    if (leftSubcategory !== rightSubcategory) return leftSubcategory - rightSubcategory;
+
+    const subcategoryName = leftIdentity.subcategory.localeCompare(
+      rightIdentity.subcategory,
+      "id",
+      { sensitivity: "base" },
+    );
+    if (subcategoryName !== 0) return subcategoryName;
+
+    return leftIdentity.name.localeCompare(rightIdentity.name, "id", {
+      sensitivity: "base",
+    });
+  });
+
+  const list = page.querySelector(".manager-stock-list");
+  sorted.forEach((row) => list?.appendChild(row));
+  return sorted;
 }
 
 function ensureSummary(page, rows, masterByName) {
@@ -153,10 +198,10 @@ function createDrawer(page, rows, masterByName) {
 
   const select = drawer.querySelector("[data-stock-product]");
   rows.forEach((row, index) => {
-    const { name, category } = parseIdentity(row);
+    const { name, category, subcategory } = parseIdentity(row);
     const option = document.createElement("option");
     option.value = String(index);
-    option.textContent = `${name} · ${category}`;
+    option.textContent = `${category} · ${subcategory} · ${name}`;
     select.appendChild(option);
   });
 
@@ -297,7 +342,7 @@ function ensureListHeader(page) {
   if (!list.querySelector(".manager-stock-list-heading")) {
     const heading = document.createElement("div");
     heading.className = "manager-stock-list-heading";
-    heading.innerHTML = `<div><h2>Daftar Stok</h2><p>Current, reserved, dan available berasal dari ledger stok terpadu.</p></div><span data-stock-visible>0 item</span>`;
+    heading.innerHTML = `<div><h2>Daftar Stok</h2><p>Urutan: Makanan → Minuman → Bahan Baku, lalu mengikuti urutan Subkategori di Product Master.</p></div><span data-stock-visible>0 item</span>`;
     list.prepend(heading);
   }
   if (!list.querySelector(".manager-stock-columns")) {
@@ -319,7 +364,8 @@ async function enhance(page) {
 
     const inventory = await loadMaster();
     const masterByName = new Map((inventory.products || []).map((product) => [normalize(product.name), product]));
-    const rows = [...page.querySelectorAll(".manager-stock-row")];
+    let rows = [...page.querySelectorAll(".manager-stock-row")];
+    rows = sortRows(page, rows, inventory, masterByName);
     decorateRows(page, rows, masterByName);
     ensureSummary(page, rows, masterByName);
     ensureToolbar(page, rows, masterByName);
