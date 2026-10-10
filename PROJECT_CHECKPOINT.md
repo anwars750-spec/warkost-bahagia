@@ -31,9 +31,50 @@
 - Batch COD Settlement Backend implementation: `590d56f727f5d1cb2ff47d590678e24b213affed`
 - Driver Multi-order Trip + Grouped COD UI implementation: `d506e466ad999a708be69fbd1a5d582978c8dadf`
 - Manager Control Center V1 implementation: `0289d0eb593f162900c5f2f039ef0100f96bde96`
-- Current milestone: Manager Control Center V1
+- Promotion Engine V1 implementation: `757f5a79e6afa721df80a6b836c3caf06af90393`
+- Current milestone: Promotion Engine V1
 - Current status: **VERIFIED**
 - Verification date: 2026-10-10
+
+## Promotion Engine V1
+
+### Promotion rules and shared data model
+
+- The existing `promotions` table remains the single source of truth and now supports exactly six rule families: percentage item/category/subcategory discount, fixed nominal discount, free item, first member, scheduled campaign, and birthday promotion.
+- Rule data includes dynamic benefit type, target scope and relational target IDs, minimum spend, maximum discount, gift product, validity, Asia/Jakarta schedule pattern/time window, total quota, per-member limit, registration window, birthday window, and payment eligibility.
+- Integer Rupiah arithmetic and server-side checkout validation remain authoritative. Guest sessions cannot consume member promotions; COD rejects every regular promotion; birthday promotions remain eligible on COD and may coexist with one Loyalty Reward.
+- One regular promotion per order is enforced. Regular promotion + Loyalty stacking is rejected with a business-readable error.
+- Applied rules are snapshotted on the order, including promotion name/family, calculated discount, gift item, rule summary, and eligibility. Later edits or deactivation do not rewrite historical orders.
+- MySQL migration `025_promotion_engine_v1.sql` and the matching SQLite runtime upgrade add the rule fields, immutable order snapshot fields, promotion gift metadata, and auditable `promotion_redemptions` lifecycle.
+
+### Fulfillment, synchronization, and audit
+
+- Free item promotion products use the existing inventory engine: reserve at checkout, commit on confirmation, release before commit, restore after supported cancellation, and route from the shared product record (`Makanan` to Kitchen; `Minuman`/`Bahan Baku` to Admin).
+- Manager create/edit/activate/deactivate writes the shared promotion record. Customer homepage and checkout read current active records from the shared API; checkout always revalidates against the latest rule. No parallel promotion source or client-trusted discount was added.
+- Admin/Owner order details expose the immutable promotion snapshot, gift marker, and financial breakdown: subtotal, promotion discount, loyalty, delivery, and final total. Admin remains unable to mutate Manager promotion settings.
+- Audit records cover create, edit, activate, deactivate, apply, and restore events with actor, promotion/order IDs, timestamp, and meaningful payload.
+
+### Manager Promotion Center
+
+- Replaced the primitive Manager promo editor with a responsive React Promotion Center matching the approved warm Warkost visual direction.
+- Desktop includes five KPI states, search, type/status filters, promo table/cards, edit and activate/deactivate actions, six-family guide, and structured create/edit drawer sections for benefit, target, customer eligibility, schedule, payment, limits, preview, and activation.
+- Mobile uses promo cards and a full-height sheet rather than a squeezed desktop table; responsive CSS prevents horizontal page overflow.
+- Manager is the promotion mutation role. Owner retains read-only oversight; Admin receives applied-promotion data through order detail only.
+
+### Verification
+
+- Dedicated Promotion Engine V1 tests: **8/8 PASS**, covering all six families, target calculation, server-authoritative discount, free gift stock/routing, first-member use, Jakarta schedule patterns, birthday COD + Loyalty, guest/COD guards, quota/limit/minimum/deactivation, stacking, audit, and immutable snapshots.
+- Targeted Promotion/Cart/Checkout/Inventory/Kitchen/RBAC cross-role regression: **55/55 PASS**.
+- Final MySQL migration and UAT-contract retest: **26/26 PASS**.
+- Full unit suite: **213/213 PASS**.
+- Production build with Next.js 16.3.6: **PASS**.
+- `git diff --check`: **PASS**.
+- Critical defects: **0**. High defects: **0**.
+
+### Guardrails preserved
+
+- Locked Customer catalog/cart presentation, Kitchen, Admin operational/customer-service/printer/COD, Manager Dashboard/Product/Subcategory/Stock/Notifications, unified PCS/GRAM inventory, and Checkout Rules V2 remain covered by passing regression.
+- No new loyalty engine, payment engine, deployment work, dependency upgrade, DOM business-logic workaround, or unrelated redesign was introduced.
 
 ## Manager Control Center V1
 
