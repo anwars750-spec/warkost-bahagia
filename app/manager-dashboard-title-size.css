@@ -1,0 +1,24 @@
+/* Manager dashboard title scale refinement — UI only. */
+.manager-dashboard-polished .manager-dashboard .manager-page-title h1 {
+  font-size: clamp(2.45rem, 3.2vw, 3.15rem);
+  line-height: 1;
+  letter-spacing: -0.045em;
+  margin-top: 0.32rem;
+  margin-bottom: 0.38rem;
+}
+
+@media (max-width: 760px) {
+  .manager-dashboard-polished .manager-dashboard .manager-page-title h1 {
+    font-size: 1.7rem;
+    line-height: 1.04;
+    letter-spacing: -0.035em;
+    margin-top: 0.24rem;
+    margin-bottom: 0.3rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .manager-dashboard-polished .manager-dashboard .manager-page-title h1 {
+    font-size: 1.58rem;
+  }
+}
