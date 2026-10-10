@@ -15,13 +15,13 @@ const projectRoot = fileURLToPath(new URL("..", import.meta.url));
 
 test("migration MySQL memiliki urutan dan checksum stabil", () => {
   const migrations = loadMysqlMigrations();
-  assert.equal(migrations.length, 24);
+  assert.equal(migrations.length, 25);
   assert.equal(migrations[0].version, "001_mysql.sql");
-  assert.equal(migrations.at(-1).version, "024_unified_catalog_stock.sql");
+  assert.equal(migrations.at(-1).version, "025_promotion_engine_v1.sql");
   assert.ok(
     migrations.every(({ checksum }) => /^[0-9a-f]{64}$/.test(checksum)),
   );
-  assert.equal(new Set(migrations.map(({ checksum }) => checksum)).size, 24);
+  assert.equal(new Set(migrations.map(({ checksum }) => checksum)).size, 25);
 });
 
 test("DATABASE_URL MySQL diparsing tanpa kehilangan karakter kredensial", () => {
