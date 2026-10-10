@@ -1,0 +1,42 @@
+/* Driver logo precision fix — keep the full Warkost mark visible on every viewport. */
+.driver-v2-brand img {
+  display: block;
+  width: 72px;
+  height: 52px;
+  flex: 0 0 72px;
+  object-fit: contain;
+  object-position: center;
+  max-width: none;
+  overflow: visible;
+}
+
+.driver-v2-brand {
+  overflow: visible;
+}
+
+@media (max-width: 760px) {
+  .driver-v2-brand {
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .driver-v2-brand img {
+    width: 58px;
+    height: 42px;
+    flex-basis: 58px;
+    object-fit: contain;
+    object-position: center;
+  }
+
+  .driver-v2-brand > div {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 390px) {
+  .driver-v2-brand img {
+    width: 54px;
+    height: 40px;
+    flex-basis: 54px;
+  }
+}
