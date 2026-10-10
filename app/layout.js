@@ -65,8 +65,6 @@ import CustomerCatalogPolish from "./CustomerCatalogPolish";
 import CustomerQuantityUnitPolish from "./CustomerQuantityUnitPolish";
 import ManagerDashboardUiPolish from "./ManagerDashboardUiPolish";
 import ManagerSubcategoryPolish from "./ManagerSubcategoryPolish";
-import ManagerStockPolish from "./ManagerStockPolish";
-import ManagerStockActionRuntime from "./ManagerStockActionRuntime";
 import ManagerNotificationPopover from "./ManagerNotificationPopover";
 import ManagerNotificationOutsideClose from "./ManagerNotificationOutsideClose";
 
@@ -93,8 +91,6 @@ export default function RootLayout({ children }) {
         <CustomerQuantityUnitPolish />
         <ManagerDashboardUiPolish />
         <ManagerSubcategoryPolish />
-        <ManagerStockPolish />
-        <ManagerStockActionRuntime />
         <ManagerNotificationPopover />
         <ManagerNotificationOutsideClose />
         <div id="admin-ui-portal-root" />
