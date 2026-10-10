@@ -45,6 +45,7 @@ import "./manager-products-mobile-v2.css";
 import "./manager-subcategory-polish.css";
 import "./manager-subcategory-final-polish.css";
 import "./manager-stock-polish.css";
+import "./manager-stock-action-green.css";
 import "./manager-notification-popover.css";
 import "./manager-promotion-center.css";
 import "./manager-promotion-ui-polish.css";
@@ -65,6 +66,7 @@ import CustomerQuantityUnitPolish from "./CustomerQuantityUnitPolish";
 import ManagerDashboardUiPolish from "./ManagerDashboardUiPolish";
 import ManagerSubcategoryPolish from "./ManagerSubcategoryPolish";
 import ManagerStockPolish from "./ManagerStockPolish";
+import ManagerStockActionRuntime from "./ManagerStockActionRuntime";
 import ManagerNotificationPopover from "./ManagerNotificationPopover";
 import ManagerNotificationOutsideClose from "./ManagerNotificationOutsideClose";
 
@@ -92,6 +94,7 @@ export default function RootLayout({ children }) {
         <ManagerDashboardUiPolish />
         <ManagerSubcategoryPolish />
         <ManagerStockPolish />
+        <ManagerStockActionRuntime />
         <ManagerNotificationPopover />
         <ManagerNotificationOutsideClose />
         <div id="admin-ui-portal-root" />
