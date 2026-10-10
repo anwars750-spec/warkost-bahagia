@@ -30,9 +30,48 @@
 - Admin Order Filter Architecture implementation: `4456119cee6fb5e0d62eb9c1564f4daf75aa8c9c`
 - Batch COD Settlement Backend implementation: `590d56f727f5d1cb2ff47d590678e24b213affed`
 - Driver Multi-order Trip + Grouped COD UI implementation: `d506e466ad999a708be69fbd1a5d582978c8dadf`
-- Current milestone: Driver Multi-order Trip + Customer Wait Notice + Grouped COD UI
+- Manager Control Center V1 implementation: `0289d0eb593f162900c5f2f039ef0100f96bde96`
+- Current milestone: Manager Control Center V1
 - Current status: **VERIFIED**
-- Verification date: 2026-10-08
+- Verification date: 2026-10-10
+
+## Manager Control Center V1
+
+### Manager dashboard and analytics
+
+- Added a Manager-only, server-authoritative analytics service and API with one shared period contract: Hari ini, Kemarin, 7 hari, Bulan ini, and validated custom date range.
+- Ringkasan Penjualan reports Total Pesanan, verified Revenue, Qty Terjual, AOV, PAID, Selesai, Menunggu, Disiapkan, Siap Antar, and Dalam Pengantaran from the same selected period.
+- Revenue uses orders whose payment status is `PAID` and excludes `CANCELLED`; status analytics use the valid operational states `PENDING` through `DELIVERED`. Failed, expired, and unpaid payments never contribute revenue.
+- Trend combines order count and revenue using hourly buckets for a single day and daily buckets for multi-day ranges.
+- Category contribution is limited to the three main categories (`Makanan`, `Minuman`, `Bahan Baku`); subcategories remain separate in their own ranking.
+- Product ranking supports Revenue and Qty. GRAM quantities render as `100 g`, `500 g`, `1 kg`, and `1,5 kg`; PCS stays integer-based.
+- Deterministic insights are generated only from actual aggregate results. Empty periods return intentional zero/empty states and never fabricate insight.
+
+### Product Master, routing, and stock
+
+- Manager Dashboard, Produk & Menu, Subkategori, and unified Stok now use a dedicated responsive React workspace matching the approved warm Warkost desktop/mobile direction.
+- Product create/edit/deactivate continues to mutate the existing shared `products` record. No per-role product copy or analytics table was introduced.
+- Product image upload reuses the existing validated media pipeline; Product Master includes a safe local fallback thumbnail.
+- Category/subcategory ownership, active-state, PCS/GRAM, price unit, minimum, step, stock threshold, and integer-Rupiah validation remain server-side.
+- Routing stays derived from the main category: Makanan → Customer + Kitchen; Minuman/Bahan Baku → Customer + Admin.
+- New API requests immediately read the latest Product Master. Existing authenticated screens use bounded 20-second refresh for relevant catalog/stock visibility without introducing a broad realtime engine.
+- Deactivated products disappear from the orderable Customer catalog while historical `order_items` name/price/unit snapshots remain intact.
+- Manager stock reuses the unified inventory engine and exposes Current, Reserved, Available, unit, low-stock state, and reasoned/audited adjustment. Existing Admin/Kitchen read-only scopes are unchanged.
+- Desktop navigation: Dashboard, Produk & Menu, Subkategori, Stok, Promo, Notifikasi, Keluar. Mobile navigation: Dashboard, Produk & Menu, Stok, Promo, Lainnya; Lainnya exposes Subkategori, Notifikasi, and Keluar.
+
+### Security and verification
+
+- Manager analytics is enforced server-side as Manager-only; unauthenticated access returns 401 and unauthorized roles return 403.
+- Existing Product, Subcategory, media upload, and stock mutation capabilities remain server-authoritative and were not weakened.
+- Dedicated Manager Control Center tests: **7/7 PASS**.
+- Manager/Product/Stock/RBAC focused suite: **29/29 PASS** before final source formatting; final affected retest: **26/26 PASS**.
+- Customer Cart/Checkout, Admin, Kitchen, Driver, inventory, and operational relevant regression: **50/50 PASS**.
+- Full unit suite: **205/205 PASS**.
+- Production build with Next.js 16.3.6: **PASS**.
+- `git diff --check`: **PASS**.
+- Migration: **none**.
+- Critical defects: **0**.
+- High defects: **0**.
 
 ## Driver Multi-order Trip + Customer Wait Notice + Grouped COD UI
 
