@@ -15,13 +15,13 @@ const projectRoot = fileURLToPath(new URL("..", import.meta.url));
 
 test("migration MySQL memiliki urutan dan checksum stabil", () => {
   const migrations = loadMysqlMigrations();
-  assert.equal(migrations.length, 25);
+  assert.equal(migrations.length, 27);
   assert.equal(migrations[0].version, "001_mysql.sql");
-  assert.equal(migrations.at(-1).version, "025_promotion_engine_v1.sql");
+  assert.equal(migrations.at(-1).version, "027_manager_owner_settlements.sql");
   assert.ok(
     migrations.every(({ checksum }) => /^[0-9a-f]{64}$/.test(checksum)),
   );
-  assert.equal(new Set(migrations.map(({ checksum }) => checksum)).size, 25);
+  assert.equal(new Set(migrations.map(({ checksum }) => checksum)).size, 27);
 });
 
 test("DATABASE_URL MySQL diparsing tanpa kehilangan karakter kredensial", () => {
@@ -72,19 +72,7 @@ test("backup MySQL membuat checksum dan menolak output dump yang tidak valid", (
     const fixtureRunner = path.join(directory, "mysqldump-fixture-runner.mjs");
     fs.writeFileSync(
       fixtureRunner,
-      `import fs from "node:fs";
-import childProcess from "node:child_process";
-import { syncBuiltinESMExports } from "node:module";
-import { pathToFileURL } from "node:url";
-
-childProcess.spawnSync = (_command, _args, options) => {
-  const output = fs.readFileSync(process.env.MYSQLDUMP_FIXTURE_FILE);
-  fs.writeSync(options.stdio[1], output);
-  return { status: 0, signal: null, error: undefined, stderr: "" };
-};
-syncBuiltinESMExports();
-await import(pathToFileURL(process.env.BACKUP_SCRIPT_PATH).href);
-`,
+      `import fs from "node:fs";\nimport childProcess from "node:child_process";\nimport { syncBuiltinESMExports } from "node:module";\nimport { pathToFileURL } from "node:url";\n\nchildProcess.spawnSync = (_command, _args, options) => {\n  const output = fs.readFileSync(process.env.MYSQLDUMP_FIXTURE_FILE);\n  fs.writeSync(options.stdio[1], output);\n  return { status: 0, signal: null, error: undefined, stderr: "" };\n};\nsyncBuiltinESMExports();\nawait import(pathToFileURL(process.env.BACKUP_SCRIPT_PATH).href);\n`,
     );
     const valid = path.join(directory, "valid-dump.sql");
     fs.writeFileSync(
