@@ -35,8 +35,30 @@ async function request(route, body) {
 function isAdminCodCard(target) {
   const element = target instanceof Element ? target : null;
   if (!element) return false;
+
+  // Never hijack actions inside other control-center dialogs. The previous
+  // ancestor scan reached <body>, whose combined text contains both
+  // "SETORAN COD" and "CASH SETTLEMENT", so unrelated buttons such as
+  // "Mulai Shift" were stopped in document capture before React saw them.
+  if (
+    element.closest(
+      ".admin-cash-overlay, .owner-operator-overlay, .cod-batch-overlay",
+    )
+  ) {
+    return false;
+  }
+
+  if (element.closest(".admin-cod-launcher-button")) return true;
+
   let node = element;
-  for (let depth = 0; depth < 8 && node; depth += 1) {
+  for (
+    let depth = 0;
+    depth < 6 &&
+    node &&
+    node !== document.body &&
+    node !== document.documentElement;
+    depth += 1
+  ) {
     const text = String(node.textContent || "").replace(/\s+/g, " ").trim();
     if (
       /SETORAN COD/i.test(text) &&
