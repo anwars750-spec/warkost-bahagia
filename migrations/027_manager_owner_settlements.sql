@@ -1,3 +1,28 @@
+CREATE TABLE IF NOT EXISTS admin_shift_settlements (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  slip_number VARCHAR(40) UNIQUE NULL,
+  shift_id BIGINT NOT NULL UNIQUE,
+  admin_user_id BIGINT NOT NULL,
+  operator_id BIGINT NOT NULL,
+  expected_amount BIGINT NOT NULL,
+  submitted_amount BIGINT NOT NULL,
+  admin_overage_amount BIGINT NOT NULL DEFAULT 0,
+  status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+  manager_id BIGINT NULL,
+  manager_received_amount BIGINT NULL,
+  manager_overage_amount BIGINT NOT NULL DEFAULT 0,
+  manager_custody_status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+  submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  verified_at TIMESTAMP NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_admin_shift_settlements_status(status, id),
+  INDEX idx_admin_shift_settlements_manager(manager_id, manager_custody_status, id),
+  CONSTRAINT fk_shift_settlement_shift FOREIGN KEY (shift_id) REFERENCES admin_shifts(id),
+  CONSTRAINT fk_shift_settlement_admin FOREIGN KEY (admin_user_id) REFERENCES users(id),
+  CONSTRAINT fk_shift_settlement_operator FOREIGN KEY (operator_id) REFERENCES admin_operators(id),
+  CONSTRAINT fk_shift_settlement_manager FOREIGN KEY (manager_id) REFERENCES users(id)
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS manager_owner_settlements (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   settlement_number VARCHAR(40) UNIQUE NULL,
