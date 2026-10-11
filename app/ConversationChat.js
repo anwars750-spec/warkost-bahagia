@@ -60,6 +60,7 @@ export default function ConversationChat({ target, viewerRole, onClose }) {
 
   const isDriverChat = target?.type === "CUSTOMER_DRIVER";
   const driverViewer = viewerRole === "DRIVER";
+  const hasOrderTarget = Number(target?.orderId || 0) > 0;
   const prompts = driverViewer
     ? [
         "Saya sedang menuju lokasi",
@@ -72,11 +73,17 @@ export default function ConversationChat({ target, viewerRole, onClose }) {
           "Patokan rumah saya...",
           "Mohon hubungi saat sudah dekat",
         ]
-      : [
-          "Pesanan saya sampai mana?",
-          "Saya ingin konfirmasi pembayaran",
-          "Ada kendala pengantaran",
-        ];
+      : hasOrderTarget
+        ? [
+            "Pesanan saya sampai mana?",
+            "Saya ingin konfirmasi pembayaran",
+            "Ada kendala pengantaran",
+          ]
+        : [
+            "Saya butuh bantuan",
+            "Saya ingin bertanya tentang menu",
+            "Saya butuh bantuan akun",
+          ];
 
   useEffect(() => {
     if (!target) return;
@@ -168,7 +175,9 @@ export default function ConversationChat({ target, viewerRole, onClose }) {
               {isDriverChat ? "Koordinasi pengantaran" : "Customer Support"}
               {conversation?.order?.display_number
                 ? ` - ${conversation.order.display_number}`
-                : ""}
+                : !isDriverChat
+                  ? " - Bantuan Umum"
+                  : ""}
             </span>
           </div>
           <button
@@ -227,7 +236,11 @@ export default function ConversationChat({ target, viewerRole, onClose }) {
                 <ChatIcon />
               </span>
               <strong>Belum ada pesan</strong>
-              <p>Mulai percakapan terkait pesanan ini.</p>
+              <p>
+                {conversation?.order
+                  ? "Mulai percakapan terkait pesanan ini."
+                  : "Mulai percakapan dengan Customer Service Warkost."}
+              </p>
             </div>
           )}
           {conversation?.messages?.map((message) => {
