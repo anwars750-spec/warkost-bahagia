@@ -1,5 +1,20 @@
 /* Mandatory Admin shift gate — operations stay locked until an Owner-registered operator starts a shift. */
 
+body.admin-shift-gate-checking::before {
+  content: "Memulihkan shift Admin…";
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: grid;
+  place-items: center;
+  color: #6f3b2b;
+  background: rgba(255, 252, 248, 0.97);
+  backdrop-filter: blur(8px);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+
 body.admin-shift-gate-locked .admin-cash-header > button {
   visibility: hidden !important;
   pointer-events: none !important;
@@ -25,6 +40,10 @@ body.admin-shift-gate-locked .admin-cash-header::after {
 }
 
 @media (max-width: 760px) {
+  body.admin-shift-gate-checking::before {
+    font-size: 12px;
+  }
+
   body.admin-shift-gate-locked .admin-cash-header::after {
     display: none;
   }
