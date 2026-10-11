@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
+const RUNTIME_REVISION = "P0-ENDSHIFT-R4";
+const POST_TIMEOUT_MS = 4500;
+const RECOVERY_TIMEOUT_MS = 2200;
+
 const money = (value) => `Rp${Number(value || 0).toLocaleString("id-ID")}`;
 
 const dateTime = (value) => {
@@ -29,7 +33,20 @@ function signalSubmitting(active) {
   );
 }
 
-async function request(body, timeoutMs = 12000) {
+function staleRuntimeError() {
+  const error = new Error(
+    "Build Owner Demo yang berjalan masih versi lama. Hentikan server, jalankan build terbaru, start Owner Demo lagi, lalu hard refresh browser (Ctrl+Shift+R).",
+  );
+  error.code = "STALE_RUNTIME";
+  return error;
+}
+
+function assertRuntime(data) {
+  if (data?.runtime_revision !== RUNTIME_REVISION) throw staleRuntimeError();
+  return data;
+}
+
+async function request(body, timeoutMs = 6000) {
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -50,7 +67,7 @@ async function request(body, timeoutMs = 12000) {
   } catch (error) {
     if (error?.name === "AbortError") {
       const timeoutError = new Error(
-        "Proses setoran terlalu lama merespons. Sistem sedang mengecek apakah transaksi sudah tersimpan.",
+        "Server belum merespons tepat waktu. Sistem sedang mengecek ledger agar setoran tidak dibuat ganda.",
       );
       timeoutError.code = "SETTLEMENT_TIMEOUT";
       throw timeoutError;
@@ -68,6 +85,8 @@ export default function AdminShiftSettlementRuntime() {
   const [submittedAmount, setSubmittedAmount] = useState("");
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [busyStage, setBusyStage] = useState("idle");
+  const [runtimeReady, setRuntimeReady] = useState(false);
   const [error, setError] = useState("");
   const [lastSlip, setLastSlip] = useState(null);
   const [noCashMessage, setNoCashMessage] = useState("");
@@ -109,11 +128,13 @@ export default function AdminShiftSettlementRuntime() {
     setLoading(true);
     setError("");
     try {
-      const data = await request(undefined, 6000);
+      const data = assertRuntime(await request(undefined, 4000));
+      setRuntimeReady(true);
       setState(data);
       const expected = Number(data.current_shift?.cash_custody || 0);
       setSubmittedAmount(String(expected));
     } catch (err) {
+      setRuntimeReady(false);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -154,27 +175,40 @@ export default function AdminShiftSettlementRuntime() {
   const completeSubmission = useCallback((result) => {
     setOpen(false);
     setError("");
-    window.dispatchEvent(new CustomEvent("warkost:cod-batch-updated"));
 
     if (result?.no_cash) {
       setNoCashMessage(
         `Shift ${result.operator_name} selesai. Tidak ada kas COD untuk disetor.`,
       );
+      setBusy(false);
+      setBusyStage("idle");
+      signalSubmitting(false);
+      window.dispatchEvent(new CustomEvent("warkost:cod-batch-updated"));
       window.dispatchEvent(new CustomEvent("warkost:admin-shift-ended"));
-      return;
+      return true;
     }
 
-    if (!result?.settlement) return;
+    if (!result?.settlement) return false;
     const settlement = result.settlement;
     setLastSlip(settlement);
+    setBusyStage("printing");
+
     window.dispatchEvent(
       new CustomEvent("warkost:admin-settlement-submitted", {
         detail: { settlement },
       }),
     );
+    window.dispatchEvent(new CustomEvent("warkost:cod-batch-updated"));
 
-    // Handover sukses harus terlihat dulu di workspace Printer. Shift Gate baru
-    // dikunci lagi sesudah dialog cetak selesai/ditutup agar tidak merebut UI.
+    const releaseGate = () => {
+      setBusy(false);
+      setBusyStage("idle");
+      signalSubmitting(false);
+      window.dispatchEvent(new CustomEvent("warkost:admin-shift-ended"));
+    };
+
+    // Setelah ledger mengonfirmasi sukses, pindahkan workspace ke Printer dulu.
+    // Shift Gate tetap ditahan sampai dialog cetak selesai agar Printer tidak direbut popup shift baru.
     window.setTimeout(() => {
       const printerButton = document.querySelector(
         'nav [data-admin-nav="Printer"]',
@@ -182,31 +216,43 @@ export default function AdminShiftSettlementRuntime() {
       printerButton?.click();
 
       window.setTimeout(() => {
+        let released = false;
+        const releaseOnce = () => {
+          if (released) return;
+          released = true;
+          window.removeEventListener("afterprint", releaseOnce);
+          releaseGate();
+        };
+        window.addEventListener("afterprint", releaseOnce, { once: true });
         try {
           window.print();
-        } finally {
-          window.setTimeout(
-            () => window.dispatchEvent(new CustomEvent("warkost:admin-shift-ended")),
-            120,
-          );
+        } catch {
+          releaseOnce();
+          return;
         }
-      }, 320);
-    }, 80);
+        // Browser tertentu tidak mengirim afterprint; fallback tetap bounded.
+        window.setTimeout(releaseOnce, 1600);
+      }, 260);
+    }, 60);
+
+    return true;
   }, []);
 
   const recoverSubmission = useCallback(async (shiftId) => {
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      if (attempt) await wait(450);
+    setBusyStage("checking");
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      if (attempt) await wait(350);
       try {
-        const snapshot = await request(undefined, 5000);
+        const snapshot = assertRuntime(
+          await request(undefined, RECOVERY_TIMEOUT_MS),
+        );
         const settlement = (snapshot.recent_settlements || []).find(
           (item) => Number(item.shift_id) === Number(shiftId),
         );
-        if (settlement) return { no_cash: false, settlement, replayed: true };
-        if (snapshot.current_shift && Number(snapshot.current_shift.id) === Number(shiftId))
-          return null;
-      } catch {
-        // Retry ledger reconciliation. The POST is idempotent by shiftId.
+        if (settlement)
+          return { no_cash: false, settlement, replayed: true };
+      } catch (recoveryError) {
+        if (recoveryError?.code === "STALE_RUNTIME") throw recoveryError;
       }
     }
     return null;
@@ -218,6 +264,13 @@ export default function AdminShiftSettlementRuntime() {
     const expected = Number(state.current_shift.cash_custody || 0);
     const shiftId = Number(state.current_shift.id);
     setError("");
+
+    if (!runtimeReady) {
+      setError(
+        "Runtime setoran belum sinkron dengan server. Restart Owner Demo lalu hard refresh browser (Ctrl+Shift+R).",
+      );
+      return;
+    }
     if (!Number.isSafeInteger(actual) || actual < 0) {
       setError("Masukkan nominal uang fisik yang valid.");
       return;
@@ -230,34 +283,63 @@ export default function AdminShiftSettlementRuntime() {
     }
 
     setBusy(true);
+    setBusyStage("saving");
     signalSubmitting(true);
+    let handedOff = false;
+    const stageTimer = window.setTimeout(
+      () => setBusyStage("checking"),
+      1800,
+    );
+
     try {
-      const result = await request(
-        {
-          action: "SUBMIT_END_SHIFT",
-          shiftId,
-          submittedAmount: actual,
-        },
-        12000,
+      const result = assertRuntime(
+        await request(
+          {
+            action: "SUBMIT_END_SHIFT",
+            shiftId,
+            submittedAmount: actual,
+          },
+          POST_TIMEOUT_MS,
+        ),
       );
-      completeSubmission(result);
+      handedOff = completeSubmission(result);
     } catch (err) {
-      if (err?.code === "SETTLEMENT_TIMEOUT") {
-        const recovered = await recoverSubmission(shiftId);
-        if (recovered) {
-          completeSubmission(recovered);
-        } else {
-          setError(
-            "Setoran belum dapat dipastikan tersimpan. Sistem tidak membuat transaksi ganda. Tunggu sebentar lalu coba lagi.",
-          );
-          await load();
+      if (err?.code === "STALE_RUNTIME") {
+        setRuntimeReady(false);
+        setError(err.message);
+      } else if (
+        err?.code === "SETTLEMENT_TIMEOUT" ||
+        err?.name === "TypeError" ||
+        /failed to fetch|networkerror/i.test(String(err?.message || ""))
+      ) {
+        try {
+          const recovered = await recoverSubmission(shiftId);
+          if (recovered) {
+            handedOff = completeSubmission(recovered);
+          } else {
+            setError(
+              "Setoran belum terkonfirmasi di ledger. Proses dihentikan agar tidak membeku dan tidak membuat transaksi ganda. Klik lagi setelah memastikan server Owner Demo masih aktif.",
+            );
+            await load();
+          }
+        } catch (recoveryError) {
+          if (recoveryError?.code === "STALE_RUNTIME") {
+            setRuntimeReady(false);
+            setError(recoveryError.message);
+          } else {
+            setError(recoveryError.message || "Gagal mengecek status setoran.");
+          }
         }
       } else {
         setError(err.message);
       }
     } finally {
-      setBusy(false);
-      signalSubmitting(false);
+      window.clearTimeout(stageTimer);
+      if (!handedOff) {
+        setBusy(false);
+        setBusyStage("idle");
+        signalSubmitting(false);
+      }
     }
   };
 
@@ -265,6 +347,13 @@ export default function AdminShiftSettlementRuntime() {
   const expected = Number(shift?.cash_custody || 0);
   const actual = Number(submittedAmount || 0);
   const difference = actual - expected;
+
+  const busyLabel =
+    busyStage === "checking"
+      ? "Memeriksa ledger…"
+      : busyStage === "printing"
+        ? "Menyiapkan Printer…"
+        : "Menyimpan setoran…";
 
   return (
     <>
@@ -298,6 +387,7 @@ export default function AdminShiftSettlementRuntime() {
               role="dialog"
               aria-modal="true"
               aria-label="End Shift dan Setoran Manager"
+              data-runtime-revision={RUNTIME_REVISION}
             >
               <header>
                 <div>
@@ -377,11 +467,11 @@ export default function AdminShiftSettlementRuntime() {
                   <button
                     className="admin-shift-settlement-primary"
                     type="button"
-                    disabled={busy || difference < 0}
+                    disabled={busy || difference < 0 || !runtimeReady}
                     onClick={submit}
                   >
                     {busy
-                      ? "Menyimpan setoran…"
+                      ? busyLabel
                       : expected === 0 && actual === 0
                         ? "Akhiri Shift"
                         : "Ajukan Setoran & Cetak Slip"}
