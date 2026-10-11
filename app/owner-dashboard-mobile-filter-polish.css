@@ -88,6 +88,47 @@
   }
 }
 
+@media (max-width: 410px) {
+  .owner-dashboard-kpis-v3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .owner-dashboard-kpis-v3 article {
+    min-height: 118px !important;
+    padding: 11px !important;
+  }
+
+  .owner-dashboard-kpis-v3 article:last-child {
+    grid-column: 1 / -1;
+    min-height: 104px !important;
+  }
+
+  .owner-dashboard-kpis-v3 .owner-dashboard-icon {
+    width: 34px;
+    height: 34px;
+    margin-bottom: 3px;
+    border-radius: 10px;
+  }
+
+  .owner-dashboard-kpis-v3 .owner-dashboard-icon svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .owner-dashboard-kpis-v3 small {
+    font-size: 0.66rem;
+  }
+
+  .owner-dashboard-kpis-v3 strong {
+    font-size: 1rem;
+  }
+
+  .owner-dashboard-kpis-v3 em {
+    font-size: 0.62rem;
+  }
+}
+
 @media (max-width: 380px) {
   .owner-sales-head {
     gap: 8px;
