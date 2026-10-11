@@ -84,6 +84,7 @@ import AdminCodLauncherButton from "./AdminCodLauncherButton";
 import AdminCashControlCenter from "./AdminCashControlCenter";
 import AdminShiftGateRuntime from "./AdminShiftGateRuntime";
 import AdminShiftSettlementRuntime from "./AdminShiftSettlementRuntime";
+import AdminSettlementStabilityBridge from "./AdminSettlementStabilityBridge";
 import AdminOrderNumberEnhancer from "./AdminOrderNumberEnhancer";
 import OwnerAdminOperatorCenter from "./OwnerAdminOperatorCenter";
 import ManagerCashSettlementCenter from "./ManagerCashSettlementCenter";
@@ -123,6 +124,7 @@ export default function RootLayout({ children }) {
         <AdminCashControlCenter />
         <AdminShiftGateRuntime />
         <AdminShiftSettlementRuntime />
+        <AdminSettlementStabilityBridge />
         <AdminOrderNumberEnhancer />
         <OwnerAdminOperatorCenter />
         <ManagerCashSettlementCenter />
