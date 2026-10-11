@@ -34,6 +34,7 @@ import {
   productPriceLabel,
   productQuantityRules,
 } from "../lib/product-units.mjs";
+import { customerWhatsAppUrl } from "../lib/customer-contact.mjs";
 const money = (n) => "Rp" + Number(n || 0).toLocaleString("id-ID");
 const orderItemQuantityLabel = (item) =>
   item.stock_unit === "GRAM"
@@ -1100,7 +1101,7 @@ export default function App() {
           role === "CUSTOMER" ? "customer-home-header customer-app-header" : ""
         } ${!role ? "guest-customer-header" : ""} ${
           !role && view === "auth" ? "auth-header" : ""
-        }`}
+        } ${role === "DRIVER" ? "driver-header" : ""}`}
       >
         <button
           className="brand brand-button"
@@ -1123,7 +1124,11 @@ export default function App() {
           />
           <span className="brand-copy">
             <strong>{menu.brand}</strong>
-            <small>Pesanan hangat, sampai dengan aman.</small>
+            <small>
+              {role === "DRIVER"
+                ? "DRIVER CENTER"
+                : "Pesanan hangat, sampai dengan aman."}
+            </small>
           </span>
         </button>
         <nav
@@ -1285,6 +1290,9 @@ export default function App() {
                   <button onClick={() => setView("stock")}>Stok Makanan</button>
                   <button onClick={() => setView("printing")}>Printer</button>
                 </>
+              )}
+              {role === "DRIVER" && (
+                <button onClick={() => setView("account")}>Akun</button>
               )}
             </>
           ) : null}
@@ -3425,6 +3433,15 @@ export default function App() {
             </div>
           </>
         )}
+        {role === "DRIVER" && view === "account" && (
+          <DriverCommunicationPanel
+            user={user}
+            orders={orders}
+            onChat={(orderId) =>
+              setChatTarget({ type: "CUSTOMER_DRIVER", orderId })
+            }
+          />
+        )}
         {role === "OWNER" && view === "reports" && (
           <section className="panel">
             <h2>Ringkasan operasional</h2>
@@ -5292,6 +5309,21 @@ export default function App() {
           onClose={() => setChatTarget(null)}
         />
       )}
+      {role === "DRIVER" && (
+        <nav className="driver-mobile-nav" aria-label="Navigasi Driver mobile">
+          <button onClick={() => setView("orders")}>Tugas</button>
+          <button
+            onClick={() =>
+              window.dispatchEvent(new CustomEvent("warkost:open-cod-batch"))
+            }
+          >
+            COD
+          </button>
+          <button onClick={() => setView("notifications")}>Notifikasi</button>
+          <button onClick={() => setView("account")}>Akun</button>
+          <button onClick={logout}>Keluar</button>
+        </nav>
+      )}
       {role === "ADMIN" && <AdminUiRuntime view={view} />}
       <footer>
         Warkost Bahagia · Dibuat untuk operasional yang lebih rapi
@@ -6238,15 +6270,40 @@ function Order({
                   : "Selesaikan pengantaran"}
             </button>
           )}
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => onChat?.("CUSTOMER_DRIVER", o.id)}
-          >
-            <ChatIcon /> Chat Customer
-          </button>
         </div>
       )}
+      {role === "DRIVER" &&
+        ["ASSIGNED", "PICKED_UP", "ON_DELIVERY"].includes(o.status) && (
+          <section
+            className="driver-customer-communication"
+            aria-label="Komunikasi Customer"
+          >
+            <small>KOMUNIKASI CUSTOMER</small>
+            <div>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => onChat?.("CUSTOMER_DRIVER", o.id)}
+              >
+                <ChatIcon /> Chat Customer
+              </button>
+              {customerWhatsAppUrl(o.customer_phone, o.id) ? (
+                <a
+                  className="driver-whatsapp-action"
+                  href={customerWhatsAppUrl(o.customer_phone, o.id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <PhoneIcon /> Hubungi WhatsApp
+                </a>
+              ) : (
+                <button type="button" disabled>
+                  <PhoneIcon /> Nomor customer belum tersedia
+                </button>
+              )}
+            </div>
+          </section>
+        )}
       {role === "DRIVER" && Boolean(o.available_to_claim) && (
         <div className="actions">
           <button
@@ -6259,6 +6316,70 @@ function Order({
         </div>
       )}
     </article>
+  );
+}
+
+function DriverCommunicationPanel({ user, orders, onChat }) {
+  const activeOrders = orders.filter((order) =>
+    ["ASSIGNED", "PICKED_UP", "ON_DELIVERY"].includes(order.status),
+  );
+  return (
+    <section className="driver-account-page">
+      <header>
+        <span>AKUN DRIVER</span>
+        <h1>{user?.name || "Driver Warkost"}</h1>
+        <p>Kelola komunikasi pengantaran untuk tugas aktif Anda.</p>
+      </header>
+      <section className="panel driver-account-communication">
+        <div>
+          <small>KOMUNIKASI PENGANTARAN</small>
+          <h2>Customer dalam tugas aktif</h2>
+        </div>
+        {activeOrders.length ? (
+          <div className="driver-contact-list">
+            {activeOrders.map((order) => {
+              const whatsapp = customerWhatsAppUrl(
+                order.customer_phone,
+                order.id,
+              );
+              return (
+                <article key={order.id}>
+                  <div>
+                    <strong>{order.customer_name || "Customer Warkost"}</strong>
+                    <span>
+                      WB{String(order.id).padStart(6, "0")} ·{" "}
+                      {orderStatusMeta(order.status).label}
+                    </span>
+                  </div>
+                  <div className="driver-contact-actions">
+                    <button type="button" onClick={() => onChat(order.id)}>
+                      <ChatIcon /> Chat Customer
+                    </button>
+                    {whatsapp ? (
+                      <a
+                        href={whatsapp}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <PhoneIcon /> Hubungi WhatsApp
+                      </a>
+                    ) : (
+                      <button type="button" disabled>
+                        Nomor customer belum tersedia
+                      </button>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="driver-contact-empty">
+            Tidak ada customer yang perlu dihubungi saat ini.
+          </p>
+        )}
+      </section>
+    </section>
   );
 }
 

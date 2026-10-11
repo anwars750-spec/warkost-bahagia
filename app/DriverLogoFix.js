@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-const DRIVER_LOGO = "/warkost-bahagia-logo-transparent.png";
+const DRIVER_LOGO = "/warkost-bahagia-logo-clean.png";
 
 export default function DriverLogoFix() {
   useEffect(() => {

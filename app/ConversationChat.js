@@ -59,17 +59,24 @@ export default function ConversationChat({ target, viewerRole, onClose }) {
   const endRef = useRef(null);
 
   const isDriverChat = target?.type === "CUSTOMER_DRIVER";
-  const prompts = isDriverChat
+  const driverViewer = viewerRole === "DRIVER";
+  const prompts = driverViewer
     ? [
-        "Saya sudah di lokasi",
-        "Patokan rumah saya...",
-        "Mohon hubungi saat sudah dekat",
+        "Saya sedang menuju lokasi",
+        "Saya sudah dekat dengan alamat",
+        "Saya sudah tiba di lokasi",
       ]
-    : [
-        "Pesanan saya sampai mana?",
-        "Saya ingin konfirmasi pembayaran",
-        "Ada kendala pengantaran",
-      ];
+    : isDriverChat
+      ? [
+          "Saya sudah di lokasi",
+          "Patokan rumah saya...",
+          "Mohon hubungi saat sudah dekat",
+        ]
+      : [
+          "Pesanan saya sampai mana?",
+          "Saya ingin konfirmasi pembayaran",
+          "Ada kendala pengantaran",
+        ];
 
   useEffect(() => {
     if (!target) return;
@@ -124,7 +131,9 @@ export default function ConversationChat({ target, viewerRole, onClose }) {
   };
 
   const title = isDriverChat
-    ? conversation?.driver?.name || "Driver Warkost"
+    ? driverViewer
+      ? conversation?.customer?.name || "Customer Warkost"
+      : conversation?.driver?.name || "Driver Warkost"
     : "Admin Warkost";
 
   return (
@@ -133,7 +142,13 @@ export default function ConversationChat({ target, viewerRole, onClose }) {
         className="conversation-screen"
         role="dialog"
         aria-modal="true"
-        aria-label={isDriverChat ? "Chat dengan Driver" : "Chat dengan Admin"}
+        aria-label={
+          isDriverChat
+            ? driverViewer
+              ? "Chat dengan Customer"
+              : "Chat dengan Driver"
+            : "Chat dengan Admin"
+        }
       >
         <header className="conversation-header">
           <button
@@ -145,7 +160,7 @@ export default function ConversationChat({ target, viewerRole, onClose }) {
             <BackIcon />
           </button>
           <div className="conversation-avatar">
-            {isDriverChat ? "DR" : "AD"}
+            {isDriverChat ? (driverViewer ? "CU" : "DR") : "AD"}
           </div>
           <div className="conversation-identity">
             <strong>{title}</strong>
@@ -203,7 +218,9 @@ export default function ConversationChat({ target, viewerRole, onClose }) {
         )}
 
         <div className="conversation-messages" aria-live="polite">
-          {loading && <p className="conversation-state">Memuat percakapan...</p>}
+          {loading && (
+            <p className="conversation-state">Memuat percakapan...</p>
+          )}
           {!loading && !conversation?.messages?.length && !error && (
             <div className="conversation-empty">
               <span className="conversation-empty-icon">

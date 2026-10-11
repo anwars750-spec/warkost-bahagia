@@ -1,8 +1,29 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import ConversationChat from "./ConversationChat";
 
 const money = (value) => `Rp${Number(value || 0).toLocaleString("id-ID")}`;
+
+const normalizeWhatsAppNumber = (value) => {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("0")) return `62${digits.slice(1)}`;
+  if (digits.startsWith("62")) return digits;
+  return digits;
+};
+
+const customerWhatsAppUrl = (phone, orderId) => {
+  const number = normalizeWhatsAppNumber(phone);
+  if (!number) return "";
+
+  const orderCode = `WB${String(orderId).padStart(6, "0")}`;
+  const message =
+    `Halo, saya Driver Warkost Bahagia untuk pesanan ${orderCode}. ` +
+    "Saya ingin mengonfirmasi pengantaran pesanan Anda.";
+
+  return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+};
 
 const ICONS = {
   home: ["M3 11.5 12 4l9 7.5", "M5 10.5V20h14v-9.5", "M9 20v-6h6v6"],
@@ -14,6 +35,7 @@ const ICONS = {
   map: ["M9 18 3 21V6l6-3 6 3 6-3v15l-6 3-6-3Z", "M9 3v15", "M15 6v15"],
   pin: ["M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z", "M12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"],
   phone: ["M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.4 2.1L8.1 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c1 .4 1.9.6 2.9.7A2 2 0 0 1 22 16.9Z"],
+  chat: ["M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"],
   chevron: ["m9 18 6-6-6-6"],
   refresh: ["M20 11a8 8 0 1 0 2 5.5", "M20 4v7h-7"],
   package: ["M21 8 12 13 3 8l9-5 9 5Z", "M3 8v8l9 5 9-5V8", "M12 13v8"],
@@ -78,13 +100,21 @@ function NavigationLink({ active, icon, label, onClick }) {
   );
 }
 
-function OrderCard({ order, busy, onAction, compact = false }) {
+function OrderCard({ order, busy, onAction, onChat, compact = false }) {
   const status = statusMeta(order.status);
   const action = actionMeta(order);
   const cod = String(order.method || "").toUpperCase() === "CASH";
   const mapsUrl = order.latitude != null && order.longitude != null
     ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${order.latitude},${order.longitude}`)}`
     : null;
+
+  const canContact =
+    !order.available_to_claim &&
+    ["ASSIGNED", "PICKED_UP", "ON_DELIVERY"].includes(order.status);
+
+  const whatsappUrl = canContact
+    ? customerWhatsAppUrl(order.customer_phone, order.id)
+    : "";
   return (
     <article className={`driver-v2-order-card ${compact ? "compact" : ""}`}>
       <div className="driver-v2-order-top">
@@ -111,6 +141,62 @@ function OrderCard({ order, busy, onAction, compact = false }) {
           <strong>{money(order.payment_amount ?? order.total)}</strong>
         </div>
       )}
+      {canContact && !compact && (
+        <div className="driver-v2-order-communication">
+  <div className="driver-v2-order-communication-headline">
+    <span>KOMUNIKASI CUSTOMER</span>
+    <small>Hubungi customer lebih cepat</small>
+  </div>
+
+  <div className="driver-v2-order-communication-row">
+    <button
+      type="button"
+      className="driver-v2-contact-cta driver-v2-contact-cta--chat"
+      onClick={() => onChat?.(order)}
+    >
+      <span className="driver-v2-contact-cta-icon">
+        <Icon name="chat" size={18} />
+      </span>
+      <span className="driver-v2-contact-cta-copy">
+        <strong>Chat</strong>
+        <small>Pesan customer</small>
+      </span>
+    </button>
+
+    {whatsapp ? (
+      <a
+        href={whatsapp}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="driver-v2-contact-cta driver-v2-contact-cta--whatsapp"
+      >
+        <span className="driver-v2-contact-cta-icon">
+          <Icon name="phone" size={18} />
+        </span>
+        <span className="driver-v2-contact-cta-copy">
+          <strong>Call WA</strong>
+          <small>Hubungi customer</small>
+        </span>
+      </a>
+    ) : (
+      <button
+        type="button"
+        className="driver-v2-contact-cta driver-v2-contact-cta--disabled"
+        disabled
+      >
+        <span className="driver-v2-contact-cta-icon">
+          <Icon name="phone" size={18} />
+        </span>
+        <span className="driver-v2-contact-cta-copy">
+          <strong>Call WA</strong>
+          <small>Nomor belum tersedia</small>
+        </span>
+      </button>
+    )}
+  </div>
+</div>
+      )}
+
       <div className="driver-v2-order-actions">
         {mapsUrl && (
           <a className="driver-v2-secondary" href={mapsUrl} target="_blank" rel="noreferrer">
@@ -138,6 +224,7 @@ export default function DriverControlCenter() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
+  const [chatTarget, setChatTarget] = useState(null);
   const notificationRef = useRef(null);
 
   const load = useCallback(async (silent = false) => {
@@ -238,7 +325,7 @@ export default function DriverControlCenter() {
     <div className="driver-v2-root">
       <header className="driver-v2-header">
         <div className="driver-v2-brand">
-          <img src="/logo-warkost.png" alt="Warkost Bahagia" onError={(event) => { event.currentTarget.style.display = "none"; }} />
+          <img src="/warkost-bahagia-logo-clean.png" alt="Warkost Bahagia" />
           <div><strong>Warkost Bahagia</strong><small>Driver Center</small></div>
         </div>
         <nav className="driver-v2-desktop-nav">
@@ -296,7 +383,7 @@ export default function DriverControlCenter() {
             <div className="driver-v2-home-grid">
               <section className="driver-v2-section">
                 <div className="driver-v2-section-head"><div><small>PENGANTARAN PRIORITAS</small><h2>{featured ? "Tugas yang perlu ditangani" : "Tidak ada tugas aktif"}</h2></div><button type="button" onClick={() => setView("deliveries")}>Lihat semua <Icon name="chevron" size={16} /></button></div>
-                {featured ? <OrderCard order={featured} busy={busy} onAction={performAction} /> : <div className="driver-v2-empty"><span><Icon name="delivery" size={27} /></span><strong>Belum ada pengantaran</strong><p>Tugas baru akan muncul otomatis di sini.</p></div>}
+                {featured ? <OrderCard order={featured} busy={busy} onAction={performAction} onChat={(orderId) => setChatTarget({ type: "CUSTOMER_DRIVER", orderId })} /> : <div className="driver-v2-empty"><span><Icon name="delivery" size={27} /></span><strong>Belum ada pengantaran</strong><p>Tugas baru akan muncul otomatis di sini.</p></div>}
               </section>
               <aside className="driver-v2-side-card">
                 <div className="driver-v2-side-icon"><Icon name="wallet" size={22} /></div>
@@ -310,9 +397,9 @@ export default function DriverControlCenter() {
         ) : view === "deliveries" ? (
           <section>
             <div className="driver-v2-page-title"><div><span className="driver-v2-eyebrow">OPERASIONAL DRIVER</span><h1>Pengantaran</h1><p>Kerjakan tugas sesuai urutan status sampai pesanan diterima customer.</p></div><button type="button" onClick={() => load()}><Icon name="refresh" size={18} /> Refresh</button></div>
-            {available.length > 0 && <><div className="driver-v2-list-title"><h2>Siap Diambil</h2><span>{available.length} pesanan</span></div><div className="driver-v2-order-grid">{available.map((order) => <OrderCard key={order.id} order={order} busy={busy} onAction={performAction} />)}</div></>}
+            {available.length > 0 && <><div className="driver-v2-list-title"><h2>Siap Diambil</h2><span>{available.length} pesanan</span></div><div className="driver-v2-order-grid">{available.map((order) => <OrderCard key={order.id} order={order} busy={busy} onAction={performAction} onChat={(orderId) => setChatTarget({ type: "CUSTOMER_DRIVER", orderId })} />)}</div></>}
             <div className="driver-v2-list-title"><h2>Pengantaran Aktif</h2><span>{active.length} tugas</span></div>
-            <div className="driver-v2-order-grid">{active.map((order) => <OrderCard key={order.id} order={order} busy={busy} onAction={performAction} />)}{!active.length && <div className="driver-v2-empty wide"><span><Icon name="delivery" /></span><strong>Tidak ada pengantaran aktif</strong><p>Ambil pesanan yang sudah siap untuk memulai perjalanan.</p></div>}</div>
+            <div className="driver-v2-order-grid">{active.map((order) => <OrderCard key={order.id} order={order} busy={busy} onAction={performAction} onChat={(orderId) => setChatTarget({ type: "CUSTOMER_DRIVER", orderId })} />)}{!active.length && <div className="driver-v2-empty wide"><span><Icon name="delivery" /></span><strong>Tidak ada pengantaran aktif</strong><p>Ambil pesanan yang sudah siap untuk memulai perjalanan.</p></div>}</div>
           </section>
         ) : view === "cod" ? (
           <section>
@@ -334,11 +421,89 @@ export default function DriverControlCenter() {
             <div className="driver-v2-account-grid">
               <article className="driver-v2-profile-card"><div className="driver-v2-avatar">{String(user.name || "D").slice(0, 1).toUpperCase()}</div><div><span className="driver-v2-status done">Online</span><h2>{user.name || "Driver Warkost"}</h2><p>{user.email || "Email belum tersedia"}</p></div></article>
               <article className="driver-v2-account-details"><div><small>NOMOR WHATSAPP</small><strong>{user.phone || "Belum diatur"}</strong></div><div><small>ROLE</small><strong>Driver</strong></div><div><small>STATUS AKUN</small><strong>{user.active ? "Aktif" : "Nonaktif"}</strong></div><div><small>PENGANTARAN TERMUAT</small><strong>{completed.filter((item) => item.status === "DELIVERED").length} selesai</strong></div></article>
+              <article className="driver-v2-account-communication">
+                <div className="driver-v2-account-communication-head">
+                  <div>
+                    <small>KOMUNIKASI PENGANTARAN</small>
+                    <h2>Customer Aktif</h2>
+                  </div>
+                  <span>{active.length} aktif</span>
+                </div>
+
+                {active.length ? (
+                  <div className="driver-v2-account-contact-list">
+                    {active.map((order) => {
+                      const whatsapp = customerWhatsAppUrl(
+                        order.customer_phone,
+                        order.id,
+                      );
+
+                      return (
+                        <div className="driver-v2-account-contact" key={order.id}>
+                          <div>
+                            <strong>
+                              {order.customer_name || "Customer Warkost"}
+                            </strong>
+                            <small>
+                              WB{String(order.id).padStart(6, "0")} ?{" "}
+                              {statusMeta(order.status).label}
+                            </small>
+                          </div>
+
+                          <div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setChatTarget({
+                                  type: "CUSTOMER_DRIVER",
+                                  orderId: order.id,
+                                })
+                              }
+                            >
+                              <Icon name="chat" size={16} />
+                              Chat
+                            </button>
+
+                            {whatsapp ? (
+                              <a
+                                href={whatsapp}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <Icon name="phone" size={16} />
+                                WhatsApp
+                              </a>
+                            ) : (
+                              <button type="button" disabled>
+                                <Icon name="phone" size={16} />
+                                Nomor tidak tersedia
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="driver-v2-account-contact-empty">
+                    Tidak ada customer yang perlu dihubungi saat ini.
+                  </div>
+                )}
+              </article>
+
               <article className="driver-v2-account-safety"><div><span><Icon name="wallet" /></span><div><small>SEBELUM KELUAR</small><strong>Pastikan COD dan status pengantaran sudah diperbarui.</strong></div></div><button type="button" className="driver-v2-account-logout"><Icon name="logout" size={18} /> Keluar</button></article>
             </div>
           </section>
         )}
       </main>
+
+      {chatTarget && (
+        <ConversationChat
+          target={chatTarget}
+          viewerRole="DRIVER"
+          onClose={() => setChatTarget(null)}
+        />
+      )}
 
       <nav className="driver-v2-bottom-nav" aria-label="Navigasi Driver">
         {navItems.map(([key, icon, label]) => (

@@ -55,3 +55,36 @@ body.driver-v2-active .driver-trip-workspace {
     pointer-events: auto !important;
   }
 }
+
+/* DRIVER V2 STRUCTURAL LEGACY NAV KILL SWITCH
+   Driver V2 root hanya ada saat akun Driver aktif.
+   Jangan bergantung pada body.driver-v2-active karena lifecycle React
+   dapat membuat class tersebut terlambat / berubah saat refresh. */
+body:has(.driver-v2-root) header.top,
+body:has(.driver-v2-root) header.top nav,
+body:has(.driver-v2-root) .driver-trip-workspace {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Legacy responsive nav dapat menjadi fixed bottom navigation.
+   Selama Driver Center V2 hidup, hanya dua nav V2 ini yang boleh tampil. */
+@media (max-width: 760px) {
+  body:has(.driver-v2-root)
+    nav:not(.driver-v2-desktop-nav):not(.driver-v2-bottom-nav) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  body:has(.driver-v2-root) .driver-v2-bottom-nav {
+    display: grid !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    z-index: 500 !important;
+  }
+}
