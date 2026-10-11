@@ -9,7 +9,7 @@ import {
 
 export const runtime = "nodejs";
 
-const RUNTIME_REVISION = "P0-ENDSHIFT-R4";
+const RUNTIME_REVISION = "P0-ENDSHIFT-R5";
 
 const out = (data, status = 200) =>
   NextResponse.json(
