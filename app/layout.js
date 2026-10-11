@@ -24,6 +24,7 @@ import "./admin-beverage-stock-polish.css";
 import "./admin-beverage-stock-mobile-v3.css";
 import "./admin-beverage-stock-mobile-kpi-center.css";
 import "./admin-ui-stability.css";
+import "./admin-nav-state-precision.css";
 import "./admin-operational-scope-v2.css";
 import "./cod-batch-settlement-polish.css";
 import "./kitchen-dashboard.css";
