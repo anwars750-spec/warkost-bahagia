@@ -32,19 +32,24 @@ export default function AdminShiftGateRuntime() {
   const [checking, setChecking] = useState(false);
   const autoOpened = useRef(false);
   const checkingRef = useRef(false);
-  const resolvedRef = useRef(false);
+  const shiftActiveRef = useRef(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     let alive = true;
     let lastAdminSurface = Boolean(document.querySelector(ADMIN_SURFACE));
-    let refreshTimer = null;
 
-    const refreshAdminState = async ({ forceOpen = false } = {}) => {
-      if (checkingRef.current) return;
+    const reconcileLogin = async ({ forceOpen = false } = {}) => {
+      if (checkingRef.current || submittingRef.current) return;
       checkingRef.current = true;
 
       const adminSurface = Boolean(document.querySelector(ADMIN_SURFACE));
-      if (adminSurface) document.body.classList.add("admin-shift-gate-checking");
+      if (adminSurface && !shiftActiveRef.current) {
+        setIsAdmin(true);
+        setLocked(true);
+        setChecking(true);
+        document.body.classList.add("admin-shift-gate-checking");
+      }
 
       try {
         const user = await readSession();
@@ -55,81 +60,130 @@ export default function AdminShiftGateRuntime() {
           setIsAdmin(false);
           setLocked(false);
           setChecking(false);
+          shiftActiveRef.current = false;
           autoOpened.current = false;
-          resolvedRef.current = false;
           document.body.classList.remove("admin-shift-gate-checking");
           return;
         }
 
         setIsAdmin(true);
-        setChecking(true);
-
         const state = await readCashState();
         if (!alive) return;
 
         const hasShift = Boolean(state?.current_shift);
+        shiftActiveRef.current = hasShift;
         setLocked(!hasShift);
-        resolvedRef.current = true;
         setChecking(false);
         document.body.classList.remove("admin-shift-gate-checking");
 
-        // Force all Admin cash surfaces to reload from the persisted ledger after login/relogin.
-        window.dispatchEvent(new CustomEvent("warkost:admin-session-restored", {
-          detail: { hasShift },
-        }));
-        window.dispatchEvent(new CustomEvent("warkost:cod-batch-updated"));
-        window.setTimeout(
-          () => window.dispatchEvent(new CustomEvent("warkost:cod-batch-updated")),
-          350,
+        window.dispatchEvent(
+          new CustomEvent("warkost:admin-session-restored", {
+            detail: { hasShift, currentShift: state?.current_shift || null },
+          }),
         );
 
         if (forceOpen) autoOpened.current = false;
       } catch {
-        // Initial Admin resolution fails closed. Once a valid shift has already been
-        // resolved, a transient read failure must not bounce the UI back to start-shift.
         if (!alive) return;
-        if (!resolvedRef.current && adminSurface) {
+        // At first Admin render we fail closed. Once an OPEN shift is known,
+        // a transient read failure must never throw the operator back to start-shift.
+        if (!shiftActiveRef.current && adminSurface) {
           setIsAdmin(true);
           setLocked(true);
-          setChecking(false);
         }
+        setChecking(false);
         document.body.classList.remove("admin-shift-gate-checking");
       } finally {
         checkingRef.current = false;
       }
     };
 
-    void refreshAdminState({ forceOpen: true });
-
-    const observer = new MutationObserver(() => {
+    const onDomChange = () => {
       const adminSurface = Boolean(document.querySelector(ADMIN_SURFACE));
       if (adminSurface === lastAdminSurface) return;
       lastAdminSurface = adminSurface;
-      if (adminSurface) document.body.classList.add("admin-shift-gate-checking");
-      void refreshAdminState({ forceOpen: adminSurface });
-    });
+
+      if (adminSurface) {
+        // New Admin shell means a new login render. Resolve persisted shift once,
+        // before allowing the operational dashboard to be used.
+        shiftActiveRef.current = false;
+        autoOpened.current = false;
+        setIsAdmin(true);
+        setLocked(true);
+        setChecking(true);
+        document.body.classList.add("admin-shift-gate-checking");
+        void reconcileLogin({ forceOpen: true });
+      } else {
+        setIsAdmin(false);
+        setLocked(false);
+        setChecking(false);
+        shiftActiveRef.current = false;
+        autoOpened.current = false;
+        document.body.classList.remove("admin-shift-gate-checking");
+      }
+    };
+
+    onDomChange();
+    if (!lastAdminSurface) void reconcileLogin();
+
+    const observer = new MutationObserver(onDomChange);
     observer.observe(document.body, { childList: true, subtree: true });
 
-    const onFocus = () => void refreshAdminState();
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") void refreshAdminState();
+    const onShiftStarted = (event) => {
+      shiftActiveRef.current = true;
+      setIsAdmin(true);
+      setLocked(false);
+      setChecking(false);
+      document.body.classList.remove("admin-shift-gate-checking");
+      if (event?.detail?.currentShift) {
+        window.dispatchEvent(
+          new CustomEvent("warkost:admin-session-restored", {
+            detail: { hasShift: true, currentShift: event.detail.currentShift },
+          }),
+        );
+      }
     };
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onVisibility);
 
-    // Light reconciliation only. Avoid the old 900ms ledger polling that could
-    // queue transactions in front of End Shift writes on SQLite.
-    refreshTimer = window.setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-      if (!document.querySelector(ADMIN_SURFACE)) return;
-      void refreshAdminState();
-    }, 6000);
+    const onShiftEnded = () => {
+      shiftActiveRef.current = false;
+      autoOpened.current = false;
+      setLocked(true);
+      setChecking(false);
+      window.setTimeout(() => {
+        const button = document.querySelector(CASH_NAV);
+        if (button && !document.querySelector(CASH_PANEL)) button.click();
+        autoOpened.current = true;
+      }, 180);
+    };
+
+    const onSubmitting = (event) => {
+      submittingRef.current = Boolean(event?.detail?.active);
+    };
+
+    const onVisibility = () => {
+      // Only reconcile an unresolved Admin login. Do not re-decide a known OPEN
+      // shift on every focus/visibility change; that caused dashboard snap-back.
+      if (
+        document.visibilityState === "visible" &&
+        document.querySelector(ADMIN_SURFACE) &&
+        !shiftActiveRef.current &&
+        !submittingRef.current
+      ) {
+        void reconcileLogin();
+      }
+    };
+
+    window.addEventListener("warkost:admin-shift-started", onShiftStarted);
+    window.addEventListener("warkost:admin-shift-ended", onShiftEnded);
+    window.addEventListener("warkost:admin-shift-submitting", onSubmitting);
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
       alive = false;
       observer.disconnect();
-      if (refreshTimer) window.clearInterval(refreshTimer);
-      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("warkost:admin-shift-started", onShiftStarted);
+      window.removeEventListener("warkost:admin-shift-ended", onShiftEnded);
+      window.removeEventListener("warkost:admin-shift-submitting", onSubmitting);
       document.removeEventListener("visibilitychange", onVisibility);
       document.body.classList.remove("admin-shift-gate-checking");
     };
@@ -143,7 +197,7 @@ export default function AdminShiftGateRuntime() {
       const button = document.querySelector(CASH_NAV);
       if (!button) return false;
       autoOpened.current = true;
-      button.click();
+      if (!document.querySelector(CASH_PANEL)) button.click();
       return true;
     };
 
@@ -155,34 +209,6 @@ export default function AdminShiftGateRuntime() {
   }, [isAdmin, checking]);
 
   useEffect(() => {
-    if (!isAdmin) return;
-
-    const onStarted = () => {
-      resolvedRef.current = true;
-      setLocked(false);
-      setChecking(false);
-      document.body.classList.remove("admin-shift-gate-checking");
-    };
-
-    const onEnded = () => {
-      resolvedRef.current = true;
-      setLocked(true);
-      autoOpened.current = false;
-      window.setTimeout(() => {
-        document.querySelector(CASH_NAV)?.click();
-        autoOpened.current = true;
-      }, 180);
-    };
-
-    window.addEventListener("warkost:admin-shift-started", onStarted);
-    window.addEventListener("warkost:admin-shift-ended", onEnded);
-    return () => {
-      window.removeEventListener("warkost:admin-shift-started", onStarted);
-      window.removeEventListener("warkost:admin-shift-ended", onEnded);
-    };
-  }, [isAdmin]);
-
-  useEffect(() => {
     if (!isAdmin || !locked) {
       document.body.classList.remove("admin-shift-gate-locked");
       return;
@@ -191,8 +217,8 @@ export default function AdminShiftGateRuntime() {
     document.body.classList.add("admin-shift-gate-locked");
 
     const reopen = () => {
-      const panel = document.querySelector(CASH_PANEL);
-      if (panel) return;
+      if (submittingRef.current) return;
+      if (document.querySelector(CASH_PANEL)) return;
       document.querySelector(CASH_NAV)?.click();
     };
 
@@ -234,36 +260,10 @@ export default function AdminShiftGateRuntime() {
     document.addEventListener("click", blockClick, true);
     document.addEventListener("mousedown", blockMouseDown, true);
     document.addEventListener("keydown", blockEscape, true);
-
-    const domObserver = new MutationObserver(() => {
-      if (document.querySelector(".admin-cash-live")) {
-        window.dispatchEvent(new CustomEvent("warkost:admin-shift-started"));
-      } else if (!document.querySelector(".admin-shift-settlement-panel")) {
-        reopen();
-      }
-    });
-    domObserver.observe(document.body, { childList: true, subtree: true });
-
-    // Slow fallback only while locked, in case a UI event is missed.
-    const stateTimer = window.setInterval(async () => {
-      try {
-        const state = await readCashState();
-        if (state?.current_shift) {
-          window.dispatchEvent(new CustomEvent("warkost:admin-shift-started"));
-        } else if (!document.querySelector(".admin-shift-settlement-panel")) {
-          reopen();
-        }
-      } catch {
-        if (!document.querySelector(".admin-shift-settlement-panel")) reopen();
-      }
-    }, 3500);
-
     reopen();
 
     return () => {
       document.body.classList.remove("admin-shift-gate-locked");
-      domObserver.disconnect();
-      window.clearInterval(stateTimer);
       document.removeEventListener("click", blockClick, true);
       document.removeEventListener("mousedown", blockMouseDown, true);
       document.removeEventListener("keydown", blockEscape, true);
