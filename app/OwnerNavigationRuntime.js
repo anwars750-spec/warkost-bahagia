@@ -63,13 +63,24 @@ function makeIcon(name) {
   return span;
 }
 
+function hasNativeIcon(button) {
+  return [...button.children].some((child) => {
+    if (child.classList?.contains("owner-nav-icon-v2")) return false;
+    return child.tagName?.toLowerCase() === "svg" || Boolean(child.querySelector?.("svg"));
+  });
+}
+
 function decorate(button, label) {
   button.dataset.ownerNavKey = label;
   button.dataset.ownerNavVisible = VISIBLE_TABS.has(label) ? "true" : "false";
   if (!VISIBLE_TABS.has(label)) return;
-  if (!button.querySelector(":scope > .owner-nav-icon-v2")) {
-    button.prepend(makeIcon(MENU_META[label]?.icon || "home"));
+
+  const injectedIcon = button.querySelector(":scope > .owner-nav-icon-v2");
+  if (hasNativeIcon(button)) {
+    injectedIcon?.remove();
+    return;
   }
+  if (!injectedIcon) button.prepend(makeIcon(MENU_META[label]?.icon || "home"));
 }
 
 export default function OwnerNavigationRuntime() {
@@ -110,7 +121,7 @@ export default function OwnerNavigationRuntime() {
           if (active) item.setAttribute("aria-current", "page");
           else item.removeAttribute("aria-current");
         });
-      if (VISIBLE_TABS.has(label) && label !== "Keluar") {
+      if (VISIBLE_TABS.has(label) && label !== "Keluar" && label !== "Notifikasi") {
         sessionStorage.setItem("warkost-owner-nav-active", label);
       }
     };
@@ -135,7 +146,9 @@ export default function OwnerNavigationRuntime() {
         decorate(button, label);
         if (VISIBLE_TABS.has(label) && !button.dataset.ownerNavClickBound) {
           button.dataset.ownerNavClickBound = "true";
-          button.addEventListener("click", () => setActive(label));
+          button.addEventListener("click", () => {
+            if (label !== "Notifikasi") setActive(label);
+          });
         }
       });
 
