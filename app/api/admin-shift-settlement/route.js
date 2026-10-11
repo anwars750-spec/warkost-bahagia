@@ -40,6 +40,7 @@ export async function POST(request) {
     if (action === "SUBMIT_END_SHIFT")
       return out(
         await submitAdminShiftSettlement(user, {
+          shiftId: body.shiftId,
           submittedAmount: body.submittedAmount,
         }),
         201,
