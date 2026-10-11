@@ -17,6 +17,7 @@ import "./admin-customer-modal-polish.css";
 import "./admin-customer-service-mobile.css";
 import "./admin-customer-service-mobile-final.css";
 import "./communication.css";
+import "./customer-support-chat-spacing.css";
 import "./admin-printer-center.css";
 import "./admin-notification-popover.css";
 import "./admin-notification-popover-mobile-fix.css";
