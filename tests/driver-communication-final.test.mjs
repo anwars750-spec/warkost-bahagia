@@ -76,6 +76,10 @@ test("nomor customer hanya tampil pada order aktif milik Driver terkait", async 
 
 test("UI Driver memakai logo valid, chat existing, dan aksi delivery tetap ada", () => {
   const page = fs.readFileSync(path.resolve("app/page.js"), "utf8");
+  const driver = fs.readFileSync(
+    path.resolve("app/DriverControlCenter.js"),
+    "utf8",
+  );
   const chat = fs.readFileSync(path.resolve("app/ConversationChat.js"), "utf8");
   const css = fs.readFileSync(
     path.resolve("app/driver-communication.css"),
@@ -94,6 +98,22 @@ test("UI Driver memakai logo valid, chat existing, dan aksi delivery tetap ada",
   assert.match(page, /Sudah diambil · Pickup/);
   assert.match(page, /Mulai pengantaran/);
   assert.match(page, /Selesaikan pengantaran/);
+  assert.match(driver, /onClick=\{\(\) => onChat\?\.\(order\.id\)\}/);
+  assert.match(driver, /\{whatsappUrl \? \(/);
+  assert.match(driver, /href=\{whatsappUrl\}/);
+  assert.doesNotMatch(driver, /Hubungi customer lebih cepat/);
+  assert.doesNotMatch(
+    driver,
+    /\{whatsapp \? \([\s\S]*href=\{whatsapp\}[\s\S]*driver-v2-order-actions/,
+  );
+  assert.match(
+    driver,
+    /\["home", "home", "Beranda"\][\s\S]*\["deliveries", "delivery", "Antar"\][\s\S]*\["cod", "wallet", "COD"\][\s\S]*\["history", "history", "Riwayat"\][\s\S]*\["account", "user", "Akun"\]/,
+  );
   assert.match(css, /object-fit: contain/);
+  assert.match(
+    css,
+    /\.driver-v2-order-communication-row\s*\{[\s\S]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/,
+  );
   assert.doesNotMatch(css, /object-position:\s*-/);
 });

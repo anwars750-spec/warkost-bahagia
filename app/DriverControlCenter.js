@@ -143,58 +143,56 @@ function OrderCard({ order, busy, onAction, onChat, compact = false }) {
       )}
       {canContact && !compact && (
         <div className="driver-v2-order-communication">
-  <div className="driver-v2-order-communication-headline">
-    <span>KOMUNIKASI CUSTOMER</span>
-    <small>Hubungi customer lebih cepat</small>
-  </div>
+          <div className="driver-v2-order-communication-headline">
+            <span>KOMUNIKASI CUSTOMER</span>
+          </div>
 
-  <div className="driver-v2-order-communication-row">
-    <button
-      type="button"
-      className="driver-v2-contact-cta driver-v2-contact-cta--chat"
-      onClick={() => onChat?.(order)}
-    >
-      <span className="driver-v2-contact-cta-icon">
-        <Icon name="chat" size={18} />
-      </span>
-      <span className="driver-v2-contact-cta-copy">
-        <strong>Chat</strong>
-        <small>Pesan customer</small>
-      </span>
-    </button>
+          <div className="driver-v2-order-communication-row">
+            <button
+              type="button"
+              className="driver-v2-contact-cta driver-v2-contact-cta--chat"
+              onClick={() => onChat?.(order.id)}
+            >
+              <span className="driver-v2-contact-cta-icon">
+                <Icon name="chat" size={18} />
+              </span>
+              <span className="driver-v2-contact-cta-copy">
+                <strong>Chat</strong>
+              </span>
+            </button>
 
-    {whatsapp ? (
-      <a
-        href={whatsapp}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="driver-v2-contact-cta driver-v2-contact-cta--whatsapp"
-      >
-        <span className="driver-v2-contact-cta-icon">
-          <Icon name="phone" size={18} />
-        </span>
-        <span className="driver-v2-contact-cta-copy">
-          <strong>Call WA</strong>
-          <small>Hubungi customer</small>
-        </span>
-      </a>
-    ) : (
-      <button
-        type="button"
-        className="driver-v2-contact-cta driver-v2-contact-cta--disabled"
-        disabled
-      >
-        <span className="driver-v2-contact-cta-icon">
-          <Icon name="phone" size={18} />
-        </span>
-        <span className="driver-v2-contact-cta-copy">
-          <strong>Call WA</strong>
-          <small>Nomor belum tersedia</small>
-        </span>
-      </button>
-    )}
-  </div>
-</div>
+            {whatsappUrl ? (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="driver-v2-contact-cta driver-v2-contact-cta--whatsapp"
+              >
+                <span className="driver-v2-contact-cta-icon">
+                  <Icon name="phone" size={18} />
+                </span>
+                <span className="driver-v2-contact-cta-copy">
+                  <strong>Call WA</strong>
+                </span>
+              </a>
+            ) : (
+              <button
+                type="button"
+                className="driver-v2-contact-cta driver-v2-contact-cta--disabled"
+                aria-label="Call WA tidak tersedia"
+                title="Nomor customer belum tersedia"
+                disabled
+              >
+                <span className="driver-v2-contact-cta-icon">
+                  <Icon name="phone" size={18} />
+                </span>
+                <span className="driver-v2-contact-cta-copy">
+                  <strong>Call WA</strong>
+                </span>
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
       <div className="driver-v2-order-actions">
