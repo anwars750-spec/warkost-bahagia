@@ -3,6 +3,7 @@ import "./admin-ui.css";
 import "./admin-icons.css";
 import "./admin-detail.css";
 import "./admin-order-cards-v2.css";
+import "./admin-order-number-v3.css";
 import "./admin-order-modal.css";
 import "./admin-order-modal-close-fix.css";
 import "./admin-order-modal-fallback.css";
@@ -29,6 +30,7 @@ import "./admin-operational-scope-v2.css";
 import "./cod-batch-settlement-polish.css";
 import "./admin-cash-control.css";
 import "./admin-cash-pin-feedback.css";
+import "./admin-shift-gate.css";
 import "./admin-shift-settlement.css";
 import "./owner-admin-operators.css";
 import "./kitchen-dashboard.css";
@@ -67,6 +69,7 @@ import "./driver-control-center-v2.css";
 import "./driver-home-cod-dedupe.css";
 import "./driver-runtime-transition.css";
 import "./driver-mobile-final.css";
+import "./driver-mobile-icon-precision.css";
 import "./driver-logo-fix.css";
 import "./driver-communication.css";
 import "./driver-cod-close-precision.css";
@@ -79,7 +82,9 @@ import DriverLogoFix from "./DriverLogoFix";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
 import AdminCodLauncherButton from "./AdminCodLauncherButton";
 import AdminCashControlCenter from "./AdminCashControlCenter";
+import AdminShiftGateRuntime from "./AdminShiftGateRuntime";
 import AdminShiftSettlementRuntime from "./AdminShiftSettlementRuntime";
+import AdminOrderNumberEnhancer from "./AdminOrderNumberEnhancer";
 import OwnerAdminOperatorCenter from "./OwnerAdminOperatorCenter";
 import ManagerCashSettlementCenter from "./ManagerCashSettlementCenter";
 import ManagerOwnerSettlementCenter from "./ManagerOwnerSettlementCenter";
@@ -116,7 +121,9 @@ export default function RootLayout({ children }) {
         <AdminCodBatchEventBridge />
         <AdminCodLauncherButton />
         <AdminCashControlCenter />
+        <AdminShiftGateRuntime />
         <AdminShiftSettlementRuntime />
+        <AdminOrderNumberEnhancer />
         <OwnerAdminOperatorCenter />
         <ManagerCashSettlementCenter />
         <ManagerOwnerSettlementCenter />
