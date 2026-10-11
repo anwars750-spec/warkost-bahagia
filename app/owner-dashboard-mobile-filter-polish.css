@@ -1,0 +1,128 @@
+@media (max-width: 700px) {
+  .owner-sales-head {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 14px 12px;
+  }
+
+  .owner-sales-head > div {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .owner-sales-head span {
+    margin-bottom: 3px;
+    font-size: 0.6rem;
+    letter-spacing: 0.11em;
+  }
+
+  .owner-sales-head h3 {
+    overflow: hidden;
+    font-size: 0.88rem;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .owner-refresh-button {
+    width: auto !important;
+    min-width: 0;
+    min-height: 34px;
+    flex: 0 0 auto;
+    gap: 5px;
+    padding: 0 10px;
+    border-color: #e0c8b2;
+    border-radius: 10px;
+    background: #fffdf9;
+    color: #633820;
+    box-shadow: 0 4px 12px rgba(82, 47, 27, 0.06);
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .owner-refresh-button:hover,
+  .owner-refresh-button:focus-visible {
+    border-color: #bd9678;
+    background: #fff7ef;
+    box-shadow: 0 5px 14px rgba(82, 47, 27, 0.1);
+    outline: none;
+  }
+
+  .owner-refresh-button svg {
+    width: 15px;
+    height: 15px;
+    flex: 0 0 15px;
+  }
+
+  .owner-period-filter {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    overflow: visible;
+    padding: 10px 10px 8px !important;
+  }
+
+  .owner-period-filter button {
+    width: 100% !important;
+    min-width: 0;
+    min-height: 34px !important;
+    padding: 0 5px !important;
+    border-radius: 999px;
+    font-size: clamp(0.58rem, 2.55vw, 0.67rem);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .owner-period-filter button.active {
+    box-shadow: 0 5px 14px rgba(96, 50, 30, 0.16);
+  }
+
+  .owner-custom-range {
+    padding-top: 4px;
+  }
+}
+
+@media (max-width: 380px) {
+  .owner-sales-head {
+    gap: 8px;
+    padding: 12px 10px 10px;
+  }
+
+  .owner-sales-head span {
+    font-size: 0.56rem;
+  }
+
+  .owner-sales-head h3 {
+    font-size: 0.82rem;
+  }
+
+  .owner-refresh-button {
+    min-height: 32px;
+    padding: 0 8px;
+    border-radius: 9px;
+    font-size: 0.66rem;
+  }
+
+  .owner-refresh-button svg {
+    width: 14px;
+    height: 14px;
+    flex-basis: 14px;
+  }
+
+  .owner-period-filter {
+    gap: 4px !important;
+    padding: 8px 8px 7px !important;
+  }
+
+  .owner-period-filter button {
+    min-height: 32px !important;
+    padding-inline: 3px !important;
+    font-size: 0.56rem;
+  }
+}
