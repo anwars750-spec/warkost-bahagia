@@ -3,7 +3,6 @@ import { currentUser } from "../../../lib/auth.mjs";
 import { DomainError } from "../../../lib/domain.mjs";
 import { assertSameOrigin, readJsonBody } from "../../../lib/request.mjs";
 import {
-  bootstrapAdminOperator,
   getAdminCashState,
   startAdminShift,
 } from "../../../lib/admin-cash-control.mjs";
@@ -39,15 +38,6 @@ export async function POST(request) {
     const body = await readJsonBody(request);
     const action = String(body?.action || "").toUpperCase();
 
-    if (action === "BOOTSTRAP_OPERATOR")
-      return out(
-        await bootstrapAdminOperator(user, {
-          name: body.name,
-          pin: body.pin,
-        }),
-        201,
-      );
-
     if (action === "START_SHIFT")
       return out(
         await startAdminShift(user, {
@@ -56,7 +46,10 @@ export async function POST(request) {
         }),
       );
 
-    throw new DomainError("Aksi cash control tidak dikenal", 404);
+    throw new DomainError(
+      "Admin hanya dapat memilih operator yang sudah didaftarkan Owner dan memulai shift",
+      404,
+    );
   } catch (error) {
     return errorResponse(error);
   }
