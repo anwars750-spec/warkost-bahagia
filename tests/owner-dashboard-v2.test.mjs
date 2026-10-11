@@ -90,11 +90,27 @@ test("Header Owner hanya mempertahankan Dashboard, Pelanggan, Notifikasi, dan Ke
   assert.match(navigation, /result\.user\?\.role === "OWNER"/);
   assert.match(navigation, /nav\.querySelectorAll\("button"\)/);
   assert.match(navigation, /dataset\.ownerNavVisible/);
+  assert.match(navigation, /hasNativeIcon/);
   assert.match(
     styles,
     /nav\.owner-nav-v2 button\[data-owner-nav-visible="false"\]/,
   );
+  assert.match(styles, /owner-nav-active:hover/);
   assert.match(styles, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+});
+
+test("Notifikasi Owner memakai popup dan tidak membuka halaman notifikasi lama", () => {
+  const popover = source("app/OwnerNotificationPopover.js");
+  const layout = source("app/layout.js");
+
+  assert.match(popover, /data-owner-nav-key="Notifikasi"/);
+  assert.match(popover, /event\.preventDefault\(\)/);
+  assert.match(popover, /event\.stopPropagation\(\)/);
+  assert.match(popover, /\/api\/notifications/);
+  assert.match(popover, /\/api\/notification-read/);
+  assert.match(popover, /PUSAT NOTIFIKASI OWNER/);
+  assert.match(layout, /import OwnerNotificationPopover from "\.\/OwnerNotificationPopover"/);
+  assert.match(layout, /<OwnerNotificationPopover \/>/);
 });
 
 test("Owner Dashboard V3 berdiri sendiri tanpa stylesheet dan struktur dashboard lama", () => {
