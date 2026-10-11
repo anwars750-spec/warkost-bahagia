@@ -19,15 +19,20 @@ const routeSource = await readFile(
   "utf8",
 );
 
-test("end shift submission is bounded, idempotent by shift, and hands off to Printer", () => {
+test("end shift submission is bounded, ledger-authoritative, idempotent by shift, and hands off to Printer", () => {
   assert.match(settlementSource, /AbortController/);
   assert.match(settlementSource, /SETTLEMENT_TIMEOUT/);
   assert.match(settlementSource, /recoverSubmission/);
+  assert.match(settlementSource, /Promise\.race/);
+  assert.match(settlementSource, /LEDGER_ATTEMPTS/);
+  assert.match(settlementSource, /confirmed_by: "ledger"/);
   assert.match(settlementSource, /shiftId/);
   assert.match(routeSource, /shiftId: body\.shiftId/);
   assert.match(settlementSource, /data-admin-nav=\"Printer\"/);
   assert.match(settlementSource, /window\.print\(\)/);
   assert.match(settlementSource, /warkost:admin-shift-ended/);
+  assert.match(settlementSource, /P0-ENDSHIFT-R5/);
+  assert.match(routeSource, /P0-ENDSHIFT-R5/);
 });
 
 test("admin shift gate only opens mandatory Setoran when shift is actually locked", () => {
