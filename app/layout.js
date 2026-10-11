@@ -29,6 +29,7 @@ import "./admin-operational-scope-v2.css";
 import "./cod-batch-settlement-polish.css";
 import "./admin-cash-control.css";
 import "./admin-cash-pin-feedback.css";
+import "./admin-shift-settlement.css";
 import "./owner-admin-operators.css";
 import "./kitchen-dashboard.css";
 import "./kitchen-dashboard-queue-polish.css";
@@ -61,6 +62,7 @@ import "./manager-promotion-ui-polish.css";
 import "./manager-promotion-actions-polish.css";
 import "./manager-promotion-icon-single-fix.css";
 import "./manager-promotion-drawer-v2.css";
+import "./manager-cash-settlement.css";
 import "./driver-control-center-v2.css";
 import "./driver-home-cod-dedupe.css";
 import "./driver-runtime-transition.css";
@@ -73,7 +75,9 @@ import DriverLogoFix from "./DriverLogoFix";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
 import AdminCodLauncherButton from "./AdminCodLauncherButton";
 import AdminCashControlCenter from "./AdminCashControlCenter";
+import AdminShiftSettlementRuntime from "./AdminShiftSettlementRuntime";
 import OwnerAdminOperatorCenter from "./OwnerAdminOperatorCenter";
+import ManagerCashSettlementCenter from "./ManagerCashSettlementCenter";
 import KitchenDashboardFast from "./KitchenDashboardFast";
 import KitchenFlashGuard from "./KitchenFlashGuard";
 import PrinterCenterRuntime from "./PrinterCenterRuntime";
@@ -105,7 +109,9 @@ export default function RootLayout({ children }) {
         <AdminCodBatchEventBridge />
         <AdminCodLauncherButton />
         <AdminCashControlCenter />
+        <AdminShiftSettlementRuntime />
         <OwnerAdminOperatorCenter />
+        <ManagerCashSettlementCenter />
         <PrinterCenterRuntime />
         <KitchenHeaderActions />
         <KitchenStockCenter />
