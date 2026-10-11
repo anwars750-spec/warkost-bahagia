@@ -92,6 +92,7 @@ import AdminOrderNumberEnhancer from "./AdminOrderNumberEnhancer";
 import OwnerAdminOperatorCenter from "./OwnerAdminOperatorCenter";
 import OwnerDashboardRuntime from "./OwnerDashboardRuntime";
 import OwnerNavigationRuntime from "./OwnerNavigationRuntime";
+import OwnerNotificationPopover from "./OwnerNotificationPopover";
 import ManagerCashSettlementCenter from "./ManagerCashSettlementCenter";
 import ManagerOwnerSettlementCenter from "./ManagerOwnerSettlementCenter";
 import ManagerCashSyncBridge from "./ManagerCashSyncBridge";
@@ -136,6 +137,7 @@ export default function RootLayout({ children }) {
         <OwnerAdminOperatorCenter />
         <OwnerDashboardRuntime />
         <OwnerNavigationRuntime />
+        <OwnerNotificationPopover />
         <ManagerCashSettlementCenter />
         <ManagerOwnerSettlementCenter />
         <ManagerCashSyncBridge />
