@@ -150,7 +150,8 @@
 }
 
 .admin-cash-setup form,
-.admin-cash-start form {
+.admin-cash-start form,
+.admin-cash-form {
   display: grid;
   gap: 14px;
   padding: 20px;
