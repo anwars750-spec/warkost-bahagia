@@ -12,10 +12,12 @@ process.env.SESSION_SECRET = "admin-cash-control-test-secret-32-bytes-minimum";
 
 const { db } = await import("../lib/db.mjs");
 const {
-  bootstrapAdminOperator,
   getAdminCashState,
   startAdminShift,
 } = await import("../lib/admin-cash-control.mjs");
+const { createOwnerAdminOperator } = await import(
+  "../lib/owner-admin-operators.mjs"
+);
 const {
   submitCodBatchCashHandover,
   verifyCodBatchWithOperator,
@@ -27,13 +29,15 @@ database.exec(`
   INSERT INTO users(id,name,email,password_hash,role,active) VALUES
     (1,'Admin Shared','admin@cash.test','x','ADMIN',1),
     (2,'Driver Budi','driver@cash.test','x','DRIVER',1),
-    (3,'Customer','customer@cash.test','x','CUSTOMER',1);
+    (3,'Customer','customer@cash.test','x','CUSTOMER',1),
+    (4,'Owner','owner@cash.test','x','OWNER',1);
   INSERT INTO addresses(id,user_id,label,detail,latitude,longitude,is_default,active)
     VALUES(3,3,'Rumah','Alamat Customer',0,0,1,1);
 `);
 
 const admin = { id: 1, role: "ADMIN" };
 const driver = { id: 2, role: "DRIVER" };
+const owner = { id: 4, role: "OWNER" };
 
 function createDeliveredCod(amount) {
   const order = database
@@ -62,8 +66,8 @@ function createDeliveredCod(amount) {
 
 let operatorId;
 
-test("operator pertama dapat dibuat tetapi shift belum otomatis aktif", async () => {
-  const operator = await bootstrapAdminOperator(admin, {
+test("operator yang dibuat Owner tersedia untuk dipilih Admin tetapi shift belum otomatis aktif", async () => {
+  const operator = await createOwnerAdminOperator(owner, {
     name: "Virsa",
     pin: "2580",
   });
