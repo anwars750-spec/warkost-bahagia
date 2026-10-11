@@ -86,7 +86,27 @@ test("Header Owner hanya mempertahankan Dashboard, Pelanggan, Notifikasi, dan Ke
     navigation,
     /VISIBLE_TABS = new Set\(\["Dashboard", "Pelanggan", "Notifikasi", "Keluar"\]\)/,
   );
-  assert.match(navigation, /data\.ownerNavVisible/);
+  assert.match(navigation, /dataset\.ownerNavVisible/);
   assert.match(styles, /data-owner-nav-visible="false"/);
   assert.match(styles, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+});
+
+test("Owner Dashboard V3 berdiri sendiri tanpa stylesheet dan struktur dashboard lama", () => {
+  const component = source("app/OwnerDashboardRuntime.js");
+  const layout = source("app/layout.js");
+  const styles = source("app/owner-dashboard-v3.css");
+
+  assert.match(component, /className="owner-dashboard-v3"/);
+  assert.match(component, /Selamat datang,/);
+  assert.match(component, /<h2>Owner Control Center<\/h2>/);
+  assert.match(component, /owner-dashboard-v3-active/);
+  assert.doesNotMatch(
+    component,
+    /owner-dashboard-v1-active|owner-dashboard-v1-host/,
+  );
+  assert.doesNotMatch(
+    layout,
+    /owner-dashboard-v1\.css|owner-dashboard-v2\.css/,
+  );
+  assert.match(styles, /url\("\/demo\/kopi-susu-rumah\.webp"\)/);
 });

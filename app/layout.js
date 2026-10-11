@@ -77,8 +77,6 @@ import "./driver-cod-close-precision.css";
 import "./cash-settlement-ui-v2.css";
 import "./manager-owner-settlement.css";
 import "./manager-owner-settlement-v2.css";
-import "./owner-dashboard-v1.css";
-import "./owner-dashboard-v2.css";
 import "./owner-dashboard-v3.css";
 import "./owner-navigation-v2.css";
 import "./print-branding.css";

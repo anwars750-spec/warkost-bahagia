@@ -44,9 +44,15 @@ function countStatus(statuses, wanted) {
 }
 
 function goToOwnerView(label) {
-  const wanted = String(label || "").trim().toLowerCase();
+  const wanted = String(label || "")
+    .trim()
+    .toLowerCase();
   const button = [...document.querySelectorAll("header.top nav button")].find(
-    (item) => item.textContent.trim().replace(/^Rp\s*/i, "").toLowerCase() === wanted,
+    (item) =>
+      item.textContent
+        .trim()
+        .replace(/^Rp\s*/i, "")
+        .toLowerCase() === wanted,
   );
   button?.click();
 }
@@ -64,16 +70,22 @@ const Icon = ({ name }) => {
     digital: "M4 7h16v10H4zM8 12h8M8 15h4",
     warning: "M12 4 3 20h18L12 4Zm0 5v5m0 3h.01",
     box: "M4 7 12 3l8 4v10l-8 4-8-4V7Zm0 0 8 4 8-4M12 11v10",
-    printer: "M6 9V4h12v5M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v6H6z",
-    refresh: "M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5m-5 4a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5",
+    printer:
+      "M6 9V4h12v5M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v6H6z",
+    refresh:
+      "M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5m-5 4a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5",
     report: "M5 3h14v18H5zM8 8h8M8 12h8M8 16h5",
     audit: "M9 11l2 2 4-4M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z",
-    staff: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z",
+    staff:
+      "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z",
     activity: "M3 12h4l2-6 4 12 2-6h6",
     promo: "M20 13 13 20 4 11V4h7l9 9ZM8.5 8.5h.01",
-    loyalty: "m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z",
-    operator: "M12 3 20 6v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6l8-3ZM9 12l2 2 4-4",
-    settings: "M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4",
+    loyalty:
+      "m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z",
+    operator:
+      "M12 3 20 6v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6l8-3ZM9 12l2 2 4-4",
+    settings:
+      "M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4",
     close: "M6 6l12 12M18 6 6 18",
     arrow: "M5 12h14m-5-5 5 5-5 5",
   };
@@ -120,19 +132,21 @@ export default function OwnerDashboardRuntime() {
       setVisible(Boolean(onDashboard));
 
       if (!onDashboard || !main) {
-        document.body.classList.remove("owner-dashboard-v1-active");
-        document.getElementById("owner-dashboard-v1-host")?.remove();
+        document.body.classList.remove("owner-dashboard-v3-active");
+        document.getElementById("owner-dashboard-v3-host")?.remove();
         setHost(null);
         return;
       }
 
-      let target = document.getElementById("owner-dashboard-v1-host");
+      let target = document.getElementById("owner-dashboard-v3-host");
       if (!target) {
         target = document.createElement("div");
-        target.id = "owner-dashboard-v1-host";
-        main.querySelector(".heading")?.insertAdjacentElement("afterend", target);
+        target.id = "owner-dashboard-v3-host";
+        main
+          .querySelector(".heading")
+          ?.insertAdjacentElement("afterend", target);
       }
-      document.body.classList.add("owner-dashboard-v1-active");
+      document.body.classList.add("owner-dashboard-v3-active");
       setHost(target);
     };
 
@@ -141,8 +155,8 @@ export default function OwnerDashboardRuntime() {
     observer.observe(document.body, { childList: true, subtree: true });
     return () => {
       observer.disconnect();
-      document.body.classList.remove("owner-dashboard-v1-active");
-      document.getElementById("owner-dashboard-v1-host")?.remove();
+      document.body.classList.remove("owner-dashboard-v3-active");
+      document.getElementById("owner-dashboard-v3-host")?.remove();
     };
   }, []);
 
@@ -154,7 +168,8 @@ export default function OwnerDashboardRuntime() {
     let active = true;
     request("me")
       .then((result) => {
-        if (active) setOwner(result.user?.role === "OWNER" ? result.user : null);
+        if (active)
+          setOwner(result.user?.role === "OWNER" ? result.user : null);
       })
       .catch(() => active && setOwner(null));
     return () => {
@@ -173,7 +188,10 @@ export default function OwnerDashboardRuntime() {
 
   async function load() {
     if (!visible || !owner) return;
-    if (preset === "custom" && (!customFrom || !customTo || customFrom > customTo)) {
+    if (
+      preset === "custom" &&
+      (!customFrom || !customTo || customFrom > customTo)
+    ) {
       setError("Rentang tanggal custom belum valid.");
       return;
     }
@@ -232,12 +250,15 @@ export default function OwnerDashboardRuntime() {
     ];
     const activeOrders = countStatus(statuses, activeStatuses);
     const pendingPayments = Number(
-      dashboard?.paymentStatuses?.find((item) => item.status === "PENDING")?.count || 0,
+      dashboard?.paymentStatuses?.find((item) => item.status === "PENDING")
+        ?.count || 0,
     );
     const outOfStockProducts = payload.stock.filter(
       (product) => Number(product.available_quantity || 0) <= 0,
     );
-    const failedPrintJobs = payload.printJobs.filter((job) => job.status === "FAILED");
+    const failedPrintJobs = payload.printJobs.filter(
+      (job) => job.status === "FAILED",
+    );
 
     return {
       revenue,
@@ -260,8 +281,26 @@ export default function OwnerDashboardRuntime() {
 
   const periodLabel = displayPeriod(payload.dashboard?.period);
 
-  const openActionPopup = ({ title, icon, eyebrow, value, description, details, actionLabel, action }) => {
-    setPopup({ title, icon, eyebrow, value, description, details, actionLabel, action });
+  const openActionPopup = ({
+    title,
+    icon,
+    eyebrow,
+    value,
+    description,
+    details,
+    actionLabel,
+    action,
+  }) => {
+    setPopup({
+      title,
+      icon,
+      eyebrow,
+      value,
+      description,
+      details,
+      actionLabel,
+      action,
+    });
   };
 
   const healthItems = [
@@ -271,8 +310,15 @@ export default function OwnerDashboardRuntime() {
       value: metrics.activeOrders,
       description: `Order aktif pada periode ${periodLabel}.`,
       details: metrics.statuses
-        .filter((item) => metrics.activeStatuses.includes(item.status) && Number(item.count || 0) > 0)
-        .map((item) => `${STATUS_LABELS[item.status] || item.status}: ${item.count}`),
+        .filter(
+          (item) =>
+            metrics.activeStatuses.includes(item.status) &&
+            Number(item.count || 0) > 0,
+        )
+        .map(
+          (item) =>
+            `${STATUS_LABELS[item.status] || item.status}: ${item.count}`,
+        ),
       actionLabel: "Buka Laporan",
       action: () => goToOwnerView("Laporan"),
     },
@@ -280,8 +326,11 @@ export default function OwnerDashboardRuntime() {
       title: "Produk Stock Habis",
       icon: "box",
       value: metrics.outOfStockProducts.length,
-      description: "Produk yang tidak memiliki stok tersedia dan perlu perhatian.",
-      details: metrics.outOfStockProducts.slice(0, 8).map((item) => item.name || `Produk #${item.id}`),
+      description:
+        "Produk yang tidak memiliki stok tersedia dan perlu perhatian.",
+      details: metrics.outOfStockProducts
+        .slice(0, 8)
+        .map((item) => item.name || `Produk #${item.id}`),
       actionLabel: "Buka Stok",
       action: () => goToOwnerView("Stok"),
     },
@@ -290,7 +339,9 @@ export default function OwnerDashboardRuntime() {
       icon: "warning",
       value: metrics.pendingPayments,
       description: `Pembayaran yang masih berstatus pending pada periode ${periodLabel}.`,
-      details: metrics.pendingPayments ? [`${metrics.pendingPayments} pembayaran belum final.`] : [],
+      details: metrics.pendingPayments
+        ? [`${metrics.pendingPayments} pembayaran belum final.`]
+        : [],
       actionLabel: "Buka Laporan",
       action: () => goToOwnerView("Laporan"),
     },
@@ -299,33 +350,78 @@ export default function OwnerDashboardRuntime() {
       icon: "printer",
       value: metrics.failedPrintJobs.length,
       description: "Print job gagal yang perlu dicek atau dicetak ulang.",
-      details: metrics.failedPrintJobs.slice(0, 8).map((job) =>
-        `Job #${job.id}${job.order_id ? ` · Order #${job.order_id}` : ""}`,
-      ),
+      details: metrics.failedPrintJobs
+        .slice(0, 8)
+        .map(
+          (job) =>
+            `Job #${job.id}${job.order_id ? ` · Order #${job.order_id}` : ""}`,
+        ),
       actionLabel: "Buka Printer",
       action: () => goToOwnerView("Printer"),
     },
   ];
 
   const controlItems = [
-    ["Setoran Kas", "cash", "Pantau dan verifikasi setoran kas dari Manager.", openOwnerCashSettlement],
-    ["Laporan", "report", "Lihat laporan operasional dan penjualan lebih lengkap.", () => goToOwnerView("Laporan")],
-    ["Promo", "promo", "Pantau program promo yang sedang berjalan.", () => goToOwnerView("Promo")],
-    ["Audit Log", "audit", "Telusuri jejak perubahan dan aktivitas sistem.", () => goToOwnerView("Audit log")],
-    ["Staf", "staff", "Kelola akun, akses, dan peran staf.", () => goToOwnerView("Staf")],
-    ["Loyalty", "loyalty", "Pantau aturan dan reward loyalty pelanggan.", () => goToOwnerView("Loyalty")],
-    ["Operator Admin", "operator", "Kelola operator Admin dan akses operasionalnya.", () => goToOwnerView("Operator Admin")],
-    ["Pengaturan", "settings", "Atur konfigurasi operasional Warkost Bahagia.", () => goToOwnerView("Pengaturan")],
+    [
+      "Setoran Kas",
+      "cash",
+      "Pantau dan verifikasi setoran kas dari Manager.",
+      openOwnerCashSettlement,
+    ],
+    [
+      "Laporan",
+      "report",
+      "Lihat laporan operasional dan penjualan lebih lengkap.",
+      () => goToOwnerView("Laporan"),
+    ],
+    [
+      "Promo",
+      "promo",
+      "Pantau program promo yang sedang berjalan.",
+      () => goToOwnerView("Promo"),
+    ],
+    [
+      "Audit Log",
+      "audit",
+      "Telusuri jejak perubahan dan aktivitas sistem.",
+      () => goToOwnerView("Audit log"),
+    ],
+    [
+      "Staf",
+      "staff",
+      "Kelola akun, akses, dan peran staf.",
+      () => goToOwnerView("Staf"),
+    ],
+    [
+      "Loyalty",
+      "loyalty",
+      "Pantau aturan dan reward loyalty pelanggan.",
+      () => goToOwnerView("Loyalty"),
+    ],
+    [
+      "Operator Admin",
+      "operator",
+      "Kelola operator Admin dan akses operasionalnya.",
+      () => goToOwnerView("Operator Admin"),
+    ],
+    [
+      "Pengaturan",
+      "settings",
+      "Atur konfigurasi operasional Warkost Bahagia.",
+      () => goToOwnerView("Pengaturan"),
+    ],
   ];
 
   return createPortal(
     <>
-      <section className="owner-dashboard-v1 owner-dashboard-v3" aria-label="Owner Control Center">
+      <section className="owner-dashboard-v3" aria-label="Owner Control Center">
         <div className="owner-dashboard-hero owner-dashboard-hero-v3">
           <div>
-            <span className="owner-dashboard-kicker">OWNER CONTROL CENTER</span>
-            <h2>Dashboard Owner</h2>
-            <p>Ringkasan usaha, kondisi operasional, dan kontrol penting dalam satu halaman.</p>
+            <span className="owner-dashboard-greeting">
+              Selamat datang, <strong>{owner.name || "Owner"}!</strong>
+            </span>
+            <h2>Owner Control Center</h2>
+            <p>Anda bisa memantau bisnis dari satu layar.</p>
           </div>
         </div>
 
@@ -337,13 +433,21 @@ export default function OwnerDashboardRuntime() {
               <span>RINGKASAN SALES</span>
               <h3>{periodLabel}</h3>
             </div>
-            <button className="owner-refresh-button" type="button" onClick={load} disabled={loading}>
+            <button
+              className="owner-refresh-button"
+              type="button"
+              onClick={load}
+              disabled={loading}
+            >
               <Icon name="refresh" />
               {loading ? "Memuat..." : "Perbarui"}
             </button>
           </div>
 
-          <div className="owner-period-filter" aria-label="Filter periode penjualan">
+          <div
+            className="owner-period-filter"
+            aria-label="Filter periode penjualan"
+          >
             {[
               ["today", "Hari Ini"],
               ["month", "Bulan Ini"],
@@ -387,31 +491,43 @@ export default function OwnerDashboardRuntime() {
 
           <div className="owner-dashboard-kpis owner-dashboard-kpis-v3">
             <article>
-              <span className="owner-dashboard-icon"><Icon name="sales" /></span>
+              <span className="owner-dashboard-icon">
+                <Icon name="sales" />
+              </span>
               <small>Penjualan</small>
               <strong>{money(metrics.revenue)}</strong>
               <em>Revenue terverifikasi</em>
             </article>
             <article>
-              <span className="owner-dashboard-icon"><Icon name="orders" /></span>
+              <span className="owner-dashboard-icon">
+                <Icon name="orders" />
+              </span>
               <small>Order</small>
               <strong>{metrics.orderCount}</strong>
               <em>Total order periode</em>
             </article>
             <article>
-              <span className="owner-dashboard-icon"><Icon name="aov" /></span>
+              <span className="owner-dashboard-icon">
+                <Icon name="aov" />
+              </span>
               <small>AOV</small>
               <strong>{money(metrics.aov)}</strong>
               <em>Rata-rata transaksi</em>
             </article>
-            <article className={metrics.codOutstandingCount ? "needs-attention" : ""}>
-              <span className="owner-dashboard-icon"><Icon name="cash" /></span>
+            <article
+              className={metrics.codOutstandingCount ? "needs-attention" : ""}
+            >
+              <span className="owner-dashboard-icon">
+                <Icon name="cash" />
+              </span>
               <small>COD Belum Final</small>
               <strong>{money(metrics.codOutstandingAmount)}</strong>
               <em>{metrics.codOutstandingCount} transaksi</em>
             </article>
             <article>
-              <span className="owner-dashboard-icon"><Icon name="digital" /></span>
+              <span className="owner-dashboard-icon">
+                <Icon name="digital" />
+              </span>
               <small>QRIS & Transfer</small>
               <strong>{money(metrics.digitalAmount)}</strong>
               <em>{metrics.digitalCount} transaksi paid</em>
@@ -431,9 +547,13 @@ export default function OwnerDashboardRuntime() {
               <button
                 key={item.title}
                 type="button"
-                onClick={() => openActionPopup({ ...item, eyebrow: "OPERATIONAL HEALTH" })}
+                onClick={() =>
+                  openActionPopup({ ...item, eyebrow: "OPERATIONAL HEALTH" })
+                }
               >
-                <span><Icon name={item.icon} /></span>
+                <span>
+                  <Icon name={item.icon} />
+                </span>
                 <div>
                   <strong>{item.value}</strong>
                   <small>{item.title}</small>
@@ -468,7 +588,9 @@ export default function OwnerDashboardRuntime() {
                   })
                 }
               >
-                <span><Icon name={icon} /></span>
+                <span>
+                  <Icon name={icon} />
+                </span>
                 <div>
                   <strong>{title}</strong>
                   <small>{description}</small>
@@ -481,7 +603,11 @@ export default function OwnerDashboardRuntime() {
       </section>
 
       {popup && (
-        <div className="owner-popup-backdrop" role="presentation" onMouseDown={() => setPopup(null)}>
+        <div
+          className="owner-popup-backdrop"
+          role="presentation"
+          onMouseDown={() => setPopup(null)}
+        >
           <section
             className="owner-popup-card"
             role="dialog"
@@ -489,19 +615,32 @@ export default function OwnerDashboardRuntime() {
             aria-label={popup.title}
             onMouseDown={(event) => event.stopPropagation()}
           >
-            <button className="owner-popup-close" type="button" onClick={() => setPopup(null)} aria-label="Tutup popup">
+            <button
+              className="owner-popup-close"
+              type="button"
+              onClick={() => setPopup(null)}
+              aria-label="Tutup popup"
+            >
               <Icon name="close" />
             </button>
-            <span className="owner-popup-icon"><Icon name={popup.icon} /></span>
+            <span className="owner-popup-icon">
+              <Icon name={popup.icon} />
+            </span>
             <small className="owner-popup-eyebrow">{popup.eyebrow}</small>
             <h3>{popup.title}</h3>
-            {popup.value !== undefined && <strong className="owner-popup-value">{popup.value}</strong>}
+            {popup.value !== undefined && (
+              <strong className="owner-popup-value">{popup.value}</strong>
+            )}
             <p>{popup.description}</p>
             <div className="owner-popup-details">
               {(popup.details || []).length ? (
-                popup.details.map((detail, index) => <div key={`${detail}-${index}`}>{detail}</div>)
+                popup.details.map((detail, index) => (
+                  <div key={`${detail}-${index}`}>{detail}</div>
+                ))
               ) : (
-                <div>Tidak ada detail tambahan yang perlu ditindaklanjuti saat ini.</div>
+                <div>
+                  Tidak ada detail tambahan yang perlu ditindaklanjuti saat ini.
+                </div>
               )}
             </div>
             {popup.action && (
