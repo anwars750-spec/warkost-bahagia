@@ -84,20 +84,24 @@ export default function AdminCashControlCenter() {
     let observer = null;
 
     const ensureButton = () => {
-      const nav = document.querySelector(".admin-nav");
+      const printerButton = document.querySelector(
+        'nav [data-admin-nav="Printer"]',
+      );
+      const nav = printerButton?.closest("nav") || document.querySelector(".admin-nav");
       if (!nav) return;
+
       const existing = nav.querySelector('[data-admin-nav="Setoran"]');
       if (existing) {
         navButton = existing;
         return;
       }
+
       const button = document.createElement("button");
       button.type = "button";
       button.dataset.adminNav = "Setoran";
       button.className = "admin-cash-nav";
       button.innerHTML = '<span class="admin-cash-nav-icon" aria-hidden="true">⇄</span><span>Setoran</span><em class="admin-cash-nav-badge"></em>';
-      const printer = nav.querySelector('[data-admin-nav="Printer"]');
-      nav.insertBefore(button, printer || null);
+      nav.insertBefore(button, printerButton || null);
       navButton = button;
       button.addEventListener("click", () => {
         setOpen(true);
@@ -108,7 +112,12 @@ export default function AdminCashControlCenter() {
 
     ensureButton();
     observer = new MutationObserver(ensureButton);
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class", "data-admin-nav"],
+    });
 
     return () => {
       observer?.disconnect();
@@ -117,7 +126,7 @@ export default function AdminCashControlCenter() {
   }, [isAdmin, load]);
 
   useEffect(() => {
-    const button = document.querySelector('.admin-nav [data-admin-nav="Setoran"]');
+    const button = document.querySelector('nav [data-admin-nav="Setoran"]');
     if (!button) return;
     button.classList.toggle("admin-nav-active", open);
     const badge = button.querySelector(".admin-cash-nav-badge");
