@@ -28,6 +28,7 @@ import "./admin-nav-state-precision.css";
 import "./admin-operational-scope-v2.css";
 import "./cod-batch-settlement-polish.css";
 import "./admin-cash-control.css";
+import "./owner-admin-operators.css";
 import "./kitchen-dashboard.css";
 import "./kitchen-dashboard-queue-polish.css";
 import "./kitchen-flash-guard.css";
@@ -71,6 +72,7 @@ import DriverLogoFix from "./DriverLogoFix";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
 import AdminCodLauncherButton from "./AdminCodLauncherButton";
 import AdminCashControlCenter from "./AdminCashControlCenter";
+import OwnerAdminOperatorCenter from "./OwnerAdminOperatorCenter";
 import KitchenDashboardFast from "./KitchenDashboardFast";
 import KitchenFlashGuard from "./KitchenFlashGuard";
 import PrinterCenterRuntime from "./PrinterCenterRuntime";
@@ -102,6 +104,7 @@ export default function RootLayout({ children }) {
         <AdminCodBatchEventBridge />
         <AdminCodLauncherButton />
         <AdminCashControlCenter />
+        <OwnerAdminOperatorCenter />
         <PrinterCenterRuntime />
         <KitchenHeaderActions />
         <KitchenStockCenter />
