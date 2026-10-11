@@ -1,0 +1,26 @@
+/* Admin navigation state precision
+   Keep hover visually distinct from the currently selected section. */
+
+.admin-ui-mode .admin-nav button:hover:not(.admin-nav-active) {
+  color: #6f3b2b;
+  background: #fbf4ee;
+  box-shadow: inset 0 0 0 1px rgba(109, 47, 32, 0.045);
+}
+
+.admin-ui-mode .admin-nav button.admin-nav-active {
+  color: #6a2d1f;
+  background: #f3e4d9;
+  box-shadow:
+    inset 0 0 0 1px rgba(132, 68, 45, 0.16),
+    0 6px 16px rgba(91, 48, 31, 0.06);
+}
+
+.admin-ui-mode .admin-nav button.admin-nav-active:hover {
+  color: #5e261a;
+  background: #f0dfd2;
+}
+
+.admin-ui-mode .admin-nav button:focus-visible {
+  outline: 2px solid rgba(157, 78, 50, 0.35);
+  outline-offset: 2px;
+}
