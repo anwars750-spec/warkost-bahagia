@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { ensurePrintBranding } from "../lib/print-branding.mjs";
 
 const PRINT_SELECTOR = [
   ".admin-settlement-print-sheet",
@@ -11,24 +12,7 @@ const PRINT_SELECTOR = [
 
 function ensureBranding(sheet) {
   if (!(sheet instanceof HTMLElement)) return;
-  sheet.dataset.warkostPrintSheet = "true";
-
-  let header = sheet.querySelector(":scope > .warkost-print-brand");
-  if (!header) {
-    header = document.createElement("div");
-    header.className = "warkost-print-brand";
-    sheet.prepend(header);
-  }
-
-  header.innerHTML = `
-    <div class="warkost-print-brand-logo-wrap">
-      <img src="/warkost-bahagia-logo-clean.png" alt="Warkost Bahagia" />
-    </div>
-    <div class="warkost-print-brand-copy">
-      <strong>WARKOST BAHAGIA</strong>
-      <span>DELIVERY</span>
-    </div>
-  `;
+  ensurePrintBranding(sheet);
 }
 
 function applyBranding() {
