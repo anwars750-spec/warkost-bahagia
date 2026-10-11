@@ -19,20 +19,38 @@ const dateTime = (value) => {
   });
 };
 
-async function request(body) {
-  const response = await fetch("/api/admin-shift-settlement", {
-    method: body ? "POST" : "GET",
-    credentials: "same-origin",
-    headers: body
-      ? { "Content-Type": "application/json", Accept: "application/json" }
-      : { Accept: "application/json" },
-    body: body ? JSON.stringify(body) : undefined,
-    cache: "no-store",
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok)
-    throw new Error(data.error || `Gagal memproses setoran (${response.status})`);
-  return data;
+const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+async function request(body, timeoutMs = 9000) {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch("/api/admin-shift-settlement", {
+      method: body ? "POST" : "GET",
+      credentials: "same-origin",
+      headers: body
+        ? { "Content-Type": "application/json", Accept: "application/json" }
+        : { Accept: "application/json" },
+      body: body ? JSON.stringify(body) : undefined,
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok)
+      throw new Error(data.error || `Gagal memproses setoran (${response.status})`);
+    return data;
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      const timeoutError = new Error(
+        "Proses setoran terlalu lama merespons. Sistem sedang mengecek apakah transaksi sudah tersimpan.",
+      );
+      timeoutError.code = "SETTLEMENT_TIMEOUT";
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timer);
+  }
 }
 
 export default function AdminShiftSettlementRuntime() {
@@ -83,7 +101,7 @@ export default function AdminShiftSettlementRuntime() {
     setLoading(true);
     setError("");
     try {
-      const data = await request();
+      const data = await request(undefined, 6000);
       setState(data);
       const expected = Number(data.current_shift?.cash_custody || 0);
       setSubmittedAmount(String(expected));
@@ -99,7 +117,11 @@ export default function AdminShiftSettlementRuntime() {
     load();
     const refresh = () => load();
     window.addEventListener("warkost:cod-batch-updated", refresh);
-    return () => window.removeEventListener("warkost:cod-batch-updated", refresh);
+    window.addEventListener("warkost:admin-session-restored", refresh);
+    return () => {
+      window.removeEventListener("warkost:cod-batch-updated", refresh);
+      window.removeEventListener("warkost:admin-session-restored", refresh);
+    };
   }, [anchor, load]);
 
   const openSettlement = async () => {
@@ -121,10 +143,58 @@ export default function AdminShiftSettlementRuntime() {
     };
   }, [open, busy]);
 
+  const completeSubmission = useCallback((result) => {
+    setOpen(false);
+    window.dispatchEvent(new CustomEvent("warkost:cod-batch-updated"));
+
+    if (result?.no_cash) {
+      setNoCashMessage(
+        `Shift ${result.operator_name} selesai. Tidak ada kas COD untuk disetor.`,
+      );
+      window.dispatchEvent(new CustomEvent("warkost:admin-shift-ended"));
+      return;
+    }
+
+    if (!result?.settlement) return;
+    setLastSlip(result.settlement);
+    window.dispatchEvent(new CustomEvent("warkost:admin-settlement-submitted"));
+
+    // Let the print dialog finish first. The mandatory next-shift gate is
+    // re-enabled afterwards so it cannot race the settlement print flow.
+    window.setTimeout(() => {
+      window.print();
+      window.setTimeout(
+        () => window.dispatchEvent(new CustomEvent("warkost:admin-shift-ended")),
+        120,
+      );
+    }, 180);
+  }, []);
+
+  const recoverSubmission = useCallback(async (shiftId) => {
+    // A browser-side timeout does not mean the server transaction failed.
+    // Reconcile against the ledger before allowing a retry to avoid duplicate handovers.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (attempt) await wait(450);
+      try {
+        const snapshot = await request(undefined, 5000);
+        const settlement = (snapshot.recent_settlements || []).find(
+          (item) => Number(item.shift_id) === Number(shiftId),
+        );
+        if (settlement) return { no_cash: false, settlement, replayed: true };
+        if (snapshot.current_shift && Number(snapshot.current_shift.id) === Number(shiftId))
+          return null;
+      } catch {
+        // Retry reconciliation; the original write may still be finishing in the serialized SQLite queue.
+      }
+    }
+    return null;
+  }, []);
+
   const submit = async () => {
     if (busy || !state?.current_shift) return;
     const actual = Number(submittedAmount);
     const expected = Number(state.current_shift.cash_custody || 0);
+    const shiftId = Number(state.current_shift.id);
     setError("");
     if (!Number.isSafeInteger(actual) || actual < 0) {
       setError("Masukkan nominal uang fisik yang valid.");
@@ -139,23 +209,28 @@ export default function AdminShiftSettlementRuntime() {
 
     setBusy(true);
     try {
-      const result = await request({
-        action: "SUBMIT_END_SHIFT",
-        submittedAmount: actual,
-      });
-      setOpen(false);
-      window.dispatchEvent(new CustomEvent("warkost:cod-batch-updated"));
-      if (result.no_cash) {
-        setNoCashMessage(
-          `Shift ${result.operator_name} selesai. Tidak ada kas COD untuk disetor.`,
-        );
-        return;
-      }
-      setLastSlip(result.settlement);
-      window.dispatchEvent(new CustomEvent("warkost:admin-settlement-submitted"));
-      window.setTimeout(() => window.print(), 180);
+      const result = await request(
+        {
+          action: "SUBMIT_END_SHIFT",
+          submittedAmount: actual,
+        },
+        9000,
+      );
+      completeSubmission(result);
     } catch (err) {
-      setError(err.message);
+      if (err?.code === "SETTLEMENT_TIMEOUT") {
+        const recovered = await recoverSubmission(shiftId);
+        if (recovered) {
+          completeSubmission(recovered);
+        } else {
+          setError(
+            "Setoran belum dapat dipastikan tersimpan. Tidak ada transaksi ganda yang dibuat. Silakan tunggu sebentar lalu coba lagi.",
+          );
+          await load();
+        }
+      } else {
+        setError(err.message);
+      }
     } finally {
       setBusy(false);
     }
@@ -281,7 +356,7 @@ export default function AdminShiftSettlementRuntime() {
                     onClick={submit}
                   >
                     {busy
-                      ? "Membuat Setoran…"
+                      ? "Menyimpan setoran…"
                       : expected === 0 && actual === 0
                         ? "Akhiri Shift"
                         : "Ajukan Setoran & Cetak Slip"}
