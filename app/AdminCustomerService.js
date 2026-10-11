@@ -327,7 +327,7 @@ export default function AdminCustomerService() {
                   </div>
                   <div>
                     <strong>{detail.customer.name}</strong>
-                    <span>{detail.order.display_number}</span>
+                    <span>{detail.order?.display_number || "Bantuan Umum"}</span>
                   </div>
                   <span
                     className={`admin-service-status ${detail.status.toLowerCase()}`}
@@ -402,57 +402,76 @@ export default function AdminCustomerService() {
                     {initials(detail.customer.name)}
                   </div>
                   <strong>{detail.customer.name}</strong>
-                  <span>{detail.order.display_number}</span>
+                  <span>{detail.order?.display_number || "Bantuan Umum"}</span>
                 </div>
-                <div className="admin-service-context-facts">
-                  <div>
-                    <span>Status order</span>
-                    <strong>{orderStatusLabel(detail.order.status)}</strong>
+                {detail.order ? (
+                  <>
+                    <div className="admin-service-context-facts">
+                      <div>
+                        <span>Status order</span>
+                        <strong>{orderStatusLabel(detail.order.status)}</strong>
+                      </div>
+                      <div
+                        className={`admin-service-payment-fact payment-${String(
+                          detail.order.payment_status || "unknown",
+                        ).toLowerCase()}`}
+                      >
+                        <span>Pembayaran</span>
+                        <strong>
+                          <b>{paymentMethodLabel(detail.order.payment_method)}</b>
+                          <i aria-hidden="true" />
+                          <b>{paymentStatusLabel(detail.order.payment_status)}</b>
+                        </strong>
+                        <small>
+                          {paymentGuidance(
+                            detail.order.payment_method,
+                            detail.order.payment_status,
+                          )}
+                        </small>
+                      </div>
+                      <div>
+                        <span>Total</span>
+                        <strong>{money(detail.order.total)}</strong>
+                      </div>
+                      <div>
+                        <span>Alamat</span>
+                        <strong>{detail.order.address}</strong>
+                      </div>
+                      <div>
+                        <span>Driver</span>
+                        <strong>{detail.driver?.name || "Belum ditugaskan"}</strong>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.dispatchEvent(
+                          new CustomEvent("warkost:open-admin-order-context", {
+                            detail: { orderId: detail.order.id },
+                          }),
+                        );
+                        setOpen(false);
+                      }}
+                    >
+                      Buka detail pesanan
+                    </button>
+                  </>
+                ) : (
+                  <div className="admin-service-context-facts general-support-context">
+                    <div>
+                      <span>Jenis bantuan</span>
+                      <strong>Bantuan Umum</strong>
+                    </div>
+                    <div>
+                      <span>Customer</span>
+                      <strong>{detail.customer.name}</strong>
+                    </div>
+                    <div>
+                      <span>Konteks</span>
+                      <strong>Tidak terikat pesanan</strong>
+                    </div>
                   </div>
-                  <div
-                    className={`admin-service-payment-fact payment-${String(
-                      detail.order.payment_status || "unknown",
-                    ).toLowerCase()}`}
-                  >
-                    <span>Pembayaran</span>
-                    <strong>
-                      <b>{paymentMethodLabel(detail.order.payment_method)}</b>
-                      <i aria-hidden="true" />
-                      <b>{paymentStatusLabel(detail.order.payment_status)}</b>
-                    </strong>
-                    <small>
-                      {paymentGuidance(
-                        detail.order.payment_method,
-                        detail.order.payment_status,
-                      )}
-                    </small>
-                  </div>
-                  <div>
-                    <span>Total</span>
-                    <strong>{money(detail.order.total)}</strong>
-                  </div>
-                  <div>
-                    <span>Alamat</span>
-                    <strong>{detail.order.address}</strong>
-                  </div>
-                  <div>
-                    <span>Driver</span>
-                    <strong>{detail.driver?.name || "Belum ditugaskan"}</strong>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    window.dispatchEvent(
-                      new CustomEvent("warkost:open-admin-order-context", {
-                        detail: { orderId: detail.order.id },
-                      }),
-                    );
-                    setOpen(false);
-                  }}
-                >
-                  Buka detail pesanan
-                </button>
+                )}
                 <div className="admin-service-status-actions">
                   {detail.status !== "HANDLED" &&
                     detail.status !== "CLOSED" && (
@@ -486,7 +505,7 @@ export default function AdminCustomerService() {
             ) : (
               <div className="admin-service-context-empty">
                 <strong>Belum ada konteks</strong>
-                <p>Informasi order tampil setelah percakapan dipilih.</p>
+                <p>Informasi bantuan tampil setelah percakapan dipilih.</p>
               </div>
             )}
           </aside>
