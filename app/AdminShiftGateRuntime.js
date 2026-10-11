@@ -72,6 +72,7 @@ export default function AdminShiftGateRuntime() {
 
         const hasShift = Boolean(state?.current_shift);
         shiftActiveRef.current = hasShift;
+        autoOpened.current = hasShift;
         setLocked(!hasShift);
         setChecking(false);
         document.body.classList.remove("admin-shift-gate-checking");
@@ -82,11 +83,9 @@ export default function AdminShiftGateRuntime() {
           }),
         );
 
-        if (forceOpen) autoOpened.current = false;
+        if (forceOpen && !hasShift) autoOpened.current = false;
       } catch {
         if (!alive) return;
-        // At first Admin render we fail closed. Once an OPEN shift is known,
-        // a transient read failure must never throw the operator back to start-shift.
         if (!shiftActiveRef.current && adminSurface) {
           setIsAdmin(true);
           setLocked(true);
@@ -104,8 +103,6 @@ export default function AdminShiftGateRuntime() {
       lastAdminSurface = adminSurface;
 
       if (adminSurface) {
-        // New Admin shell means a new login render. Resolve persisted shift once,
-        // before allowing the operational dashboard to be used.
         shiftActiveRef.current = false;
         autoOpened.current = false;
         setIsAdmin(true);
@@ -131,6 +128,7 @@ export default function AdminShiftGateRuntime() {
 
     const onShiftStarted = (event) => {
       shiftActiveRef.current = true;
+      autoOpened.current = true;
       setIsAdmin(true);
       setLocked(false);
       setChecking(false);
@@ -161,8 +159,6 @@ export default function AdminShiftGateRuntime() {
     };
 
     const onVisibility = () => {
-      // Only reconcile an unresolved Admin login. Do not re-decide a known OPEN
-      // shift on every focus/visibility change; that caused dashboard snap-back.
       if (
         document.visibilityState === "visible" &&
         document.querySelector(ADMIN_SURFACE) &&
@@ -190,7 +186,7 @@ export default function AdminShiftGateRuntime() {
   }, []);
 
   useEffect(() => {
-    if (!isAdmin || checking) return;
+    if (!isAdmin || checking || !locked) return;
 
     const openCashControl = () => {
       if (autoOpened.current) return true;
@@ -206,7 +202,7 @@ export default function AdminShiftGateRuntime() {
       if (openCashControl()) window.clearInterval(timer);
     }, 120);
     return () => window.clearInterval(timer);
-  }, [isAdmin, checking]);
+  }, [isAdmin, checking, locked]);
 
   useEffect(() => {
     if (!isAdmin || !locked) {
