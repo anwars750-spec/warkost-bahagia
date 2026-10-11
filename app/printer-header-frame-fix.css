@@ -28,8 +28,8 @@ body.admin-printer-stable-view .top nav button {
   white-space: nowrap;
 }
 
-/* Dapur, Printer, Notifikasi, Keluar — Printer is the active second item. */
-body.admin-printer-stable-view .top nav > button:nth-child(2) {
+/* Dapur, Stok Makanan, Printer, Notifikasi, Keluar — Printer is item 3. */
+body.admin-printer-stable-view .top nav > button:nth-child(3) {
   border-radius: 14px;
   background: #f4e2d2;
   color: #6f321e;
@@ -111,7 +111,7 @@ body.printer-center-transition {
 
   body.admin-printer-stable-view .top nav {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     width: 100%;
     margin-left: 0;
     gap: 4px;
