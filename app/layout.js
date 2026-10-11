@@ -33,6 +33,7 @@ import "./printer-header-frame-fix.css";
 import "./kitchen-header-actions.css";
 import "./kitchen-stock-center.css";
 import "./kitchen-stock-final-sync.css";
+import "./kitchen-nav-stability.css";
 import "./customer-quantity-mobile-polish.css";
 import "./customer-catalog-polish.css";
 import "./customer-catalog-final-polish.css";
