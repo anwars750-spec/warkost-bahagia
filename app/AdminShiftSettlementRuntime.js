@@ -94,6 +94,14 @@ export default function AdminShiftSettlementRuntime() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!anchor) return;
+    load();
+    const refresh = () => load();
+    window.addEventListener("warkost:cod-batch-updated", refresh);
+    return () => window.removeEventListener("warkost:cod-batch-updated", refresh);
+  }, [anchor, load]);
+
   const openSettlement = async () => {
     setOpen(true);
     setError("");
