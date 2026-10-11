@@ -101,6 +101,7 @@ import RoleLogoutConfirmation from "./RoleLogoutConfirmation";
 import CustomerCatalogPolish from "./CustomerCatalogPolish";
 import CustomerQuantityUnitPolish from "./CustomerQuantityUnitPolish";
 import CustomerHelpRoutingRuntime from "./CustomerHelpRoutingRuntime";
+import CustomerGeneralSupportRuntime from "./CustomerGeneralSupportRuntime";
 import ManagerDashboardUiPolish from "./ManagerDashboardUiPolish";
 import ManagerSubcategoryPolish from "./ManagerSubcategoryPolish";
 import ManagerNotificationPopover from "./ManagerNotificationPopover";
@@ -140,6 +141,7 @@ export default function RootLayout({ children }) {
         <CustomerCatalogPolish />
         <CustomerQuantityUnitPolish />
         <CustomerHelpRoutingRuntime />
+        <CustomerGeneralSupportRuntime />
         <ManagerDashboardUiPolish />
         <ManagerSubcategoryPolish />
         <ManagerNotificationPopover />
