@@ -28,6 +28,7 @@ import "./admin-nav-state-precision.css";
 import "./admin-operational-scope-v2.css";
 import "./cod-batch-settlement-polish.css";
 import "./admin-cash-control.css";
+import "./admin-cash-pin-feedback.css";
 import "./owner-admin-operators.css";
 import "./kitchen-dashboard.css";
 import "./kitchen-dashboard-queue-polish.css";
