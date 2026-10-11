@@ -44,17 +44,31 @@ export async function POST(request) {
     const body = await readJsonBody(request);
     const action = String(body?.action || "").toUpperCase();
     if (action === "SUBMIT_END_SHIFT") {
+      console.info(`[${RUNTIME_REVISION}] submit start`, {
+        adminUserId: Number(user?.id || 0),
+        shiftId: Number(body?.shiftId || 0),
+        submittedAmount: Number(body?.submittedAmount || 0),
+      });
       const result = await submitAdminShiftSettlement(user, {
         shiftId: body.shiftId,
         submittedAmount: body.submittedAmount,
       });
-      return out(
-        { ...result, server_elapsed_ms: Date.now() - startedAt },
-        201,
-      );
+      const elapsed = Date.now() - startedAt;
+      console.info(`[${RUNTIME_REVISION}] submit success`, {
+        shiftId: Number(result?.settlement?.shift_id || result?.shift_id || 0),
+        settlementId: Number(result?.settlement?.id || 0),
+        noCash: Boolean(result?.no_cash),
+        replayed: Boolean(result?.replayed),
+        elapsedMs: elapsed,
+      });
+      return out({ ...result, server_elapsed_ms: elapsed }, 201);
     }
     throw new DomainError("Aksi setoran shift tidak dikenal", 404);
   } catch (error) {
+    console.error(`[${RUNTIME_REVISION}] submit failed`, {
+      elapsedMs: Date.now() - startedAt,
+      message: error?.message || String(error),
+    });
     return errorResponse(error);
   }
 }
