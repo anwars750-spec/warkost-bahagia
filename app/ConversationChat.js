@@ -37,6 +37,301 @@ const ChatIcon = () => (
   </svg>
 );
 
+const SupportChatStyles = () => (
+  <style>{`
+    .conversation-screen.support-chat {
+      width: min(840px, calc(100vw - 48px));
+      height: min(720px, calc(100dvh - 48px));
+      max-height: none;
+      grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+      border: 1px solid #e6d7c6;
+      border-radius: 24px;
+      background: #fbf7f2;
+      box-shadow: 0 30px 90px rgba(52, 30, 18, 0.28);
+    }
+
+    .support-chat .conversation-header {
+      min-height: 76px;
+      padding: 12px 18px;
+      column-gap: 11px;
+      border-bottom-color: rgba(255, 255, 255, 0.08);
+      background: linear-gradient(135deg, #55301f 0%, #6a3a23 100%);
+    }
+
+    .support-chat .conversation-header-action {
+      width: 40px;
+      height: 40px;
+      border-color: rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .support-chat .conversation-header-action:hover {
+      border-color: rgba(255, 255, 255, 0.42);
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .support-chat .conversation-avatar {
+      width: 42px;
+      height: 42px;
+      border: 0;
+      background: #fff4e7;
+      color: #60351f;
+      box-shadow: none;
+    }
+
+    .support-chat .conversation-identity {
+      gap: 3px;
+    }
+
+    .support-chat .conversation-identity strong {
+      font-size: 1rem;
+      font-weight: 800;
+    }
+
+    .support-chat .conversation-identity span {
+      color: #ead7c8;
+      font-size: 0.75rem;
+    }
+
+    .support-chat .conversation-messages {
+      min-height: 0;
+      gap: 12px;
+      padding: 22px 24px;
+      background:
+        radial-gradient(circle at 92% 8%, rgba(176, 113, 70, 0.08), transparent 32%),
+        #fbf7f2;
+    }
+
+    .support-chat .conversation-empty {
+      min-height: 0;
+      max-width: 420px;
+      margin: auto;
+      padding: 28px 22px;
+      color: #7c695c;
+    }
+
+    .support-chat .conversation-empty-icon {
+      width: 50px;
+      height: 50px;
+      margin-bottom: 12px;
+      border-color: #e8d7c4;
+      border-radius: 16px;
+      background: #fff;
+      color: #6a3a23;
+      box-shadow: 0 8px 22px rgba(79, 46, 27, 0.06);
+    }
+
+    .support-chat .conversation-empty strong {
+      color: #553728;
+      font-size: 1rem;
+      font-weight: 800;
+    }
+
+    .support-chat .conversation-empty p {
+      max-width: 360px;
+      margin-top: 6px;
+      color: #8a776a;
+      font-size: 0.86rem;
+      line-height: 1.55;
+    }
+
+    .support-chat .conversation-bubble {
+      max-width: min(72%, 520px);
+      padding: 10px 13px 9px;
+      border-radius: 16px 16px 16px 6px;
+      box-shadow: 0 5px 16px rgba(70, 42, 26, 0.05);
+    }
+
+    .support-chat .conversation-bubble.own {
+      border-color: #6a3a23;
+      border-radius: 16px 16px 6px 16px;
+      background: #6a3a23;
+    }
+
+    .support-chat .conversation-prompts {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      overflow: visible;
+      padding: 12px 18px;
+      border-top: 1px solid #eadfd4;
+      background: #fffdfb;
+    }
+
+    .support-chat .conversation-prompts button {
+      flex: 0 0 auto;
+      width: auto;
+      min-width: 0;
+      min-height: 36px;
+      height: auto;
+      margin: 0;
+      padding: 8px 13px;
+      border: 1px solid #dec9b3;
+      border-radius: 999px;
+      background: #fff9f2;
+      color: #633921;
+      font-size: 0.75rem;
+      font-weight: 650;
+      line-height: 1.25;
+      white-space: nowrap;
+      box-shadow: none;
+    }
+
+    .support-chat .conversation-prompts button:hover {
+      border-color: #a97858;
+      background: #fff;
+    }
+
+    .support-chat .conversation-composer {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 18px 14px;
+      border-top: 1px solid #eadfd4;
+      background: #fff;
+      box-shadow: 0 -8px 24px rgba(67, 40, 25, 0.03);
+    }
+
+    .support-chat .conversation-composer input {
+      width: 100%;
+      min-width: 0;
+      height: 46px;
+      margin: 0;
+      padding: 0 15px;
+      border: 1px solid #ded2c7;
+      border-radius: 14px;
+      outline: 0;
+      background: #fcfaf8;
+      color: #493126;
+      font: inherit;
+      font-size: 0.84rem;
+    }
+
+    .support-chat .conversation-composer input:focus {
+      border-color: #9c6a4c;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(156, 106, 76, 0.1);
+    }
+
+    .support-chat .conversation-composer input::placeholder {
+      color: #9e9189;
+    }
+
+    .support-chat .conversation-composer .primary {
+      width: auto;
+      min-width: 84px;
+      height: 46px;
+      margin: 0;
+      padding: 0 18px;
+      border: 1px solid #65371f;
+      border-radius: 14px;
+      background: #65371f;
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 800;
+      box-shadow: 0 6px 16px rgba(82, 43, 23, 0.16);
+    }
+
+    .support-chat .conversation-composer .primary:hover:not(:disabled) {
+      background: #56301d;
+    }
+
+    .support-chat .conversation-composer .primary:disabled {
+      border-color: #dbcfc7;
+      background: #dbcfc7;
+      color: #fff;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    .support-chat .conversation-order-context {
+      gap: 8px;
+      padding: 10px 16px;
+      background: #f5ede5;
+    }
+
+    .support-chat .conversation-order-context > div {
+      padding: 9px 10px;
+      border-radius: 11px;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    @media (max-width: 760px) {
+      .conversation-screen.support-chat {
+        width: 100%;
+        height: 100dvh;
+        max-height: none;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      .support-chat .conversation-header {
+        min-height: 68px;
+        padding: max(10px, env(safe-area-inset-top)) 12px 10px;
+      }
+
+      .support-chat .conversation-header-action {
+        width: 38px;
+        height: 38px;
+      }
+
+      .support-chat .conversation-avatar {
+        width: 40px;
+        height: 40px;
+      }
+
+      .support-chat .conversation-messages {
+        padding: 16px 14px;
+      }
+
+      .support-chat .conversation-empty {
+        padding: 22px 16px;
+      }
+
+      .support-chat .conversation-bubble {
+        max-width: 86%;
+      }
+
+      .support-chat .conversation-prompts {
+        flex-wrap: nowrap;
+        gap: 7px;
+        overflow-x: auto;
+        padding: 10px 12px;
+        scrollbar-width: none;
+      }
+
+      .support-chat .conversation-prompts::-webkit-scrollbar {
+        display: none;
+      }
+
+      .support-chat .conversation-prompts button {
+        min-height: 34px;
+        padding: 7px 11px;
+        font-size: 0.72rem;
+      }
+
+      .support-chat .conversation-composer {
+        padding: 10px 12px max(12px, env(safe-area-inset-bottom));
+      }
+
+      .support-chat .conversation-composer input,
+      .support-chat .conversation-composer .primary {
+        height: 44px;
+      }
+
+      .support-chat .conversation-composer .primary {
+        min-width: 72px;
+        padding: 0 14px;
+      }
+    }
+  `}</style>
+);
+
 async function request(route, body) {
   const response = await fetch(`/api/${route}`, {
     method: body ? "POST" : "GET",
@@ -142,11 +437,15 @@ export default function ConversationChat({ target, viewerRole, onClose }) {
       ? conversation?.customer?.name || "Customer Warkost"
       : conversation?.driver?.name || "Driver Warkost"
     : "Admin Warkost";
+  const screenClass = isDriverChat
+    ? "conversation-screen conversation-screen-driver"
+    : `conversation-screen support-chat ${hasOrderTarget ? "order-support" : "general-support"}`;
 
   return (
     <div className="conversation-backdrop" role="presentation">
+      {!isDriverChat && <SupportChatStyles />}
       <section
-        className="conversation-screen"
+        className={screenClass}
         role="dialog"
         aria-modal="true"
         aria-label={
