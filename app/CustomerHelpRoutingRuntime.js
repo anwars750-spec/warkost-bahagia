@@ -3,10 +3,8 @@
 import { useEffect } from "react";
 
 const HELP_CHAT_SELECTOR = ".customer-help .help-actions a:not([href^='tel:'])";
-const INTERNAL_SUPPORT_SELECTOR = [
-  ".support-communication-card.primary-chat:not(:disabled)",
-  ".support-admin-action:not(:disabled)",
-].join(",");
+const ADMIN_SUPPORT_SELECTOR = ".support-admin-action";
+const ORDER_SUPPORT_SELECTOR = ".support-communication-card.primary-chat:not(:disabled)";
 const STYLE_ID = "warkost-customer-help-routing-style";
 
 export default function CustomerHelpRoutingRuntime() {
@@ -22,11 +20,52 @@ export default function CustomerHelpRoutingRuntime() {
         .customer-help .help-actions a:not([href^="tel:"]) {
           cursor: pointer;
         }
+        .support-admin-action[data-general-support="true"] {
+          opacity: 1 !important;
+          cursor: pointer !important;
+          pointer-events: auto !important;
+        }
       `;
       document.head.appendChild(style);
     }
 
+    const enableGeneralSupport = () => {
+      const button = document.querySelector(ADMIN_SUPPORT_SELECTOR);
+      if (!button) return;
+      if (!document.querySelector(".support-order-context")) {
+        button.disabled = false;
+        button.dataset.generalSupport = "true";
+        button.removeAttribute("aria-disabled");
+      } else {
+        delete button.dataset.generalSupport;
+      }
+    };
+
+    const observer = new MutationObserver(enableGeneralSupport);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["disabled"],
+    });
+    enableGeneralSupport();
+
+    const openGeneralSupport = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      document.querySelector(".support-sheet .sheet-close")?.click();
+      window.dispatchEvent(
+        new CustomEvent("warkost:open-general-customer-service"),
+      );
+    };
+
     const onClick = (event) => {
+      const adminSupport = event.target.closest(ADMIN_SUPPORT_SELECTOR);
+      if (adminSupport && !document.querySelector(".support-order-context")) {
+        openGeneralSupport(event);
+        return;
+      }
+
       const chatAction = event.target.closest(HELP_CHAT_SELECTOR);
       if (!chatAction) return;
 
@@ -40,18 +79,20 @@ export default function CustomerHelpRoutingRuntime() {
 
       helpButton.click();
 
-      // Jika customer memiliki pesanan yang dapat dijadikan konteks,
-      // langsung buka percakapan Customer Service Admin. Jika belum ada,
-      // pusat Bantuan tetap terbuka sehingga customer tidak dilempar ke luar aplikasi.
       window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => {
-          document.querySelector(INTERNAL_SUPPORT_SELECTOR)?.click();
+          enableGeneralSupport();
+          const target =
+            document.querySelector(ORDER_SUPPORT_SELECTOR) ||
+            document.querySelector(ADMIN_SUPPORT_SELECTOR);
+          target?.click();
         });
       });
     };
 
     document.addEventListener("click", onClick, true);
     return () => {
+      observer.disconnect();
       document.removeEventListener("click", onClick, true);
       document.getElementById(STYLE_ID)?.remove();
     };
