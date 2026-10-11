@@ -6,6 +6,10 @@ const runtimeSource = await readFile(
   new URL("../app/CustomerHelpRoutingRuntime.js", import.meta.url),
   "utf8",
 );
+const generalSupportSource = await readFile(
+  new URL("../app/CustomerGeneralSupportRuntime.js", import.meta.url),
+  "utf8",
+);
 const layoutSource = await readFile(
   new URL("../app/layout.js", import.meta.url),
   "utf8",
@@ -13,9 +17,14 @@ const layoutSource = await readFile(
 
 test("customer help chat stays inside Customer Service and call action is hidden", () => {
   assert.match(layoutSource, /<CustomerHelpRoutingRuntime \/>/);
+  assert.match(layoutSource, /<CustomerGeneralSupportRuntime \/>/);
   assert.match(runtimeSource, /\.customer-help \.help-actions a\[href\^="tel:"\]/);
   assert.match(runtimeSource, /display: none !important/);
   assert.match(runtimeSource, /support-communication-card\.primary-chat/);
   assert.match(runtimeSource, /support-admin-action/);
+  assert.match(runtimeSource, /button\.disabled = false/);
+  assert.match(runtimeSource, /warkost:open-general-customer-service/);
   assert.match(runtimeSource, /aria-label="Bantuan"/);
+  assert.match(generalSupportSource, /target=\{\{ type: "CUSTOMER_ADMIN" \}\}/);
+  assert.match(generalSupportSource, /viewerRole="CUSTOMER"/);
 });
