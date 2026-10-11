@@ -88,6 +88,7 @@ export default function OwnerNavigationRuntime() {
     let stopped = false;
     let ownerActive = false;
     let verifying = false;
+    let logoutTriggered = false;
 
     const cleanupLegacyRuntime = () => {
       document
@@ -110,6 +111,16 @@ export default function OwnerNavigationRuntime() {
           button.querySelector(":scope > .owner-nav-icon-v2")?.remove();
         });
       });
+    };
+
+    const triggerExpiredSessionLogout = () => {
+      if (logoutTriggered || stopped) return;
+      logoutTriggered = true;
+      sessionStorage.removeItem("warkost-owner-nav-active");
+      const logoutButton = [...document.querySelectorAll("header.top nav button")].find(
+        (button) => normalizeLabel(button) === "Keluar",
+      );
+      logoutButton?.click();
     };
 
     const setActive = (label) => {
@@ -162,7 +173,18 @@ export default function OwnerNavigationRuntime() {
       try {
         const response = await fetch("/api/me", { cache: "no-store" });
         const result = await response.json().catch(() => ({}));
+
+        if (response.status === 401) {
+          const ownerUiStillVisible =
+            ownerActive || document.body.classList.contains("owner-dashboard-v3-active");
+          if (ownerUiStillVisible) triggerExpiredSessionLogout();
+          ownerActive = false;
+          clearNavigation();
+          return;
+        }
+
         const nextOwnerActive = response.ok && result.user?.role === "OWNER";
+        if (nextOwnerActive) logoutTriggered = false;
         if (ownerActive !== nextOwnerActive) {
           ownerActive = nextOwnerActive;
           sync();
