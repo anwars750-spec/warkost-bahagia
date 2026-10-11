@@ -86,8 +86,14 @@ test("Header Owner hanya mempertahankan Dashboard, Pelanggan, Notifikasi, dan Ke
     navigation,
     /VISIBLE_TABS = new Set\(\["Dashboard", "Pelanggan", "Notifikasi", "Keluar"\]\)/,
   );
+  assert.match(navigation, /fetch\("\/api\/me"/);
+  assert.match(navigation, /result\.user\?\.role === "OWNER"/);
+  assert.match(navigation, /nav\.querySelectorAll\("button"\)/);
   assert.match(navigation, /dataset\.ownerNavVisible/);
-  assert.match(styles, /data-owner-nav-visible="false"/);
+  assert.match(
+    styles,
+    /nav\.owner-nav-v2 button\[data-owner-nav-visible="false"\]/,
+  );
   assert.match(styles, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
 });
 
