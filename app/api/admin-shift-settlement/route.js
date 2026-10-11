@@ -9,11 +9,16 @@ import {
 
 export const runtime = "nodejs";
 
+const RUNTIME_REVISION = "P0-ENDSHIFT-R4";
+
 const out = (data, status = 200) =>
-  NextResponse.json(data, {
-    status,
-    headers: { "Cache-Control": "no-store" },
-  });
+  NextResponse.json(
+    { ...data, runtime_revision: RUNTIME_REVISION },
+    {
+      status,
+      headers: { "Cache-Control": "no-store" },
+    },
+  );
 
 function errorResponse(error) {
   if (error instanceof DomainError)
@@ -32,19 +37,22 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
+  const startedAt = Date.now();
   try {
     assertSameOrigin(request);
     const user = await currentUser(request);
     const body = await readJsonBody(request);
     const action = String(body?.action || "").toUpperCase();
-    if (action === "SUBMIT_END_SHIFT")
+    if (action === "SUBMIT_END_SHIFT") {
+      const result = await submitAdminShiftSettlement(user, {
+        shiftId: body.shiftId,
+        submittedAmount: body.submittedAmount,
+      });
       return out(
-        await submitAdminShiftSettlement(user, {
-          shiftId: body.shiftId,
-          submittedAmount: body.submittedAmount,
-        }),
+        { ...result, server_elapsed_ms: Date.now() - startedAt },
         201,
       );
+    }
     throw new DomainError("Aksi setoran shift tidak dikenal", 404);
   } catch (error) {
     return errorResponse(error);
