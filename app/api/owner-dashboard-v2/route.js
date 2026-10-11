@@ -177,10 +177,11 @@ export async function GET(request) {
       ),
     });
   } catch (error) {
-    console.error("Owner dashboard V2 error", error);
+    const status = error?.status || 500;
+    if (status >= 500) console.error("Owner dashboard V2 error", error);
     return out(
       { error: error?.message || "Terjadi kesalahan server" },
-      error?.status || 500,
+      status,
     );
   }
 }
