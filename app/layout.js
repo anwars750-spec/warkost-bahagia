@@ -31,6 +31,7 @@ import "./kitchen-flash-guard.css";
 import "./kitchen-dashboard-mobile-v2.css";
 import "./printer-header-frame-fix.css";
 import "./kitchen-header-actions.css";
+import "./kitchen-stock-center.css";
 import "./customer-quantity-mobile-polish.css";
 import "./customer-catalog-polish.css";
 import "./customer-catalog-final-polish.css";
@@ -68,6 +69,7 @@ import KitchenDashboardFast from "./KitchenDashboardFast";
 import KitchenFlashGuard from "./KitchenFlashGuard";
 import PrinterCenterRuntime from "./PrinterCenterRuntime";
 import KitchenHeaderActions from "./KitchenHeaderActions";
+import KitchenStockCenter from "./KitchenStockCenter";
 import RoleLogoutConfirmation from "./RoleLogoutConfirmation";
 import CustomerCatalogPolish from "./CustomerCatalogPolish";
 import CustomerQuantityUnitPolish from "./CustomerQuantityUnitPolish";
@@ -94,6 +96,7 @@ export default function RootLayout({ children }) {
         <AdminCodLauncherButton />
         <PrinterCenterRuntime />
         <KitchenHeaderActions />
+        <KitchenStockCenter />
         <RoleLogoutConfirmation />
         <CustomerCatalogPolish />
         <CustomerQuantityUnitPolish />
