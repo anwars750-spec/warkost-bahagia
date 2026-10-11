@@ -7,40 +7,63 @@
 @media print {
   .warkost-print-brand {
     display: flex !important;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin: 0 0 10px;
-    padding: 0 0 8px;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    width: 100% !important;
+    margin: 0 0 10px !important;
+    padding: 2px 0 8px !important;
+    overflow: visible !important;
     border-bottom: 1px dashed #111;
     color: #000;
     text-align: left;
     break-inside: avoid;
   }
 
-  .warkost-print-brand img {
-    display: block !important;
-    width: 42px !important;
-    height: 42px !important;
-    object-fit: contain;
-    filter: grayscale(1) contrast(1.2);
+  .warkost-print-brand-logo-wrap {
+    width: 64px !important;
+    height: 38px !important;
+    flex: 0 0 64px !important;
+    display: grid !important;
+    place-items: center !important;
+    overflow: visible !important;
   }
 
-  .warkost-print-brand > div {
-    display: grid;
-    gap: 1px;
+  .warkost-print-brand img {
+    display: block !important;
+    width: 64px !important;
+    height: 38px !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    overflow: visible !important;
+    clip-path: none !important;
+    transform: none !important;
+    filter: grayscale(1) contrast(1.14);
+  }
+
+  .warkost-print-brand-copy {
+    display: grid !important;
+    gap: 1px !important;
+    align-content: center !important;
+    min-width: 0;
   }
 
   .warkost-print-brand strong {
     font-size: 11px;
-    line-height: 1.1;
-    letter-spacing: .04em;
+    line-height: 1.08;
+    letter-spacing: .03em;
+    white-space: nowrap;
   }
 
   .warkost-print-brand span {
     font-size: 8px;
     font-weight: 800;
-    letter-spacing: .22em;
+    line-height: 1.05;
+    letter-spacing: .2em;
   }
 
   .admin-settlement-print-sheet > .admin-settlement-print-logo {
