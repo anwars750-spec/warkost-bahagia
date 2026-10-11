@@ -178,7 +178,7 @@ export default function AdminCodBatchEventBridge() {
   const orders = detail?.orders || [];
   const canVerify =
     detail?.status === "SUBMITTED" &&
-    submitted === expected &&
+    submitted >= expected &&
     orders.length > 0;
 
   const verify = async () => {
@@ -189,7 +189,7 @@ export default function AdminCodBatchEventBridge() {
     try {
       await request("cod-batch-verify", { batchId: detail.id });
       setSuccess(
-        `${orders.length} order COD berhasil diverifikasi. Pembayaran telah menjadi PAID.`,
+        `${orders.length} order COD berhasil diverifikasi dan masuk ke Kas Operator Admin.`,
       );
       window.dispatchEvent(new CustomEvent("warkost:cod-batch-updated"));
       await loadLists();
@@ -313,10 +313,20 @@ export default function AdminCodBatchEventBridge() {
                         </div>
                         <div>
                           <strong>{money(batch.expected_amount)}</strong>
-                          <small className={itemDiff === 0 ? "match" : "mismatch"}>
+                          <small
+                            className={
+                              itemDiff === 0
+                                ? "match"
+                                : itemDiff > 0
+                                  ? "overage"
+                                  : "mismatch"
+                            }
+                          >
                             {itemDiff === 0
                               ? statusLabel(batch.status)
-                              : `Selisih ${money(Math.abs(itemDiff))}`}
+                              : itemDiff > 0
+                                ? `Lebih ${money(itemDiff)}`
+                                : `Kurang ${money(Math.abs(itemDiff))}`}
                           </small>
                         </div>
                       </button>
@@ -366,7 +376,15 @@ export default function AdminCodBatchEventBridge() {
                         <strong>{money(submitted)}</strong>
                         <small>Tunai yang diserahkan</small>
                       </article>
-                      <article className={difference === 0 ? "is-match" : "is-mismatch"}>
+                      <article
+                        className={
+                          difference === 0
+                            ? "is-match"
+                            : difference > 0
+                              ? "is-overage"
+                              : "is-mismatch"
+                        }
+                      >
                         <span>Selisih</span>
                         <strong>{money(Math.abs(difference))}</strong>
                         <small>
@@ -381,10 +399,16 @@ export default function AdminCodBatchEventBridge() {
 
                     {detail.status === "NEEDS_REVIEW" && (
                       <div className="cod-batch-warning">
-                        <strong>Setoran perlu diperbaiki</strong>
+                        <strong>Setoran kurang</strong>
                         <span>
-                          Admin tidak dapat memverifikasi sampai Driver mengoreksi nominal.
+                          Admin tidak dapat menerima sampai Driver mengoreksi nominal setoran.
                         </span>
+                      </div>
+                    )}
+
+                    {detail.status === "SUBMITTED" && difference > 0 && (
+                      <div className="cod-batch-success">
+                        ✓ Kelebihan {money(difference)} boleh diterima dan akan tercatat sebagai overage pada Kas Operator.
                       </div>
                     )}
 
