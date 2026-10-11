@@ -12,18 +12,23 @@ const PRINT_SELECTOR = [
 function ensureBranding(sheet) {
   if (!(sheet instanceof HTMLElement)) return;
   sheet.dataset.warkostPrintSheet = "true";
-  if (sheet.querySelector(":scope > .warkost-print-brand")) return;
 
-  const header = document.createElement("div");
-  header.className = "warkost-print-brand";
+  let header = sheet.querySelector(":scope > .warkost-print-brand");
+  if (!header) {
+    header = document.createElement("div");
+    header.className = "warkost-print-brand";
+    sheet.prepend(header);
+  }
+
   header.innerHTML = `
-    <img src="/warkost-bahagia-logo-transparent.png" alt="Warkost Bahagia" />
-    <div>
+    <div class="warkost-print-brand-logo-wrap">
+      <img src="/warkost-bahagia-logo-clean.png" alt="Warkost Bahagia" />
+    </div>
+    <div class="warkost-print-brand-copy">
       <strong>WARKOST BAHAGIA</strong>
       <span>DELIVERY</span>
     </div>
   `;
-  sheet.prepend(header);
 }
 
 function applyBranding() {
