@@ -100,6 +100,7 @@ import KitchenStockImageSync from "./KitchenStockImageSync";
 import RoleLogoutConfirmation from "./RoleLogoutConfirmation";
 import CustomerCatalogPolish from "./CustomerCatalogPolish";
 import CustomerQuantityUnitPolish from "./CustomerQuantityUnitPolish";
+import CustomerHelpRoutingRuntime from "./CustomerHelpRoutingRuntime";
 import ManagerDashboardUiPolish from "./ManagerDashboardUiPolish";
 import ManagerSubcategoryPolish from "./ManagerSubcategoryPolish";
 import ManagerNotificationPopover from "./ManagerNotificationPopover";
@@ -138,6 +139,7 @@ export default function RootLayout({ children }) {
         <RoleLogoutConfirmation />
         <CustomerCatalogPolish />
         <CustomerQuantityUnitPolish />
+        <CustomerHelpRoutingRuntime />
         <ManagerDashboardUiPolish />
         <ManagerSubcategoryPolish />
         <ManagerNotificationPopover />
