@@ -132,7 +132,6 @@ export default function OwnerNavigationRuntime() {
       mobileToggle = null;
       mobileDrawer = null;
       mobileBackdrop = null;
-      lastSignature = "";
     };
 
     const setActive = (label) => {
@@ -147,7 +146,6 @@ export default function OwnerNavigationRuntime() {
 
     const buildRuntimeMenus = (header, nav, entries) => {
       cleanupRuntimeNodes();
-
       const secondaryEntries = entries.filter((entry) => entry.meta.group === "secondary");
 
       moreToggle = document.createElement("button");
@@ -253,6 +251,7 @@ export default function OwnerNavigationRuntime() {
         document.body.classList.remove("owner-navigation-v2-active");
         closeMenus();
         cleanupRuntimeNodes();
+        lastSignature = "";
         return;
       }
 
@@ -282,8 +281,8 @@ export default function OwnerNavigationRuntime() {
 
       const signature = entries.map(({ label }) => label).join("|");
       if (signature !== lastSignature || !morePanel?.isConnected || !mobileDrawer?.isConnected) {
-        lastSignature = signature;
         buildRuntimeMenus(header, nav, entries);
+        lastSignature = signature;
       }
 
       const storedActive = sessionStorage.getItem("warkost-owner-nav-active");
@@ -292,7 +291,7 @@ export default function OwnerNavigationRuntime() {
     };
 
     sync();
-    const observer = new MutationObserver(() => sync());
+    const observer = new MutationObserver(sync);
     observer.observe(document.body, { childList: true, subtree: true });
 
     const onDocumentClick = (event) => {
