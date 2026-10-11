@@ -193,8 +193,7 @@ export default function AdminCashControlCenter() {
     [operators, selectedOperator],
   );
 
-  const bootstrap = async (event) => {
-    event.preventDefault();
+  const bootstrap = async () => {
     if (busy) return;
 
     const name = bootstrapName.trim();
@@ -228,8 +227,7 @@ export default function AdminCashControlCenter() {
     }
   };
 
-  const startShift = async (event) => {
-    event.preventDefault();
+  const startShift = async () => {
     if (busy) return;
 
     const cleanPin = pin.trim();
@@ -310,7 +308,7 @@ export default function AdminCashControlCenter() {
                 Akun Admin tetap satu. Nama operator dan PIN dipakai untuk mencatat siapa yang benar-benar memegang uang pada shift tersebut.
               </p>
             </div>
-            <form onSubmit={bootstrap} noValidate>
+            <div className="admin-cash-form">
               <label>
                 Nama operator
                 <input
@@ -318,7 +316,6 @@ export default function AdminCashControlCenter() {
                   onChange={(event) => setBootstrapName(event.target.value)}
                   placeholder="Contoh: Virsa"
                   autoComplete="off"
-                  required
                 />
               </label>
               <label>
@@ -330,14 +327,24 @@ export default function AdminCashControlCenter() {
                   onChange={(event) => setBootstrapPin(event.target.value)}
                   placeholder="4-6 digit angka"
                   autoComplete="new-password"
-                  required
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      bootstrap();
+                    }
+                  }}
                 />
                 <small>Gunakan 4-6 digit angka, misalnya 2580.</small>
               </label>
-              <button className="admin-cash-primary" type="submit" disabled={busy}>
+              <button
+                className="admin-cash-primary"
+                type="button"
+                disabled={busy}
+                onClick={bootstrap}
+              >
                 {busy ? "Menyimpan…" : "Buat Operator"}
               </button>
-            </form>
+            </div>
           </div>
         ) : !shift ? (
           <div className="admin-cash-start">
@@ -348,13 +355,12 @@ export default function AdminCashControlCenter() {
                 Uang COD baru menjadi tanggung jawab operator setelah setoran Driver benar-benar diterima dan diverifikasi.
               </p>
             </div>
-            <form onSubmit={startShift} noValidate>
+            <div className="admin-cash-form">
               <label>
                 Operator
                 <select
                   value={selectedOperator}
                   onChange={(event) => setSelectedOperator(event.target.value)}
-                  required
                 >
                   {operators.map((operator) => (
                     <option key={operator.id} value={operator.id}>
@@ -372,13 +378,23 @@ export default function AdminCashControlCenter() {
                   onChange={(event) => setPin(event.target.value)}
                   placeholder="Masukkan PIN"
                   autoComplete="current-password"
-                  required
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      startShift();
+                    }
+                  }}
                 />
               </label>
-              <button className="admin-cash-primary" type="submit" disabled={busy}>
+              <button
+                className="admin-cash-primary"
+                type="button"
+                disabled={busy}
+                onClick={startShift}
+              >
                 {busy ? "Memulai…" : "Mulai Shift"}
               </button>
-            </form>
+            </div>
           </div>
         ) : (
           <div className="admin-cash-active">
