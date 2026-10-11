@@ -60,14 +60,17 @@ export default function AdminCashControlCenter() {
   }, [isAdmin, selectedOperator]);
 
   useEffect(() => {
-    let active = true;
-    fetch("/api/me", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((data) => active && setIsAdmin(data.user?.role === "ADMIN"))
-      .catch(() => active && setIsAdmin(false));
-    return () => {
-      active = false;
+    const detectAdmin = () => {
+      setIsAdmin(
+        Boolean(document.querySelector('nav [data-admin-nav="Printer"]')),
+      );
     };
+
+    detectAdmin();
+    const observer = new MutationObserver(detectAdmin);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
