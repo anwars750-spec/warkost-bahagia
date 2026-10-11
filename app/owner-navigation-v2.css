@@ -42,7 +42,7 @@ body.owner-navigation-v2-active header.top .brand-copy small {
   line-height: 1.3;
 }
 
-.owner-nav-v2 {
+body.owner-navigation-v2-active header.top nav.owner-nav-v2 {
   display: flex !important;
   align-items: center;
   justify-content: flex-end;
@@ -51,11 +51,11 @@ body.owner-navigation-v2-active header.top .brand-copy small {
   flex-wrap: nowrap !important;
 }
 
-.owner-nav-v2 > button[data-owner-nav-visible="false"] {
+body.owner-navigation-v2-active header.top nav.owner-nav-v2 button[data-owner-nav-visible="false"] {
   display: none !important;
 }
 
-.owner-nav-v2 > button[data-owner-nav-visible="true"] {
+body.owner-navigation-v2-active header.top nav.owner-nav-v2 button[data-owner-nav-visible="true"] {
   appearance: none;
   display: inline-flex !important;
   align-items: center;
@@ -75,13 +75,13 @@ body.owner-navigation-v2-active header.top .brand-copy small {
   transition: background 160ms ease, color 160ms ease, border-color 160ms ease, transform 160ms ease;
 }
 
-.owner-nav-v2 > button[data-owner-nav-visible="true"]:hover {
+body.owner-navigation-v2-active header.top nav.owner-nav-v2 button[data-owner-nav-visible="true"]:hover {
   transform: translateY(-1px);
   border-color: #ead3bd;
   background: #fff5e9;
 }
 
-.owner-nav-v2 > button.owner-nav-active {
+body.owner-navigation-v2-active header.top nav.owner-nav-v2 button.owner-nav-active {
   border-color: #5a2f1c;
   background: #5a2f1c;
   color: #fffaf5;
@@ -127,14 +127,14 @@ body.owner-navigation-v2-active header.top .brand-copy small {
     display: none;
   }
 
-  .owner-nav-v2 {
+  body.owner-navigation-v2-active header.top nav.owner-nav-v2 {
     display: grid !important;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 6px;
     width: 100%;
   }
 
-  .owner-nav-v2 > button[data-owner-nav-visible="true"] {
+  body.owner-navigation-v2-active header.top nav.owner-nav-v2 button[data-owner-nav-visible="true"] {
     min-width: 0;
     min-height: 44px;
     padding: 6px 5px;
@@ -146,7 +146,7 @@ body.owner-navigation-v2-active header.top .brand-copy small {
     line-height: 1.05;
   }
 
-  .owner-nav-v2 > button.owner-nav-active {
+  body.owner-navigation-v2-active header.top nav.owner-nav-v2 button.owner-nav-active {
     border-color: #5a2f1c;
     background: #5a2f1c;
     color: #fffaf5;
@@ -159,7 +159,7 @@ body.owner-navigation-v2-active header.top .brand-copy small {
 }
 
 @media (max-width: 380px) {
-  .owner-nav-v2 > button[data-owner-nav-visible="true"] {
+  body.owner-navigation-v2-active header.top nav.owner-nav-v2 button[data-owner-nav-visible="true"] {
     font-size: 9.5px;
     padding-inline: 3px;
   }
