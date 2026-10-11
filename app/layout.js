@@ -71,6 +71,7 @@ import "./driver-logo-fix.css";
 import "./driver-communication.css";
 import "./driver-cod-close-precision.css";
 import "./cash-settlement-ui-v2.css";
+import "./manager-owner-settlement.css";
 import DriverRuntimeBootstrap from "./DriverRuntimeBootstrap";
 import DriverLogoFix from "./DriverLogoFix";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
@@ -79,6 +80,7 @@ import AdminCashControlCenter from "./AdminCashControlCenter";
 import AdminShiftSettlementRuntime from "./AdminShiftSettlementRuntime";
 import OwnerAdminOperatorCenter from "./OwnerAdminOperatorCenter";
 import ManagerCashSettlementCenter from "./ManagerCashSettlementCenter";
+import ManagerOwnerSettlementCenter from "./ManagerOwnerSettlementCenter";
 import KitchenDashboardFast from "./KitchenDashboardFast";
 import KitchenFlashGuard from "./KitchenFlashGuard";
 import PrinterCenterRuntime from "./PrinterCenterRuntime";
@@ -113,6 +115,7 @@ export default function RootLayout({ children }) {
         <AdminShiftSettlementRuntime />
         <OwnerAdminOperatorCenter />
         <ManagerCashSettlementCenter />
+        <ManagerOwnerSettlementCenter />
         <PrinterCenterRuntime />
         <KitchenHeaderActions />
         <KitchenStockCenter />
