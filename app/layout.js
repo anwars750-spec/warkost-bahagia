@@ -83,6 +83,7 @@ import AdminShiftSettlementRuntime from "./AdminShiftSettlementRuntime";
 import OwnerAdminOperatorCenter from "./OwnerAdminOperatorCenter";
 import ManagerCashSettlementCenter from "./ManagerCashSettlementCenter";
 import ManagerOwnerSettlementCenter from "./ManagerOwnerSettlementCenter";
+import ManagerCashSyncBridge from "./ManagerCashSyncBridge";
 import PrintBrandingRuntime from "./PrintBrandingRuntime";
 import KitchenDashboardFast from "./KitchenDashboardFast";
 import KitchenFlashGuard from "./KitchenFlashGuard";
@@ -119,6 +120,7 @@ export default function RootLayout({ children }) {
         <OwnerAdminOperatorCenter />
         <ManagerCashSettlementCenter />
         <ManagerOwnerSettlementCenter />
+        <ManagerCashSyncBridge />
         <PrintBrandingRuntime />
         <PrinterCenterRuntime />
         <KitchenHeaderActions />
