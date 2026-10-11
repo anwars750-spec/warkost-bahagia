@@ -1,0 +1,705 @@
+/* Cash Settlement UI V2
+   Visual-only polish for Admin Open Shift, Admin End Shift, and Manager Cash Settlement.
+   Business rules and data flow stay untouched. */
+
+@media screen {
+  :root {
+    --cash-v2-ink: #2f1a12;
+    --cash-v2-muted: #7d6d64;
+    --cash-v2-line: #eadfd4;
+    --cash-v2-line-strong: #dcc9ba;
+    --cash-v2-surface: #fffdfb;
+    --cash-v2-surface-soft: #fff8f2;
+    --cash-v2-accent: #8b3c25;
+    --cash-v2-accent-dark: #642418;
+    --cash-v2-success: #1f7444;
+    --cash-v2-success-bg: #edf8f1;
+    --cash-v2-danger: #9b332f;
+    --cash-v2-danger-bg: #fff0ee;
+    --cash-v2-shadow: 0 28px 80px rgba(48, 27, 19, 0.20), 0 8px 26px rgba(48, 27, 19, 0.08);
+  }
+
+  /* Shared backdrop */
+  .admin-cash-overlay,
+  .admin-shift-settlement-overlay,
+  .manager-cash-overlay {
+    background:
+      radial-gradient(circle at 50% 18%, rgba(255, 248, 241, 0.14), transparent 34%),
+      rgba(43, 28, 22, 0.48) !important;
+    backdrop-filter: blur(10px) saturate(0.9) !important;
+  }
+
+  /* Shared shell */
+  .admin-cash-panel,
+  .admin-shift-settlement-panel,
+  .manager-cash-panel {
+    border: 1px solid rgba(226, 210, 197, 0.94) !important;
+    border-radius: 28px !important;
+    background: linear-gradient(180deg, #fffefd 0%, var(--cash-v2-surface) 100%) !important;
+    box-shadow: var(--cash-v2-shadow) !important;
+    scrollbar-width: thin;
+    scrollbar-color: #cdb7a7 transparent;
+  }
+
+  .admin-cash-panel::-webkit-scrollbar,
+  .admin-shift-settlement-panel::-webkit-scrollbar,
+  .manager-cash-panel::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .admin-cash-panel::-webkit-scrollbar-thumb,
+  .admin-shift-settlement-panel::-webkit-scrollbar-thumb,
+  .manager-cash-panel::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: #cdb7a7;
+    background-clip: padding-box;
+  }
+
+  .admin-cash-panel {
+    width: min(1020px, 96vw) !important;
+  }
+
+  .admin-shift-settlement-panel {
+    width: min(700px, 94vw) !important;
+  }
+
+  .manager-cash-panel {
+    width: min(1120px, 96vw) !important;
+  }
+
+  /* Header system */
+  .admin-cash-header,
+  .admin-shift-settlement-panel > header,
+  .manager-cash-panel > header {
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    align-items: flex-start !important;
+    padding: 28px 30px 23px !important;
+    border-bottom: 1px solid #efe4da !important;
+    background: rgba(255, 253, 251, 0.96) !important;
+    backdrop-filter: blur(14px);
+  }
+
+  .admin-cash-header small,
+  .admin-shift-settlement-panel header small,
+  .manager-cash-panel header small,
+  .admin-cash-copy > span,
+  .admin-cash-shiftbar small,
+  .admin-cash-section-title small,
+  .manager-cash-grid aside > small,
+  .manager-cash-detail-head small,
+  .manager-cash-history > small,
+  .admin-shift-operator small {
+    color: #a25c40 !important;
+    font-size: 10px !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.16em !important;
+    text-transform: uppercase;
+  }
+
+  .admin-cash-header h2,
+  .admin-shift-settlement-panel h2,
+  .manager-cash-panel h2 {
+    margin-top: 5px !important;
+    color: var(--cash-v2-ink) !important;
+    font-size: clamp(25px, 2.2vw, 30px) !important;
+    line-height: 1.12 !important;
+    letter-spacing: -0.025em;
+  }
+
+  .admin-cash-header p,
+  .admin-shift-settlement-panel header p,
+  .manager-cash-panel header p {
+    max-width: 720px;
+    margin-top: 8px !important;
+    color: var(--cash-v2-muted) !important;
+    font-size: 13px !important;
+    line-height: 1.6 !important;
+  }
+
+  /* Precision close button: one visual language across all cash popups. */
+  .admin-cash-header > button,
+  .admin-shift-settlement-panel header > button,
+  .manager-cash-panel header > button {
+    position: relative !important;
+    flex: 0 0 44px !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 1px solid #e5d7ca !important;
+    border-radius: 14px !important;
+    color: transparent !important;
+    background: linear-gradient(180deg, #fffefd 0%, #f9f1ea 100%) !important;
+    box-shadow: 0 3px 10px rgba(74, 43, 28, 0.06) !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    transform: none !important;
+    cursor: pointer;
+    transition: border-color .16s ease, background .16s ease, box-shadow .16s ease, transform .16s ease !important;
+  }
+
+  .admin-cash-header > button::before,
+  .admin-cash-header > button::after,
+  .admin-shift-settlement-panel header > button::before,
+  .admin-shift-settlement-panel header > button::after,
+  .manager-cash-panel header > button::before,
+  .manager-cash-panel header > button::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 17px;
+    height: 2px;
+    border-radius: 999px;
+    background: #654235;
+    transform-origin: center;
+  }
+
+  .admin-cash-header > button::before,
+  .admin-shift-settlement-panel header > button::before,
+  .manager-cash-panel header > button::before {
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
+
+  .admin-cash-header > button::after,
+  .admin-shift-settlement-panel header > button::after,
+  .manager-cash-panel header > button::after {
+    transform: translate(-50%, -50%) rotate(-45deg);
+  }
+
+  .admin-cash-header > button:hover,
+  .admin-shift-settlement-panel header > button:hover,
+  .manager-cash-panel header > button:hover {
+    border-color: #d5bead !important;
+    background: linear-gradient(180deg, #fffaf6 0%, #f3e7de 100%) !important;
+    box-shadow: 0 8px 18px rgba(74, 43, 28, 0.10) !important;
+    transform: translateY(-1px) !important;
+  }
+
+  .admin-cash-header > button:active,
+  .admin-shift-settlement-panel header > button:active,
+  .manager-cash-panel header > button:active {
+    transform: scale(0.97) !important;
+  }
+
+  .admin-cash-header > button:focus-visible,
+  .admin-shift-settlement-panel header > button:focus-visible,
+  .manager-cash-panel header > button:focus-visible {
+    outline: none !important;
+    box-shadow: 0 0 0 4px rgba(139, 60, 37, 0.13), 0 8px 18px rgba(74, 43, 28, 0.10) !important;
+  }
+
+  /* ADMIN — open/start shift */
+  .admin-cash-setup,
+  .admin-cash-start {
+    grid-template-columns: minmax(0, 1.05fr) minmax(330px, .82fr) !important;
+    gap: 26px !important;
+    padding: 30px !important;
+  }
+
+  .admin-cash-copy {
+    position: relative;
+    min-height: 245px;
+    padding: 28px !important;
+    border: 1px solid #eee0d4;
+    border-radius: 22px;
+    background:
+      radial-gradient(circle at 90% 12%, rgba(174, 94, 56, 0.12), transparent 32%),
+      linear-gradient(145deg, #fff9f3 0%, #fffdfb 76%);
+    overflow: hidden;
+  }
+
+  .admin-cash-copy::after {
+    content: "";
+    position: absolute;
+    right: -46px;
+    bottom: -52px;
+    width: 170px;
+    height: 170px;
+    border: 26px solid rgba(153, 79, 46, 0.055);
+    border-radius: 50%;
+  }
+
+  .admin-cash-copy h3 {
+    max-width: 520px;
+    margin-top: 9px !important;
+    color: var(--cash-v2-ink) !important;
+    font-size: clamp(24px, 2.3vw, 31px) !important;
+    line-height: 1.16;
+    letter-spacing: -0.025em;
+  }
+
+  .admin-cash-copy p {
+    position: relative;
+    z-index: 1;
+    max-width: 520px;
+    margin-top: 12px !important;
+    font-size: 13px !important;
+    line-height: 1.7 !important;
+  }
+
+  .admin-cash-form {
+    align-content: start;
+    gap: 16px !important;
+    padding: 24px !important;
+    border: 1px solid #eadbce !important;
+    border-radius: 22px !important;
+    background: #fff !important;
+    box-shadow: 0 12px 30px rgba(55, 34, 24, 0.055);
+  }
+
+  .admin-cash-panel label,
+  .admin-shift-settlement-body label,
+  .manager-cash-detail label {
+    gap: 8px !important;
+    color: #5c4439 !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+  }
+
+  .admin-cash-panel input,
+  .admin-cash-panel select,
+  .admin-shift-money-input,
+  .manager-cash-money-input {
+    border: 1px solid #dfd0c4 !important;
+    border-radius: 14px !important;
+    background: #fff !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .85);
+  }
+
+  .admin-cash-panel input,
+  .admin-cash-panel select {
+    min-height: 50px !important;
+    padding: 11px 14px !important;
+    font-size: 13px;
+  }
+
+  .admin-cash-panel input:focus,
+  .admin-cash-panel select:focus,
+  .admin-shift-money-input:focus-within,
+  .manager-cash-money-input:focus-within {
+    border-color: #bd795c !important;
+    box-shadow: 0 0 0 4px rgba(154, 78, 45, 0.10) !important;
+  }
+
+  .admin-cash-primary,
+  .admin-shift-settlement-primary,
+  .manager-cash-primary {
+    min-height: 50px !important;
+    border-radius: 14px !important;
+    background: linear-gradient(180deg, #914028 0%, #732d1d 100%) !important;
+    box-shadow: 0 10px 22px rgba(111, 43, 27, 0.16) !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+    letter-spacing: .01em;
+    transition: box-shadow .16s ease, transform .16s ease, filter .16s ease !important;
+  }
+
+  .admin-cash-primary:hover:not(:disabled),
+  .admin-shift-settlement-primary:hover:not(:disabled),
+  .manager-cash-primary:hover:not(:disabled) {
+    transform: translateY(-1px) !important;
+    filter: saturate(1.05);
+    box-shadow: 0 14px 28px rgba(111, 43, 27, 0.21) !important;
+  }
+
+  .admin-cash-primary:active:not(:disabled),
+  .admin-shift-settlement-primary:active:not(:disabled),
+  .manager-cash-primary:active:not(:disabled) {
+    transform: scale(.992) !important;
+  }
+
+  /* Admin active shift */
+  .admin-cash-active {
+    padding: 26px 30px 32px !important;
+  }
+
+  .admin-cash-shiftbar {
+    padding: 18px 20px !important;
+    border: 1px solid #e5d7ca !important;
+    border-radius: 18px !important;
+    background: linear-gradient(135deg, #fff9f4 0%, #fffefd 100%) !important;
+    box-shadow: 0 7px 20px rgba(60, 36, 25, 0.04);
+  }
+
+  .admin-cash-shiftbar strong {
+    font-size: 19px !important;
+    letter-spacing: -0.015em;
+  }
+
+  .admin-cash-live {
+    padding: 8px 12px !important;
+    border: 1px solid #cde9d8;
+    background: #ebf8f0 !important;
+  }
+
+  .admin-cash-kpis {
+    gap: 14px !important;
+    margin-top: 16px !important;
+  }
+
+  .admin-cash-kpis article {
+    min-height: 112px !important;
+    padding: 18px !important;
+    border: 1px solid #eadfd5 !important;
+    border-radius: 18px !important;
+    background: linear-gradient(180deg, #fff 0%, #fffdfb 100%) !important;
+    box-shadow: 0 6px 16px rgba(60, 36, 25, 0.035);
+  }
+
+  .admin-cash-kpis article > strong {
+    margin-top: 3px;
+    font-size: 24px !important;
+    letter-spacing: -0.025em;
+  }
+
+  .admin-cash-rule {
+    margin-top: 16px !important;
+    padding: 14px 16px !important;
+    border: 1px solid #f0e0d3;
+    border-radius: 15px !important;
+    background: #fcf4ed !important;
+    line-height: 1.55;
+  }
+
+  .admin-cash-receive {
+    min-width: 205px;
+    margin-top: 16px !important;
+  }
+
+  .admin-cash-history {
+    margin-top: 24px !important;
+    padding-top: 22px !important;
+  }
+
+  .admin-cash-receipt-list article {
+    padding: 14px 16px !important;
+    border-radius: 15px !important;
+    transition: border-color .16s ease, transform .16s ease, box-shadow .16s ease;
+  }
+
+  .admin-cash-receipt-list article:hover {
+    border-color: #dec9b9 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(60, 36, 25, 0.05);
+  }
+
+  /* ADMIN — end shift */
+  .admin-shift-settlement-body {
+    gap: 16px !important;
+    padding: 24px 30px 30px !important;
+  }
+
+  .admin-shift-operator {
+    padding: 17px 18px !important;
+    border: 1px solid #e6d8cb !important;
+    border-radius: 17px !important;
+    background: linear-gradient(135deg, #fff9f4, #fffefd) !important;
+  }
+
+  .admin-shift-operator strong {
+    margin-top: 2px;
+    font-size: 18px !important;
+  }
+
+  .admin-shift-settlement-kpis {
+    gap: 14px !important;
+  }
+
+  .admin-shift-settlement-kpis article {
+    min-height: 112px;
+    align-content: center;
+    padding: 18px !important;
+    border: 1px solid #e9ddd3 !important;
+    border-radius: 18px !important;
+    background: linear-gradient(180deg, #fff 0%, #fffdfb 100%) !important;
+    box-shadow: 0 6px 18px rgba(60, 36, 25, 0.035);
+  }
+
+  .admin-shift-settlement-kpis strong {
+    margin: 3px 0;
+    font-size: 24px !important;
+    letter-spacing: -0.025em;
+  }
+
+  .admin-shift-money-input,
+  .manager-cash-money-input {
+    min-height: 56px !important;
+    padding: 0 15px !important;
+  }
+
+  .admin-shift-money-input input,
+  .manager-cash-money-input input {
+    font-size: 20px !important;
+    letter-spacing: -0.02em;
+  }
+
+  .admin-shift-settlement-match,
+  .manager-cash-variance {
+    padding: 14px 16px !important;
+    border: 1px solid transparent;
+    border-radius: 15px !important;
+    line-height: 1.55;
+  }
+
+  .admin-shift-settlement-match.match,
+  .admin-shift-settlement-match.over,
+  .manager-cash-variance.match,
+  .manager-cash-variance.over {
+    border-color: #cde8d7;
+    background: var(--cash-v2-success-bg) !important;
+  }
+
+  .admin-shift-settlement-match.short,
+  .manager-cash-variance.short {
+    border-color: #efc6c1;
+    background: var(--cash-v2-danger-bg) !important;
+  }
+
+  .admin-shift-settlement-error {
+    margin: 18px 30px 0 !important;
+    padding: 13px 15px !important;
+    border: 1px solid #efc6c1;
+    border-radius: 14px !important;
+  }
+
+  /* MANAGER — cash settlement */
+  .manager-cash-summary {
+    gap: 14px !important;
+    padding: 22px 30px 0 !important;
+  }
+
+  .manager-cash-summary article {
+    min-height: 112px;
+    align-content: center;
+    padding: 18px 20px !important;
+    border: 1px solid #e9ddd3 !important;
+    border-radius: 18px !important;
+    background: linear-gradient(180deg, #fff 0%, #fffdfb 100%) !important;
+    box-shadow: 0 6px 18px rgba(60, 36, 25, 0.035);
+  }
+
+  .manager-cash-summary strong {
+    margin: 3px 0;
+    font-size: 25px !important;
+    letter-spacing: -0.03em;
+  }
+
+  .manager-cash-grid {
+    grid-template-columns: minmax(270px, .72fr) minmax(0, 1.55fr) !important;
+    gap: 18px !important;
+    padding: 20px 30px 28px !important;
+  }
+
+  .manager-cash-grid aside {
+    gap: 10px !important;
+    padding: 16px;
+    border: 1px solid #eadfd5;
+    border-radius: 19px;
+    background: #fffaf6;
+  }
+
+  .manager-cash-grid aside > small {
+    margin: 0 2px 4px !important;
+  }
+
+  .manager-cash-grid aside > button {
+    min-height: 68px;
+    padding: 14px 15px !important;
+    border: 1px solid #eadfd5 !important;
+    border-radius: 15px !important;
+    background: #fff !important;
+    box-shadow: 0 3px 10px rgba(59, 36, 25, 0.025);
+    transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease, background .16s ease;
+  }
+
+  .manager-cash-grid aside > button:hover {
+    border-color: #d8bdab !important;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(59, 36, 25, 0.055);
+  }
+
+  .manager-cash-grid aside > button.active {
+    border-color: #c58b6e !important;
+    background: linear-gradient(135deg, #fff3e9 0%, #fffaf6 100%) !important;
+    box-shadow: inset 3px 0 0 #8b3c25, 0 8px 20px rgba(105, 45, 27, 0.07) !important;
+  }
+
+  .manager-cash-detail {
+    gap: 16px !important;
+    padding: 22px !important;
+    border: 1px solid #e5d7ca !important;
+    border-radius: 20px !important;
+    background: linear-gradient(180deg, #fffaf6 0%, #fffdfb 100%) !important;
+    box-shadow: 0 8px 24px rgba(60, 36, 25, 0.04);
+  }
+
+  .manager-cash-detail-head {
+    align-items: center !important;
+    padding-bottom: 3px;
+  }
+
+  .manager-cash-detail-head h3 {
+    margin-top: 5px !important;
+    font-size: 23px !important;
+    letter-spacing: -0.02em;
+  }
+
+  .manager-cash-detail-head > button {
+    min-height: 40px;
+    padding: 8px 13px !important;
+    border: 1px solid #dbc8b9 !important;
+    border-radius: 12px !important;
+    background: #fff !important;
+    color: #6b3727 !important;
+    box-shadow: 0 4px 12px rgba(60, 36, 25, 0.04);
+    transition: border-color .16s ease, background .16s ease, transform .16s ease;
+  }
+
+  .manager-cash-detail-head > button:hover {
+    border-color: #caa88f !important;
+    background: #fff7f1 !important;
+    transform: translateY(-1px);
+  }
+
+  .manager-cash-detail dl {
+    gap: 8px !important;
+  }
+
+  .manager-cash-detail dl > div {
+    min-height: 42px;
+    align-items: center;
+    padding: 10px 12px !important;
+    border: 1px solid #eee4dc;
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, .94) !important;
+  }
+
+  .manager-cash-detail dt {
+    font-size: 10px !important;
+  }
+
+  .manager-cash-detail dd {
+    font-size: 11px !important;
+  }
+
+  .manager-cash-history {
+    margin: 0 30px 28px !important;
+    padding-top: 20px !important;
+  }
+
+  .manager-cash-history > div {
+    min-height: 52px;
+    align-items: center;
+    padding: 11px 14px !important;
+    border-radius: 13px !important;
+  }
+
+  .manager-cash-feedback {
+    margin: 18px 30px 0 !important;
+    padding: 13px 15px !important;
+    border: 1px solid transparent;
+    border-radius: 14px !important;
+  }
+
+  .manager-cash-feedback.error {
+    border-color: #efc6c1;
+  }
+
+  .manager-cash-feedback.success {
+    border-color: #cae7d4;
+  }
+
+  /* Toast refinement */
+  .admin-shift-settlement-toast {
+    border-radius: 16px !important;
+    box-shadow: 0 20px 54px rgba(39, 25, 18, .17) !important;
+  }
+
+  @media (max-width: 900px) {
+    .admin-cash-setup,
+    .admin-cash-start,
+    .manager-cash-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    .admin-cash-copy {
+      min-height: 190px;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .admin-cash-overlay,
+    .admin-shift-settlement-overlay,
+    .manager-cash-overlay {
+      align-items: end !important;
+      padding: 0 !important;
+    }
+
+    .admin-cash-panel,
+    .admin-shift-settlement-panel,
+    .manager-cash-panel {
+      width: 100% !important;
+      max-height: 95vh !important;
+      border-radius: 24px 24px 0 0 !important;
+    }
+
+    .admin-cash-header,
+    .admin-shift-settlement-panel > header,
+    .manager-cash-panel > header {
+      padding: 22px 20px 18px !important;
+    }
+
+    .admin-cash-header h2,
+    .admin-shift-settlement-panel h2,
+    .manager-cash-panel h2 {
+      padding-right: 54px;
+      font-size: 24px !important;
+    }
+
+    .admin-cash-header > button,
+    .admin-shift-settlement-panel header > button,
+    .manager-cash-panel header > button {
+      position: absolute !important;
+      top: 18px;
+      right: 18px;
+      width: 42px !important;
+      height: 42px !important;
+      min-width: 42px !important;
+      min-height: 42px !important;
+    }
+
+    .admin-cash-setup,
+    .admin-cash-start,
+    .admin-cash-active,
+    .admin-shift-settlement-body,
+    .manager-cash-summary,
+    .manager-cash-grid {
+      padding-left: 18px !important;
+      padding-right: 18px !important;
+    }
+
+    .admin-cash-copy,
+    .admin-cash-form,
+    .manager-cash-grid aside,
+    .manager-cash-detail {
+      border-radius: 18px !important;
+    }
+
+    .admin-cash-kpis,
+    .admin-shift-settlement-kpis,
+    .manager-cash-summary {
+      grid-template-columns: 1fr !important;
+    }
+
+    .manager-cash-history {
+      margin-left: 18px !important;
+      margin-right: 18px !important;
+    }
+  }
+}
