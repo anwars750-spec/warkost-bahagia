@@ -59,26 +59,30 @@ export default function AdminCashControlCenter() {
   const [pin, setPin] = useState("");
   const [pinPopup, setPinPopup] = useState("");
 
-  const load = useCallback(async () => {
-    if (!isAdmin) return;
-    setLoading(true);
-    setError("");
-    try {
-      const data = await request();
-      setState(data);
-      setSelectedOperator((current) => {
-        const stillAvailable = data.operators?.some(
-          (item) => String(item.id) === String(current),
-        );
-        if (stillAvailable) return current;
-        return data.operators?.length ? String(data.operators[0].id) : "";
-      });
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [isAdmin]);
+  const load = useCallback(
+    async ({ force = false } = {}) => {
+      if (!isAdmin && !force) return;
+      setLoading(true);
+      setError("");
+      try {
+        const data = await request();
+        setState(data);
+        setSelectedOperator((current) => {
+          const stillAvailable = data.operators?.some(
+            (item) => String(item.id) === String(current),
+          );
+          if (stillAvailable) return current;
+          return data.operators?.length ? String(data.operators[0].id) : "";
+        });
+      } catch (err) {
+        if (force && /Akses ditolak/i.test(String(err?.message || ""))) return;
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [isAdmin],
+  );
 
   useEffect(() => {
     let active = true;
@@ -117,9 +121,45 @@ export default function AdminCashControlCenter() {
   }, []);
 
   useEffect(() => {
+    const restoreSession = (event) => {
+      const hasShift = Boolean(event?.detail?.hasShift);
+      const restored = event?.detail?.currentShift || null;
+      setIsAdmin(true);
+
+      if (hasShift && restored) {
+        setState((current) => ({
+          ...(current || {}),
+          current_shift: {
+            ...(current?.current_shift || {}),
+            ...restored,
+            id: Number(restored.id),
+            operator_id: Number(restored.operator_id),
+            receipt_count: Number(restored.receipt_count || 0),
+            cash_custody: Number(restored.cash_custody || 0),
+            expected_received: Number(restored.expected_received || 0),
+            overage_total: Number(restored.overage_total || 0),
+          },
+        }));
+        setOpen(false);
+        setPinPopup("");
+      } else {
+        setState((current) =>
+          current ? { ...current, current_shift: null } : current,
+        );
+      }
+
+      window.setTimeout(() => void load({ force: true }), 80);
+    };
+
+    window.addEventListener("warkost:admin-session-restored", restoreSession);
+    return () =>
+      window.removeEventListener("warkost:admin-session-restored", restoreSession);
+  }, [load]);
+
+  useEffect(() => {
     if (!isAdmin) return;
-    load();
-    const refresh = () => load();
+    load({ force: true });
+    const refresh = () => load({ force: true });
     window.addEventListener("warkost:cod-batch-updated", refresh);
     return () => window.removeEventListener("warkost:cod-batch-updated", refresh);
   }, [isAdmin, load]);
@@ -155,7 +195,7 @@ export default function AdminCashControlCenter() {
         setOpen(true);
         setSuccess("");
         setPinPopup("");
-        load();
+        load({ force: true });
       });
     };
 
@@ -243,24 +283,31 @@ export default function AdminCashControlCenter() {
         7000,
       );
 
+      const currentShift = {
+        id: Number(started.id),
+        operator_id: Number(started.operator_id),
+        operator_name: started.operator_name || operatorName,
+        started_at: started.started_at,
+        receipt_count: 0,
+        cash_custody: 0,
+        expected_received: 0,
+        overage_total: 0,
+      };
+
       setPin("");
-      setSuccess(`Shift ${started.operator_name || operatorName} dimulai.`);
+      setSuccess(`Shift ${currentShift.operator_name} dimulai.`);
       setState((current) => ({
         ...(current || {}),
-        current_shift: {
-          id: Number(started.id),
-          operator_id: Number(started.operator_id),
-          operator_name: started.operator_name || operatorName,
-          started_at: started.started_at,
-          receipt_count: 0,
-          cash_custody: 0,
-          expected_received: 0,
-          overage_total: 0,
-        },
+        current_shift: currentShift,
       }));
+      window.dispatchEvent(
+        new CustomEvent("warkost:admin-shift-started", {
+          detail: { currentShift },
+        }),
+      );
 
       window.setTimeout(() => {
-        void load();
+        void load({ force: true });
       }, 50);
     } catch (err) {
       setPin("");
@@ -335,7 +382,7 @@ export default function AdminCashControlCenter() {
                 className="admin-cash-primary"
                 type="button"
                 disabled={loading}
-                onClick={load}
+                onClick={() => load({ force: true })}
               >
                 {loading ? "Memuat…" : "Perbarui Operator"}
               </button>
