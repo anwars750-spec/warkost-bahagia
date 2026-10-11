@@ -36,3 +36,22 @@ body.driver-v2-transition:not(.driver-v2-active)::after {
   font-weight: 760;
   letter-spacing: -0.01em;
 }
+
+/* Driver Center V2 is the only Driver shell allowed to remain visible.
+   The legacy page header/nav is responsive and becomes a fixed bottom bar on
+   mobile, which caused duplicate Beranda/Tugas/COD/Notifikasi/Akun/Keluar
+   controls to sit on top of the V2 icon navigation. */
+body.driver-v2-active .top,
+body.driver-v2-active .driver-trip-workspace {
+  display: none !important;
+}
+
+@media (max-width: 760px) {
+  /* Defensive mobile dedupe: keep only the icon-based V2 navigation. */
+  body.driver-v2-active .driver-v2-bottom-nav {
+    display: grid !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+}
