@@ -20,7 +20,13 @@ const formatTime = (value) => {
 async function request(body) {
   const response = await fetch("/api/admin-cash-control", {
     method: body ? "POST" : "GET",
-    headers: body ? { "Content-Type": "application/json" } : {},
+    credentials: "same-origin",
+    headers: body
+      ? {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        }
+      : { Accept: "application/json" },
     body: body ? JSON.stringify(body) : undefined,
     cache: "no-store",
   });
@@ -60,17 +66,39 @@ export default function AdminCashControlCenter() {
   }, [isAdmin, selectedOperator]);
 
   useEffect(() => {
-    const detectAdmin = () => {
-      setIsAdmin(
-        Boolean(document.querySelector('nav [data-admin-nav="Printer"]')),
+    let active = true;
+    const detectAdmin = async () => {
+      const hasAdminNav = Boolean(
+        document.querySelector('nav [data-admin-nav="Printer"]'),
       );
+      if (hasAdminNav) {
+        if (active) setIsAdmin(true);
+        return;
+      }
+      try {
+        const response = await fetch("/api/me", {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        const data = await response.json();
+        if (active) setIsAdmin(data.user?.role === "ADMIN");
+      } catch {
+        if (active) setIsAdmin(false);
+      }
     };
 
     detectAdmin();
     const observer = new MutationObserver(detectAdmin);
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    return () => observer.disconnect();
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-admin-nav"],
+    });
+    return () => {
+      active = false;
+      observer.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -168,14 +196,27 @@ export default function AdminCashControlCenter() {
   const bootstrap = async (event) => {
     event.preventDefault();
     if (busy) return;
-    setBusy(true);
+
+    const name = bootstrapName.trim();
+    const cleanPin = bootstrapPin.trim();
     setError("");
     setSuccess("");
+
+    if (name.length < 2 || name.length > 80) {
+      setError("Nama operator harus 2-80 karakter.");
+      return;
+    }
+    if (!/^\d{4,6}$/.test(cleanPin)) {
+      setError("PIN operator harus 4-6 digit angka.");
+      return;
+    }
+
+    setBusy(true);
     try {
       await request({
         action: "BOOTSTRAP_OPERATOR",
-        name: bootstrapName,
-        pin: bootstrapPin,
+        name,
+        pin: cleanPin,
       });
       setBootstrapPin("");
       setSuccess("Operator pertama berhasil dibuat. Sekarang mulai shift.");
@@ -190,14 +231,25 @@ export default function AdminCashControlCenter() {
   const startShift = async (event) => {
     event.preventDefault();
     if (busy) return;
-    setBusy(true);
+
+    const cleanPin = pin.trim();
     setError("");
     setSuccess("");
+    if (!selectedOperator) {
+      setError("Pilih operator terlebih dahulu.");
+      return;
+    }
+    if (!/^\d{4,6}$/.test(cleanPin)) {
+      setError("PIN operator harus 4-6 digit angka.");
+      return;
+    }
+
+    setBusy(true);
     try {
       await request({
         action: "START_SHIFT",
         operatorId: Number(selectedOperator),
-        pin,
+        pin: cleanPin,
       });
       setPin("");
       setSuccess(`Shift ${operatorName} dimulai.`);
@@ -258,15 +310,14 @@ export default function AdminCashControlCenter() {
                 Akun Admin tetap satu. Nama operator dan PIN dipakai untuk mencatat siapa yang benar-benar memegang uang pada shift tersebut.
               </p>
             </div>
-            <form onSubmit={bootstrap}>
+            <form onSubmit={bootstrap} noValidate>
               <label>
                 Nama operator
                 <input
                   value={bootstrapName}
                   onChange={(event) => setBootstrapName(event.target.value)}
                   placeholder="Contoh: Virsa"
-                  minLength={2}
-                  maxLength={80}
+                  autoComplete="off"
                   required
                 />
               </label>
@@ -275,12 +326,13 @@ export default function AdminCashControlCenter() {
                 <input
                   type="password"
                   inputMode="numeric"
-                  pattern="[0-9]{4,6}"
                   value={bootstrapPin}
                   onChange={(event) => setBootstrapPin(event.target.value)}
-                  placeholder="4-6 digit"
+                  placeholder="4-6 digit angka"
+                  autoComplete="new-password"
                   required
                 />
+                <small>Gunakan 4-6 digit angka, misalnya 2580.</small>
               </label>
               <button className="admin-cash-primary" type="submit" disabled={busy}>
                 {busy ? "Menyimpan…" : "Buat Operator"}
@@ -296,7 +348,7 @@ export default function AdminCashControlCenter() {
                 Uang COD baru menjadi tanggung jawab operator setelah setoran Driver benar-benar diterima dan diverifikasi.
               </p>
             </div>
-            <form onSubmit={startShift}>
+            <form onSubmit={startShift} noValidate>
               <label>
                 Operator
                 <select
@@ -316,10 +368,10 @@ export default function AdminCashControlCenter() {
                 <input
                   type="password"
                   inputMode="numeric"
-                  pattern="[0-9]{4,6}"
                   value={pin}
                   onChange={(event) => setPin(event.target.value)}
                   placeholder="Masukkan PIN"
+                  autoComplete="current-password"
                   required
                 />
               </label>
