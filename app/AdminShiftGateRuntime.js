@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 const CASH_PANEL = ".admin-cash-panel";
 const CASH_NAV = 'nav [data-admin-nav="Setoran"]';
+const ADMIN_SURFACE = 'nav [data-admin-nav="Printer"]';
 
 async function readSession() {
   const response = await fetch("/api/me", {
@@ -33,6 +34,7 @@ export default function AdminShiftGateRuntime() {
 
   useEffect(() => {
     let alive = true;
+    let lastAdminSurface = Boolean(document.querySelector(ADMIN_SURFACE));
 
     const inspect = async () => {
       if (checking.current) return;
@@ -53,8 +55,8 @@ export default function AdminShiftGateRuntime() {
         if (!alive) return;
         setLocked(!state?.current_shift);
       } catch {
-        // Fail closed only after the Admin surface is actually present.
-        const adminSurface = Boolean(document.querySelector('nav [data-admin-nav="Printer"]'));
+        // If the Admin shell is already visible, fail closed instead of exposing operations.
+        const adminSurface = Boolean(document.querySelector(ADMIN_SURFACE));
         if (alive && adminSurface) {
           setIsAdmin(true);
           setLocked(true);
@@ -65,13 +67,13 @@ export default function AdminShiftGateRuntime() {
     };
 
     void inspect();
-    const observer = new MutationObserver(() => void inspect());
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["data-admin-nav", "class"],
+    const observer = new MutationObserver(() => {
+      const adminSurface = Boolean(document.querySelector(ADMIN_SURFACE));
+      if (adminSurface === lastAdminSurface) return;
+      lastAdminSurface = adminSurface;
+      void inspect();
     });
+    observer.observe(document.body, { childList: true, subtree: true });
 
     return () => {
       alive = false;
