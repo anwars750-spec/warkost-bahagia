@@ -77,6 +77,7 @@ import "./driver-cod-close-precision.css";
 import "./cash-settlement-ui-v2.css";
 import "./manager-owner-settlement.css";
 import "./manager-owner-settlement-v2.css";
+import "./owner-dashboard-v1.css";
 import "./print-branding.css";
 import DriverRuntimeBootstrap from "./DriverRuntimeBootstrap";
 import DriverLogoFix from "./DriverLogoFix";
@@ -88,6 +89,7 @@ import AdminShiftSettlementRuntime from "./AdminShiftSettlementRuntime";
 import AdminSettlementStabilityBridge from "./AdminSettlementStabilityBridge";
 import AdminOrderNumberEnhancer from "./AdminOrderNumberEnhancer";
 import OwnerAdminOperatorCenter from "./OwnerAdminOperatorCenter";
+import OwnerDashboardRuntime from "./OwnerDashboardRuntime";
 import ManagerCashSettlementCenter from "./ManagerCashSettlementCenter";
 import ManagerOwnerSettlementCenter from "./ManagerOwnerSettlementCenter";
 import ManagerCashSyncBridge from "./ManagerCashSyncBridge";
@@ -130,6 +132,7 @@ export default function RootLayout({ children }) {
         <AdminSettlementStabilityBridge />
         <AdminOrderNumberEnhancer />
         <OwnerAdminOperatorCenter />
+        <OwnerDashboardRuntime />
         <ManagerCashSettlementCenter />
         <ManagerOwnerSettlementCenter />
         <ManagerCashSyncBridge />
