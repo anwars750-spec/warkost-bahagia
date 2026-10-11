@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
-const RUNTIME_REVISION = "P0-ENDSHIFT-R4";
-const POST_TIMEOUT_MS = 4500;
-const RECOVERY_TIMEOUT_MS = 2200;
+const RUNTIME_REVISION = "P0-ENDSHIFT-R5";
+const POST_TIMEOUT_MS = 5000;
+const LEDGER_TIMEOUT_MS = 1800;
+const LEDGER_ATTEMPTS = 12;
 
 const money = (value) => `Rp${Number(value || 0).toLocaleString("id-ID")}`;
 
@@ -24,6 +25,7 @@ const dateTime = (value) => {
 };
 
 const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+const never = () => new Promise(() => {});
 
 function signalSubmitting(active) {
   window.dispatchEvent(
@@ -35,7 +37,7 @@ function signalSubmitting(active) {
 
 function staleRuntimeError() {
   const error = new Error(
-    "Build Owner Demo yang berjalan masih versi lama. Hentikan server, jalankan build terbaru, start Owner Demo lagi, lalu hard refresh browser (Ctrl+Shift+R).",
+    "Build Owner Demo dan browser tidak sinkron. Hentikan server, build ulang, start Owner Demo lagi, lalu hard refresh browser (Ctrl+Shift+R).",
   );
   error.code = "STALE_RUNTIME";
   return error;
@@ -46,7 +48,7 @@ function assertRuntime(data) {
   return data;
 }
 
-async function request(body, timeoutMs = 6000) {
+async function request(body, timeoutMs = 5000) {
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -61,13 +63,18 @@ async function request(body, timeoutMs = 6000) {
       signal: controller.signal,
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok)
-      throw new Error(data.error || `Gagal memproses setoran (${response.status})`);
+    if (!response.ok) {
+      const error = new Error(
+        data.error || `Gagal memproses setoran (${response.status})`,
+      );
+      error.status = response.status;
+      throw error;
+    }
     return data;
   } catch (error) {
     if (error?.name === "AbortError") {
       const timeoutError = new Error(
-        "Server belum merespons tepat waktu. Sistem sedang mengecek ledger agar setoran tidak dibuat ganda.",
+        "Respons perintah setoran terlambat. Ledger tetap diperiksa agar transaksi tidak dibuat ganda.",
       );
       timeoutError.code = "SETTLEMENT_TIMEOUT";
       throw timeoutError;
@@ -93,6 +100,7 @@ export default function AdminShiftSettlementRuntime() {
 
   useEffect(() => {
     let currentAnchor = null;
+
     const ensure = () => {
       const receiveButton = document.querySelector(
         ".admin-cash-active .admin-cash-receive",
@@ -103,6 +111,7 @@ export default function AdminShiftSettlementRuntime() {
         setAnchor(null);
         return;
       }
+
       let node = receiveButton.parentElement?.querySelector(
         ":scope > .admin-shift-settlement-anchor",
       );
@@ -118,14 +127,15 @@ export default function AdminShiftSettlementRuntime() {
     ensure();
     const observer = new MutationObserver(ensure);
     observer.observe(document.body, { childList: true, subtree: true });
+
     return () => {
       observer.disconnect();
       if (currentAnchor?.isConnected) currentAnchor.remove();
     };
   }, []);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     setError("");
     try {
       const data = assertRuntime(await request(undefined, 4000));
@@ -133,18 +143,20 @@ export default function AdminShiftSettlementRuntime() {
       setState(data);
       const expected = Number(data.current_shift?.cash_custody || 0);
       setSubmittedAmount(String(expected));
+      return data;
     } catch (err) {
       setRuntimeReady(false);
       setError(err.message);
+      return null;
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     if (!anchor) return;
-    load();
-    const refresh = () => load();
+    void load();
+    const refresh = () => void load({ silent: true });
     window.addEventListener("warkost:cod-batch-updated", refresh);
     window.addEventListener("warkost:admin-session-restored", refresh);
     return () => {
@@ -189,6 +201,7 @@ export default function AdminShiftSettlementRuntime() {
     }
 
     if (!result?.settlement) return false;
+
     const settlement = result.settlement;
     setLastSlip(settlement);
     setBusyStage("printing");
@@ -198,22 +211,19 @@ export default function AdminShiftSettlementRuntime() {
         detail: { settlement },
       }),
     );
-    window.dispatchEvent(new CustomEvent("warkost:cod-batch-updated"));
 
     const releaseGate = () => {
       setBusy(false);
       setBusyStage("idle");
       signalSubmitting(false);
+      window.dispatchEvent(new CustomEvent("warkost:cod-batch-updated"));
       window.dispatchEvent(new CustomEvent("warkost:admin-shift-ended"));
     };
 
-    // Setelah ledger mengonfirmasi sukses, pindahkan workspace ke Printer dulu.
-    // Shift Gate tetap ditahan sampai dialog cetak selesai agar Printer tidak direbut popup shift baru.
+    // Modal ditutup sebelum print. Karena lastSlip sudah dirender oleh React,
+    // print sheet tetap tersedia walaupun workspace berpindah ke Printer.
     window.setTimeout(() => {
-      const printerButton = document.querySelector(
-        'nav [data-admin-nav="Printer"]',
-      );
-      printerButton?.click();
+      document.querySelector('nav [data-admin-nav="Printer"]')?.click();
 
       window.setTimeout(() => {
         let released = false;
@@ -223,6 +233,7 @@ export default function AdminShiftSettlementRuntime() {
           window.removeEventListener("afterprint", releaseOnce);
           releaseGate();
         };
+
         window.addEventListener("afterprint", releaseOnce, { once: true });
         try {
           window.print();
@@ -230,39 +241,70 @@ export default function AdminShiftSettlementRuntime() {
           releaseOnce();
           return;
         }
-        // Browser tertentu tidak mengirim afterprint; fallback tetap bounded.
-        window.setTimeout(releaseOnce, 1600);
-      }, 260);
-    }, 60);
+        window.setTimeout(releaseOnce, 1800);
+      }, 320);
+    }, 80);
 
     return true;
   }, []);
 
-  const recoverSubmission = useCallback(async (shiftId) => {
-    setBusyStage("checking");
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      if (attempt) await wait(350);
-      try {
-        const snapshot = assertRuntime(
-          await request(undefined, RECOVERY_TIMEOUT_MS),
-        );
-        const settlement = (snapshot.recent_settlements || []).find(
-          (item) => Number(item.shift_id) === Number(shiftId),
-        );
-        if (settlement)
-          return { no_cash: false, settlement, replayed: true };
-      } catch (recoveryError) {
-        if (recoveryError?.code === "STALE_RUNTIME") throw recoveryError;
+  const recoverSubmission = useCallback(
+    async (shiftId, expected, operatorName) => {
+      // Ledger adalah source of truth. Poll ini dimulai paralel dengan POST,
+      // bukan menunggu POST timeout. Jadi response POST yang macet tidak dapat
+      // menahan modal setelah database sudah commit.
+      await wait(180);
+      setBusyStage("checking");
+
+      for (let attempt = 0; attempt < LEDGER_ATTEMPTS; attempt += 1) {
+        if (attempt) await wait(250);
+        try {
+          const snapshot = assertRuntime(
+            await request(undefined, LEDGER_TIMEOUT_MS),
+          );
+          const settlement = (snapshot.recent_settlements || []).find(
+            (item) => Number(item.shift_id) === Number(shiftId),
+          );
+
+          if (settlement) {
+            return {
+              no_cash: false,
+              settlement,
+              replayed: true,
+              confirmed_by: "ledger",
+            };
+          }
+
+          if (
+            Number(expected) === 0 &&
+            !snapshot.current_shift
+          ) {
+            return {
+              no_cash: true,
+              shift_id: Number(shiftId),
+              operator_name: operatorName,
+              expected_amount: 0,
+              submitted_amount: 0,
+              confirmed_by: "ledger",
+            };
+          }
+        } catch (recoveryError) {
+          if (recoveryError?.code === "STALE_RUNTIME") throw recoveryError;
+        }
       }
-    }
-    return null;
-  }, []);
+
+      return null;
+    },
+    [],
+  );
 
   const submit = async () => {
     if (busy || !state?.current_shift) return;
+
     const actual = Number(submittedAmount);
     const expected = Number(state.current_shift.cash_custody || 0);
     const shiftId = Number(state.current_shift.id);
+    const operatorName = state.current_shift.operator_name;
     setError("");
 
     if (!runtimeReady) {
@@ -285,56 +327,57 @@ export default function AdminShiftSettlementRuntime() {
     setBusy(true);
     setBusyStage("saving");
     signalSubmitting(true);
+
     let handedOff = false;
-    const stageTimer = window.setTimeout(
-      () => setBusyStage("checking"),
-      1800,
-    );
+    let postError = null;
+
+    // Satu POST saja. Jika body response macet di browser, ledger watcher di
+    // bawah tetap dapat menyelesaikan UI berdasarkan transaksi yang sudah commit.
+    const postSuccess = request(
+      {
+        action: "SUBMIT_END_SHIFT",
+        shiftId,
+        submittedAmount: actual,
+      },
+      POST_TIMEOUT_MS,
+    )
+      .then(assertRuntime)
+      .then((result) => ({ source: "post", result }))
+      .catch((err) => {
+        postError = err;
+        return never();
+      });
+
+    const ledgerSuccess = recoverSubmission(
+      shiftId,
+      expected,
+      operatorName,
+    ).then((result) => ({ source: "ledger", result }));
 
     try {
-      const result = assertRuntime(
-        await request(
-          {
-            action: "SUBMIT_END_SHIFT",
-            shiftId,
-            submittedAmount: actual,
-          },
-          POST_TIMEOUT_MS,
-        ),
-      );
-      handedOff = completeSubmission(result);
+      const winner = await Promise.race([postSuccess, ledgerSuccess]);
+
+      if (winner?.result) {
+        handedOff = completeSubmission(winner.result);
+      } else if (postError?.code === "STALE_RUNTIME") {
+        setRuntimeReady(false);
+        setError(postError.message);
+      } else if (postError && postError.status && postError.status < 500) {
+        setError(postError.message);
+      } else {
+        setError(
+          "Setoran belum terkonfirmasi di ledger. Proses dihentikan otomatis agar tidak membeku dan tidak membuat transaksi ganda. Muat ulang data lalu coba lagi.",
+        );
+        await load();
+      }
     } catch (err) {
       if (err?.code === "STALE_RUNTIME") {
         setRuntimeReady(false);
         setError(err.message);
-      } else if (
-        err?.code === "SETTLEMENT_TIMEOUT" ||
-        err?.name === "TypeError" ||
-        /failed to fetch|networkerror/i.test(String(err?.message || ""))
-      ) {
-        try {
-          const recovered = await recoverSubmission(shiftId);
-          if (recovered) {
-            handedOff = completeSubmission(recovered);
-          } else {
-            setError(
-              "Setoran belum terkonfirmasi di ledger. Proses dihentikan agar tidak membeku dan tidak membuat transaksi ganda. Klik lagi setelah memastikan server Owner Demo masih aktif.",
-            );
-            await load();
-          }
-        } catch (recoveryError) {
-          if (recoveryError?.code === "STALE_RUNTIME") {
-            setRuntimeReady(false);
-            setError(recoveryError.message);
-          } else {
-            setError(recoveryError.message || "Gagal mengecek status setoran.");
-          }
-        }
       } else {
-        setError(err.message);
+        setError(err?.message || "Gagal mengecek ledger setoran.");
       }
     } finally {
-      window.clearTimeout(stageTimer);
       if (!handedOff) {
         setBusy(false);
         setBusyStage("idle");
@@ -395,7 +438,11 @@ export default function AdminShiftSettlementRuntime() {
                   <h2>Setor ke Manager</h2>
                   <p>Hitung uang fisik, cocokkan, lalu serahkan ke Manager.</p>
                 </div>
-                <button type="button" disabled={busy} onClick={() => setOpen(false)}>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setOpen(false)}
+                >
                   ×
                 </button>
               </header>
@@ -504,7 +551,10 @@ export default function AdminShiftSettlementRuntime() {
               <button type="button" onClick={() => window.print()}>Cetak Ulang</button>
               <button type="button" onClick={() => setLastSlip(null)}>Tutup</button>
             </div>
-            <section className="admin-settlement-print-sheet" aria-label="Slip Setoran Admin">
+            <section
+              className="admin-settlement-print-sheet"
+              aria-label="Slip Setoran Admin"
+            >
               <div className="admin-settlement-print-logo">WARKOST BAHAGIA</div>
               <h1>BUKTI PENYERAHAN SETORAN</h1>
               <p className="admin-settlement-print-number">{lastSlip.slip_number}</p>
@@ -524,7 +574,9 @@ export default function AdminShiftSettlementRuntime() {
                 <div><span>Diserahkan oleh</span><strong>{lastSlip.operator_name}</strong></div>
                 <div><span>Diterima oleh</span><strong>Manager __________________</strong></div>
               </div>
-              <small>Dicetak {dateTime(lastSlip.submitted_at)} · Source of truth tetap ledger Warkost.</small>
+              <small>
+                Dicetak {dateTime(lastSlip.submitted_at)} · Source of truth tetap ledger Warkost.
+              </small>
             </section>
           </>,
           document.body,
