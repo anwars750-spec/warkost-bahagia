@@ -1,0 +1,34 @@
+/* Kitchen navigation stability
+   Global button styles translate buttons on hover/active. Combined with the
+   Kitchen nav hover transform this creates a visible 2px bounce when changing
+   sections. Navigation tabs should change color only, never move. */
+body.kitchen-shell-active .top nav button[data-kitchen-nav],
+body.kitchen-shell-active .top nav button[data-kitchen-nav]:hover,
+body.kitchen-shell-active .top nav button[data-kitchen-nav]:active,
+body.kitchen-shell-active .top nav button[data-kitchen-nav]:focus-visible {
+  transform: none !important;
+}
+
+body.kitchen-shell-active .top nav button[data-kitchen-nav] {
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    box-shadow 120ms ease !important;
+}
+
+/* Stock view should appear in-place. The previous fade could make a fast
+   section switch feel like the content pulses even when dimensions are stable. */
+body.kitchen-stock-modern-active .kitchen-stock-center {
+  animation: none !important;
+}
+
+/* Keep header geometry identical while Dapur/Stock state changes. */
+body.kitchen-shell-active .top nav {
+  align-items: center;
+}
+
+body.kitchen-shell-active .top nav button[data-kitchen-nav] {
+  box-sizing: border-box;
+  margin: 0;
+}
