@@ -59,6 +59,7 @@ import "./driver-runtime-transition.css";
 import "./driver-mobile-final.css";
 import "./driver-logo-fix.css";
 import "./driver-communication.css";
+import "./driver-cod-close-precision.css";
 import DriverRuntimeBootstrap from "./DriverRuntimeBootstrap";
 import DriverLogoFix from "./DriverLogoFix";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
