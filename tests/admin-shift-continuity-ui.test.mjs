@@ -14,12 +14,17 @@ const cashSource = await readFile(
   new URL("../app/AdminCashControlCenter.js", import.meta.url),
   "utf8",
 );
+const routeSource = await readFile(
+  new URL("../app/api/admin-shift-settlement/route.js", import.meta.url),
+  "utf8",
+);
 
 test("end shift submission is bounded, idempotent by shift, and hands off to Printer", () => {
   assert.match(settlementSource, /AbortController/);
   assert.match(settlementSource, /SETTLEMENT_TIMEOUT/);
   assert.match(settlementSource, /recoverSubmission/);
   assert.match(settlementSource, /shiftId/);
+  assert.match(routeSource, /shiftId: body\.shiftId/);
   assert.match(settlementSource, /data-admin-nav=\"Printer\"/);
   assert.match(settlementSource, /window\.print\(\)/);
   assert.match(settlementSource, /warkost:admin-shift-ended/);
