@@ -21,7 +21,15 @@ const dateTime = (value) => {
 
 const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
-async function request(body, timeoutMs = 9000) {
+function signalSubmitting(active) {
+  window.dispatchEvent(
+    new CustomEvent("warkost:admin-shift-submitting", {
+      detail: { active: Boolean(active) },
+    }),
+  );
+}
+
+async function request(body, timeoutMs = 12000) {
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -145,6 +153,7 @@ export default function AdminShiftSettlementRuntime() {
 
   const completeSubmission = useCallback((result) => {
     setOpen(false);
+    setError("");
     window.dispatchEvent(new CustomEvent("warkost:cod-batch-updated"));
 
     if (result?.no_cash) {
@@ -156,23 +165,36 @@ export default function AdminShiftSettlementRuntime() {
     }
 
     if (!result?.settlement) return;
-    setLastSlip(result.settlement);
-    window.dispatchEvent(new CustomEvent("warkost:admin-settlement-submitted"));
+    const settlement = result.settlement;
+    setLastSlip(settlement);
+    window.dispatchEvent(
+      new CustomEvent("warkost:admin-settlement-submitted", {
+        detail: { settlement },
+      }),
+    );
 
-    // Let the print dialog finish first. The mandatory next-shift gate is
-    // re-enabled afterwards so it cannot race the settlement print flow.
+    // Handover sukses harus terlihat dulu di workspace Printer. Shift Gate baru
+    // dikunci lagi sesudah dialog cetak selesai/ditutup agar tidak merebut UI.
     window.setTimeout(() => {
-      window.print();
-      window.setTimeout(
-        () => window.dispatchEvent(new CustomEvent("warkost:admin-shift-ended")),
-        120,
+      const printerButton = document.querySelector(
+        'nav [data-admin-nav="Printer"]',
       );
-    }, 180);
+      printerButton?.click();
+
+      window.setTimeout(() => {
+        try {
+          window.print();
+        } finally {
+          window.setTimeout(
+            () => window.dispatchEvent(new CustomEvent("warkost:admin-shift-ended")),
+            120,
+          );
+        }
+      }, 320);
+    }, 80);
   }, []);
 
   const recoverSubmission = useCallback(async (shiftId) => {
-    // A browser-side timeout does not mean the server transaction failed.
-    // Reconcile against the ledger before allowing a retry to avoid duplicate handovers.
     for (let attempt = 0; attempt < 3; attempt += 1) {
       if (attempt) await wait(450);
       try {
@@ -184,7 +206,7 @@ export default function AdminShiftSettlementRuntime() {
         if (snapshot.current_shift && Number(snapshot.current_shift.id) === Number(shiftId))
           return null;
       } catch {
-        // Retry reconciliation; the original write may still be finishing in the serialized SQLite queue.
+        // Retry ledger reconciliation. The POST is idempotent by shiftId.
       }
     }
     return null;
@@ -208,13 +230,15 @@ export default function AdminShiftSettlementRuntime() {
     }
 
     setBusy(true);
+    signalSubmitting(true);
     try {
       const result = await request(
         {
           action: "SUBMIT_END_SHIFT",
+          shiftId,
           submittedAmount: actual,
         },
-        9000,
+        12000,
       );
       completeSubmission(result);
     } catch (err) {
@@ -224,7 +248,7 @@ export default function AdminShiftSettlementRuntime() {
           completeSubmission(recovered);
         } else {
           setError(
-            "Setoran belum dapat dipastikan tersimpan. Tidak ada transaksi ganda yang dibuat. Silakan tunggu sebentar lalu coba lagi.",
+            "Setoran belum dapat dipastikan tersimpan. Sistem tidak membuat transaksi ganda. Tunggu sebentar lalu coba lagi.",
           );
           await load();
         }
@@ -233,6 +257,7 @@ export default function AdminShiftSettlementRuntime() {
       }
     } finally {
       setBusy(false);
+      signalSubmitting(false);
     }
   };
 
