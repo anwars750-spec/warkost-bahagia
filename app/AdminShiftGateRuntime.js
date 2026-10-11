@@ -51,6 +51,9 @@ export default function AdminShiftGateRuntime() {
           return;
         }
 
+        // Fail closed while the cash state is being resolved so Admin cannot
+        // slip into operational screens between login and the shift check.
+        setLocked(true);
         const state = await readCashState();
         if (!alive) return;
         setLocked(!state?.current_shift);
