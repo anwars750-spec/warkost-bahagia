@@ -1,0 +1,66 @@
+/* Unified print branding: Warkost Bahagia + DELIVERY. */
+
+.warkost-print-brand {
+  display: none;
+}
+
+@media print {
+  .warkost-print-brand {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 0 0 10px;
+    padding: 0 0 8px;
+    border-bottom: 1px dashed #111;
+    color: #000;
+    text-align: left;
+    break-inside: avoid;
+  }
+
+  .warkost-print-brand img {
+    display: block !important;
+    width: 42px !important;
+    height: 42px !important;
+    object-fit: contain;
+    filter: grayscale(1) contrast(1.2);
+  }
+
+  .warkost-print-brand > div {
+    display: grid;
+    gap: 1px;
+  }
+
+  .warkost-print-brand strong {
+    font-size: 11px;
+    line-height: 1.1;
+    letter-spacing: .04em;
+  }
+
+  .warkost-print-brand span {
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: .22em;
+  }
+
+  .admin-settlement-print-sheet > .admin-settlement-print-logo {
+    display: none !important;
+  }
+}
+
+/* Prevent the Manager → Owner amount field from looking broken when no verified cash exists. */
+.manager-owner-panel.manager-mode label:has(.manager-owner-money-input input:disabled)::after {
+  content: "Belum ada Kas Manager yang siap disetor. Verifikasi setoran Admin terlebih dahulu di menu Kas & Setoran.";
+  display: block;
+  margin-top: 7px;
+  color: #8a6a5d;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.manager-owner-panel.manager-mode .manager-owner-money-input:has(input:disabled) {
+  border-style: dashed;
+  background: #f8f2ed;
+  opacity: .82;
+}
