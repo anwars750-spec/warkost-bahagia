@@ -61,26 +61,15 @@ export default function OwnerDashboardRuntime() {
     printJobs: [],
   });
 
+  // Detect the Owner dashboard from the rendered app, independent of the
+  // session state that existed when RootLayout first mounted. This matters
+  // because login happens client-side and the runtime must wake up afterwards.
   useEffect(() => {
-    let active = true;
-    request("me")
-      .then((result) => {
-        if (!active) return;
-        setOwner(result.user?.role === "OWNER" ? result.user : null);
-      })
-      .catch(() => active && setOwner(null));
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!owner) return;
-
     const sync = () => {
       const main = document.querySelector("main");
       const heading = main?.querySelector(".heading h1");
       const onDashboard = heading?.textContent?.trim() === "Ringkasan usaha";
+
       setVisible(Boolean(onDashboard));
 
       if (!onDashboard || !main) {
@@ -94,9 +83,9 @@ export default function OwnerDashboardRuntime() {
       if (!target) {
         target = document.createElement("div");
         target.id = "owner-dashboard-v1-host";
-        const headingBlock = main.querySelector(".heading");
-        headingBlock?.insertAdjacentElement("afterend", target);
+        main.querySelector(".heading")?.insertAdjacentElement("afterend", target);
       }
+
       document.body.classList.add("owner-dashboard-v1-active");
       setHost(target);
     };
@@ -104,15 +93,37 @@ export default function OwnerDashboardRuntime() {
     sync();
     const observer = new MutationObserver(sync);
     observer.observe(document.body, { childList: true, subtree: true });
+
     return () => {
       observer.disconnect();
       document.body.classList.remove("owner-dashboard-v1-active");
       document.getElementById("owner-dashboard-v1-host")?.remove();
     };
-  }, [owner]);
+  }, []);
+
+  // Re-resolve the authenticated Owner whenever the Owner dashboard becomes
+  // visible. This fixes login/logout/login flows without requiring a hard reload.
+  useEffect(() => {
+    if (!visible) {
+      setOwner(null);
+      return;
+    }
+
+    let active = true;
+    request("me")
+      .then((result) => {
+        if (!active) return;
+        setOwner(result.user?.role === "OWNER" ? result.user : null);
+      })
+      .catch(() => active && setOwner(null));
+
+    return () => {
+      active = false;
+    };
+  }, [visible]);
 
   async function load() {
-    if (!visible) return;
+    if (!visible || !owner) return;
     setLoading(true);
     setError("");
     try {
@@ -138,11 +149,11 @@ export default function OwnerDashboardRuntime() {
   }
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || !owner) return;
     load();
     const timer = window.setInterval(load, 30000);
     return () => window.clearInterval(timer);
-  }, [visible]);
+  }, [visible, owner?.id]);
 
   const metrics = useMemo(() => {
     const dashboard = payload.dashboard;
@@ -170,8 +181,7 @@ export default function OwnerDashboardRuntime() {
     );
     const codOutstandingAmount = codOutstanding.reduce(
       (sum, order) =>
-        sum +
-        Number(order.expected_amount ?? order.payment_amount ?? order.total ?? 0),
+        sum + Number(order.expected_amount ?? order.payment_amount ?? order.total ?? 0),
       0,
     );
     const outOfStock = payload.stock.filter(
