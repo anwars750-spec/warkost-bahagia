@@ -7,11 +7,23 @@ import { fileURLToPath } from "node:url";
 const projectRoot = fileURLToPath(new URL("..", import.meta.url));
 const read = (file) => fs.readFileSync(path.join(projectRoot, file), "utf8");
 
-test("Admin enhancers are owned by the active React view, not the root layout", () => {
+test("Admin view enhancers are owned by the active React view, not the root layout", () => {
   const layout = read("app/layout.js");
   const page = read("app/page.js");
 
-  assert.doesNotMatch(layout, /Admin(?:Ui|Order|Customers|Printer|Beverage|View)/);
+  // Cash/shift runtimes are intentionally global because they protect Admin
+  // session continuity and settlement handoff across view changes. Only the
+  // view-specific DOM enhancers/controllers must stay out of RootLayout.
+  for (const legacyViewRuntime of [
+    "AdminUiEnhancer",
+    "AdminOrderCardEnhancer",
+    "AdminCustomersEnhancer",
+    "AdminPrinterController",
+    "AdminBeverageStockEnhancerV2",
+  ]) {
+    assert.doesNotMatch(layout, new RegExp(legacyViewRuntime));
+  }
+
   assert.match(page, /<AdminUiRuntime view=\{view\} \/>/);
   assert.match(page, /view === "orders" &&/);
   assert.match(page, /view === "customers" &&/);
