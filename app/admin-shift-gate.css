@@ -1,0 +1,31 @@
+/* Mandatory Admin shift gate — operations stay locked until an Owner-registered operator starts a shift. */
+
+body.admin-shift-gate-locked .admin-cash-header > button {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+body.admin-shift-gate-locked .admin-cash-panel {
+  box-shadow: 0 32px 90px rgba(48, 28, 20, 0.28) !important;
+}
+
+body.admin-shift-gate-locked .admin-cash-header::after {
+  content: "WAJIB MULAI SHIFT";
+  align-self: center;
+  margin-left: auto;
+  padding: 7px 10px;
+  border: 1px solid #efd4c6;
+  border-radius: 999px;
+  color: #8d3b27;
+  background: #fff3ec;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  body.admin-shift-gate-locked .admin-cash-header::after {
+    display: none;
+  }
+}
