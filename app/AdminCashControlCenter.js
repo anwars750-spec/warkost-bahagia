@@ -46,8 +46,6 @@ export default function AdminCashControlCenter() {
   const [success, setSuccess] = useState("");
   const [selectedOperator, setSelectedOperator] = useState("");
   const [pin, setPin] = useState("");
-  const [bootstrapName, setBootstrapName] = useState("");
-  const [bootstrapPin, setBootstrapPin] = useState("");
 
   const load = useCallback(async () => {
     if (!isAdmin) return;
@@ -56,14 +54,19 @@ export default function AdminCashControlCenter() {
     try {
       const data = await request();
       setState(data);
-      if (!selectedOperator && data.operators?.length)
-        setSelectedOperator(String(data.operators[0].id));
+      setSelectedOperator((current) => {
+        const stillAvailable = data.operators?.some(
+          (item) => String(item.id) === String(current),
+        );
+        if (stillAvailable) return current;
+        return data.operators?.length ? String(data.operators[0].id) : "";
+      });
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, selectedOperator]);
+  }, [isAdmin]);
 
   useEffect(() => {
     let active = true;
@@ -193,40 +196,6 @@ export default function AdminCashControlCenter() {
     [operators, selectedOperator],
   );
 
-  const bootstrap = async () => {
-    if (busy) return;
-
-    const name = bootstrapName.trim();
-    const cleanPin = bootstrapPin.trim();
-    setError("");
-    setSuccess("");
-
-    if (name.length < 2 || name.length > 80) {
-      setError("Nama operator harus 2-80 karakter.");
-      return;
-    }
-    if (!/^\d{4,6}$/.test(cleanPin)) {
-      setError("PIN operator harus 4-6 digit angka.");
-      return;
-    }
-
-    setBusy(true);
-    try {
-      await request({
-        action: "BOOTSTRAP_OPERATOR",
-        name,
-        pin: cleanPin,
-      });
-      setBootstrapPin("");
-      setSuccess("Operator pertama berhasil dibuat. Sekarang mulai shift.");
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const startShift = async () => {
     if (busy) return;
 
@@ -302,47 +271,26 @@ export default function AdminCashControlCenter() {
         ) : operators.length === 0 ? (
           <div className="admin-cash-setup">
             <div className="admin-cash-copy">
-              <span>SETUP PERTAMA</span>
-              <h3>Buat operator Admin pertama</h3>
+              <span>OPERATOR BELUM TERDAFTAR</span>
+              <h3>Minta Owner mendaftarkan operator</h3>
               <p>
-                Akun Admin tetap satu. Nama operator dan PIN dipakai untuk mencatat siapa yang benar-benar memegang uang pada shift tersebut.
+                Admin tidak dapat membuat operator sendiri. Owner menentukan nama operator, PIN, dan status aktifnya dari menu Operator Admin.
               </p>
             </div>
             <div className="admin-cash-form">
-              <label>
-                Nama operator
-                <input
-                  value={bootstrapName}
-                  onChange={(event) => setBootstrapName(event.target.value)}
-                  placeholder="Contoh: Virsa"
-                  autoComplete="off"
-                />
-              </label>
-              <label>
-                PIN operator
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  value={bootstrapPin}
-                  onChange={(event) => setBootstrapPin(event.target.value)}
-                  placeholder="4-6 digit angka"
-                  autoComplete="new-password"
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      bootstrap();
-                    }
-                  }}
-                />
-                <small>Gunakan 4-6 digit angka, misalnya 2580.</small>
-              </label>
+              <div className="admin-cash-rule">
+                <strong>Kontrol akses</strong>
+                <span>
+                  Setelah Owner membuat operator, klik Perbarui lalu pilih nama operator dan masukkan PIN untuk mulai shift.
+                </span>
+              </div>
               <button
                 className="admin-cash-primary"
                 type="button"
-                disabled={busy}
-                onClick={bootstrap}
+                disabled={loading}
+                onClick={load}
               >
-                {busy ? "Menyimpan…" : "Buat Operator"}
+                {loading ? "Memuat…" : "Perbarui Operator"}
               </button>
             </div>
           </div>
@@ -352,7 +300,7 @@ export default function AdminCashControlCenter() {
               <span>MULAI SHIFT</span>
               <h3>Siapa operator yang bertugas?</h3>
               <p>
-                Uang COD baru menjadi tanggung jawab operator setelah setoran Driver benar-benar diterima dan diverifikasi.
+                Pilih nama yang sudah didaftarkan Owner. Uang COD baru menjadi tanggung jawab operator setelah setoran Driver benar-benar diterima dan diverifikasi.
               </p>
             </div>
             <div className="admin-cash-form">
