@@ -36,7 +36,8 @@ database.exec(`
     (5,'Driver Satu','driver1@chat.test','x','DRIVER',1),
     (6,'Driver Dua','driver2@chat.test','x','DRIVER',1),
     (7,'Kitchen','kitchen@chat.test','x','KITCHEN',1),
-    (8,'Manager','manager@chat.test','x','MANAGER',1);
+    (8,'Manager','manager@chat.test','x','MANAGER',1),
+    (9,'Guest Bantuan','guest-support@guest.warkost.local','x','CUSTOMER',1);
   INSERT INTO addresses(id,user_id,label,detail) VALUES
     (1,3,'Rumah','Jl. Chat Customer Satu'),
     (2,4,'Rumah','Jl. Chat Customer Dua');
@@ -50,6 +51,7 @@ const assignedDriver = { id: 5, role: "DRIVER" };
 const unrelatedDriver = { id: 6, role: "DRIVER" };
 const kitchen = { id: 7, role: "KITCHEN" };
 const manager = { id: 8, role: "MANAGER" };
+const guestCustomer = { id: 9, role: "CUSTOMER", isGuest: true };
 
 function createOrder({
   customerId = 3,
@@ -160,6 +162,45 @@ test("Admin inbox menerima unread, membaca konteks order, lalu membalas Customer
       .get().count,
     1,
   );
+});
+
+test("Customer member dan Guest dapat membuka Bantuan Umum tanpa pesanan", async () => {
+  const memberThread = await openConversation(customer, {
+    type: CONVERSATION_TYPES.ADMIN,
+  });
+  const memberDuplicate = await openConversation(customer, {
+    type: CONVERSATION_TYPES.ADMIN,
+  });
+  const guestThread = await openConversation(guestCustomer, {
+    type: CONVERSATION_TYPES.ADMIN,
+  });
+
+  assert.equal(memberDuplicate.id, memberThread.id);
+  assert.notEqual(guestThread.id, memberThread.id);
+  assert.equal(memberThread.order, null);
+  assert.equal(guestThread.order, null);
+  assert.equal(
+    database
+      .prepare("PRAGMA table_info(conversations)")
+      .all()
+      .find((column) => column.name === "order_id").notnull,
+    0,
+  );
+
+  await sendConversationMessage(guestCustomer, {
+    conversationId: guestThread.id,
+    message: "Saya butuh bantuan sebelum membuat pesanan.",
+  });
+  const inbox = await listAdminConversations(admin, { query: "Guest Bantuan" });
+  const general = inbox.conversations.find((item) => item.id === guestThread.id);
+  assert.ok(general);
+  assert.equal(general.order_id, null);
+  assert.equal(general.display_number, "Bantuan Umum");
+  assert.equal(general.latest_message, "Saya butuh bantuan sebelum membuat pesanan.");
+
+  const existingOrderThread = await getConversation(customer, adminConversationId);
+  assert.equal(existingOrderThread.order.id, adminOrderId);
+  assert.equal(existingOrderThread.messages.length, 2);
 });
 
 test("unread tidak diduplikasi polling dan status ditangani/selesai/buka kembali bekerja", async () => {
@@ -343,6 +384,7 @@ test("UI menghubungkan Customer, Admin, dan Driver ke chat React nyata", () => {
   assert.match(adminChat, /Tandai ditangani/);
   assert.match(adminChat, /Selesaikan percakapan/);
   assert.match(adminChat, /Buka kembali/);
+  assert.match(adminChat, /Bantuan Umum/);
   assert.doesNotMatch(adminChat, /MutationObserver/);
   assert.match(enhancer, /warkost:open-admin-customer-service/);
 });
