@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 
 const VISIBLE_TABS = new Set(["Dashboard", "Pelanggan", "Notifikasi", "Keluar"]);
 
@@ -14,7 +14,7 @@ const MENU_META = {
 const ICON_PATHS = {
   home: ["M3 11.5 12 4l9 7.5", "M5.5 10.5V20h13v-9.5", "M9 20v-6h6v6"],
   users: [
-    "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2",
+    "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0 0 8",
     "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8",
     "M22 21v-2a4 4 0 0 0-3-3.87",
     "M16 3.13a4 4 0 0 1 0 7.75",
@@ -41,6 +41,20 @@ function normalizeLabel(button) {
     .replace(/\s+/g, " ")
     .replace(/^Rp\s*/i, "")
     .trim();
+}
+
+function ownerNavigationSignaturePresent() {
+  const buttons = [...document.querySelectorAll("header.top nav button")];
+  const labels = new Set(buttons.map(normalizeLabel));
+  return (
+    labels.has("Dashboard") &&
+    labels.has("Pelanggan") &&
+    labels.has("Pengaturan") &&
+    labels.has("Loyalty") &&
+    labels.has("Staf") &&
+    labels.has("Audit log") &&
+    labels.has("Laporan")
+  );
 }
 
 function makeIcon(name) {
@@ -84,7 +98,7 @@ function decorate(button, label) {
 }
 
 export default function OwnerNavigationRuntime() {
-  useEffect(() => {
+  useLayoutEffect(() => {
     let stopped = false;
     let ownerActive = false;
     let verifying = false;
@@ -201,11 +215,27 @@ export default function OwnerNavigationRuntime() {
       }
     };
 
+    const syncFromDom = () => {
+      if (stopped) return;
+
+      // The legacy Owner header is rendered immediately by page.js after login.
+      // Detect its unique menu signature synchronously and collapse it to the
+      // four approved tabs before waiting for the network role verification.
+      if (!ownerActive && ownerNavigationSignaturePresent()) {
+        ownerActive = true;
+        logoutTriggered = false;
+        sync();
+        verifyOwnerRole();
+        return;
+      }
+
+      if (ownerActive) sync();
+    };
+
+    syncFromDom();
     verifyOwnerRole();
 
-    const observer = new MutationObserver(() => {
-      if (ownerActive) sync();
-    });
+    const observer = new MutationObserver(syncFromDom);
     observer.observe(document.body, { childList: true, subtree: true });
 
     const roleTimer = window.setInterval(verifyOwnerRole, 2000);
