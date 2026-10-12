@@ -52,8 +52,23 @@ export default function OwnerAdminOperatorCenter() {
   const [resetTarget, setResetTarget] = useState(null);
   const [resetPin, setResetPin] = useState("");
 
+  const verifyOwner = useCallback(async () => {
+    try {
+      const response = await fetch("/api/me", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      const data = await response.json().catch(() => ({}));
+      const allowed = response.ok && data.user?.role === "OWNER";
+      setIsOwner(allowed);
+      return allowed;
+    } catch {
+      setIsOwner(false);
+      return false;
+    }
+  }, []);
+
   const load = useCallback(async () => {
-    if (!isOwner) return;
     setLoading(true);
     setError("");
     try {
@@ -64,38 +79,30 @@ export default function OwnerAdminOperatorCenter() {
     } finally {
       setLoading(false);
     }
-  }, [isOwner]);
+  }, []);
 
-  const openCenter = useCallback(() => {
-    setOpen(true);
+  const openCenter = useCallback(async () => {
+    const allowed = isOwner || (await verifyOwner());
+    if (!allowed) {
+      setOpen(false);
+      return;
+    }
     setSuccess("");
     setError("");
     setResetTarget(null);
     setResetPin("");
-  }, []);
+    setOpen(true);
+  }, [isOwner, verifyOwner]);
 
   useEffect(() => {
-    let alive = true;
-    const detectOwner = async () => {
-      try {
-        const response = await fetch("/api/me", {
-          cache: "no-store",
-          credentials: "same-origin",
-        });
-        const data = await response.json().catch(() => ({}));
-        if (alive) setIsOwner(response.ok && data.user?.role === "OWNER");
-      } catch {
-        if (alive) setIsOwner(false);
-      }
-    };
-    detectOwner();
-    return () => {
-      alive = false;
-    };
-  }, []);
+    verifyOwner();
+  }, [verifyOwner]);
 
   useEffect(() => {
-    const openFromEvent = () => openCenter();
+    const openFromEvent = () => {
+      void openCenter();
+    };
+
     const interceptDashboardOperator = (event) => {
       const target = event.target;
       const controlButton = target?.closest?.(".owner-control-grid-v3 > button");
@@ -115,7 +122,7 @@ export default function OwnerAdminOperatorCenter() {
       event.stopPropagation();
       event.stopImmediatePropagation?.();
       document.querySelector(".owner-popup-close")?.click();
-      openCenter();
+      void openCenter();
     };
 
     window.addEventListener("warkost:owner-open-admin-operators", openFromEvent);
