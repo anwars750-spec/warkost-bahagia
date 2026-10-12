@@ -63,3 +63,13 @@ test("keuangan tidak mengklaim laba bersih tanpa HPP dan biaya lengkap", () => {
   assert.match(ui, /Revenue ≠ laba bersih/);
   assert.match(ui, /accounting_note/);
 });
+
+test("Owner report duration query kompatibel dengan SQLite demo dan MySQL production", () => {
+  const store = source("lib/store.mjs");
+  const analytics = source("lib/owner-business-report.mjs");
+
+  assert.match(analytics, /TIMESTAMPDIFF\(MINUTE,d\.accepted_at,d\.delivered_at\)/);
+  assert.match(store, /function sqlForSQLite/);
+  assert.match(store, /julianday\(\$2\)-julianday\(\$1\)/);
+  assert.match(store, /database\.prepare\(sqlForSQLite\(sql\)\)/);
+});
