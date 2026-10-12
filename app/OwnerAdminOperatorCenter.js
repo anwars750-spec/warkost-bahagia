@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 async function request(body) {
   const response = await fetch("/api/owner-admin-operators", {
@@ -19,6 +20,24 @@ async function request(body) {
 }
 
 const cleanPin = (value) => String(value || "").replace(/\D/g, "").slice(0, 6);
+
+function Icon({ name }) {
+  const paths = {
+    shield: "M12 3 20 6v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6l8-3ZM9 12l2 2 4-4",
+    users: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z",
+    active: "M20 6 9 17l-5-5",
+    shift: "M12 6v6l4 2M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z",
+    plus: "M12 5v14M5 12h14",
+    key: "M21 2l-2 2m-7.6 7.6a5 5 0 1 1-7.1 7.1 5 5 0 0 1 7.1-7.1ZM15.5 7.5l2 2L21 6l-2-2-3.5 3.5Z",
+    close: "M6 6l12 12M18 6 6 18",
+    refresh: "M20 11a8 8 0 0 0-15-3M4 4v5h5m11 4a8 8 0 0 1-15 3M4 20v-5h5",
+  };
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d={paths[name] || paths.shield} />
+    </svg>
+  );
+}
 
 export default function OwnerAdminOperatorCenter() {
   const [isOwner, setIsOwner] = useState(false);
@@ -47,106 +66,99 @@ export default function OwnerAdminOperatorCenter() {
     }
   }, [isOwner]);
 
+  const openCenter = useCallback(() => {
+    setOpen(true);
+    setSuccess("");
+    setError("");
+    setResetTarget(null);
+    setResetPin("");
+  }, []);
+
   useEffect(() => {
     let alive = true;
-    let checking = false;
-
     const detectOwner = async () => {
-      if (checking) return;
-      const buttons = [...document.querySelectorAll("header.top nav button")];
-      const hasOwnerNav =
-        buttons.some((button) => button.textContent?.trim() === "Staf") &&
-        buttons.some((button) => button.textContent?.trim() === "Audit log");
-      if (hasOwnerNav) {
-        if (alive) setIsOwner(true);
-        return;
-      }
-
-      checking = true;
       try {
         const response = await fetch("/api/me", {
           cache: "no-store",
           credentials: "same-origin",
         });
-        const data = await response.json();
-        if (alive) setIsOwner(data.user?.role === "OWNER");
+        const data = await response.json().catch(() => ({}));
+        if (alive) setIsOwner(response.ok && data.user?.role === "OWNER");
       } catch {
         if (alive) setIsOwner(false);
-      } finally {
-        checking = false;
       }
     };
-
     detectOwner();
-    const observer = new MutationObserver(detectOwner);
-    observer.observe(document.body, { childList: true, subtree: true });
     return () => {
       alive = false;
-      observer.disconnect();
     };
   }, []);
 
   useEffect(() => {
-    if (!isOwner) return;
-    load();
-  }, [isOwner, load]);
+    const openFromEvent = () => openCenter();
+    const interceptDashboardOperator = (event) => {
+      const target = event.target;
+      const controlButton = target?.closest?.(".owner-control-grid-v3 > button");
+      const controlLabel = controlButton
+        ?.querySelector("strong")
+        ?.textContent?.trim();
+      const popupAction = target?.closest?.(".owner-popup-action");
+      const popupLabel = popupAction?.textContent?.trim() || "";
 
-  useEffect(() => {
-    if (!isOwner) return;
-    let navButton = null;
-    const ensureButton = () => {
-      const nav = document.querySelector("header.top nav");
-      if (!nav) return;
-      const existing = nav.querySelector('[data-owner-nav="AdminOperator"]');
-      if (existing) {
-        navButton = existing;
+      if (
+        controlLabel !== "Operator Admin" &&
+        !popupLabel.includes("Buka Operator Admin")
+      )
         return;
-      }
-      const staffButton = [...nav.querySelectorAll("button")].find(
-        (button) => button.textContent?.trim() === "Staf",
-      );
-      if (!staffButton) return;
 
-      const button = document.createElement("button");
-      button.type = "button";
-      button.dataset.ownerNav = "AdminOperator";
-      button.className = "owner-admin-operator-nav";
-      button.innerHTML = '<span aria-hidden="true">⌁</span><span>Operator Admin</span>';
-      button.addEventListener("click", () => {
-        setOpen(true);
-        setSuccess("");
-        setError("");
-        load();
-      });
-      nav.insertBefore(button, staffButton);
-      navButton = button;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      document.querySelector(".owner-popup-close")?.click();
+      openCenter();
     };
 
-    ensureButton();
-    const observer = new MutationObserver(ensureButton);
-    observer.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener("warkost:owner-open-admin-operators", openFromEvent);
+    document.addEventListener("click", interceptDashboardOperator, true);
     return () => {
-      observer.disconnect();
-      navButton?.remove();
+      window.removeEventListener("warkost:owner-open-admin-operators", openFromEvent);
+      document.removeEventListener("click", interceptDashboardOperator, true);
     };
-  }, [isOwner, load]);
+  }, [openCenter]);
 
   useEffect(() => {
-    const button = document.querySelector('[data-owner-nav="AdminOperator"]');
-    if (button) button.classList.toggle("owner-admin-operator-nav-active", open);
-  }, [open]);
+    if (!open || !isOwner) return;
+    load();
+  }, [open, isOwner, load]);
 
   useEffect(() => {
     if (!open) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const close = (event) => event.key === "Escape" && setOpen(false);
+    const close = (event) => {
+      if (event.key !== "Escape") return;
+      if (resetTarget) {
+        setResetTarget(null);
+        setResetPin("");
+      } else {
+        setOpen(false);
+      }
+    };
     document.addEventListener("keydown", close);
     return () => {
       document.body.style.overflow = previous;
       document.removeEventListener("keydown", close);
     };
-  }, [open]);
+  }, [open, resetTarget]);
+
+  const counts = useMemo(
+    () => ({
+      total: operators.length,
+      active: operators.filter((operator) => operator.active).length,
+      shifts: operators.filter((operator) => operator.shift_active).length,
+    }),
+    [operators],
+  );
 
   const createOperator = async () => {
     if (busy) return;
@@ -227,9 +239,9 @@ export default function OwnerAdminOperatorCenter() {
     }
   };
 
-  if (!isOwner || !open) return null;
+  if (!isOwner || !open || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <div
       className="owner-operator-overlay"
       role="presentation"
@@ -242,29 +254,61 @@ export default function OwnerAdminOperatorCenter() {
         aria-label="Kelola Operator Admin"
       >
         <header className="owner-operator-header">
-          <div>
-            <small>OWNER CONTROL</small>
-            <h2>Operator Admin</h2>
-            <p>Owner menentukan siapa yang boleh membuka shift Admin dan PIN-nya.</p>
+          <div className="owner-operator-header-copy">
+            <span className="owner-operator-header-icon">
+              <Icon name="shield" />
+            </span>
+            <div>
+              <small>OWNER CONTROL CENTER</small>
+              <h2>Operator Admin</h2>
+              <p>Kelola petugas yang berhak membuka shift Admin dan mengamankan akses dengan PIN.</p>
+            </div>
           </div>
-          <button type="button" onClick={() => setOpen(false)} aria-label="Tutup">
-            ×
+          <button
+            className="owner-operator-close"
+            type="button"
+            onClick={() => setOpen(false)}
+            aria-label="Tutup Operator Admin"
+          >
+            <Icon name="close" />
           </button>
         </header>
+
+        <div className="owner-operator-summary" aria-label="Ringkasan operator">
+          <article>
+            <span><Icon name="users" /></span>
+            <div><small>Total Operator</small><strong>{counts.total}</strong></div>
+          </article>
+          <article>
+            <span><Icon name="active" /></span>
+            <div><small>Operator Aktif</small><strong>{counts.active}</strong></div>
+          </article>
+          <article>
+            <span><Icon name="shift" /></span>
+            <div><small>Shift Aktif</small><strong>{counts.shifts}</strong></div>
+          </article>
+          <button type="button" className="owner-operator-refresh" onClick={load} disabled={loading || busy}>
+            <Icon name="refresh" />
+            {loading ? "Memuat" : "Perbarui"}
+          </button>
+        </div>
 
         {error && <div className="owner-operator-feedback error">{error}</div>}
         {success && <div className="owner-operator-feedback success">✓ {success}</div>}
 
         <div className="owner-operator-body">
-          <section className="owner-operator-create">
-            <div>
-              <small>TAMBAH OPERATOR</small>
-              <h3>Daftarkan petugas Admin</h3>
-              <p>PIN hanya dipakai saat mulai shift dan tidak pernah ditampilkan kembali.</p>
+          <aside className="owner-operator-create">
+            <div className="owner-operator-create-title">
+              <span className="owner-operator-create-icon"><Icon name="plus" /></span>
+              <div>
+                <small>TAMBAH OPERATOR</small>
+                <h3>Daftarkan petugas Admin</h3>
+              </div>
             </div>
+            <p>Gunakan nama yang mudah dikenali. PIN hanya dipakai saat mulai shift dan tidak pernah ditampilkan kembali.</p>
             <div className="owner-operator-form">
               <label>
-                Nama operator
+                <span>Nama operator</span>
                 <input
                   value={name}
                   onChange={(event) => setName(event.target.value)}
@@ -273,30 +317,35 @@ export default function OwnerAdminOperatorCenter() {
                 />
               </label>
               <label>
-                PIN 4-6 digit
+                <span>PIN 4-6 digit</span>
                 <input
                   type="password"
                   inputMode="numeric"
                   value={pin}
                   onChange={(event) => setPin(cleanPin(event.target.value))}
-                  placeholder="Contoh: 2580"
+                  placeholder="••••"
                   autoComplete="new-password"
                   onKeyDown={(event) => event.key === "Enter" && createOperator()}
                 />
               </label>
               <button type="button" onClick={createOperator} disabled={busy}>
+                <Icon name="plus" />
                 {busy ? "Menyimpan…" : "Tambah Operator"}
               </button>
             </div>
-          </section>
+            <div className="owner-operator-security-note">
+              <Icon name="key" />
+              <span>PIN tersimpan secara aman dan hanya bisa direset, bukan dilihat kembali.</span>
+            </div>
+          </aside>
 
           <section className="owner-operator-list-section">
             <div className="owner-operator-section-title">
               <div>
                 <small>OPERATOR TERDAFTAR</small>
-                <h3>{operators.length} operator</h3>
+                <h3>Kelola akses operator</h3>
               </div>
-              <span>PIN lama tidak dapat dilihat</span>
+              <span>{operators.length} operator</span>
             </div>
 
             {loading && !operators.length ? (
@@ -315,8 +364,8 @@ export default function OwnerAdminOperatorCenter() {
                           {operator.shift_active
                             ? "Sedang menjalankan shift"
                             : operator.active
-                              ? "Siap digunakan"
-                              : "Tidak dapat digunakan"}
+                              ? "Siap digunakan untuk shift"
+                              : "Akses operator dinonaktifkan"}
                         </small>
                       </div>
                     </div>
@@ -362,45 +411,73 @@ export default function OwnerAdminOperatorCenter() {
               </div>
             ) : (
               <div className="owner-operator-empty">
-                Belum ada operator. Tambahkan operator pertama di atas.
+                <span className="owner-operator-empty-icon"><Icon name="users" /></span>
+                <strong>Belum ada operator</strong>
+                <p>Tambahkan operator pertama dari panel di sebelah kiri.</p>
               </div>
             )}
           </section>
         </div>
 
         {resetTarget && (
-          <div className="owner-operator-reset-box">
-            <div>
-              <small>RESET PIN</small>
-              <strong>{resetTarget.name}</strong>
-              <span>PIN lama tetap tersembunyi. Masukkan PIN baru.</span>
-            </div>
-            <input
-              type="password"
-              inputMode="numeric"
-              value={resetPin}
-              onChange={(event) => setResetPin(cleanPin(event.target.value))}
-              placeholder="PIN baru 4-6 digit"
-              autoComplete="new-password"
-              onKeyDown={(event) => event.key === "Enter" && saveResetPin()}
-            />
-            <button type="button" onClick={saveResetPin} disabled={busy}>
-              Simpan PIN Baru
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => {
+          <div
+            className="owner-operator-reset-backdrop"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget && !busy) {
                 setResetTarget(null);
                 setResetPin("");
-              }}
-              disabled={busy}
-            >
-              Batal
-            </button>
+              }
+            }}
+          >
+            <section className="owner-operator-reset-box" role="dialog" aria-modal="true" aria-label={`Reset PIN ${resetTarget.name}`}>
+              <button
+                type="button"
+                className="owner-operator-reset-close"
+                onClick={() => {
+                  setResetTarget(null);
+                  setResetPin("");
+                }}
+                disabled={busy}
+                aria-label="Tutup reset PIN"
+              >
+                <Icon name="close" />
+              </button>
+              <span className="owner-operator-reset-icon"><Icon name="key" /></span>
+              <small>RESET PIN OPERATOR</small>
+              <h3>{resetTarget.name}</h3>
+              <p>PIN lama tetap tersembunyi. Masukkan PIN baru 4-6 digit untuk operator ini.</p>
+              <input
+                type="password"
+                inputMode="numeric"
+                value={resetPin}
+                onChange={(event) => setResetPin(cleanPin(event.target.value))}
+                placeholder="PIN baru 4-6 digit"
+                autoComplete="new-password"
+                autoFocus
+                onKeyDown={(event) => event.key === "Enter" && saveResetPin()}
+              />
+              <div className="owner-operator-reset-actions">
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => {
+                    setResetTarget(null);
+                    setResetPin("");
+                  }}
+                  disabled={busy}
+                >
+                  Batal
+                </button>
+                <button type="button" onClick={saveResetPin} disabled={busy}>
+                  {busy ? "Menyimpan…" : "Simpan PIN Baru"}
+                </button>
+              </div>
+            </section>
           </div>
         )}
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }
