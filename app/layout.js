@@ -91,6 +91,7 @@ import AdminShiftSettlementRuntime from "./AdminShiftSettlementRuntime";
 import AdminSettlementStabilityBridge from "./AdminSettlementStabilityBridge";
 import AdminOrderNumberEnhancer from "./AdminOrderNumberEnhancer";
 import OwnerAdminOperatorCenter from "./OwnerAdminOperatorCenter";
+import OwnerControlDirectBridge from "./OwnerControlDirectBridge";
 import OwnerDashboardRuntime from "./OwnerDashboardRuntime";
 import OwnerNavigationRuntime from "./OwnerNavigationRuntime";
 import OwnerNotificationPopover from "./OwnerNotificationPopover";
@@ -136,6 +137,7 @@ export default function RootLayout({ children }) {
         <AdminSettlementStabilityBridge />
         <AdminOrderNumberEnhancer />
         <OwnerAdminOperatorCenter />
+        <OwnerControlDirectBridge />
         <OwnerDashboardRuntime />
         <OwnerNavigationRuntime />
         <OwnerNotificationPopover />
