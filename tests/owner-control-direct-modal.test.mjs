@@ -17,6 +17,16 @@ test("Setoran Kas dari Kontrol Usaha membuka modal settlement langsung", () => {
   assert.match(layout, /<OwnerControlDirectBridge \/>/);
 });
 
+test("Laporan dari Kontrol Usaha membuka report langsung tanpa preview generik", () => {
+  const bridge = source("app/OwnerControlDirectBridge.js");
+
+  assert.match(bridge, /REPORT_LABEL = "Laporan"/);
+  assert.match(bridge, /ownerNavButton\(REPORT_LABEL\)/);
+  assert.match(bridge, /openOwnerReport/);
+  assert.match(bridge, /event\.stopImmediatePropagation/);
+  assert.match(bridge, /owner-popup-close/);
+});
+
 test("modal Setoran Kas Owner tetap memakai settlement center existing", () => {
   const center = source("app/ManagerOwnerSettlementCenter.js");
 
