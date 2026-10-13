@@ -84,6 +84,7 @@ import "./owner-business-report.css";
 import "./owner-business-report-legacy-heading-fix.css";
 import "./owner-promotion-report.css";
 import "./owner-promotion-heading-fix.css";
+import "./owner-loyalty-center.css";
 import "./print-branding.css";
 import DriverRuntimeBootstrap from "./DriverRuntimeBootstrap";
 import DriverLogoFix from "./DriverLogoFix";
@@ -99,6 +100,7 @@ import OwnerControlDirectBridge from "./OwnerControlDirectBridge";
 import OwnerDashboardRuntime from "./OwnerDashboardRuntime";
 import OwnerBusinessReport from "./OwnerBusinessReport";
 import OwnerPromotionReport from "./OwnerPromotionReport";
+import OwnerLoyaltyCenter from "./OwnerLoyaltyCenter";
 import OwnerNavigationRuntime from "./OwnerNavigationRuntime";
 import OwnerNotificationPopover from "./OwnerNotificationPopover";
 import ManagerCashSettlementCenter from "./ManagerCashSettlementCenter";
@@ -147,6 +149,7 @@ export default function RootLayout({ children }) {
         <OwnerDashboardRuntime />
         <OwnerBusinessReport />
         <OwnerPromotionReport />
+        <OwnerLoyaltyCenter />
         <OwnerNavigationRuntime />
         <OwnerNotificationPopover />
         <ManagerCashSettlementCenter />
