@@ -45,3 +45,14 @@ test("Owner Staff Center preserves staff security rules", () => {
   assert.match(staff, /Driver masih memiliki pengantaran aktif/);
   assert.match(staff, /UPDATE sessions SET revoked_at=CURRENT_TIMESTAMP/);
 });
+
+test("Add Staff modal loads precision polish and CSS-drawn close icon", () => {
+  const layout = read("app/layout.js");
+  const css = read("app/owner-staff-modal-polish.css");
+  assert.match(layout, /owner-staff-modal-polish\.css/);
+  assert.match(css, /INFORMASI AKUN/);
+  assert.match(css, /KEAMANAN AKUN/);
+  assert.match(css, /button\[aria-label="Tutup"\]::before/);
+  assert.match(css, /button\[aria-label="Tutup"\]::after/);
+  assert.match(css, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+});
