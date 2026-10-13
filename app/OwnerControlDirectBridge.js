@@ -8,6 +8,7 @@ const PROMO_LABEL = "Promo";
 const LOYALTY_LABEL = "Loyalty";
 const STAFF_LABEL = "Staf";
 const AUDIT_LABEL = "Audit Log";
+const SETTINGS_LABEL = "Pengaturan";
 const REPORT_SCROLL_STYLE_ID = "owner-report-scroll-polish";
 
 function controlLabel(button) {
@@ -81,6 +82,13 @@ function openOwnerStaff() {
 
 function openOwnerAudit() {
   const button = ownerNavButton("Audit log");
+  if (!button) return false;
+  button.click();
+  return true;
+}
+
+function openOwnerSettings() {
+  const button = ownerNavButton(SETTINGS_LABEL);
   if (!button) return false;
   button.click();
   return true;
@@ -189,6 +197,7 @@ export default function OwnerControlDirectBridge() {
           LOYALTY_LABEL,
           STAFF_LABEL,
           AUDIT_LABEL,
+          SETTINGS_LABEL,
         ].includes(label)
       )
         return;
@@ -205,7 +214,8 @@ export default function OwnerControlDirectBridge() {
       else if (label === PROMO_LABEL) retry(openOwnerPromo);
       else if (label === LOYALTY_LABEL) retry(openOwnerLoyalty);
       else if (label === STAFF_LABEL) retry(openOwnerStaff);
-      else retry(openOwnerAudit);
+      else if (label === AUDIT_LABEL) retry(openOwnerAudit);
+      else retry(openOwnerSettings);
     };
 
     document.addEventListener("click", onClickCapture, true);
