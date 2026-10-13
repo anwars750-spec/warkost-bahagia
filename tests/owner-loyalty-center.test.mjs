@@ -45,3 +45,13 @@ test("Owner can manage reward rules through existing server contract", () => {
   assert.match(loyalty, /saveRewardRule/);
   assert.match(loyalty, /CAPABILITIES\.LOYALTY_WRITE/);
 });
+
+test("Owner loyalty reward editor loads dedicated precision polish", () => {
+  const layout = read("app/layout.js");
+  const css = read("app/owner-loyalty-reward-modal-polish.css");
+  assert.match(layout, /owner-loyalty-reward-modal-polish\.css/);
+  assert.match(css, /\.olc-modal>header::before/);
+  assert.match(css, /\.olc-form-grid>label:nth-child\(5\)/);
+  assert.match(css, /\.olc-switch input\[type="checkbox"\]:checked/);
+  assert.match(css, /Simpan Reward|button\.primary/);
+});
