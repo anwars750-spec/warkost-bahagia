@@ -77,6 +77,20 @@ function installReportScrollPolish() {
     body.owner-business-report-v2-active .obr-health {
       scroll-margin-top: 118px;
     }
+    body.owner-business-report-v2-active .obr-health.belum-ada-data {
+      background: linear-gradient(120deg, #f6f7f6, #ffffff);
+      border-color: #dde3df;
+    }
+    body.owner-business-report-v2-active .obr-health.belum-ada-data .obr-health-score strong {
+      color: #66736a;
+    }
+    body.owner-business-report-v2-active .obr-health.belum-ada-data .obr-health-score em {
+      display: none;
+    }
+    body.owner-business-report-v2-active .obr-health.belum-ada-data .obr-health-signals div span {
+      background: #e9eeeb;
+      color: #5f6f65;
+    }
     @media (max-width: 820px) {
       body.owner-business-report-v2-active main {
         scroll-padding-top: 92px;
