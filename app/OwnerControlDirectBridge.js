@@ -4,6 +4,7 @@ import { useEffect } from "react";
 
 const CASH_SETTLEMENT_LABEL = "Setoran Kas";
 const REPORT_LABEL = "Laporan";
+const REPORT_SCROLL_STYLE_ID = "owner-report-scroll-polish";
 
 function controlLabel(button) {
   return button?.querySelector("strong")?.textContent?.trim() || "";
@@ -28,6 +29,24 @@ function ownerNavButton(label) {
   );
 }
 
+function ownerDashboardButton() {
+  return (
+    document.querySelector(
+      'header.top nav button[data-owner-nav-key="Dashboard"]',
+    ) || null
+  );
+}
+
+function openOwnerDashboard() {
+  const button = ownerDashboardButton();
+  if (!button) return false;
+  button.click();
+  window.requestAnimationFrame(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+  return true;
+}
+
 function openOwnerReport() {
   const button = ownerNavButton(REPORT_LABEL);
   if (!button) return false;
@@ -45,9 +64,47 @@ function retry(action) {
   }, 25);
 }
 
+function installReportScrollPolish() {
+  if (document.getElementById(REPORT_SCROLL_STYLE_ID)) return;
+  const style = document.createElement("style");
+  style.id = REPORT_SCROLL_STYLE_ID;
+  style.textContent = `
+    body.owner-business-report-v2-active main {
+      scroll-padding-top: 118px;
+    }
+    body.owner-business-report-v2-active .owner-business-report > *,
+    body.owner-business-report-v2-active .obr-section,
+    body.owner-business-report-v2-active .obr-health {
+      scroll-margin-top: 118px;
+    }
+    @media (max-width: 820px) {
+      body.owner-business-report-v2-active main {
+        scroll-padding-top: 92px;
+      }
+      body.owner-business-report-v2-active .owner-business-report > *,
+      body.owner-business-report-v2-active .obr-section,
+      body.owner-business-report-v2-active .obr-health {
+        scroll-margin-top: 92px;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 export default function OwnerControlDirectBridge() {
   useEffect(() => {
+    installReportScrollPolish();
+
     const onClickCapture = (event) => {
+      const brandButton = event.target?.closest?.("header.top .brand-button");
+      if (brandButton && ownerDashboardButton()) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        retry(openOwnerDashboard);
+        return;
+      }
+
       const button = event.target?.closest?.(".owner-control-grid-v3 > button");
       if (!button) return;
       const label = controlLabel(button);
