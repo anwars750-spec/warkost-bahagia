@@ -80,6 +80,7 @@ import "./manager-owner-settlement-v2.css";
 import "./owner-dashboard-v3.css";
 import "./owner-dashboard-mobile-filter-polish.css";
 import "./owner-navigation-v2.css";
+import "./owner-customers-center.css";
 import "./owner-business-report.css";
 import "./owner-business-report-legacy-heading-fix.css";
 import "./owner-promotion-report.css";
@@ -120,6 +121,7 @@ import OwnerSettingsCenter from "./OwnerSettingsCenter";
 import OwnerSettingsExperience from "./OwnerSettingsExperience";
 import OwnerNavigationRuntime from "./OwnerNavigationRuntime";
 import OwnerNotificationPopover from "./OwnerNotificationPopover";
+import OwnerCustomersCenter from "./OwnerCustomersCenter";
 import ManagerCashSettlementCenter from "./ManagerCashSettlementCenter";
 import ManagerOwnerSettlementCenter from "./ManagerOwnerSettlementCenter";
 import ManagerCashSyncBridge from "./ManagerCashSyncBridge";
@@ -175,6 +177,7 @@ export default function RootLayout({ children }) {
         <OwnerSettingsExperience />
         <OwnerNavigationRuntime />
         <OwnerNotificationPopover />
+        <OwnerCustomersCenter />
         <ManagerCashSettlementCenter />
         <ManagerOwnerSettlementCenter />
         <ManagerCashSyncBridge />
