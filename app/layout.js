@@ -89,6 +89,7 @@ import "./owner-loyalty-reward-modal-polish.css";
 import "./owner-loyalty-close-precision.css";
 import "./owner-loyalty-reward-viewport-fit.css";
 import "./owner-loyalty-save-hover-fix.css";
+import "./owner-staff-center.css";
 import "./print-branding.css";
 import DriverRuntimeBootstrap from "./DriverRuntimeBootstrap";
 import DriverLogoFix from "./DriverLogoFix";
@@ -105,6 +106,7 @@ import OwnerDashboardRuntime from "./OwnerDashboardRuntime";
 import OwnerBusinessReport from "./OwnerBusinessReport";
 import OwnerPromotionReport from "./OwnerPromotionReport";
 import OwnerLoyaltyCenter from "./OwnerLoyaltyCenter";
+import OwnerStaffCenter from "./OwnerStaffCenter";
 import OwnerNavigationRuntime from "./OwnerNavigationRuntime";
 import OwnerNotificationPopover from "./OwnerNotificationPopover";
 import ManagerCashSettlementCenter from "./ManagerCashSettlementCenter";
@@ -154,6 +156,7 @@ export default function RootLayout({ children }) {
         <OwnerBusinessReport />
         <OwnerPromotionReport />
         <OwnerLoyaltyCenter />
+        <OwnerStaffCenter />
         <OwnerNavigationRuntime />
         <OwnerNotificationPopover />
         <ManagerCashSettlementCenter />
