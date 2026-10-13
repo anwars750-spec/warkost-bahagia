@@ -55,3 +55,14 @@ test("Owner loyalty reward editor loads dedicated precision polish", () => {
   assert.match(css, /\.olc-switch input\[type="checkbox"\]:checked/);
   assert.match(css, /Simpan Reward|button\.primary/);
 });
+
+test("Reward editor fits desktop viewport and becomes full screen on mobile", () => {
+  const layout = read("app/layout.js");
+  const css = read("app/owner-loyalty-reward-viewport-fit.css");
+  assert.match(layout, /owner-loyalty-reward-viewport-fit\.css/);
+  assert.match(css, /max-height:calc\(100dvh - 24px\)/);
+  assert.match(css, /overflow:hidden!important/);
+  assert.match(css, /height:100dvh!important/);
+  assert.match(css, /width:100vw!important/);
+  assert.match(css, /grid-template-columns:1fr!important/);
+});
