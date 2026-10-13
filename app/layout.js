@@ -109,6 +109,8 @@ import AdminOrderNumberEnhancer from "./AdminOrderNumberEnhancer";
 import OwnerAdminOperatorCenter from "./OwnerAdminOperatorCenter";
 import OwnerControlDirectBridge from "./OwnerControlDirectBridge";
 import OwnerDashboardRuntime from "./OwnerDashboardRuntime";
+import OwnerOperationalHealth from "./OwnerOperationalHealth";
+import OwnerStockOverview from "./OwnerStockOverview";
 import OwnerBusinessReport from "./OwnerBusinessReport";
 import OwnerPromotionReport from "./OwnerPromotionReport";
 import OwnerLoyaltyCenter from "./OwnerLoyaltyCenter";
@@ -162,6 +164,8 @@ export default function RootLayout({ children }) {
         <OwnerAdminOperatorCenter />
         <OwnerControlDirectBridge />
         <OwnerDashboardRuntime />
+        <OwnerOperationalHealth />
+        <OwnerStockOverview />
         <OwnerBusinessReport />
         <OwnerPromotionReport />
         <OwnerLoyaltyCenter />
