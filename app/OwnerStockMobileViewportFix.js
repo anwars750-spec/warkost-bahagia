@@ -6,23 +6,37 @@ export default function OwnerStockMobileViewportFix() {
   useEffect(() => {
     const media = window.matchMedia("(max-width: 760px)");
     let raf = 0;
+    let wasActive = false;
+
+    const clear = () => {
+      document.documentElement.classList.remove("owner-stock-mobile-open");
+      document.body.classList.remove("owner-stock-mobile-open");
+      if (wasActive) {
+        document.documentElement.scrollLeft = 0;
+        document.body.scrollLeft = 0;
+        window.scrollTo(0, window.scrollY);
+      }
+      wasActive = false;
+    };
 
     const sync = () => {
-      const open = Boolean(document.querySelector(".oso-modal"));
-      const active = open && media.matches;
-      document.documentElement.classList.toggle("owner-stock-mobile-open", active);
-      document.body.classList.toggle("owner-stock-mobile-open", active);
+      const active = Boolean(document.querySelector(".oso-modal")) && media.matches;
+      if (!active) {
+        clear();
+        return;
+      }
 
-      if (!active) return;
+      wasActive = true;
+      document.documentElement.classList.add("owner-stock-mobile-open");
+      document.body.classList.add("owner-stock-mobile-open");
       document.documentElement.scrollLeft = 0;
       document.body.scrollLeft = 0;
-      const top = window.scrollY;
-      window.scrollTo(0, top);
+      window.scrollTo(0, window.scrollY);
+
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         document.documentElement.scrollLeft = 0;
         document.body.scrollLeft = 0;
-        window.scrollTo(0, window.scrollY);
       });
     };
 
@@ -37,8 +51,7 @@ export default function OwnerStockMobileViewportFix() {
       observer.disconnect();
       window.removeEventListener("resize", sync);
       media.removeEventListener?.("change", sync);
-      document.documentElement.classList.remove("owner-stock-mobile-open");
-      document.body.classList.remove("owner-stock-mobile-open");
+      clear();
     };
   }, []);
 
