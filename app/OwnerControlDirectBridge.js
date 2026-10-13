@@ -4,6 +4,7 @@ import { useEffect } from "react";
 
 const CASH_SETTLEMENT_LABEL = "Setoran Kas";
 const REPORT_LABEL = "Laporan";
+const PROMO_LABEL = "Promo";
 const REPORT_SCROLL_STYLE_ID = "owner-report-scroll-polish";
 
 function controlLabel(button) {
@@ -49,6 +50,13 @@ function openOwnerDashboard() {
 
 function openOwnerReport() {
   const button = ownerNavButton(REPORT_LABEL);
+  if (!button) return false;
+  button.click();
+  return true;
+}
+
+function openOwnerPromo() {
+  const button = ownerNavButton(PROMO_LABEL);
   if (!button) return false;
   button.click();
   return true;
@@ -122,16 +130,19 @@ export default function OwnerControlDirectBridge() {
       const button = event.target?.closest?.(".owner-control-grid-v3 > button");
       if (!button) return;
       const label = controlLabel(button);
-      if (![CASH_SETTLEMENT_LABEL, REPORT_LABEL].includes(label)) return;
+      if (![CASH_SETTLEMENT_LABEL, REPORT_LABEL, PROMO_LABEL].includes(label))
+        return;
 
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation?.();
 
-      // Kontrol Usaha opens the real module directly. The generic preview card
-      // is intentionally skipped for modules that already have a full UI.
+      // Kontrol Usaha membuka modul sebenarnya secara langsung. Popup preview
+      // generik dilewati untuk modul yang sudah memiliki UI penuh.
       document.querySelector(".owner-popup-close")?.click();
-      retry(label === CASH_SETTLEMENT_LABEL ? openCashSettlementModal : openOwnerReport);
+      if (label === CASH_SETTLEMENT_LABEL) retry(openCashSettlementModal);
+      else if (label === REPORT_LABEL) retry(openOwnerReport);
+      else retry(openOwnerPromo);
     };
 
     document.addEventListener("click", onClickCapture, true);
