@@ -11,3 +11,10 @@ test("Owner Settings uses a dedicated module view instead of stacking below dash
   assert.match(css, /display:\s*none\s*!important/);
   assert.match(css, /owner-settings-center-active #owner-settings-center-host/);
 });
+
+test("Owner location hides raw latitude and longitude controls while keeping them mounted", () => {
+  assert.match(css, /data-owner-settings-section="location"/);
+  assert.match(css, /> \.osc-fields\.two/);
+  assert.match(css, /clip-path:\s*inset\(50%\)/);
+  assert.match(css, /pointer-events:\s*none\s*!important/);
+});
