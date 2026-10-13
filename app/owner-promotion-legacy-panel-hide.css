@@ -1,4 +1,0 @@
-body.owner-promotion-report-active [data-owner-promo-legacy-panel="true"],
-body.owner-promotion-report-active [data-owner-promo-legacy="true"] {
-  display: none !important;
-}
