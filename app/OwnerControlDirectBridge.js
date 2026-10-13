@@ -62,6 +62,22 @@ function openOwnerPromo() {
   return true;
 }
 
+function markOwnerLegacyPromoPanel() {
+  if (!ownerDashboardButton()) return false;
+  const panel = [...document.querySelectorAll("main > section.panel")].find(
+    (node) =>
+      node
+        .querySelector("h2")
+        ?.textContent?.trim()
+        .toLowerCase()
+        .startsWith("promo customer"),
+  );
+  if (!panel) return false;
+  panel.dataset.ownerPromoLegacyPanel = "true";
+  panel.classList.add("manager-promo-center");
+  return true;
+}
+
 function retry(action) {
   if (action()) return;
   let attempts = 0;
@@ -116,6 +132,17 @@ function installReportScrollPolish() {
 export default function OwnerControlDirectBridge() {
   useEffect(() => {
     installReportScrollPolish();
+    markOwnerLegacyPromoPanel();
+
+    const promoPanelObserver = new MutationObserver(() => {
+      markOwnerLegacyPromoPanel();
+    });
+    promoPanelObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-owner-nav-key"],
+    });
 
     const onClickCapture = (event) => {
       const brandButton = event.target?.closest?.("header.top .brand-button");
@@ -146,7 +173,10 @@ export default function OwnerControlDirectBridge() {
     };
 
     document.addEventListener("click", onClickCapture, true);
-    return () => document.removeEventListener("click", onClickCapture, true);
+    return () => {
+      promoPanelObserver.disconnect();
+      document.removeEventListener("click", onClickCapture, true);
+    };
   }, []);
 
   return null;
