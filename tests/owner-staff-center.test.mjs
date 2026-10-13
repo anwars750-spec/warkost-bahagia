@@ -56,3 +56,14 @@ test("Add Staff modal loads precision polish and CSS-drawn close icon", () => {
   assert.match(css, /button\[aria-label="Tutup"\]::after/);
   assert.match(css, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
 });
+
+test("Reset Password modal keeps close control anchored and polished", () => {
+  const layout = read("app/layout.js");
+  const css = read("app/owner-staff-reset-modal-polish.css");
+  assert.match(layout, /owner-staff-reset-modal-polish\.css/);
+  assert.match(css, /\.osc-modal\.compact>header\{/);
+  assert.match(css, /position:relative!important/);
+  assert.match(css, /button\[aria-label="Tutup"\]/);
+  assert.match(css, /PASSWORD BARU/);
+  assert.match(css, /button\.primary:hover:not\(:disabled\)/);
+});
