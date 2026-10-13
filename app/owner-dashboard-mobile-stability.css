@@ -1,0 +1,160 @@
+/* Final mobile stability layer for Owner Dashboard.
+   Keep the Owner shell inside the viewport and remove the legacy order list. */
+
+body.owner-dashboard-v3-active .order-list,
+body.owner-dashboard-v3-active .panel.empty-state {
+  display: none !important;
+}
+
+.owner-refresh-button svg {
+  display: block !important;
+  width: 16px !important;
+  height: 16px !important;
+  flex: 0 0 16px !important;
+  transform-origin: 50% 50%;
+}
+
+.owner-refresh-button {
+  line-height: 1 !important;
+}
+
+@media (max-width: 760px) {
+  html,
+  body {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  body.owner-dashboard-v3-active,
+  body.owner-dashboard-v3-active main,
+  body.owner-dashboard-v3-active #owner-dashboard-v3-host,
+  body.owner-dashboard-v3-active .owner-dashboard-v3 {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    transform: none !important;
+    box-sizing: border-box !important;
+  }
+
+  body.owner-dashboard-v3-active main {
+    overflow-x: hidden !important;
+  }
+
+  body.owner-dashboard-v3-active #owner-dashboard-v3-host,
+  body.owner-dashboard-v3-active #owner-dashboard-v3-host * {
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  body.owner-navigation-v2-active header.top {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  body.owner-navigation-v2-active header.top .brand,
+  body.owner-navigation-v2-active header.top nav.owner-nav-v2 {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  body.owner-navigation-v2-active header.top nav.owner-nav-v2 {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  body.owner-navigation-v2-active header.top nav.owner-nav-v2 button[data-owner-nav-visible="true"] {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis;
+  }
+
+  .owner-dashboard-hero-v3,
+  .owner-dashboard-panel,
+  .owner-sales-panel,
+  .owner-health-panel-v3,
+  .owner-control-panel-v3 {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .owner-sales-head {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  .owner-sales-head > div {
+    min-width: 0 !important;
+  }
+
+  .owner-refresh-button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+    min-height: 36px !important;
+    padding: 0 10px !important;
+    white-space: nowrap !important;
+    font-size: 11px !important;
+  }
+
+  .owner-refresh-button svg {
+    width: 15px !important;
+    height: 15px !important;
+    flex-basis: 15px !important;
+  }
+
+  .owner-period-filter {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    width: 100% !important;
+    padding: 11px 10px 0 !important;
+  }
+
+  .owner-period-filter button {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 34px !important;
+    padding: 0 3px !important;
+    font-size: 10px !important;
+    white-space: nowrap !important;
+  }
+
+  .owner-dashboard-kpis-v3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    width: 100% !important;
+    padding: 10px !important;
+    gap: 8px !important;
+  }
+
+  .owner-dashboard-kpis-v3 article {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 11px !important;
+  }
+
+  .owner-control-grid-v3,
+  .owner-health-grid-v3,
+  .ooh-grid {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  body.owner-dashboard-v3-active footer {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+}
