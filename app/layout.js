@@ -94,6 +94,7 @@ import "./owner-staff-modal-polish.css";
 import "./owner-staff-reset-modal-polish.css";
 import "./owner-audit-center.css";
 import "./owner-settings-center.css";
+import "./owner-settings-experience.css";
 import "./print-branding.css";
 import DriverRuntimeBootstrap from "./DriverRuntimeBootstrap";
 import DriverLogoFix from "./DriverLogoFix";
@@ -113,6 +114,7 @@ import OwnerLoyaltyCenter from "./OwnerLoyaltyCenter";
 import OwnerStaffCenter from "./OwnerStaffCenter";
 import OwnerAuditCenter from "./OwnerAuditCenter";
 import OwnerSettingsCenter from "./OwnerSettingsCenter";
+import OwnerSettingsExperience from "./OwnerSettingsExperience";
 import OwnerNavigationRuntime from "./OwnerNavigationRuntime";
 import OwnerNotificationPopover from "./OwnerNotificationPopover";
 import ManagerCashSettlementCenter from "./ManagerCashSettlementCenter";
@@ -165,6 +167,7 @@ export default function RootLayout({ children }) {
         <OwnerStaffCenter />
         <OwnerAuditCenter />
         <OwnerSettingsCenter />
+        <OwnerSettingsExperience />
         <OwnerNavigationRuntime />
         <OwnerNotificationPopover />
         <ManagerCashSettlementCenter />
