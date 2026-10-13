@@ -1,5 +1,6 @@
 @import "./owner-operational-health-close-precision.css";
 @import "./owner-stock-mobile-final.css";
+@import "./owner-dashboard-mobile-stability.css";
 
 /* Owner Settings must behave like a dedicated Owner module, not append below Dashboard. */
 body.owner-settings-center-active #owner-dashboard-v3-host,
