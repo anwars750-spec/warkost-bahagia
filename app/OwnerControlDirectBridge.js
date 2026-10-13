@@ -5,6 +5,7 @@ import { useEffect } from "react";
 const CASH_SETTLEMENT_LABEL = "Setoran Kas";
 const REPORT_LABEL = "Laporan";
 const PROMO_LABEL = "Promo";
+const LOYALTY_LABEL = "Loyalty";
 const REPORT_SCROLL_STYLE_ID = "owner-report-scroll-polish";
 
 function controlLabel(button) {
@@ -57,6 +58,13 @@ function openOwnerReport() {
 
 function openOwnerPromo() {
   const button = ownerNavButton(PROMO_LABEL);
+  if (!button) return false;
+  button.click();
+  return true;
+}
+
+function openOwnerLoyalty() {
+  const button = ownerNavButton(LOYALTY_LABEL);
   if (!button) return false;
   button.click();
   return true;
@@ -157,7 +165,14 @@ export default function OwnerControlDirectBridge() {
       const button = event.target?.closest?.(".owner-control-grid-v3 > button");
       if (!button) return;
       const label = controlLabel(button);
-      if (![CASH_SETTLEMENT_LABEL, REPORT_LABEL, PROMO_LABEL].includes(label))
+      if (
+        ![
+          CASH_SETTLEMENT_LABEL,
+          REPORT_LABEL,
+          PROMO_LABEL,
+          LOYALTY_LABEL,
+        ].includes(label)
+      )
         return;
 
       event.preventDefault();
@@ -169,7 +184,8 @@ export default function OwnerControlDirectBridge() {
       document.querySelector(".owner-popup-close")?.click();
       if (label === CASH_SETTLEMENT_LABEL) retry(openCashSettlementModal);
       else if (label === REPORT_LABEL) retry(openOwnerReport);
-      else retry(openOwnerPromo);
+      else if (label === PROMO_LABEL) retry(openOwnerPromo);
+      else retry(openOwnerLoyalty);
     };
 
     document.addEventListener("click", onClickCapture, true);
