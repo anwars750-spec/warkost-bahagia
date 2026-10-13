@@ -85,6 +85,7 @@ import "./owner-business-report-legacy-heading-fix.css";
 import "./owner-promotion-report.css";
 import "./owner-promotion-heading-fix.css";
 import "./owner-loyalty-center.css";
+import "./owner-loyalty-reward-modal-polish.css";
 import "./print-branding.css";
 import DriverRuntimeBootstrap from "./DriverRuntimeBootstrap";
 import DriverLogoFix from "./DriverLogoFix";
