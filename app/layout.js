@@ -82,6 +82,7 @@ import "./owner-dashboard-mobile-filter-polish.css";
 import "./owner-navigation-v2.css";
 import "./owner-business-report.css";
 import "./owner-business-report-legacy-heading-fix.css";
+import "./owner-promotion-report.css";
 import "./print-branding.css";
 import DriverRuntimeBootstrap from "./DriverRuntimeBootstrap";
 import DriverLogoFix from "./DriverLogoFix";
@@ -96,6 +97,7 @@ import OwnerAdminOperatorCenter from "./OwnerAdminOperatorCenter";
 import OwnerControlDirectBridge from "./OwnerControlDirectBridge";
 import OwnerDashboardRuntime from "./OwnerDashboardRuntime";
 import OwnerBusinessReport from "./OwnerBusinessReport";
+import OwnerPromotionReport from "./OwnerPromotionReport";
 import OwnerNavigationRuntime from "./OwnerNavigationRuntime";
 import OwnerNotificationPopover from "./OwnerNotificationPopover";
 import ManagerCashSettlementCenter from "./ManagerCashSettlementCenter";
@@ -143,6 +145,7 @@ export default function RootLayout({ children }) {
         <OwnerControlDirectBridge />
         <OwnerDashboardRuntime />
         <OwnerBusinessReport />
+        <OwnerPromotionReport />
         <OwnerNavigationRuntime />
         <OwnerNotificationPopover />
         <ManagerCashSettlementCenter />
