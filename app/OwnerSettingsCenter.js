@@ -8,9 +8,9 @@ const EMPTY = {
   businessWhatsApp: "6281546407856",
   businessLatitude: -6.9217,
   businessLongitude: 106.9272,
-  deliveryFreeKm: 5,
+  deliveryFreeKm: 3,
   deliveryFeePerKm: 2500,
-  deliveryMaxKm: 15,
+  deliveryMaxKm: 10,
   paymentExpiryMinutes: 15,
   printerSimulation: true,
   adminPrinter: "LAN 80mm Admin (simulasi)",
@@ -189,9 +189,7 @@ export default function OwnerSettingsCenter() {
         businessWhatsApp: String(form.businessWhatsApp || "").trim(),
         businessLatitude: Number(form.businessLatitude),
         businessLongitude: Number(form.businessLongitude),
-        deliveryFreeKm: Number(form.deliveryFreeKm),
         deliveryFeePerKm: Number(form.deliveryFeePerKm),
-        deliveryMaxKm: Number(form.deliveryMaxKm),
         paymentExpiryMinutes: Number(form.paymentExpiryMinutes),
         printerSimulation: Boolean(form.printerSimulation),
         adminPrinter: String(form.adminPrinter || "").trim(),
@@ -342,29 +340,30 @@ export default function OwnerSettingsCenter() {
           <div>
             <span>DELIVERY RULES</span>
             <h2>Radius & ongkir</h2>
-            <p>Aturan ini dipakai server saat quote maupun saat order dibuat.</p>
+            <p>Radius inti mengikuti Checkout Business Rules yang sudah dikunci.</p>
           </div>
         </header>
         <div className="osc-rule-preview">
-          <span>ATURAN AKTIF SETELAH DISIMPAN</span>
+          <span>ATURAN CHECKOUT TERKUNCI</span>
           <strong>{deliverySummary}</strong>
+        </div>
+        <div className="osc-callout locked">
+          <b>Radius tidak diedit dari Owner Settings</b>
+          <span>Gratis 3 km dan maksimum 10 km dijaga tetap sama dengan validasi checkout server. Owner dapat menyesuaikan tarif per km berikutnya.</span>
         </div>
         <div className="osc-fields three">
           <label>
             <span>Gratis sampai</span>
-            <div className="osc-input-suffix">
+            <div className="osc-input-suffix locked-input">
               <input
                 type="number"
-                min="0"
-                max="50"
-                step="0.1"
-                required
                 value={form.deliveryFreeKm}
-                onChange={(e) => patch("deliveryFreeKm", e.target.value)}
+                readOnly
+                aria-readonly="true"
               />
               <em>km</em>
             </div>
-            <small>Radius bebas ongkir dari outlet.</small>
+            <small>Dikunci oleh Checkout Business Rules.</small>
           </label>
           <label>
             <span>Biaya per km mulai</span>
@@ -383,19 +382,16 @@ export default function OwnerSettingsCenter() {
           </label>
           <label>
             <span>Radius maksimum</span>
-            <div className="osc-input-suffix">
+            <div className="osc-input-suffix locked-input">
               <input
                 type="number"
-                min="1"
-                max="100"
-                step="0.1"
-                required
                 value={form.deliveryMaxKm}
-                onChange={(e) => patch("deliveryMaxKm", e.target.value)}
+                readOnly
+                aria-readonly="true"
               />
               <em>km</em>
             </div>
-            <small>Di luar radius ini checkout diblokir.</small>
+            <small>Dikunci oleh Checkout Business Rules.</small>
           </label>
         </div>
       </section>
