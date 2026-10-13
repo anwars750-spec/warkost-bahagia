@@ -1,2 +1,12 @@
-body.owner-promotion-report-active main > .heading{display:none!important}
-body.owner-promotion-report-active #owner-promotion-report-host{margin-top:0}
+body.owner-promotion-report-active main > .heading {
+  display: none !important;
+}
+
+body.owner-promotion-report-active #owner-promotion-report-host {
+  margin-top: 0;
+}
+
+body.owner-promotion-report-active [data-owner-promo-legacy-panel="true"],
+body.owner-promotion-report-active [data-owner-promo-legacy="true"] {
+  display: none !important;
+}
