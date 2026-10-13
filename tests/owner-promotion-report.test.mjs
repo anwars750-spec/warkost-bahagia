@@ -11,6 +11,13 @@ test("Owner Promo card opens the real promo module directly", () => {
   assert.match(bridge, /CASH_SETTLEMENT_LABEL, REPORT_LABEL, PROMO_LABEL/);
 });
 
+test("Owner promo legacy read-only panel is targeted for takeover", () => {
+  const bridge = read("app/OwnerControlDirectBridge.js");
+  assert.match(bridge, /markOwnerLegacyPromoPanel/);
+  assert.match(bridge, /startsWith\("promo customer"\)/);
+  assert.match(bridge, /classList\.add\("manager-promo-center"\)/);
+});
+
 test("Owner promotion performance is mounted and read only", () => {
   const layout = read("app/layout.js");
   const ui = read("app/OwnerPromotionReport.js");
