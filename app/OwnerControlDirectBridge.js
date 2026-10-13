@@ -6,6 +6,7 @@ const CASH_SETTLEMENT_LABEL = "Setoran Kas";
 const REPORT_LABEL = "Laporan";
 const PROMO_LABEL = "Promo";
 const LOYALTY_LABEL = "Loyalty";
+const STAFF_LABEL = "Staf";
 const REPORT_SCROLL_STYLE_ID = "owner-report-scroll-polish";
 
 function controlLabel(button) {
@@ -65,6 +66,13 @@ function openOwnerPromo() {
 
 function openOwnerLoyalty() {
   const button = ownerNavButton(LOYALTY_LABEL);
+  if (!button) return false;
+  button.click();
+  return true;
+}
+
+function openOwnerStaff() {
+  const button = ownerNavButton(STAFF_LABEL);
   if (!button) return false;
   button.click();
   return true;
@@ -171,6 +179,7 @@ export default function OwnerControlDirectBridge() {
           REPORT_LABEL,
           PROMO_LABEL,
           LOYALTY_LABEL,
+          STAFF_LABEL,
         ].includes(label)
       )
         return;
@@ -185,7 +194,8 @@ export default function OwnerControlDirectBridge() {
       if (label === CASH_SETTLEMENT_LABEL) retry(openCashSettlementModal);
       else if (label === REPORT_LABEL) retry(openOwnerReport);
       else if (label === PROMO_LABEL) retry(openOwnerPromo);
-      else retry(openOwnerLoyalty);
+      else if (label === LOYALTY_LABEL) retry(openOwnerLoyalty);
+      else retry(openOwnerStaff);
     };
 
     document.addEventListener("click", onClickCapture, true);
