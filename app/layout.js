@@ -90,6 +90,7 @@ import "./owner-loyalty-close-precision.css";
 import "./owner-loyalty-reward-viewport-fit.css";
 import "./owner-loyalty-save-hover-fix.css";
 import "./owner-staff-center.css";
+import "./owner-staff-modal-polish.css";
 import "./print-branding.css";
 import DriverRuntimeBootstrap from "./DriverRuntimeBootstrap";
 import DriverLogoFix from "./DriverLogoFix";
