@@ -13,9 +13,12 @@ test("Owner Promo card opens the real promo module directly", () => {
 
 test("Owner promo legacy read-only panel is targeted for takeover", () => {
   const bridge = read("app/OwnerControlDirectBridge.js");
+  const css = read("app/owner-promotion-heading-fix.css");
   assert.match(bridge, /markOwnerLegacyPromoPanel/);
   assert.match(bridge, /startsWith\("promo customer"\)/);
-  assert.match(bridge, /classList\.add\("manager-promo-center"\)/);
+  assert.match(bridge, /ownerPromoLegacyPanel/);
+  assert.match(css, /data-owner-promo-legacy-panel/);
+  assert.match(css, /display:\s*none\s*!important/);
 });
 
 test("Owner promotion performance is mounted and read only", () => {
