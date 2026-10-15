@@ -50,3 +50,14 @@ test("Owner customer detail stays centered as a card on narrow mobile", () => {
   assert.match(css, /\.occ-modal\{[\s\S]*width:min\(380px,calc\(100vw - 24px\)\);height:auto;max-height:calc\(100dvh - 24px\);margin:auto;/);
   assert.doesNotMatch(css, /@media\(max-width:480px\)[\s\S]*\.occ-modal\{[^}]*height:100dvh/);
 });
+
+test("Owner customer confirmation uses compact centered desktop and mobile cards", () => {
+  assert.match(css, /\.occ-backdrop\.confirm\{place-items:center;padding:20px\}/);
+  assert.match(css, /\.occ-confirm\{[\s\S]*width:min\(420px,calc\(100vw - 40px\)\);margin:auto;padding:22px 22px 20px;/);
+  assert.match(css, /@media\(max-width:480px\)[\s\S]*\.occ-confirm\{[\s\S]*width:min\(360px,calc\(100vw - 24px\)\);margin:auto;padding:18px 16px 16px;/);
+});
+
+test("Owner customer mobile row keeps metrics and actions balanced", () => {
+  assert.match(css, /@media\(max-width:480px\)[\s\S]*\.occ-row\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\);gap:8px;padding:12px\}/);
+  assert.match(css, /@media\(max-width:480px\)[\s\S]*\.occ-metric,body \.occ-activity\{[\s\S]*grid-column:auto!important/);
+});
