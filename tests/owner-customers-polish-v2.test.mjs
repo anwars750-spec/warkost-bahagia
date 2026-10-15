@@ -44,3 +44,9 @@ test("Owner customer confirmation keeps cancel and confirm buttons equal", () =>
   assert.match(css, /\.occ-confirm-actions\{[\s\S]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(css, /@media\(max-width:480px\)[\s\S]*\.occ-confirm-actions\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
 });
+
+test("Owner customer detail stays centered as a card on narrow mobile", () => {
+  assert.match(css, /@media\(max-width:480px\)[\s\S]*\.occ-backdrop\{place-items:center;padding:12px\}/);
+  assert.match(css, /\.occ-modal\{[\s\S]*width:min\(380px,calc\(100vw - 24px\)\);height:auto;max-height:calc\(100dvh - 24px\);margin:auto;/);
+  assert.doesNotMatch(css, /@media\(max-width:480px\)[\s\S]*\.occ-modal\{[^}]*height:100dvh/);
+});
