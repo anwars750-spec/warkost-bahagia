@@ -267,6 +267,9 @@ export default function OwnerNotificationPopover() {
       load();
     };
 
+    // Capture at window level so the Owner click is stopped before React's
+    // delegated notification handler can change the page view to the legacy
+    // inline notifications screen. This makes the Owner interaction popup-only.
     const onCapture = (event) => {
       const button = event.target.closest?.('header.top nav button[data-owner-nav-key="Notifikasi"]');
       if (!button) return;
@@ -310,7 +313,7 @@ export default function OwnerNotificationPopover() {
 
     const onViewport = () => position();
 
-    document.addEventListener("click", onCapture, true);
+    window.addEventListener("click", onCapture, true);
     document.addEventListener("click", onClick, false);
     document.addEventListener("keydown", onKeyDown);
     window.addEventListener("resize", onViewport);
@@ -318,7 +321,7 @@ export default function OwnerNotificationPopover() {
 
     return () => {
       close();
-      document.removeEventListener("click", onCapture, true);
+      window.removeEventListener("click", onCapture, true);
       document.removeEventListener("click", onClick, false);
       document.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("resize", onViewport);
