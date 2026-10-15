@@ -1,64 +1,159 @@
-/* Owner Customer Center — final responsive polish */
+/* Owner Customer Center — final precision pass */
 
-/* Keep the customer page clear below the sticky Owner header. */
+/* Page spacing below sticky Owner navigation */
 body:has(.occ) main > .heading{
-  margin-top:22px;
-  margin-bottom:18px;
+  margin-top:22px!important;
+  margin-bottom:18px!important;
 }
 
-/* Desktop list actions: equal height, equal visual weight, no vertical drift. */
+/* =========================================================
+   CUSTOMER LIST — DESKTOP PRECISION
+   ========================================================= */
+@media(min-width:1181px){
+  body .occ-list-head,
+  body .occ-row{
+    grid-template-columns:minmax(220px,1fr) 92px 78px 82px 120px 150px 214px!important;
+    column-gap:10px!important;
+  }
+}
+
 body .occ-actions{
   display:grid!important;
-  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  grid-template-columns:86px 112px!important;
+  justify-content:end!important;
+  align-items:center!important;
   gap:8px!important;
-  align-items:stretch!important;
+  width:206px!important;
+  min-width:206px!important;
 }
 body .occ-action-button{
+  box-sizing:border-box!important;
   width:100%!important;
   min-width:0!important;
+  height:38px!important;
   min-height:38px!important;
-  padding:0 12px!important;
-  border-radius:11px!important;
+  max-height:38px!important;
+  margin:0!important;
+  padding:0 10px!important;
+  border-width:1px!important;
+  border-style:solid!important;
+  border-radius:10px!important;
   display:inline-flex!important;
   align-items:center!important;
   justify-content:center!important;
-  gap:7px!important;
+  gap:6px!important;
+  overflow:hidden!important;
+  font-size:10px!important;
+  font-weight:800!important;
   line-height:1!important;
+  white-space:nowrap!important;
+  text-align:center!important;
+  vertical-align:middle!important;
+  box-shadow:none!important;
 }
 body .occ-action-button svg{
-  flex:0 0 auto;
+  display:block!important;
+  flex:0 0 14px!important;
+  width:14px!important;
+  height:14px!important;
+  margin:0!important;
+  fill:none!important;
+  stroke:currentColor!important;
+  stroke-width:1.8!important;
+  stroke-linecap:round!important;
+  stroke-linejoin:round!important;
+}
+body .occ-action-button span{
+  display:block!important;
+  min-width:0!important;
+  line-height:1!important;
+}
+body .occ-detail-button.occ-action-button{
+  border-color:#d8c5b6!important;
+  background:#fffaf6!important;
+  color:#6c4937!important;
+}
+body .occ-detail-button.occ-action-button:hover{
+  border-color:#b88d72!important;
+  background:#fff3e8!important;
+  color:#5e3927!important;
+  transform:none!important;
+}
+body .occ-toggle.danger.occ-action-button{
+  border-color:#eccac0!important;
+  background:#fff1ed!important;
+  color:#a14635!important;
+}
+body .occ-toggle.danger.occ-action-button:hover{
+  border-color:#dda99c!important;
+  background:#fce5df!important;
+  transform:none!important;
+}
+body .occ-toggle.success.occ-action-button{
+  border-color:#c9e0d0!important;
+  background:#edf7f0!important;
+  color:#39744b!important;
+}
+body .occ-toggle.success.occ-action-button:hover{
+  border-color:#afd1b9!important;
+  background:#e3f2e7!important;
+  transform:none!important;
 }
 
-/* Modal shell: header is fixed in place, only body can scroll. */
+/* Tablet rows keep the same action geometry. */
+@media(max-width:1180px) and (min-width:761px){
+  body .occ-row{
+    padding-right:236px!important;
+  }
+  body .occ-actions{
+    position:absolute!important;
+    right:18px!important;
+    top:50%!important;
+    transform:translateY(-50%)!important;
+    grid-template-columns:86px 112px!important;
+    width:206px!important;
+    min-width:206px!important;
+  }
+}
+
+/* =========================================================
+   DETAIL MODAL — CLEAN CARD, FIXED HEADER, SCROLLABLE BODY
+   ========================================================= */
 body .occ-backdrop{
   place-items:center!important;
   padding:24px!important;
 }
 body .occ-modal{
   width:min(640px,calc(100vw - 48px))!important;
-  max-height:min(720px,calc(100dvh - 48px))!important;
   height:auto!important;
+  max-height:min(720px,calc(100dvh - 48px))!important;
   margin:auto!important;
   overflow:hidden!important;
   display:flex!important;
   flex-direction:column!important;
-  border-radius:24px!important;
+  border:1px solid #e2d0c1!important;
+  border-radius:22px!important;
+  background:#fffaf6!important;
+  box-shadow:0 30px 86px rgba(48,28,17,.30)!important;
 }
 body .occ-modal-head{
   position:relative!important;
   top:auto!important;
   flex:0 0 auto!important;
-  grid-template-columns:52px minmax(0,1fr) 40px!important;
-  gap:13px!important;
-  padding:18px 20px 16px!important;
+  display:grid!important;
+  grid-template-columns:50px minmax(0,1fr) 38px!important;
+  gap:12px!important;
+  align-items:center!important;
+  padding:17px 20px 15px!important;
+  border-bottom:1px solid #ebded3!important;
   background:#fffaf6!important;
   backdrop-filter:none!important;
 }
 body .occ-modal-avatar{
-  width:48px!important;
-  height:48px!important;
-  border-radius:15px!important;
-  font-size:13px!important;
+  width:46px!important;
+  height:46px!important;
+  border-radius:14px!important;
+  font-size:12px!important;
 }
 body .occ-modal-title small{
   font-size:8px!important;
@@ -74,34 +169,56 @@ body .occ-modal-title p{
   font-size:9px!important;
 }
 body .occ-close{
-  width:38px!important;
-  height:38px!important;
-  border-radius:11px!important;
+  box-sizing:border-box!important;
+  width:36px!important;
+  height:36px!important;
+  min-width:36px!important;
+  min-height:36px!important;
+  margin:0!important;
+  padding:0!important;
+  border:1px solid #ddc9ba!important;
+  border-radius:10px!important;
+  display:grid!important;
+  place-items:center!important;
   align-self:start!important;
+  background:#fff!important;
+  color:#674434!important;
+}
+body .occ-close>span{
+  width:14px!important;
+  height:14px!important;
+}
+body .occ-close:hover{
+  border-color:#c6a48d!important;
+  background:#fff2e7!important;
+  transform:none!important;
 }
 body .occ-modal-body{
   min-height:0!important;
   overflow-y:auto!important;
   overscroll-behavior:contain!important;
   scrollbar-gutter:stable!important;
+  display:flex!important;
+  flex-direction:column!important;
   gap:10px!important;
   padding:14px 20px 18px!important;
 }
 body .occ-profile-status{
   min-height:54px!important;
   padding:10px 13px!important;
+  border:1px solid #eaded4!important;
   border-radius:13px!important;
-  gap:12px!important;
+  background:#fff!important;
 }
 body .occ-profile-status>div:first-child{
   display:flex!important;
-  align-items:center!important;
   flex-direction:row!important;
+  align-items:center!important;
   gap:8px!important;
 }
 body .occ-member-since{
-  text-align:right!important;
   padding:0!important;
+  text-align:right!important;
 }
 body .occ-detail-grid{
   grid-template-columns:repeat(2,minmax(0,1fr))!important;
@@ -131,38 +248,110 @@ body .occ-contact-grid{
   gap:8px!important;
 }
 body .occ-contact-grid>div{
+  min-width:0!important;
   padding:9px 10px!important;
   border-radius:10px!important;
 }
+
+/* Owner control note — icon is centered and visually intentional. */
 body .occ-rule-note{
+  display:grid!important;
   grid-template-columns:30px minmax(0,1fr)!important;
-  gap:9px!important;
+  align-items:center!important;
+  gap:10px!important;
   padding:11px 12px!important;
+  border:1px solid #ead6c4!important;
   border-radius:13px!important;
+  background:#fff4e8!important;
 }
 body .occ-rule-icon{
+  position:relative!important;
+  display:grid!important;
+  place-items:center!important;
+  align-self:center!important;
   width:28px!important;
   height:28px!important;
+  margin:0!important;
+  border:1px solid #e5c9ae!important;
   border-radius:9px!important;
+  overflow:hidden!important;
+  background:#f3dfca!important;
+  color:transparent!important;
+  font-size:0!important;
+  line-height:1!important;
+}
+body .occ-rule-icon::before{
+  content:"i"!important;
+  display:grid!important;
+  place-items:center!important;
+  width:100%!important;
+  height:100%!important;
+  color:#8a4b2d!important;
+  font-family:Arial,sans-serif!important;
+  font-size:13px!important;
+  font-weight:900!important;
+  font-style:normal!important;
+  line-height:1!important;
+  transform:translateY(-.5px)!important;
+}
+body .occ-rule-note strong{
+  display:block!important;
+  margin:0!important;
+  font-size:10px!important;
+  line-height:1.25!important;
 }
 body .occ-rule-note div>span{
+  display:block!important;
   margin-top:3px!important;
+  font-size:9px!important;
   line-height:1.45!important;
 }
+
+/* Detail footer — equal buttons, but compact rather than half-screen wide. */
 body .occ-modal-footer{
+  display:grid!important;
   grid-template-columns:repeat(2,minmax(0,1fr))!important;
   gap:9px!important;
-  padding-top:1px!important;
+  width:min(420px,100%)!important;
+  margin:2px 0 0 auto!important;
+  padding:0!important;
 }
 body .occ-modal-secondary,
 body .occ-modal-action{
+  box-sizing:border-box!important;
+  width:100%!important;
+  min-width:0!important;
+  height:42px!important;
   min-height:42px!important;
-  padding:0 10px!important;
+  max-height:42px!important;
+  margin:0!important;
+  padding:0 12px!important;
   border-radius:11px!important;
-  line-height:1.15!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  font-size:9.5px!important;
+  font-weight:850!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+}
+body .occ-modal-secondary{
+  border:1px solid #d9c6b7!important;
+  background:#fff!important;
+  color:#6c4937!important;
+}
+body .occ-modal-secondary:hover{
+  border-color:#bd987e!important;
+  background:#fff3e9!important;
+  transform:none!important;
+}
+body .occ-modal-action:hover{
+  transform:none!important;
 }
 
-/* Confirmation card: compact, centered, balanced on desktop and mobile. */
+/* =========================================================
+   CONFIRMATION DIALOG — BALANCED BUTTONS
+   ========================================================= */
 body .occ-backdrop.confirm{
   place-items:center!important;
   padding:24px!important;
@@ -170,18 +359,18 @@ body .occ-backdrop.confirm{
 body .occ-confirm{
   width:min(410px,calc(100vw - 48px))!important;
   margin:auto!important;
-  padding:20px 20px 18px!important;
-  border-radius:22px!important;
+  padding:20px!important;
+  border-radius:21px!important;
 }
 body .occ-confirm-icon{
-  width:50px!important;
-  height:50px!important;
-  margin:0 auto 10px!important;
-  border-radius:16px!important;
-  font-size:21px!important;
+  width:48px!important;
+  height:48px!important;
+  margin:0 auto 9px!important;
+  border-radius:15px!important;
+  font-size:20px!important;
 }
 body .occ-confirm-kicker{
-  margin-bottom:6px!important;
+  margin-bottom:5px!important;
   font-size:8px!important;
 }
 body .occ-confirm h3{
@@ -190,7 +379,7 @@ body .occ-confirm h3{
   line-height:1.18!important;
 }
 body .occ-confirm-customer{
-  margin-top:13px!important;
+  margin:13px 0 0!important;
   padding:10px 11px!important;
   border-radius:12px!important;
   gap:9px!important;
@@ -201,24 +390,59 @@ body .occ-confirm-avatar{
   border-radius:10px!important;
 }
 body .occ-confirm p{
-  margin:11px 2px 0!important;
+  max-width:340px!important;
+  margin:11px auto 0!important;
   font-size:9px!important;
   line-height:1.5!important;
 }
 body .occ-confirm-actions{
+  display:grid!important;
   grid-template-columns:repeat(2,minmax(0,1fr))!important;
   gap:9px!important;
-  margin-top:15px!important;
+  width:min(320px,100%)!important;
+  margin:14px auto 0!important;
 }
 body .occ-confirm-actions button{
+  box-sizing:border-box!important;
   width:100%!important;
   min-width:0!important;
+  height:42px!important;
   min-height:42px!important;
+  max-height:42px!important;
+  margin:0!important;
   padding:0 10px!important;
   border-radius:11px!important;
-  line-height:1.15!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  font-size:9.5px!important;
+  font-weight:850!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+}
+body .occ-confirm-actions button:first-child{
+  border:1px solid #d9c6b7!important;
+  background:#fff!important;
+  color:#6c4937!important;
+}
+body .occ-confirm-actions button:first-child:hover:not(:disabled){
+  border-color:#bd987e!important;
+  background:#fff3e9!important;
+  transform:none!important;
+}
+body .occ-confirm-actions button.success,
+body .occ-confirm-actions button.danger{
+  border-width:1px!important;
+  border-style:solid!important;
+}
+body .occ-confirm-actions button.success:hover:not(:disabled),
+body .occ-confirm-actions button.danger:hover:not(:disabled){
+  transform:none!important;
 }
 
+/* =========================================================
+   MOBILE
+   ========================================================= */
 @media(max-width:760px){
   body:has(.occ) main > .heading{
     margin-top:14px!important;
@@ -243,9 +467,12 @@ body .occ-confirm-actions button{
   body .occ-row>.occ-metric,
   body .occ-row>.occ-activity{
     display:flex!important;
-    align-items:center!important;
-    justify-content:space-between!important;
+    min-width:0!important;
     min-height:46px!important;
+    align-items:flex-start!important;
+    justify-content:center!important;
+    flex-direction:column!important;
+    gap:2px!important;
     padding:9px 10px!important;
   }
   body .occ-actions{
@@ -253,45 +480,47 @@ body .occ-confirm-actions button{
     grid-column:1/-1!important;
     grid-template-columns:repeat(2,minmax(0,1fr))!important;
     width:100%!important;
+    min-width:0!important;
     transform:none!important;
-    margin-top:1px!important;
+    gap:8px!important;
+    margin-top:2px!important;
   }
   body .occ-action-button{
+    width:100%!important;
+    height:40px!important;
     min-height:40px!important;
+    max-height:40px!important;
     padding:0 8px!important;
+    font-size:9px!important;
   }
 
   body .occ-modal{
     width:min(560px,calc(100vw - 24px))!important;
     max-height:calc(100dvh - 24px)!important;
-    border-radius:20px!important;
+    border-radius:19px!important;
   }
   body .occ-modal-head{
-    grid-template-columns:46px minmax(0,1fr) 36px!important;
+    grid-template-columns:44px minmax(0,1fr) 34px!important;
     gap:10px!important;
-    padding:14px 14px 12px!important;
+    padding:13px 14px 11px!important;
   }
   body .occ-modal-avatar{
-    width:43px!important;
-    height:43px!important;
+    width:42px!important;
+    height:42px!important;
     border-radius:13px!important;
-    font-size:12px!important;
   }
   body .occ-modal-title h3{
     font-size:18px!important;
   }
   body .occ-close{
-    width:34px!important;
-    height:34px!important;
-    border-radius:10px!important;
+    width:32px!important;
+    height:32px!important;
+    min-width:32px!important;
+    min-height:32px!important;
   }
   body .occ-modal-body{
     gap:9px!important;
     padding:11px 13px 13px!important;
-  }
-  body .occ-profile-status{
-    min-height:50px!important;
-    padding:9px 10px!important;
   }
   body .occ-detail-grid{
     gap:7px!important;
@@ -300,15 +529,21 @@ body .occ-confirm-actions button{
     min-height:72px!important;
     padding:10px!important;
   }
-  body .occ-contact-card{
-    padding:10px!important;
-  }
+  body .occ-contact-card,
   body .occ-rule-note{
     padding:10px!important;
   }
+  body .occ-modal-footer{
+    width:100%!important;
+    margin:1px 0 0!important;
+    gap:8px!important;
+  }
   body .occ-modal-secondary,
   body .occ-modal-action{
+    height:40px!important;
     min-height:40px!important;
+    max-height:40px!important;
+    padding:0 8px!important;
     font-size:9px!important;
   }
 
@@ -317,23 +552,18 @@ body .occ-confirm-actions button{
     padding:18px 16px 16px!important;
     border-radius:19px!important;
   }
-  body .occ-confirm-icon{
-    width:46px!important;
-    height:46px!important;
-    margin-bottom:9px!important;
-  }
   body .occ-confirm h3{
     font-size:18px!important;
   }
-  body .occ-confirm-customer{
-    margin-top:11px!important;
-  }
   body .occ-confirm-actions{
+    width:100%!important;
     gap:8px!important;
     margin-top:13px!important;
   }
   body .occ-confirm-actions button{
+    height:40px!important;
     min-height:40px!important;
+    max-height:40px!important;
     font-size:9px!important;
   }
 }
@@ -367,24 +597,20 @@ body .occ-confirm-actions button{
   body .occ-row>.occ-metric,
   body .occ-row>.occ-activity{
     grid-column:auto!important;
-    min-width:0!important;
     min-height:45px!important;
-    flex-direction:column!important;
-    align-items:flex-start!important;
-    justify-content:center!important;
-    gap:2px!important;
-  }
-  body .occ-row>.occ-metric small,
-  body .occ-row>.occ-activity small{
-    margin-top:0!important;
-    text-align:left!important;
   }
   body .occ-actions{
     grid-column:1/-1!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    width:100%!important;
+    min-width:0!important;
     gap:7px!important;
   }
   body .occ-action-button{
+    width:100%!important;
+    height:40px!important;
     min-height:40px!important;
+    max-height:40px!important;
     padding:0 7px!important;
     font-size:9px!important;
   }
@@ -395,7 +621,7 @@ body .occ-confirm-actions button{
     border-radius:18px!important;
   }
   body .occ-modal-head{
-    grid-template-columns:42px minmax(0,1fr) 34px!important;
+    grid-template-columns:42px minmax(0,1fr) 32px!important;
     gap:9px!important;
     padding:12px 12px 10px!important;
   }
@@ -414,8 +640,13 @@ body .occ-confirm-actions button{
     font-size:8px!important;
   }
   body .occ-close{
-    width:32px!important;
-    height:32px!important;
+    width:30px!important;
+    height:30px!important;
+    min-width:30px!important;
+    min-height:30px!important;
+  }
+  body .occ-close>span{
+    transform:scale(.84)!important;
   }
   body .occ-modal-body{
     gap:8px!important;
@@ -462,16 +693,25 @@ body .occ-confirm-actions button{
   body .occ-rule-icon{
     width:26px!important;
     height:26px!important;
+    border-radius:8px!important;
+  }
+  body .occ-rule-icon::before{
+    font-size:12px!important;
   }
   body .occ-modal-footer{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    width:100%!important;
     gap:7px!important;
   }
   body .occ-modal-secondary,
   body .occ-modal-action{
+    height:40px!important;
     min-height:40px!important;
+    max-height:40px!important;
     padding:0 6px!important;
     font-size:8.5px!important;
     white-space:normal!important;
+    line-height:1.15!important;
   }
 
   body .occ-confirm{
@@ -503,11 +743,14 @@ body .occ-confirm-actions button{
   }
   body .occ-confirm-actions{
     grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    width:100%!important;
     gap:7px!important;
     margin-top:12px!important;
   }
   body .occ-confirm-actions button{
+    height:40px!important;
     min-height:40px!important;
+    max-height:40px!important;
     padding:0 6px!important;
     font-size:8.5px!important;
   }
