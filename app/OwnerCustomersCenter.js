@@ -40,19 +40,52 @@ async function request(url, options) {
   return data;
 }
 
-function isOwnerCustomerView() {
-  const heading = [...document.querySelectorAll("main .heading h1, main h1")].find(
-    (node) => node.textContent?.trim() === "Kelola pelanggan",
-  );
-  if (heading) return true;
+function navLabel(button) {
+  if (!button) return "";
+  if (button.dataset.ownerNavKey) return button.dataset.ownerNavKey;
+  return String(button.textContent || "").replace(/\s+/g, " ").trim();
+}
 
-  const customerNav = [...document.querySelectorAll("header nav button")].find(
-    (button) => button.textContent?.replace(/\s+/g, " ").trim().includes("Pelanggan"),
+function ownerCustomerViewPresent() {
+  const activeNav = document.querySelector(
+    "header.top nav button[data-owner-nav-key='Pelanggan'].owner-nav-active, header.top nav button[data-owner-nav-key='Pelanggan'][aria-current='page']",
   );
-  return Boolean(
-    customerNav?.classList.contains("owner-nav-active") ||
-      customerNav?.getAttribute("aria-current") === "page",
-  );
+  const heading = document.querySelector("main .heading h1");
+  const stored = sessionStorage.getItem("warkost-owner-nav-active");
+  return Boolean(activeNav) || heading?.textContent?.trim() === "Kelola pelanggan" || stored === "Pelanggan";
+}
+
+function setLegacyVisibility(hidden) {
+  const main = document.querySelector("body main");
+  const footer = document.querySelector("body footer");
+  if (main) {
+    if (hidden) {
+      if (!main.dataset.ownerCustomersPreviousDisplay)
+        main.dataset.ownerCustomersPreviousDisplay = main.style.display || "";
+      main.style.setProperty("display", "none", "important");
+      main.dataset.ownerCustomersHidden = "true";
+    } else if (main.dataset.ownerCustomersHidden === "true") {
+      const previous = main.dataset.ownerCustomersPreviousDisplay || "";
+      main.style.removeProperty("display");
+      if (previous) main.style.display = previous;
+      delete main.dataset.ownerCustomersHidden;
+      delete main.dataset.ownerCustomersPreviousDisplay;
+    }
+  }
+  if (footer) {
+    if (hidden) {
+      if (!footer.dataset.ownerCustomersPreviousDisplay)
+        footer.dataset.ownerCustomersPreviousDisplay = footer.style.display || "";
+      footer.style.setProperty("display", "none", "important");
+      footer.dataset.ownerCustomersHidden = "true";
+    } else if (footer.dataset.ownerCustomersHidden === "true") {
+      const previous = footer.dataset.ownerCustomersPreviousDisplay || "";
+      footer.style.removeProperty("display");
+      if (previous) footer.style.display = previous;
+      delete footer.dataset.ownerCustomersHidden;
+      delete footer.dataset.ownerCustomersPreviousDisplay;
+    }
+  }
 }
 
 export default function OwnerCustomersCenter() {
@@ -75,16 +108,40 @@ export default function OwnerCustomersCenter() {
   useEffect(() => {
     let disposed = false;
     let observer = null;
+    let timer = null;
     let ownerVerified = false;
+
+    const applyActive = (nextActive) => {
+      if (disposed || !ownerVerified) return;
+      document.body.classList.toggle("owner-customers-center-active", nextActive);
+      setLegacyVisibility(nextActive);
+      const root = document.getElementById("admin-ui-portal-root");
+      if (root) setPortalRoot((current) => (current === root ? current : root));
+      setActive((current) => (current === nextActive ? current : nextActive));
+    };
 
     const sync = () => {
       if (!ownerVerified || disposed) return;
-      const nextActive = isOwnerCustomerView();
-      document.body.classList.toggle("owner-customers-center-active", nextActive);
-      const root = document.getElementById("admin-ui-portal-root");
-      setPortalRoot((current) => (current === root ? current : root));
-      setActive((current) => (current === nextActive ? current : nextActive));
+      applyActive(ownerCustomerViewPresent());
     };
+
+    const onNavClick = (event) => {
+      if (!ownerVerified || disposed) return;
+      const button = event.target?.closest?.("header.top nav button");
+      if (!button) return;
+      const label = navLabel(button);
+      if (!label) return;
+      if (label === "Pelanggan") {
+        sessionStorage.setItem("warkost-owner-nav-active", "Pelanggan");
+        applyActive(true);
+      } else if (["Dashboard", "Keluar"].includes(label)) {
+        if (label === "Dashboard")
+          sessionStorage.setItem("warkost-owner-nav-active", "Dashboard");
+        applyActive(false);
+      }
+    };
+
+    document.addEventListener("click", onNavClick, true);
 
     request("/api/me")
       .then((me) => {
@@ -99,13 +156,17 @@ export default function OwnerCustomersCenter() {
           attributes: true,
           attributeFilter: ["class", "aria-current", "data-owner-nav-key"],
         });
+        timer = window.setInterval(sync, 500);
       })
       .catch(() => {});
 
     return () => {
       disposed = true;
       observer?.disconnect();
+      if (timer) window.clearInterval(timer);
+      document.removeEventListener("click", onNavClick, true);
       document.body.classList.remove("owner-customers-center-active");
+      setLegacyVisibility(false);
     };
   }, []);
 
@@ -117,7 +178,9 @@ export default function OwnerCustomersCenter() {
       if (before) params.set("before", String(before));
       const data = await request(`/api/owner-customers?${params.toString()}`);
       setSummary(data.summary || { total: 0, active: 0, inactive: 0, points: 0 });
-      setCustomers((current) => append ? [...current, ...(data.customers || [])] : data.customers || []);
+      setCustomers((current) =>
+        append ? [...current, ...(data.customers || [])] : data.customers || [],
+      );
       setCursor(data.nextCursor || null);
     } catch (loadError) {
       setError(loadError.message);
@@ -191,7 +254,11 @@ export default function OwnerCustomersCenter() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: confirmCustomer.id, active: nextActive }),
       });
-      setNotice(nextActive ? `${confirmCustomer.name} berhasil diaktifkan kembali.` : `${confirmCustomer.name} berhasil dinonaktifkan.`);
+      setNotice(
+        nextActive
+          ? `${confirmCustomer.name} berhasil diaktifkan kembali.`
+          : `${confirmCustomer.name} berhasil dinonaktifkan.`,
+      );
       setConfirmCustomer(null);
       setDetail(null);
       await load({ nextQuery: query, nextStatus: status });
@@ -206,15 +273,6 @@ export default function OwnerCustomersCenter() {
   return createPortal(
     <>
       <style>{`
-        body.owner-customers-center-active main,
-        body.owner-customers-center-active footer {
-          display: none !important;
-        }
-        body.owner-customers-center-active #admin-ui-portal-root {
-          display: block !important;
-          width: 100% !important;
-          min-width: 0 !important;
-        }
         .occ-owner-page-shell { width:min(1360px, calc(100% - 64px)); margin:28px auto 56px; }
         .occ-owner-page-heading { margin:0 0 20px; }
         .occ-owner-page-heading span { display:block; margin-bottom:8px; color:#9a5130; font-size:11px; font-weight:900; letter-spacing:.16em; }
