@@ -41,8 +41,18 @@ async function request(url, options) {
 }
 
 function isOwnerCustomerView() {
-  const heading = document.querySelector("main .heading h1");
-  return heading?.textContent?.trim() === "Kelola pelanggan";
+  const heading = [...document.querySelectorAll("main .heading h1, main h1")].find(
+    (node) => node.textContent?.trim() === "Kelola pelanggan",
+  );
+  if (heading) return true;
+
+  const customerNav = [...document.querySelectorAll("header nav button")].find(
+    (button) => button.textContent?.replace(/\s+/g, " ").trim().includes("Pelanggan"),
+  );
+  return Boolean(
+    customerNav?.classList.contains("owner-nav-active") ||
+      customerNav?.getAttribute("aria-current") === "page",
+  );
 }
 
 export default function OwnerCustomersCenter() {
@@ -82,7 +92,13 @@ export default function OwnerCustomersCenter() {
         ownerVerified = true;
         sync();
         observer = new MutationObserver(sync);
-        observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true,
+          characterData: true,
+          attributes: true,
+          attributeFilter: ["class", "aria-current", "data-owner-nav-key"],
+        });
       })
       .catch(() => {});
 
@@ -190,9 +206,15 @@ export default function OwnerCustomersCenter() {
   return createPortal(
     <>
       <style>{`
-        body.owner-customers-center-active > main,
-        body.owner-customers-center-active > footer { display:none !important; }
-        body.owner-customers-center-active #admin-ui-portal-root { display:block !important; width:100% !important; }
+        body.owner-customers-center-active main,
+        body.owner-customers-center-active footer {
+          display: none !important;
+        }
+        body.owner-customers-center-active #admin-ui-portal-root {
+          display: block !important;
+          width: 100% !important;
+          min-width: 0 !important;
+        }
         .occ-owner-page-shell { width:min(1360px, calc(100% - 64px)); margin:28px auto 56px; }
         .occ-owner-page-heading { margin:0 0 20px; }
         .occ-owner-page-heading span { display:block; margin-bottom:8px; color:#9a5130; font-size:11px; font-weight:900; letter-spacing:.16em; }
