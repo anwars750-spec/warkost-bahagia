@@ -202,8 +202,18 @@ export default function OwnerCustomersCenter() {
                     <span className="occ-metric value"><strong>{money(customer.lifetime_value)}</strong><small>lifetime</small></span>
                     <span className="occ-activity"><strong>{formatDate(customer.last_order_at)}</strong><small>{customer.last_order_at ? "Order terakhir" : "Belum pernah order"}</small></span>
                     <div className="occ-actions">
-                      <button type="button" className="occ-detail-button" onClick={() => setDetail(customer)}>Detail</button>
-                      <button type="button" className={customer.active ? "occ-toggle danger" : "occ-toggle success"} onClick={() => setConfirmCustomer(customer)}>{customer.active ? "Nonaktifkan" : "Aktifkan"}</button>
+                      <button type="button" className="occ-detail-button occ-action-button" onClick={() => setDetail(customer)}>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/></svg>
+                        <span>Detail</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`${customer.active ? "occ-toggle danger" : "occ-toggle success"} occ-action-button`}
+                        onClick={() => setConfirmCustomer(customer)}
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v8"/><path d="M6.35 6.35a8 8 0 1 0 11.3 0"/></svg>
+                        <span>{customer.active ? "Nonaktifkan" : "Aktifkan"}</span>
+                      </button>
                     </div>
                   </article>
                 ))
@@ -221,20 +231,39 @@ export default function OwnerCustomersCenter() {
           <section className="occ-modal" role="dialog" aria-modal="true" aria-label="Detail pelanggan">
             <header className="occ-modal-head">
               <span className="occ-modal-avatar">{initials(detail.name)}</span>
-              <div><small>DETAIL PELANGGAN</small><h3>{detail.name || "Pelanggan"}</h3><p>{detail.email || "—"}</p></div>
-              <button type="button" className="occ-close" onClick={() => setDetail(null)} aria-label="Tutup detail">×</button>
+              <div className="occ-modal-title">
+                <small>PROFIL PELANGGAN</small>
+                <h3>{detail.name || "Pelanggan"}</h3>
+                <p>{detail.email || "Email belum tersedia"}</p>
+              </div>
+              <button type="button" className="occ-close" onClick={() => setDetail(null)} aria-label="Tutup detail"><span aria-hidden="true" /></button>
             </header>
             <div className="occ-modal-body">
-              <div className="occ-profile-status"><span className={`occ-status ${detail.active ? "active" : "inactive"}`}>{detail.active ? "Akun aktif" : "Akun nonaktif"}</span><small>Member sejak {formatDate(detail.created_at)}</small></div>
-              <div className="occ-detail-grid">
-                <div><span>Total pesanan</span><strong>{Number(detail.order_count || 0).toLocaleString("id-ID")}</strong></div>
-                <div><span>Saldo loyalty</span><strong>{Number(detail.points || 0).toLocaleString("id-ID")} poin</strong></div>
-                <div><span>Nilai belanja</span><strong>{money(detail.lifetime_value)}</strong></div>
-                <div><span>Order terakhir</span><strong>{formatDate(detail.last_order_at, true)}</strong></div>
+              <div className="occ-profile-status">
+                <div>
+                  <span className={`occ-status ${detail.active ? "active" : "inactive"}`}>{detail.active ? "Akun aktif" : "Akun nonaktif"}</span>
+                  <small>Status customer saat ini</small>
+                </div>
+                <div className="occ-member-since"><span>Member sejak</span><strong>{formatDate(detail.created_at)}</strong></div>
               </div>
-              <div className="occ-contact-card"><span>Kontak pelanggan</span><strong>{detail.phone || "Nomor telepon belum tersedia"}</strong><small>{detail.email || "Email tidak tersedia"}</small></div>
-              <div className="occ-rule-note"><strong>Kontrol akun Owner</strong><span>Pelanggan hanya dapat dinonaktifkan jika tidak memiliki pesanan aktif. Saat dinonaktifkan, sesi aktif pelanggan akan dicabut.</span></div>
-              <button type="button" className={detail.active ? "occ-modal-action danger" : "occ-modal-action success"} onClick={() => setConfirmCustomer(detail)}>{detail.active ? "Nonaktifkan pelanggan" : "Aktifkan kembali pelanggan"}</button>
+              <div className="occ-detail-grid">
+                <div className="occ-detail-card"><span>Total pesanan</span><strong>{Number(detail.order_count || 0).toLocaleString("id-ID")}</strong><small>order sepanjang waktu</small></div>
+                <div className="occ-detail-card"><span>Saldo loyalty</span><strong>{Number(detail.points || 0).toLocaleString("id-ID")} poin</strong><small>saldo yang dapat digunakan</small></div>
+                <div className="occ-detail-card"><span>Nilai belanja</span><strong>{money(detail.lifetime_value)}</strong><small>lifetime customer value</small></div>
+                <div className="occ-detail-card"><span>Order terakhir</span><strong>{formatDate(detail.last_order_at, true)}</strong><small>{detail.last_order_at ? "aktivitas transaksi terakhir" : "belum pernah order"}</small></div>
+              </div>
+              <div className="occ-contact-card">
+                <div className="occ-section-label">KONTAK PELANGGAN</div>
+                <div className="occ-contact-grid">
+                  <div><span>Email</span><strong>{detail.email || "Belum tersedia"}</strong></div>
+                  <div><span>Nomor telepon</span><strong>{detail.phone || "Belum tersedia"}</strong></div>
+                </div>
+              </div>
+              <div className="occ-rule-note"><span className="occ-rule-icon" aria-hidden="true">i</span><div><strong>Kontrol akun Owner</strong><span>Pelanggan hanya dapat dinonaktifkan jika tidak memiliki pesanan aktif. Saat dinonaktifkan, seluruh sesi aktif customer akan dicabut.</span></div></div>
+              <div className="occ-modal-footer">
+                <button type="button" className="occ-modal-secondary" onClick={() => setDetail(null)}>Tutup</button>
+                <button type="button" className={detail.active ? "occ-modal-action danger" : "occ-modal-action success"} onClick={() => setConfirmCustomer(detail)}>{detail.active ? "Nonaktifkan pelanggan" : "Aktifkan kembali pelanggan"}</button>
+              </div>
             </div>
           </section>
         </div>, document.body
@@ -242,9 +271,14 @@ export default function OwnerCustomersCenter() {
 
       {confirmCustomer && createPortal(
         <div className="occ-backdrop confirm" onMouseDown={(event) => !actionBusy && event.target === event.currentTarget && setConfirmCustomer(null)}>
-          <section className="occ-confirm" role="alertdialog" aria-modal="true" aria-label="Konfirmasi status pelanggan">
+          <section className={`occ-confirm ${confirmCustomer.active ? "danger" : "success"}`} role="alertdialog" aria-modal="true" aria-label="Konfirmasi status pelanggan">
             <span className={`occ-confirm-icon ${confirmCustomer.active ? "danger" : "success"}`}>{confirmCustomer.active ? "!" : "✓"}</span>
+            <span className="occ-confirm-kicker">KONFIRMASI AKUN</span>
             <h3>{confirmCustomer.active ? "Nonaktifkan pelanggan?" : "Aktifkan kembali pelanggan?"}</h3>
+            <div className="occ-confirm-customer">
+              <span className="occ-confirm-avatar">{initials(confirmCustomer.name)}</span>
+              <div><strong>{confirmCustomer.name || "Pelanggan"}</strong><small>{confirmCustomer.email || "Email belum tersedia"}</small></div>
+            </div>
             <p>{confirmCustomer.active ? `Akun ${confirmCustomer.name} tidak akan dapat bertransaksi setelah dinonaktifkan. Sistem akan menolak tindakan ini jika masih ada pesanan aktif.` : `Akun ${confirmCustomer.name} akan kembali dapat login dan melakukan transaksi.`}</p>
             <div className="occ-confirm-actions">
               <button type="button" onClick={() => setConfirmCustomer(null)} disabled={actionBusy}>Batal</button>

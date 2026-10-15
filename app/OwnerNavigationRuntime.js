@@ -177,8 +177,13 @@ export default function OwnerNavigationRuntime() {
         }
       });
 
-      const stored = sessionStorage.getItem("warkost-owner-nav-active");
-      setActive(VISIBLE_TABS.has(stored) ? stored : "Dashboard");
+      // Derive the active Owner tab from the page that is actually rendered.
+      // This prevents a stale sessionStorage value (for example Pelanggan)
+      // from making the wrong tab look active immediately after Owner login.
+      const customerViewVisible = Boolean(
+        document.querySelector('[aria-label="Owner Customer Center"]'),
+      );
+      setActive(customerViewVisible ? "Pelanggan" : "Dashboard");
     };
 
     const verifyOwnerRole = async () => {

@@ -81,6 +81,7 @@ import "./owner-dashboard-v3.css";
 import "./owner-dashboard-mobile-filter-polish.css";
 import "./owner-navigation-v2.css";
 import "./owner-customers-center.css";
+import "./owner-customers-polish-v2.css";
 import "./owner-business-report.css";
 import "./owner-business-report-legacy-heading-fix.css";
 import "./owner-promotion-report.css";
