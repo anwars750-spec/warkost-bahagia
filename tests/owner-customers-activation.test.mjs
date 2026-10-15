@@ -4,18 +4,35 @@ import test from "node:test";
 
 const source = fs.readFileSync("app/OwnerCustomersCenter.js", "utf8");
 const layout = fs.readFileSync("app/layout.js", "utf8");
+const page = fs.readFileSync("app/page.js", "utf8");
 
-test("Owner Customer Center is mounted globally", () => {
-  assert.match(layout, /import OwnerCustomersCenter from "\.\/OwnerCustomersCenter"/);
-  assert.match(layout, /<OwnerCustomersCenter\s*\/>/);
+test("Owner Customer Center dirender native oleh page.js untuk view customers", () => {
+  assert.match(page, /import OwnerCustomersCenter from "\.\/OwnerCustomersCenter"/);
+  assert.match(
+    page,
+    /role === "OWNER" && view === "customers" && \(\s*<OwnerCustomersCenter \/>/,
+  );
   assert.match(layout, /import "\.\/owner-customers-center\.css"/);
 });
 
-test("Owner Customer Center finds the legacy customer panel independent of main wrapper", () => {
-  assert.match(source, /document\.querySelectorAll\("section\.panel"\)/);
-  assert.doesNotMatch(source, /document\.querySelectorAll\("main section\.panel"\)/);
-  assert.match(source, /owner-customers-center-active/);
-  assert.match(source, /ownerCustomersLegacy/);
+test("panel pelanggan lama hanya untuk Admin", () => {
+  assert.match(page, /role === "ADMIN" && view === "customers" && \(/);
+  assert.doesNotMatch(
+    page,
+    /\["ADMIN", "OWNER"\]\.includes\(role\) && view === "customers"/,
+  );
+});
+
+test("halaman utama Owner Customer tidak memakai runtime takeover", () => {
+  assert.doesNotMatch(layout, /import OwnerCustomersCenter/);
+  assert.doesNotMatch(layout, /<OwnerCustomersCenter\s*\/>/);
+  assert.doesNotMatch(source, /MutationObserver|setInterval|portalRoot/);
+  assert.doesNotMatch(
+    source,
+    /owner-customers-center-active|setLegacyVisibility|ownerCustomerViewPresent/,
+  );
+  assert.doesNotMatch(source, /document\.querySelector\("body main"\)/);
+  assert.match(source, /<section className="occ" aria-label="Owner Customer Center">/);
 });
 
 test("Owner Customer Center keeps customer controls and richer metrics", () => {

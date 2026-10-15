@@ -121,7 +121,6 @@ import OwnerSettingsCenter from "./OwnerSettingsCenter";
 import OwnerSettingsExperience from "./OwnerSettingsExperience";
 import OwnerNavigationRuntime from "./OwnerNavigationRuntime";
 import OwnerNotificationPopover from "./OwnerNotificationPopover";
-import OwnerCustomersCenter from "./OwnerCustomersCenter";
 import ManagerCashSettlementCenter from "./ManagerCashSettlementCenter";
 import ManagerOwnerSettlementCenter from "./ManagerOwnerSettlementCenter";
 import ManagerCashSyncBridge from "./ManagerCashSyncBridge";
@@ -177,7 +176,6 @@ export default function RootLayout({ children }) {
         <OwnerSettingsExperience />
         <OwnerNavigationRuntime />
         <OwnerNotificationPopover />
-        <OwnerCustomersCenter />
         <ManagerCashSettlementCenter />
         <ManagerOwnerSettlementCenter />
         <ManagerCashSyncBridge />

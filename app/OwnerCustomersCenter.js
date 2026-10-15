@@ -40,57 +40,7 @@ async function request(url, options) {
   return data;
 }
 
-function navLabel(button) {
-  if (!button) return "";
-  if (button.dataset.ownerNavKey) return button.dataset.ownerNavKey;
-  return String(button.textContent || "").replace(/\s+/g, " ").trim();
-}
-
-function ownerCustomerViewPresent() {
-  const activeNav = document.querySelector(
-    "header.top nav button[data-owner-nav-key='Pelanggan'].owner-nav-active, header.top nav button[data-owner-nav-key='Pelanggan'][aria-current='page']",
-  );
-  const heading = document.querySelector("main .heading h1");
-  const stored = sessionStorage.getItem("warkost-owner-nav-active");
-  return Boolean(activeNav) || heading?.textContent?.trim() === "Kelola pelanggan" || stored === "Pelanggan";
-}
-
-function setLegacyVisibility(hidden) {
-  const main = document.querySelector("body main");
-  const footer = document.querySelector("body footer");
-  if (main) {
-    if (hidden) {
-      if (!main.dataset.ownerCustomersPreviousDisplay)
-        main.dataset.ownerCustomersPreviousDisplay = main.style.display || "";
-      main.style.setProperty("display", "none", "important");
-      main.dataset.ownerCustomersHidden = "true";
-    } else if (main.dataset.ownerCustomersHidden === "true") {
-      const previous = main.dataset.ownerCustomersPreviousDisplay || "";
-      main.style.removeProperty("display");
-      if (previous) main.style.display = previous;
-      delete main.dataset.ownerCustomersHidden;
-      delete main.dataset.ownerCustomersPreviousDisplay;
-    }
-  }
-  if (footer) {
-    if (hidden) {
-      if (!footer.dataset.ownerCustomersPreviousDisplay)
-        footer.dataset.ownerCustomersPreviousDisplay = footer.style.display || "";
-      footer.style.setProperty("display", "none", "important");
-      footer.dataset.ownerCustomersHidden = "true";
-    } else if (footer.dataset.ownerCustomersHidden === "true") {
-      const previous = footer.dataset.ownerCustomersPreviousDisplay || "";
-      footer.style.removeProperty("display");
-      if (previous) footer.style.display = previous;
-      delete footer.dataset.ownerCustomersHidden;
-      delete footer.dataset.ownerCustomersPreviousDisplay;
-    }
-  }
-}
-
 export default function OwnerCustomersCenter() {
-  const [portalRoot, setPortalRoot] = useState(null);
-  const [active, setActive] = useState(false);
   const [customers, setCustomers] = useState([]);
   const [summary, setSummary] = useState({ total: 0, active: 0, inactive: 0, points: 0 });
   const [cursor, setCursor] = useState(null);
@@ -104,71 +54,6 @@ export default function OwnerCustomersCenter() {
   const [detail, setDetail] = useState(null);
   const [confirmCustomer, setConfirmCustomer] = useState(null);
   const [actionBusy, setActionBusy] = useState(false);
-
-  useEffect(() => {
-    let disposed = false;
-    let observer = null;
-    let timer = null;
-    let ownerVerified = false;
-
-    const applyActive = (nextActive) => {
-      if (disposed || !ownerVerified) return;
-      document.body.classList.toggle("owner-customers-center-active", nextActive);
-      setLegacyVisibility(nextActive);
-      const root = document.getElementById("admin-ui-portal-root");
-      if (root) setPortalRoot((current) => (current === root ? current : root));
-      setActive((current) => (current === nextActive ? current : nextActive));
-    };
-
-    const sync = () => {
-      if (!ownerVerified || disposed) return;
-      applyActive(ownerCustomerViewPresent());
-    };
-
-    const onNavClick = (event) => {
-      if (!ownerVerified || disposed) return;
-      const button = event.target?.closest?.("header.top nav button");
-      if (!button) return;
-      const label = navLabel(button);
-      if (!label) return;
-      if (label === "Pelanggan") {
-        sessionStorage.setItem("warkost-owner-nav-active", "Pelanggan");
-        applyActive(true);
-      } else if (["Dashboard", "Keluar"].includes(label)) {
-        if (label === "Dashboard")
-          sessionStorage.setItem("warkost-owner-nav-active", "Dashboard");
-        applyActive(false);
-      }
-    };
-
-    document.addEventListener("click", onNavClick, true);
-
-    request("/api/me")
-      .then((me) => {
-        if (disposed || me?.user?.role !== "OWNER") return;
-        ownerVerified = true;
-        sync();
-        observer = new MutationObserver(sync);
-        observer.observe(document.body, {
-          childList: true,
-          subtree: true,
-          characterData: true,
-          attributes: true,
-          attributeFilter: ["class", "aria-current", "data-owner-nav-key"],
-        });
-        timer = window.setInterval(sync, 500);
-      })
-      .catch(() => {});
-
-    return () => {
-      disposed = true;
-      observer?.disconnect();
-      if (timer) window.clearInterval(timer);
-      document.removeEventListener("click", onNavClick, true);
-      document.body.classList.remove("owner-customers-center-active");
-      setLegacyVisibility(false);
-    };
-  }, []);
 
   async function load({ nextQuery = query, nextStatus = status, before = null, append = false } = {}) {
     append ? setLoadingMore(true) : setLoading(true);
@@ -192,13 +77,8 @@ export default function OwnerCustomersCenter() {
   }
 
   useEffect(() => {
-    if (!active) return;
-    setQuery("");
-    setDraft("");
-    setStatus("all");
-    setNotice("");
     load({ nextQuery: "", nextStatus: "all" });
-  }, [active]);
+  }, []);
 
   useEffect(() => {
     if (!detail && !confirmCustomer) return;
@@ -221,8 +101,6 @@ export default function OwnerCustomersCenter() {
     if (status === "inactive") return "pelanggan nonaktif";
     return "pelanggan";
   }, [status]);
-
-  if (!active || !portalRoot) return null;
 
   const applySearch = (event) => {
     event.preventDefault();
@@ -270,30 +148,9 @@ export default function OwnerCustomersCenter() {
     }
   };
 
-  return createPortal(
+  return (
     <>
-      <style>{`
-        .occ-owner-page-shell { width:min(1360px, calc(100% - 64px)); margin:28px auto 56px; }
-        .occ-owner-page-heading { margin:0 0 20px; }
-        .occ-owner-page-heading span { display:block; margin-bottom:8px; color:#9a5130; font-size:11px; font-weight:900; letter-spacing:.16em; }
-        .occ-owner-page-heading h1 { margin:0; color:#2f211a; font-size:clamp(30px,3vw,46px); line-height:1.05; }
-        .occ-owner-page-heading p { margin:10px 0 0; color:#8d7567; font-size:13px; }
-        @media(max-width:760px){
-          .occ-owner-page-shell{width:calc(100% - 24px);margin:18px auto 32px}
-          .occ-owner-page-heading{margin-bottom:14px}
-          .occ-owner-page-heading h1{font-size:30px}
-          .occ-owner-page-heading p{font-size:11px}
-        }
-      `}</style>
-
-      <div className="occ-owner-page-shell">
-        <header className="occ-owner-page-heading">
-          <span>KONTROL OWNER</span>
-          <h1>Kelola pelanggan</h1>
-          <p>Pantau aktivitas customer, loyalty, nilai transaksi, dan status akun dari satu layar.</p>
-        </header>
-
-        <section className="occ" aria-label="Owner Customer Center">
+      <section className="occ" aria-label="Owner Customer Center">
           <div className="occ-summary-grid">
             <article><span>Total pelanggan</span><strong>{Number(summary.total || 0).toLocaleString("id-ID")}</strong><small>Semua akun customer</small></article>
             <article className="active"><span>Pelanggan aktif</span><strong>{Number(summary.active || 0).toLocaleString("id-ID")}</strong><small>Dapat melakukan transaksi</small></article>
@@ -357,8 +214,7 @@ export default function OwnerCustomersCenter() {
 
             {cursor && <div className="occ-more-wrap"><button type="button" className="occ-more" disabled={loadingMore} onClick={() => load({ nextQuery: query, nextStatus: status, before: cursor, append: true })}>{loadingMore ? "Memuat..." : "Muat pelanggan lainnya"}</button></div>}
           </div>
-        </section>
-      </div>
+      </section>
 
       {detail && createPortal(
         <div className="occ-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setDetail(null)}>
@@ -397,7 +253,6 @@ export default function OwnerCustomersCenter() {
           </section>
         </div>, document.body
       )}
-    </>,
-    portalRoot,
+    </>
   );
 }

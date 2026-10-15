@@ -127,9 +127,15 @@ test("UI mempertahankan pencarian Admin tetapi kontrol aktivasi hanya Owner", ()
     path.join(process.cwd(), "app/page.js"),
     "utf8",
   );
+  const ownerCustomers = fs.readFileSync(
+    path.join(process.cwd(), "app/OwnerCustomersCenter.js"),
+    "utf8",
+  );
   assert.match(source, /Admin dapat mencari pelanggan/);
   assert.match(
     source,
-    /role === "OWNER" && \(\s*<button[\s\S]*api\("customer-active"/,
+    /role === "ADMIN" && view === "customers" && \(/,
   );
+  assert.match(ownerCustomers, /\/api\/customer-active/);
+  assert.match(ownerCustomers, /Nonaktifkan pelanggan/);
 });

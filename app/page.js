@@ -12,6 +12,7 @@ import AdminPrinterController from "./AdminPrinterController";
 import AdminUiEnhancer from "./AdminUiEnhancer";
 import ConversationChat from "./ConversationChat";
 import ManagerControlCenter from "./ManagerControlCenter";
+import OwnerCustomersCenter from "./OwnerCustomersCenter";
 import {
   ADMIN_ORDER_FILTERS,
   adminOrderCounts,
@@ -3780,13 +3781,15 @@ export default function App() {
             </form>
           </section>
         )}
-        {["ADMIN", "OWNER"].includes(role) && view === "customers" && (
+        {role === "OWNER" && view === "customers" && (
+          <OwnerCustomersCenter />
+        )}
+        {role === "ADMIN" && view === "customers" && (
           <section className="panel">
             <h2>Daftar pelanggan</h2>
             <p>
-              {role === "OWNER"
-                ? "Pesanan aktif harus diselesaikan sebelum akun dinonaktifkan."
-                : "Admin dapat mencari pelanggan dan menangani dukungan akun. Aktivasi akun dikelola Owner."}
+              Admin dapat mencari pelanggan dan menangani dukungan akun.
+              Aktivasi akun dikelola Owner.
             </p>
             <form
               onSubmit={async (event) => {
@@ -3827,21 +3830,6 @@ export default function App() {
                   {customer.active ? "Aktif" : "Nonaktif"} ·{" "}
                   {customer.order_count} pesanan · {customer.points} poin
                 </span>
-                {role === "OWNER" && (
-                  <button
-                    disabled={busy}
-                    onClick={() =>
-                      run(() =>
-                        api("customer-active", {
-                          id: customer.id,
-                          active: !customer.active,
-                        }),
-                      )
-                    }
-                  >
-                    {customer.active ? "Nonaktifkan" : "Aktifkan"}
-                  </button>
-                )}
               </div>
             ))}
             {!customers.length && <p>Belum ada pelanggan yang cocok.</p>}
