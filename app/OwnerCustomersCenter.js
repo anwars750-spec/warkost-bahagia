@@ -41,7 +41,9 @@ async function request(url, options) {
 function findLegacyPanel() {
   return [...document.querySelectorAll("section.panel")].find(
     (panel) =>
-      panel.querySelector("h2")?.textContent?.trim() === "Daftar pelanggan",
+      panel.dataset.ownerCustomersLegacy === "true" ||
+      panel.querySelector(":scope > h2")?.textContent?.trim() ===
+        "Daftar pelanggan",
   );
 }
 
@@ -72,13 +74,16 @@ export default function OwnerCustomersCenter() {
     let currentLegacy = null;
     let currentHost = null;
 
+    const releaseLegacy = () => {
+      if (!currentLegacy) return;
+      delete currentLegacy.dataset.ownerCustomersLegacy;
+      currentLegacy.removeAttribute("aria-hidden");
+      currentLegacy = null;
+    };
+
     const restore = () => {
       document.body.classList.remove("owner-customers-center-active");
-      if (currentLegacy) {
-        currentLegacy.hidden = false;
-        delete currentLegacy.dataset.ownerCustomersLegacy;
-        currentLegacy = null;
-      }
+      releaseLegacy();
       currentHost?.remove();
       currentHost = null;
       if (!disposed) setHost(null);
@@ -98,23 +103,29 @@ export default function OwnerCustomersCenter() {
           }
 
           if (currentLegacy && currentLegacy !== legacy) {
-            currentLegacy.hidden = false;
             delete currentLegacy.dataset.ownerCustomersLegacy;
+            currentLegacy.removeAttribute("aria-hidden");
           }
 
           currentLegacy = legacy;
-          legacy.hidden = true;
+          legacy.hidden = false;
           legacy.dataset.ownerCustomersLegacy = "true";
           document.body.classList.add("owner-customers-center-active");
 
-          let target = document.getElementById("owner-customers-center-host");
+          let target = legacy.querySelector(
+            ":scope > #owner-customers-center-host",
+          );
           if (!target) {
+            document.getElementById("owner-customers-center-host")?.remove();
             target = document.createElement("div");
             target.id = "owner-customers-center-host";
-            legacy.insertAdjacentElement("beforebegin", target);
+            target.dataset.ownerCustomersHost = "true";
+            legacy.appendChild(target);
           }
+
           currentHost = target;
-          if (!disposed) setHost((previous) => (previous === target ? previous : target));
+          if (!disposed)
+            setHost((previous) => (previous === target ? previous : target));
         };
 
         sync();
@@ -124,7 +135,7 @@ export default function OwnerCustomersCenter() {
           subtree: true,
         });
       } catch {
-        // Keep the legacy Owner screen available if role detection fails.
+        // Keep the native Owner screen available if role detection fails.
       }
     };
 
@@ -133,10 +144,7 @@ export default function OwnerCustomersCenter() {
       disposed = true;
       observer?.disconnect();
       document.body.classList.remove("owner-customers-center-active");
-      if (currentLegacy) {
-        currentLegacy.hidden = false;
-        delete currentLegacy.dataset.ownerCustomersLegacy;
-      }
+      releaseLegacy();
       currentHost?.remove();
     };
   }, []);
@@ -251,6 +259,25 @@ export default function OwnerCustomersCenter() {
 
   return createPortal(
     <>
+      <style>{`
+        section.panel[data-owner-customers-legacy="true"] {
+          display: block !important;
+          padding: 0 !important;
+          border: 0 !important;
+          background: transparent !important;
+          box-shadow: none !important;
+          overflow: visible !important;
+        }
+        section.panel[data-owner-customers-legacy="true"] > :not(#owner-customers-center-host) {
+          display: none !important;
+        }
+        #owner-customers-center-host {
+          display: block !important;
+          width: 100% !important;
+          min-width: 0 !important;
+        }
+      `}</style>
+
       <section className="occ" aria-label="Owner Customer Center">
         <div className="occ-summary-grid">
           <article>
