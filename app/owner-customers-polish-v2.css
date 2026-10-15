@@ -146,11 +146,15 @@ body .occ-confirm-actions button.danger:hover:not(:disabled){background:#813527;
 }
 
 @media(max-width:480px){
+  body .occ-backdrop{place-items:center;padding:12px}
   body .occ-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
   body .occ-action-button{min-width:0;padding:0 6px;font-size:8.5px}
-  body .occ-modal{width:100vw;max-height:100dvh;height:100dvh;border:0;border-radius:0}
-  body .occ-modal-head{padding-top:max(14px,env(safe-area-inset-top))}
-  body .occ-modal-body{padding-bottom:max(16px,env(safe-area-inset-bottom))}
+  body .occ-modal{
+    width:min(380px,calc(100vw - 24px));height:auto;max-height:calc(100dvh - 24px);margin:auto;
+    justify-self:center;align-self:center;border:1px solid #e4d3c5;border-radius:20px;
+  }
+  body .occ-modal-head{padding-top:14px}
+  body .occ-modal-body{padding-bottom:16px}
   body .occ-profile-status{flex-direction:column}
   body .occ-member-since{text-align:left}
   body .occ-detail-grid{grid-template-columns:1fr 1fr}
