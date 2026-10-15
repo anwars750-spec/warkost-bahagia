@@ -8,6 +8,7 @@ import {
   resetOwnerAdminOperatorPin,
   setOwnerAdminOperatorActive,
 } from "../../../lib/owner-admin-operators.mjs";
+import { publishRealtimeEvent } from "../../../lib/realtime.mjs";
 
 export const runtime = "nodejs";
 
@@ -40,30 +41,32 @@ export async function POST(request) {
     const body = await readJsonBody(request);
     const action = String(body?.action || "").toUpperCase();
 
-    if (action === "CREATE")
-      return out(
-        await createOwnerAdminOperator(user, {
+    if (action === "CREATE") {
+      const result = await createOwnerAdminOperator(user, {
           name: body.name,
           pin: body.pin,
-        }),
-        201,
-      );
+        });
+      publishRealtimeEvent("STAFF_CHANGED", { roles: ["OWNER"], payload: {} });
+      return out(result, 201);
+    }
 
-    if (action === "RESET_PIN")
-      return out(
-        await resetOwnerAdminOperatorPin(user, {
+    if (action === "RESET_PIN") {
+      const result = await resetOwnerAdminOperatorPin(user, {
           operatorId: body.operatorId,
           pin: body.pin,
-        }),
-      );
+        });
+      publishRealtimeEvent("STAFF_CHANGED", { roles: ["OWNER"], payload: {} });
+      return out(result);
+    }
 
-    if (action === "SET_ACTIVE")
-      return out(
-        await setOwnerAdminOperatorActive(user, {
+    if (action === "SET_ACTIVE") {
+      const result = await setOwnerAdminOperatorActive(user, {
           operatorId: body.operatorId,
           active: body.active === true,
-        }),
-      );
+        });
+      publishRealtimeEvent("STAFF_CHANGED", { roles: ["OWNER"], payload: {} });
+      return out(result);
+    }
 
     throw new DomainError("Aksi operator tidak dikenal", 404);
   } catch (error) {

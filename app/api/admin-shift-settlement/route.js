@@ -6,6 +6,7 @@ import {
   getAdminShiftSettlementState,
   submitAdminShiftSettlement,
 } from "../../../lib/cash-settlement-control.mjs";
+import { publishActionRealtime } from "../../../lib/realtime.mjs";
 
 export const runtime = "nodejs";
 
@@ -61,6 +62,10 @@ export async function POST(request) {
         replayed: Boolean(result?.replayed),
         elapsedMs: elapsed,
       });
+      await publishActionRealtime("admin-shift-settlement", user, body, result).catch(
+        (realtimeError) =>
+          console.error("Shift settlement realtime publication failed", realtimeError),
+      );
       return out({ ...result, server_elapsed_ms: elapsed }, 201);
     }
     throw new DomainError("Aksi setoran shift tidak dikenal", 404);

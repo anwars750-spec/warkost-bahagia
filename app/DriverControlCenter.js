@@ -252,12 +252,30 @@ export default function DriverControlCenter() {
 
   useEffect(() => {
     load();
-    const timer = window.setInterval(() => load(true), 10000);
+    const timer = window.setInterval(() => load(true), 120000);
     const onCod = () => load(true);
+    const onRealtime = (event) => {
+      if (
+        [
+          "KITCHEN_ORDER_READY",
+          "DRIVER_ASSIGNMENT_CHANGED",
+          "DELIVERY_STATUS_CHANGED",
+          "COD_STATUS_CHANGED",
+          "SETTLEMENT_STATUS_CHANGED",
+          "NOTIFICATION_CREATED",
+          "CONVERSATION_CHANGED",
+        ].includes(event.detail?.type)
+      )
+        load(true);
+    };
     window.addEventListener("warkost:cod-batch-updated", onCod);
+    window.addEventListener("warkost:realtime", onRealtime);
+    window.addEventListener("warkost:realtime-recovered", onCod);
     return () => {
       window.clearInterval(timer);
       window.removeEventListener("warkost:cod-batch-updated", onCod);
+      window.removeEventListener("warkost:realtime", onRealtime);
+      window.removeEventListener("warkost:realtime-recovered", onCod);
     };
   }, [load]);
 

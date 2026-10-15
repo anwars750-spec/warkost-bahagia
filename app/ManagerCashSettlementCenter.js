@@ -100,7 +100,11 @@ export default function ManagerCashSettlementCenter() {
     load();
     const refresh = () => load();
     window.addEventListener("warkost:admin-settlement-submitted", refresh);
-    return () => window.removeEventListener("warkost:admin-settlement-submitted", refresh);
+    window.addEventListener("warkost:realtime-recovered", refresh);
+    return () => {
+      window.removeEventListener("warkost:admin-settlement-submitted", refresh);
+      window.removeEventListener("warkost:realtime-recovered", refresh);
+    };
   }, [isManager, load]);
 
   useEffect(() => {

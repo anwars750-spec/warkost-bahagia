@@ -391,11 +391,28 @@ export default function ConversationChat({ target, viewerRole, onClose }) {
         if (!active) return;
         setConversation(result);
         setLoading(false);
-        timer = window.setInterval(() => {
+        const refreshConversation = () => {
           request(`chat?conversationId=${result.id}`)
             .then((latest) => active && setConversation(latest))
             .catch((pollError) => active && setError(pollError.message));
-        }, 3500);
+        };
+        const onRealtime = (event) => {
+          if (
+            event.detail?.type === "CONVERSATION_CHANGED" &&
+            Number(event.detail?.payload?.conversationId) === Number(result.id)
+          )
+            refreshConversation();
+        };
+        window.addEventListener("warkost:realtime", onRealtime);
+        window.addEventListener(
+          "warkost:realtime-recovered",
+          refreshConversation,
+        );
+        timer = {
+          interval: window.setInterval(refreshConversation, 120000),
+          onRealtime,
+          onRecovered: refreshConversation,
+        };
       })
       .catch((loadError) => {
         if (!active) return;
@@ -404,7 +421,14 @@ export default function ConversationChat({ target, viewerRole, onClose }) {
       });
     return () => {
       active = false;
-      if (timer) window.clearInterval(timer);
+      if (timer) {
+        window.clearInterval(timer.interval);
+        window.removeEventListener("warkost:realtime", timer.onRealtime);
+        window.removeEventListener(
+          "warkost:realtime-recovered",
+          timer.onRecovered,
+        );
+      }
     };
   }, [target?.type, target?.orderId]);
 

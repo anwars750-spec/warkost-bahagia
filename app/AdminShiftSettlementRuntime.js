@@ -159,9 +159,11 @@ export default function AdminShiftSettlementRuntime() {
     const refresh = () => void load({ silent: true });
     window.addEventListener("warkost:cod-batch-updated", refresh);
     window.addEventListener("warkost:admin-session-restored", refresh);
+    window.addEventListener("warkost:realtime-recovered", refresh);
     return () => {
       window.removeEventListener("warkost:cod-batch-updated", refresh);
       window.removeEventListener("warkost:admin-session-restored", refresh);
+      window.removeEventListener("warkost:realtime-recovered", refresh);
     };
   }, [anchor, load]);
 

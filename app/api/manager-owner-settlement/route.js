@@ -8,6 +8,7 @@ import {
   submitManagerOwnerSettlement,
   verifyOwnerManagerSettlement,
 } from "../../../lib/manager-owner-settlement.mjs";
+import { publishActionRealtime } from "../../../lib/realtime.mjs";
 
 export const runtime = "nodejs";
 
@@ -40,30 +41,48 @@ export async function POST(request) {
     const body = await readJsonBody(request);
     const action = String(body?.action || "").toUpperCase();
 
-    if (action === "SUBMIT")
-      return out(
-        await submitManagerOwnerSettlement(user, {
+    if (action === "SUBMIT") {
+      const result = await submitManagerOwnerSettlement(user, {
           destination: body.destination,
           submittedAmount: body.submittedAmount,
           bankReference: body.bankReference,
-        }),
-      );
+        });
+      await publishActionRealtime(
+        "manager-settlement-submit",
+        user,
+        body,
+        result,
+      ).catch(() => {});
+      return out(result);
+    }
 
-    if (action === "VERIFY")
-      return out(
-        await verifyOwnerManagerSettlement(user, {
+    if (action === "VERIFY") {
+      const result = await verifyOwnerManagerSettlement(user, {
           settlementId: body.settlementId,
           receivedAmount: body.receivedAmount,
-        }),
-      );
+        });
+      await publishActionRealtime(
+        "manager-settlement-verify",
+        user,
+        body,
+        result,
+      ).catch(() => {});
+      return out(result);
+    }
 
-    if (action === "REJECT")
-      return out(
-        await rejectOwnerManagerSettlement(user, {
+    if (action === "REJECT") {
+      const result = await rejectOwnerManagerSettlement(user, {
           settlementId: body.settlementId,
           reason: body.reason,
-        }),
-      );
+        });
+      await publishActionRealtime(
+        "manager-settlement-reject",
+        user,
+        body,
+        result,
+      ).catch(() => {});
+      return out(result);
+    }
 
     throw new DomainError("Aksi setoran Manager tidak dikenal", 404);
   } catch (error) {

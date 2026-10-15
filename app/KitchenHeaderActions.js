@@ -106,6 +106,10 @@ export default function KitchenHeaderActions() {
         if (badge.style.display !== nextDisplay) badge.style.display = nextDisplay;
       }
     };
+    const onRecovered = () => {
+      if (panel) void load({ quiet: true });
+      syncHeaderState();
+    };
 
     const filtered = () =>
       filter === "unread"
@@ -285,7 +289,7 @@ export default function KitchenHeaderActions() {
       void load();
       refreshTimer = setInterval(() => {
         if (panel && document.visibilityState === "visible") void load({ quiet: true });
-      }, 5000);
+      }, 120000);
     };
 
     const closeLogout = () => {
@@ -424,6 +428,11 @@ export default function KitchenHeaderActions() {
     };
 
     const onViewportChange = () => positionPanel();
+    const onRealtime = (event) => {
+      if (panel && event.detail?.type === "NOTIFICATION_CREATED")
+        void load({ quiet: true });
+      syncHeaderState();
+    };
     const observer = new MutationObserver(syncHeaderState);
     observer.observe(document.body, { childList: true, subtree: true });
     syncHeaderState();
@@ -433,6 +442,8 @@ export default function KitchenHeaderActions() {
     document.addEventListener("keydown", onKeyDown);
     window.addEventListener("resize", onViewportChange);
     window.addEventListener("scroll", onViewportChange, true);
+    window.addEventListener("warkost:realtime", onRealtime);
+    window.addEventListener("warkost:realtime-recovered", onRecovered);
 
     return () => {
       observer.disconnect();
@@ -443,6 +454,8 @@ export default function KitchenHeaderActions() {
       document.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("resize", onViewportChange);
       window.removeEventListener("scroll", onViewportChange, true);
+      window.removeEventListener("warkost:realtime", onRealtime);
+      window.removeEventListener("warkost:realtime-recovered", onRecovered);
     };
   }, []);
 

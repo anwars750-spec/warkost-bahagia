@@ -108,6 +108,7 @@ export default function OwnerStockOverview() {
   useEffect(() => {
     if (!open) return;
     load();
+    window.addEventListener("warkost:realtime-recovered", load);
     const previous = document.body.style.overflow;
     const onKey = (event) => event.key === "Escape" && setOpen(false);
     document.body.style.overflow = "hidden";
@@ -115,6 +116,7 @@ export default function OwnerStockOverview() {
     return () => {
       document.body.style.overflow = previous;
       document.removeEventListener("keydown", onKey);
+      window.removeEventListener("warkost:realtime-recovered", load);
     };
   }, [open, load]);
 

@@ -144,14 +144,21 @@ export default function AdminCustomerService() {
     const delay = window.setTimeout(
       () => {
         refresh();
-        timer = window.setInterval(refresh, 4000);
+        timer = window.setInterval(refresh, 120000);
       },
       query ? 250 : 0,
     );
+    const onRealtime = (event) => {
+      if (event.detail?.type === "CONVERSATION_CHANGED") refresh();
+    };
+    window.addEventListener("warkost:realtime", onRealtime);
+    window.addEventListener("warkost:realtime-recovered", refresh);
     return () => {
       active = false;
       window.clearTimeout(delay);
       if (timer) window.clearInterval(timer);
+      window.removeEventListener("warkost:realtime", onRealtime);
+      window.removeEventListener("warkost:realtime-recovered", refresh);
     };
   }, [open, filter, query, selectedId]);
 

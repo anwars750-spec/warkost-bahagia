@@ -203,11 +203,17 @@ export default function OwnerDashboardRuntime() {
         request("stock"),
         request("print-jobs"),
       ]);
-      setPayload({
+      const nextPayload = {
         dashboard,
         stock: stock.products || [],
         printJobs: printJobs.jobs || [],
-      });
+      };
+      setPayload(nextPayload);
+      window.dispatchEvent(
+        new CustomEvent("warkost:owner-operational-data", {
+          detail: nextPayload,
+        }),
+      );
     } catch (loadError) {
       setError(loadError.message);
     } finally {
@@ -218,8 +224,33 @@ export default function OwnerDashboardRuntime() {
   useEffect(() => {
     if (!visible || !owner) return;
     load();
-    const timer = window.setInterval(load, 30000);
-    return () => window.clearInterval(timer);
+    const timer = window.setInterval(load, 120000);
+    const onRealtime = (event) => {
+      if (
+        [
+          "ORDER_CREATED",
+          "ORDER_STATUS_CHANGED",
+          "PAYMENT_STATUS_CHANGED",
+          "PAYMENT_PAID",
+          "DELIVERY_STATUS_CHANGED",
+          "COD_STATUS_CHANGED",
+          "SETTLEMENT_STATUS_CHANGED",
+          "STOCK_CHANGED",
+          "PRODUCT_OUT_OF_STOCK",
+          "PRODUCT_LOW_STOCK",
+          "STAFF_CHANGED",
+          "PRINTER_STATUS_CHANGED",
+        ].includes(event.detail?.type)
+      )
+        load();
+    };
+    window.addEventListener("warkost:realtime", onRealtime);
+    window.addEventListener("warkost:realtime-recovered", load);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("warkost:realtime", onRealtime);
+      window.removeEventListener("warkost:realtime-recovered", load);
+    };
   }, [visible, owner?.id, dashboardQuery]);
 
   useEffect(() => {

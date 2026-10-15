@@ -357,19 +357,35 @@ export default function KitchenDashboardFast() {
   useEffect(() => {
     if (!showDashboard) return;
     loadKitchen();
-    const poll = setInterval(loadKitchen, 15000);
+    const poll = setInterval(loadKitchen, 120000);
     const clock = setInterval(() => setNow(Date.now()), 30000);
     const onFocus = () => loadKitchen();
     const onVisibility = () => {
       if (document.visibilityState === "visible") loadKitchen();
     };
+    const onRealtime = (event) => {
+      if (
+        [
+          "ORDER_CREATED",
+          "KITCHEN_ORDER_CREATED",
+          "ORDER_STATUS_CHANGED",
+          "ORDER_CANCELLED",
+          "STOCK_CHANGED",
+        ].includes(event.detail?.type)
+      )
+        loadKitchen();
+    };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("warkost:realtime", onRealtime);
+    window.addEventListener("warkost:realtime-recovered", loadKitchen);
     return () => {
       clearInterval(poll);
       clearInterval(clock);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("warkost:realtime", onRealtime);
+      window.removeEventListener("warkost:realtime-recovered", loadKitchen);
     };
   }, [showDashboard, loadKitchen]);
 

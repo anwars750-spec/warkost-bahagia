@@ -9,6 +9,10 @@ import {
   sessionSecret,
 } from "../../../lib/auth.mjs";
 import {
+  disconnectRealtimeUser,
+  publishActionRealtime,
+} from "../../../lib/realtime.mjs";
+import {
   required,
   createOrder,
   changeStatus,
@@ -117,6 +121,15 @@ import {
 export const runtime = "nodejs";
 const out = (data, status = 200) =>
   NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
+async function mutation(action, user, body, operation, status = 200) {
+  const result = await operation();
+  try {
+    await publishActionRealtime(action, user, body, result);
+  } catch (realtimeError) {
+    console.error("Realtime publication failed", { action, error: realtimeError });
+  }
+  return out(result, status);
+}
 const integer = (value) =>
   Number.isSafeInteger(Number(value)) && Number(value) > 0
     ? Number(value)
@@ -615,23 +628,23 @@ export async function POST(request, { params }) {
     if (action === "notification-read")
       return out(await readNotification(user, integer(body.id)));
     if (action === "chat-open")
-      return out(
-        await openConversation(user, {
+      return mutation(action, user, body, () =>
+        openConversation(user, {
           type: body.type,
           orderId: integer(body.orderId),
         }),
       );
     if (action === "chat-message")
-      return out(
-        await sendConversationMessage(user, {
+      return mutation(action, user, body, () =>
+        sendConversationMessage(user, {
           conversationId: integer(body.conversationId),
           message: body.message,
         }),
         201,
       );
     if (action === "chat-status")
-      return out(
-        await updateConversationStatus(
+      return mutation(action, user, body, () =>
+        updateConversationStatus(
           user,
           integer(body.conversationId),
           body.status,
@@ -646,20 +659,26 @@ export async function POST(request, { params }) {
       return out(await removeAddress(user, integer(body.id)));
     if (action === "profile") {
       const result = await updateProfile(user, body);
-      const response = out({ user: result.user });
-      if (result.passwordChanged)
+      const response = out({
+        user: result.user,
+        sessionRotated: result.passwordChanged,
+      });
+      if (result.passwordChanged) {
+        const nextSession = await issueSession(result.user);
         response.cookies.set(
           "wb_session",
-          await issueSession(result.user),
+          nextSession,
           cookieOptions(request),
         );
+        disconnectRealtimeUser(user.id, "session-rotated");
+      }
       return response;
     }
     if (action === "checkout") {
       if (!body.idempotencyKey)
         throw new DomainError("Kunci checkout wajib diisi");
-      return out(
-        await createOrder(user, {
+      return mutation(action, user, body, () =>
+        createOrder(user, {
           ...body,
           addressId: integer(body.addressId),
           promotionId:
@@ -671,7 +690,9 @@ export async function POST(request, { params }) {
       );
     }
     if (action === "voucher-claim")
-      return out(await claimVoucher(user, integer(body.promotionId)));
+      return mutation(action, user, body, () =>
+        claimVoucher(user, integer(body.promotionId)),
+      );
     if (action === "voucher-quote")
       return out(
         (await quoteEnginePromotion(user, {
@@ -693,8 +714,8 @@ export async function POST(request, { params }) {
         }),
       );
     if (action === "status")
-      return out(
-        await changeStatus(
+      return mutation(action, user, body, () =>
+        changeStatus(
           user,
           integer(body.orderId),
           body.status,
@@ -702,65 +723,94 @@ export async function POST(request, { params }) {
         ),
       );
     if (action === "station-status")
-      return out(
-        await updateStationStatus(user, integer(body.orderId), body.status),
+      return mutation(action, user, body, () =>
+        updateStationStatus(user, integer(body.orderId), body.status),
       );
     if (action === "stock")
-      return out(
-        await adjustStock(user, {
+      return mutation(action, user, body, () =>
+        adjustStock(user, {
           productId: integer(body.productId),
           quantity: Number(body.quantity),
           reason: body.reason,
         }),
       );
     if (action === "accept")
-      return out(await acceptDelivery(user, integer(body.orderId)));
+      return mutation(action, user, body, () =>
+        acceptDelivery(user, integer(body.orderId)),
+      );
     if (action === "claim-delivery")
-      return out(await claimDelivery(user, integer(body.orderId)));
+      return mutation(action, user, body, () =>
+        claimDelivery(user, integer(body.orderId)),
+      );
     if (action === "claim-all-deliveries")
-      return out(await claimReadyDeliveries(user));
+      return mutation(action, user, body, () => claimReadyDeliveries(user));
     if (action === "pickup-all-deliveries")
-      return out(await pickupAllDeliveries(user));
+      return mutation(action, user, body, () => pickupAllDeliveries(user));
     if (action === "payment")
-      return out(await verifyPayment(user, integer(body.orderId), body.status));
+      return mutation(action, user, body, () =>
+        verifyPayment(user, integer(body.orderId), body.status),
+      );
     if (action === "cod-settlement-submit")
-      return out(
-        await submitCodSettlement(user, {
+      return mutation(action, user, body, () =>
+        submitCodSettlement(user, {
           orderId: integer(body.orderId),
           cashAmount: body.cashAmount,
           evidenceReference: body.evidenceReference,
         }),
       );
     if (action === "cod-settlement-verify")
-      return out(await verifyCodSettlement(user, integer(body.orderId)));
+      return mutation(action, user, body, () =>
+        verifyCodSettlement(user, integer(body.orderId)),
+      );
     if (action === "cod-batch-submit")
-      return out(
-        await submitCodBatch(user, {
+      return mutation(action, user, body, () =>
+        submitCodBatch(user, {
           cashAmount: body.cashAmount,
           evidenceReference: body.evidenceReference,
         }),
       );
     if (action === "cod-batch-verify")
-      return out(await verifyCodBatch(user, integer(body.batchId)));
-    if (action === "print-retry")
-      return out(await retryPrintJob(user, integer(body.id)));
-    if (action === "settings") return out(await saveSettings(user, body));
-    if (action === "driver") return out(await createDriver(user, body), 201);
-    if (action === "staff") return out(await createStaff(user, body), 201);
-    if (action === "staff-password")
-      return out(
-        await resetStaffPassword(user, integer(body.id), body.password),
+      return mutation(action, user, body, () =>
+        verifyCodBatch(user, integer(body.batchId)),
       );
+    if (action === "print-retry")
+      return mutation(action, user, body, () =>
+        retryPrintJob(user, integer(body.id)),
+      );
+    if (action === "settings")
+      return mutation(action, user, body, () => saveSettings(user, body));
+    if (action === "driver")
+      return mutation(action, user, body, () => createDriver(user, body), 201);
+    if (action === "staff")
+      return mutation(action, user, body, () => createStaff(user, body), 201);
+    if (action === "staff-password")
+      return mutation(action, user, body, async () => {
+        const result = await resetStaffPassword(user, integer(body.id), body.password);
+        disconnectRealtimeUser(result.id, "session-revoked");
+        return result;
+      });
     if (action === "driver-active")
-      return out(await setDriverActive(user, integer(body.id), body.active));
+      return mutation(action, user, body, async () => {
+        const result = await setDriverActive(user, integer(body.id), body.active);
+        if (!result.active) disconnectRealtimeUser(result.id, "session-revoked");
+        return result;
+      });
     if (action === "customer-active")
-      return out(await setCustomerActive(user, integer(body.id), body.active));
-    if (action === "product") return out(await saveProduct(user, body));
-    if (action === "promotion") return out(await savePromotion(user, body));
+      return mutation(action, user, body, async () => {
+        const result = await setCustomerActive(user, integer(body.id), body.active);
+        if (!result.active) disconnectRealtimeUser(result.id, "session-revoked");
+        return result;
+      });
+    if (action === "product")
+      return mutation(action, user, body, () => saveProduct(user, body));
+    if (action === "promotion")
+      return mutation(action, user, body, () => savePromotion(user, body));
     if (action === "loyalty-reward")
-      return out(await saveRewardRule(user, body));
-    if (action === "category") return out(await saveCategory(user, body));
-    if (action === "subcategory") return out(await saveSubcategory(user, body));
+      return mutation(action, user, body, () => saveRewardRule(user, body));
+    if (action === "category")
+      return mutation(action, user, body, () => saveCategory(user, body));
+    if (action === "subcategory")
+      return mutation(action, user, body, () => saveSubcategory(user, body));
     throw new DomainError("Endpoint tidak ditemukan", 404);
   } catch (e) {
     return error(e);

@@ -155,22 +155,11 @@ export default function OwnerOperationalHealth() {
     setLoading(true);
     setError("");
     try {
-      const [dashboard, stock, printJobs] = await Promise.all([
-        request("owner-dashboard-v2?preset=today"),
-        request("stock"),
-        request("print-jobs"),
-      ]);
       let settings = {};
       let devices = null;
       try { settings = await request("settings"); } catch {}
       try { devices = await request("owner-device-settings"); } catch {}
-      setData({
-        dashboard,
-        stock: stock.products || [],
-        printJobs: printJobs.jobs || [],
-        settings,
-        devices,
-      });
+      setData((current) => ({ ...current, settings, devices }));
       setUpdatedAt(new Date());
     } catch (loadError) {
       setError(loadError.message);
@@ -182,8 +171,31 @@ export default function OwnerOperationalHealth() {
   useEffect(() => {
     if (!host) return;
     load();
-    const timer = window.setInterval(load, 30000);
-    return () => window.clearInterval(timer);
+    const timer = window.setInterval(load, 120000);
+    const onSharedData = (event) => {
+      const shared = event.detail || {};
+      setData((current) => ({
+        ...current,
+        dashboard: shared.dashboard || current.dashboard,
+        stock: Array.isArray(shared.stock) ? shared.stock : current.stock,
+        printJobs: Array.isArray(shared.printJobs)
+          ? shared.printJobs
+          : current.printJobs,
+      }));
+      setUpdatedAt(new Date());
+    };
+    const onRealtime = (event) => {
+      if (event.detail?.type === "PRINTER_STATUS_CHANGED") load();
+    };
+    window.addEventListener("warkost:owner-operational-data", onSharedData);
+    window.addEventListener("warkost:realtime", onRealtime);
+    window.addEventListener("warkost:realtime-recovered", load);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("warkost:owner-operational-data", onSharedData);
+      window.removeEventListener("warkost:realtime", onRealtime);
+      window.removeEventListener("warkost:realtime-recovered", load);
+    };
   }, [host]);
 
   useEffect(() => {

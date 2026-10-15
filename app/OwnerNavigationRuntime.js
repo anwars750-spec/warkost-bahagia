@@ -243,7 +243,7 @@ export default function OwnerNavigationRuntime() {
     const observer = new MutationObserver(syncFromDom);
     observer.observe(document.body, { childList: true, subtree: true });
 
-    const roleTimer = window.setInterval(verifyOwnerRole, 2000);
+    const roleTimer = window.setInterval(verifyOwnerRole, 120000);
 
     return () => {
       stopped = true;

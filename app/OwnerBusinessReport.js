@@ -200,7 +200,10 @@ export default function OwnerBusinessReport() {
   useEffect(() => {
     if (!visible || !owner) return;
     load();
-  }, [visible, owner?.id, query]);
+    window.addEventListener("warkost:realtime-recovered", load);
+    return () =>
+      window.removeEventListener("warkost:realtime-recovered", load);
+  }, [visible, owner?.id, query, load]);
 
   if (!host || !visible || !owner) return null;
 

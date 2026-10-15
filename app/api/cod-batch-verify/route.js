@@ -3,6 +3,7 @@ import { currentUser } from "../../../lib/auth.mjs";
 import { DomainError } from "../../../lib/domain.mjs";
 import { assertSameOrigin, readJsonBody } from "../../../lib/request.mjs";
 import { verifyCodBatchWithOperator } from "../../../lib/cod-cash-handover-v1.mjs";
+import { publishActionRealtime } from "../../../lib/realtime.mjs";
 
 export const runtime = "nodejs";
 
@@ -24,7 +25,9 @@ export async function POST(request) {
     assertSameOrigin(request);
     const user = await currentUser(request);
     const body = await readJsonBody(request);
-    return out(await verifyCodBatchWithOperator(user, Number(body.batchId)));
+    const result = await verifyCodBatchWithOperator(user, Number(body.batchId));
+    await publishActionRealtime("cod-batch-verify", user, body, result).catch(() => {});
+    return out(result);
   } catch (error) {
     return fail(error);
   }

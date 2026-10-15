@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import OwnerOperationalHealth from "./OwnerOperationalHealth";
 
 const CASH_SETTLEMENT_LABEL = "Setoran Kas";
 const REPORT_LABEL = "Laporan";
@@ -226,5 +225,5 @@ export default function OwnerControlDirectBridge() {
     };
   }, []);
 
-  return <OwnerOperationalHealth />;
+  return null;
 }

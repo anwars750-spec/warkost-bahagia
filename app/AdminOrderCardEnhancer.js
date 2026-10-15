@@ -229,12 +229,20 @@ export default function AdminOrderCardEnhancer() {
     loadOrders();
     schedule(0);
     const onOrdersRendered = () => schedule();
+    const onOrdersRefreshed = (event) => {
+      ordersById.clear();
+      (event.detail?.orders || []).forEach((order) =>
+        ordersById.set(Number(order.id), order),
+      );
+      schedule(0);
+    };
     window.addEventListener("warkost:admin-orders-rendered", onOrdersRendered);
+    window.addEventListener("warkost:orders-refreshed", onOrdersRefreshed);
 
     const dataHeartbeat = window.setInterval(() => {
       loadOrders();
       schedule(0);
-    }, 10000);
+    }, 120000);
 
     return () => {
       disposed = true;
@@ -242,6 +250,7 @@ export default function AdminOrderCardEnhancer() {
         "warkost:admin-orders-rendered",
         onOrdersRendered,
       );
+      window.removeEventListener("warkost:orders-refreshed", onOrdersRefreshed);
       window.clearInterval(dataHeartbeat);
       if (timer) window.clearTimeout(timer);
       document

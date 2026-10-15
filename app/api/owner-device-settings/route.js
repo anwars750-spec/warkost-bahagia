@@ -5,6 +5,7 @@ import {
   getOwnerDeviceSettings,
   saveOwnerDeviceSettings,
 } from "../../../lib/owner-device-settings.mjs";
+import { publishRealtimeEvent } from "../../../lib/realtime.mjs";
 
 export const runtime = "nodejs";
 
@@ -36,7 +37,13 @@ export async function POST(request) {
     assertSameOrigin(request);
     const user = await currentUser(request);
     const body = await readJsonBody(request);
-    return out(await saveOwnerDeviceSettings(user, body));
+    const result = await saveOwnerDeviceSettings(user, body);
+    publishRealtimeEvent("PRINTER_STATUS_CHANGED", {
+      roles: ["ADMIN", "KITCHEN", "OWNER"],
+      payload: {},
+      actionable: true,
+    });
+    return out(result);
   } catch (error) {
     return fail(error);
   }

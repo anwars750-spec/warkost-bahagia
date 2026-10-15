@@ -8,7 +8,10 @@ test("Owner Promo card opens the real promo module directly", () => {
   const bridge = read("app/OwnerControlDirectBridge.js");
   assert.match(bridge, /const PROMO_LABEL = "Promo"/);
   assert.match(bridge, /openOwnerPromo/);
-  assert.match(bridge, /CASH_SETTLEMENT_LABEL, REPORT_LABEL, PROMO_LABEL/);
+  assert.match(
+    bridge,
+    /CASH_SETTLEMENT_LABEL,[\s\S]*REPORT_LABEL,[\s\S]*PROMO_LABEL/,
+  );
 });
 
 test("Owner promo legacy read-only panel is targeted for takeover", () => {

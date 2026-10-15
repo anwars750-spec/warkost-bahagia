@@ -100,6 +100,7 @@ import "./owner-settings-experience.css";
 import "./owner-settings-dedicated-view.css";
 import "./owner-customers-final-polish.css";
 import "./print-branding.css";
+import "./realtime-operations.css";
 import DriverRuntimeBootstrap from "./DriverRuntimeBootstrap";
 import DriverLogoFix from "./DriverLogoFix";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
@@ -142,6 +143,7 @@ import ManagerDashboardUiPolish from "./ManagerDashboardUiPolish";
 import ManagerSubcategoryPolish from "./ManagerSubcategoryPolish";
 import ManagerNotificationPopover from "./ManagerNotificationPopover";
 import ManagerNotificationOutsideClose from "./ManagerNotificationOutsideClose";
+import RealtimeOperationsRuntime from "./RealtimeOperationsRuntime";
 
 export const metadata = {
   title: "Warkost Bahagia",
@@ -153,6 +155,7 @@ export default function RootLayout({ children }) {
     <html lang="id">
       <body>
         {children}
+        <RealtimeOperationsRuntime />
         <DriverRuntimeBootstrap />
         <DriverLogoFix />
         <KitchenFlashGuard />

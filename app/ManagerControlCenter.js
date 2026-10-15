@@ -281,6 +281,35 @@ function Dashboard({ api, onAddProduct }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [rankingMode, setRankingMode] = useState("revenue");
+  const [realtimeRevision, setRealtimeRevision] = useState(0);
+  useEffect(() => {
+    const onRealtime = (event) => {
+      if (
+        [
+          "ORDER_CREATED",
+          "ORDER_STATUS_CHANGED",
+          "PAYMENT_STATUS_CHANGED",
+          "PAYMENT_PAID",
+          "DELIVERY_STATUS_CHANGED",
+          "COD_STATUS_CHANGED",
+          "SETTLEMENT_STATUS_CHANGED",
+          "STOCK_CHANGED",
+          "PRODUCT_OUT_OF_STOCK",
+          "PRODUCT_LOW_STOCK",
+          "PROMO_CHANGED",
+          "STAFF_CHANGED",
+        ].includes(event.detail?.type)
+      )
+        setRealtimeRevision((value) => value + 1);
+    };
+    window.addEventListener("warkost:realtime", onRealtime);
+    const onRecovered = () => setRealtimeRevision((value) => value + 1);
+    window.addEventListener("warkost:realtime-recovered", onRecovered);
+    return () => {
+      window.removeEventListener("warkost:realtime", onRealtime);
+      window.removeEventListener("warkost:realtime-recovered", onRecovered);
+    };
+  }, []);
   useEffect(() => {
     const controller = new AbortController();
     const query = new URLSearchParams({ preset: period.preset });
@@ -297,7 +326,7 @@ function Dashboard({ api, onAddProduct }) {
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, [api, period]);
+  }, [api, period, realtimeRevision]);
   const products =
     rankingMode === "quantity"
       ? data?.products_by_quantity || []

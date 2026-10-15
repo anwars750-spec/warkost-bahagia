@@ -38,13 +38,12 @@ export async function POST(request) {
     const body = await readJsonBody(request);
     const action = String(body?.action || "").toUpperCase();
 
-    if (action === "START_SHIFT")
-      return out(
-        await startAdminShift(user, {
+    if (action === "START_SHIFT") {
+      return out(await startAdminShift(user, {
           operatorId: body.operatorId,
           pin: body.pin,
-        }),
-      );
+        }));
+    }
 
     throw new DomainError(
       "Admin hanya dapat memilih operator yang sudah didaftarkan Owner dan memulai shift",

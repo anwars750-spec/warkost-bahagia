@@ -666,9 +666,11 @@ export default function CodBatchSettlementCenter() {
     refreshBadge();
     const onUpdated = () => refreshBadge();
     window.addEventListener("warkost:cod-batch-updated", onUpdated);
-    const timer = window.setInterval(refreshBadge, 20000);
+    window.addEventListener("warkost:realtime-recovered", onUpdated);
+    const timer = window.setInterval(refreshBadge, 120000);
     return () => {
       window.removeEventListener("warkost:cod-batch-updated", onUpdated);
+      window.removeEventListener("warkost:realtime-recovered", onUpdated);
       window.clearInterval(timer);
     };
   }, [refreshBadge]);

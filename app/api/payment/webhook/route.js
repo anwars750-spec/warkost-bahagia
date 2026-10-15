@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { DomainError } from "../../../../lib/domain.mjs";
 import { processPaymentWebhook } from "../../../../lib/payments.mjs";
+import { publishActionRealtime } from "../../../../lib/realtime.mjs";
 
 export const runtime = "nodejs";
 
@@ -9,6 +10,17 @@ export async function POST(request) {
     const rawBody = await request.text();
     const signature = request.headers.get("x-payment-signature");
     const result = await processPaymentWebhook(rawBody, signature);
+    try {
+      const payment = result?.payment || result;
+      await publishActionRealtime(
+        "payment",
+        null,
+        { orderId: Number(payment?.order_id || result?.orderId || 0) },
+        { status: payment?.status || result?.status },
+      );
+    } catch (realtimeError) {
+      console.error("Payment realtime publication failed", realtimeError);
+    }
     return NextResponse.json(result, {
       headers: { "Cache-Control": "no-store" },
     });

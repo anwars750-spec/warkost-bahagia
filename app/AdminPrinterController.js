@@ -418,7 +418,7 @@ export default function AdminPrinterController() {
       load({ includeRole: true });
       poll = window.setInterval(() => {
         if (document.visibilityState === "visible") load({ silent: true });
-      }, 5000);
+      }, 120000);
     };
 
     const deactivate = () => {
@@ -448,6 +448,9 @@ export default function AdminPrinterController() {
         modal = null;
       }
     };
+    const onRecovered = () => {
+      if (root) void load({ silent: true });
+    };
 
     document.addEventListener("click", onDocumentClick, true);
     const onKey = (event) => {
@@ -457,11 +460,13 @@ export default function AdminPrinterController() {
       }
     };
     window.addEventListener("keydown", onKey);
+    window.addEventListener("warkost:realtime-recovered", onRecovered);
     activate();
 
     return () => {
       document.removeEventListener("click", onDocumentClick, true);
       window.removeEventListener("keydown", onKey);
+      window.removeEventListener("warkost:realtime-recovered", onRecovered);
       deactivate();
     };
   }, []);

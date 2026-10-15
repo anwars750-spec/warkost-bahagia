@@ -123,10 +123,12 @@ export default function ManagerOwnerSettlementCenter() {
     window.addEventListener("warkost:admin-settlement-submitted", refresh);
     window.addEventListener("warkost:manager-owner-settlement-submitted", refresh);
     window.addEventListener("warkost:manager-owner-settlement-verified", refresh);
+    window.addEventListener("warkost:realtime-recovered", refresh);
     return () => {
       window.removeEventListener("warkost:admin-settlement-submitted", refresh);
       window.removeEventListener("warkost:manager-owner-settlement-submitted", refresh);
       window.removeEventListener("warkost:manager-owner-settlement-verified", refresh);
+      window.removeEventListener("warkost:realtime-recovered", refresh);
     };
   }, [role, load]);
 

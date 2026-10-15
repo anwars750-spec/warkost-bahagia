@@ -19,6 +19,10 @@ import {
   filterAdminOrders,
 } from "../lib/admin-order-filter.mjs";
 import {
+  recoveryRefreshGroupsForRole,
+  refreshGroupsForEvent,
+} from "../lib/realtime-client.mjs";
+import {
   paymentMethodLabel,
   paymentStatusLabel,
 } from "./conversationDisplay.mjs";
@@ -169,6 +173,8 @@ export default function App() {
   const pollController = useRef(null);
   const refreshController = useRef(null);
   const messageTimer = useRef(null);
+  const realtimeRefreshTimer = useRef(null);
+  const realtimeRefreshGroups = useRef(new Set());
   const [user, setUser] = useState(null),
     [menu, setMenu] = useState({
       products: [],
@@ -369,6 +375,12 @@ export default function App() {
   useEffect(() => {
     refresh().catch((e) => setError(e.message));
   }, []);
+  useEffect(() => {
+    if (user?.id)
+      window.dispatchEvent(
+        new CustomEvent("warkost:session-started", { detail: { role: user.role } }),
+      );
+  }, [user?.id, user?.role]);
   useEffect(
     () => () => {
       if (messageTimer.current) clearTimeout(messageTimer.current);
@@ -431,11 +443,105 @@ export default function App() {
       } finally {
         running = false;
       }
-    }, 20000);
+    }, 120000);
     return () => {
       clearInterval(timer);
       controller.abort();
       if (pollController.current === controller) pollController.current = null;
+    };
+  }, [user?.id, user?.role]);
+  useEffect(() => {
+    const onSessionInvalidated = () => {
+      pollController.current?.abort();
+      refreshController.current?.abort();
+      if (realtimeRefreshTimer.current)
+        window.clearTimeout(realtimeRefreshTimer.current);
+      realtimeRefreshTimer.current = null;
+      realtimeRefreshGroups.current.clear();
+      setOverlay(null);
+      setChatTarget(null);
+      setUser(null);
+      setView("auth");
+      setError("Sesi Anda telah berakhir. Silakan masuk kembali.");
+    };
+    window.addEventListener("warkost:session-invalidated", onSessionInvalidated);
+    return () =>
+      window.removeEventListener(
+        "warkost:session-invalidated",
+        onSessionInvalidated,
+      );
+  }, []);
+  useEffect(() => {
+    if (!user) return;
+    const flushRealtimeRefresh = async () => {
+      realtimeRefreshTimer.current = null;
+      const groups = new Set(realtimeRefreshGroups.current);
+      realtimeRefreshGroups.current.clear();
+      try {
+        const jobs = [];
+        if (groups.has("notifications"))
+          jobs.push(api("notifications").then(setAlerts));
+        if (groups.has("orders") && user.role !== "MANAGER")
+          jobs.push(
+            api("orders").then((latestOrders) => {
+              setOrders((previous) => {
+                const fresh = new Set(latestOrders.orders.map((order) => order.id));
+                return [
+                  ...latestOrders.orders,
+                  ...previous.filter((order) => !fresh.has(order.id)),
+                ].sort((a, b) => b.id - a.id);
+              });
+              setNextOrderCursor(latestOrders.nextCursor);
+              if (user.role === "ADMIN")
+                window.dispatchEvent(
+                  new CustomEvent("warkost:orders-refreshed", {
+                    detail: latestOrders,
+                  }),
+                );
+            }),
+          );
+        if (groups.has("dashboard") && user.role === "ADMIN")
+          jobs.push(api("dashboard").then(setDashboard));
+        if (groups.has("account") && user.role === "CUSTOMER")
+          jobs.push(api("account").then(setAccount));
+        if (groups.has("catalog")) {
+          if (user.role === "CUSTOMER") jobs.push(api("menu").then(setMenu));
+          if (user.role === "MANAGER")
+            jobs.push(api("inventory").then(setInventory));
+        }
+        if (
+          groups.has("stock") &&
+          ["ADMIN", "KITCHEN", "MANAGER"].includes(user.role)
+        )
+          jobs.push(api("stock").then(setStock));
+        if (groups.has("promotions") && ["MANAGER", "OWNER"].includes(user.role))
+          jobs.push(api("promotions").then((data) => setPromotions(data.promotions)));
+        if (groups.has("printer") && ["ADMIN", "KITCHEN"].includes(user.role))
+          jobs.push(api("print-jobs").then((data) => setPrintJobs(data.jobs)));
+        await Promise.all(jobs);
+      } catch (realtimeError) {
+        setError(realtimeError.message);
+      }
+    };
+    const scheduleRefresh = (groups) => {
+      for (const group of groups)
+        realtimeRefreshGroups.current.add(group);
+      if (!realtimeRefreshTimer.current)
+        realtimeRefreshTimer.current = window.setTimeout(flushRealtimeRefresh, 180);
+    };
+    const onRealtime = (event) =>
+      scheduleRefresh(refreshGroupsForEvent(event.detail?.type));
+    const onRecovered = () =>
+      scheduleRefresh(recoveryRefreshGroupsForRole(user.role));
+    window.addEventListener("warkost:realtime", onRealtime);
+    window.addEventListener("warkost:realtime-recovered", onRecovered);
+    return () => {
+      window.removeEventListener("warkost:realtime", onRealtime);
+      window.removeEventListener("warkost:realtime-recovered", onRecovered);
+      if (realtimeRefreshTimer.current)
+        window.clearTimeout(realtimeRefreshTimer.current);
+      realtimeRefreshTimer.current = null;
+      realtimeRefreshGroups.current.clear();
     };
   }, [user?.id, user?.role]);
   useEffect(() => {
@@ -1012,6 +1118,7 @@ export default function App() {
       pollController.current?.abort();
       refreshController.current?.abort();
       await api("logout", {});
+      window.dispatchEvent(new CustomEvent("warkost:session-ended"));
       setUser(null);
       setView("menu");
     });
@@ -3324,15 +3431,33 @@ export default function App() {
                     e.preventDefault();
                     const f = new FormData(e.currentTarget);
                     run(async () => {
-                      const response = await api("profile", {
-                        name: f.get("name"),
-                        email: f.get("email"),
-                        phone: f.get("phone"),
-                        birthDate: f.get("birthDate"),
-                        currentPassword: f.get("currentPassword"),
-                        newPassword: f.get("newPassword"),
-                      });
+                      const newPassword = String(f.get("newPassword") || "");
+                      if (newPassword)
+                        window.dispatchEvent(
+                          new CustomEvent("warkost:session-rotation-started"),
+                        );
+                      let response;
+                      try {
+                        response = await api("profile", {
+                          name: f.get("name"),
+                          email: f.get("email"),
+                          phone: f.get("phone"),
+                          birthDate: f.get("birthDate"),
+                          currentPassword: f.get("currentPassword"),
+                          newPassword,
+                        });
+                      } catch (profileError) {
+                        if (newPassword)
+                          window.dispatchEvent(
+                            new CustomEvent("warkost:session-rotation-cancelled"),
+                          );
+                        throw profileError;
+                      }
                       setUser(response.user);
+                      if (response.sessionRotated)
+                        window.dispatchEvent(
+                          new CustomEvent("warkost:session-rotated"),
+                        );
                       setMessage("Profil diperbarui");
                       e.target.reset();
                     });
@@ -5229,6 +5354,7 @@ export default function App() {
                     <button
                       onClick={async () => {
                         await api("logout", {});
+                        window.dispatchEvent(new CustomEvent("warkost:session-ended"));
                         setUser(null);
                         setOverlay(null);
                         setMode("login");
@@ -5622,12 +5748,21 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
       api("payment-status?orderId=" + order.id)
         .then((result) => active && setPayment(result))
         .catch((error) => active && setPaymentError(error.message));
-    const poll = setInterval(refreshPayment, 10000);
+    const onRealtime = (event) => {
+      if (
+        ["PAYMENT_STATUS_CHANGED", "PAYMENT_PAID"].includes(event.detail?.type) &&
+        Number(event.detail?.payload?.orderId) === Number(order.id)
+      )
+        refreshPayment();
+    };
+    window.addEventListener("warkost:realtime", onRealtime);
+    const poll = setInterval(refreshPayment, 120000);
     const tick = setInterval(() => setClock(Date.now()), 1000);
     return () => {
       active = false;
       clearInterval(poll);
       clearInterval(tick);
+      window.removeEventListener("warkost:realtime", onRealtime);
     };
   }, [order?.id, order?.method, payment?.status]);
   if (!order)

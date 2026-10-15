@@ -161,7 +161,11 @@ export default function AdminCashControlCenter() {
     load({ force: true });
     const refresh = () => load({ force: true });
     window.addEventListener("warkost:cod-batch-updated", refresh);
-    return () => window.removeEventListener("warkost:cod-batch-updated", refresh);
+    window.addEventListener("warkost:realtime-recovered", refresh);
+    return () => {
+      window.removeEventListener("warkost:cod-batch-updated", refresh);
+      window.removeEventListener("warkost:realtime-recovered", refresh);
+    };
   }, [isAdmin, load]);
 
   useEffect(() => {
