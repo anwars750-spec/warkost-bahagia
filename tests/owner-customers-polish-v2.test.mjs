@@ -6,6 +6,7 @@ const customers = fs.readFileSync("app/OwnerCustomersCenter.js", "utf8");
 const nav = fs.readFileSync("app/OwnerNavigationRuntime.js", "utf8");
 const layout = fs.readFileSync("app/layout.js", "utf8");
 const css = fs.readFileSync("app/owner-customers-polish-v2.css", "utf8");
+const finalCss = fs.readFileSync("app/owner-customers-final-polish.css", "utf8");
 
 test("Owner navigation derives Pelanggan active state from the rendered customer page", () => {
   assert.match(nav, /Owner Customer Center/);
@@ -60,4 +61,20 @@ test("Owner customer confirmation uses compact centered desktop and mobile cards
 test("Owner customer mobile row keeps metrics and actions balanced", () => {
   assert.match(css, /@media\(max-width:480px\)[\s\S]*\.occ-row\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\);gap:8px;padding:12px\}/);
   assert.match(css, /@media\(max-width:480px\)[\s\S]*\.occ-metric,body \.occ-activity\{[\s\S]*grid-column:auto!important/);
+});
+
+test("Final Owner customer polish is loaded after other Owner styles", () => {
+  assert.match(layout, /owner-settings-dedicated-view\.css";\nimport "\.\/owner-customers-final-polish\.css";\nimport "\.\/print-branding\.css/);
+});
+
+test("Final customer detail keeps header fixed and scroll isolated to body", () => {
+  assert.match(finalCss, /\.occ-modal\{[\s\S]*overflow:hidden!important[\s\S]*display:flex!important/);
+  assert.match(finalCss, /\.occ-modal-head\{[\s\S]*position:relative!important/);
+  assert.match(finalCss, /\.occ-modal-body\{[\s\S]*overflow-y:auto!important/);
+});
+
+test("Final mobile customer experience keeps two-column metrics and actions", () => {
+  assert.match(finalCss, /@media\(max-width:480px\)[\s\S]*\.occ-row\{[\s\S]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/);
+  assert.match(finalCss, /@media\(max-width:480px\)[\s\S]*\.occ-actions\{[\s\S]*grid-column:1\/-1!important/);
+  assert.match(finalCss, /@media\(max-width:480px\)[\s\S]*\.occ-confirm-actions\{[\s\S]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/);
 });
