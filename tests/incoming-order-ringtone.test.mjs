@@ -82,4 +82,7 @@ test("incoming order ringtone mulai dan berhenti sesuai role tanpa replay", () =
   assert.match(runtime, /incoming-order-admin-kitchen-v1\.mp3/);
   assert.match(runtime, /incomingOrderAudioRef/);
   assert.match(runtime, /pendingIncomingOrdersRef/);
+  assert.match(runtime, /incomingOrderMediaReady/);
+  assert.match(runtime, /Aktifkan Suara Pesanan/);
+  assert.match(runtime, /Suara Pesanan Aktif/);
 });
