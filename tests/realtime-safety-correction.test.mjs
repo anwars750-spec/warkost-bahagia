@@ -119,7 +119,12 @@ function collect(subscribers) {
   return events;
 }
 
-test.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+test.after(() => {
+  try {
+    database.close();
+  } catch {}
+  fs.rmSync(temp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+});
 
 test("ORDER_CREATED updates Manager/Owner silently and is audible to Admin", () => {
   const events = collect({
@@ -486,7 +491,7 @@ test("self password rotation menjaga sesi baru dan remote revocation fail-closed
     .run(hashPassword("password-awal-yang-panjang"), "628111111111", "1995-05-10", ids.customerA);
 
   const oldToken = await issueSession({ id: ids.customerA, role: "CUSTOMER" });
-  const oldRequest = { cookies: { get: () => ({ value: oldToken }) } };
+  const oldRequest = { cookies: { get: () => ({ value: oldToken }) };
   const closed = [];
   resetRealtimeForTests();
   subscribeRealtime(
