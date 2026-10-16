@@ -16,6 +16,8 @@ const CONNECTION_LABELS = {
   OFFLINE: "OFFLINE",
 };
 
+const CUSTOMER_NOTIFICATION_SOUND = "/sounds/customer-order-update.wav";
+
 export default function RealtimeOperationsRuntime() {
   const [user, setUser] = useState(null);
   const [connection, setConnection] = useState("OFFLINE");
@@ -29,6 +31,7 @@ export default function RealtimeOperationsRuntime() {
   const seenEventsRef = useRef(new Set());
   const soundedEventsRef = useRef(new Set());
   const audioRef = useRef(null);
+  const customerAudioRef = useRef(null);
   const soundEnabledRef = useRef(true);
   const audioUnlockedRef = useRef(false);
   const mountedRef = useRef(false);
@@ -64,8 +67,49 @@ export default function RealtimeOperationsRuntime() {
     );
   }, [stop]);
 
+  const getCustomerAudio = useCallback(() => {
+    if (typeof Audio === "undefined") return null;
+    if (!customerAudioRef.current) {
+      const audio = new Audio(CUSTOMER_NOTIFICATION_SOUND);
+      audio.preload = "auto";
+      customerAudioRef.current = audio;
+    }
+    return customerAudioRef.current;
+  }, []);
+
+  const primeCustomerAudio = useCallback(() => {
+    if (user?.role !== "CUSTOMER") return;
+    const audio = getCustomerAudio();
+    if (!audio) return;
+    const previousVolume = audio.volume;
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.volume = 0;
+      const playback = audio.play();
+      if (playback?.then)
+        playback
+          .then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.volume = previousVolume;
+          })
+          .catch(() => {
+            audio.volume = previousVolume;
+          });
+      else {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.volume = previousVolume;
+      }
+    } catch {
+      audio.volume = previousVolume;
+    }
+  }, [getCustomerAudio, user?.role]);
+
   const unlockAudio = useCallback((force = false) => {
     if ((!soundEnabled && !force) || audioUnlocked) return;
+    if (user?.role === "CUSTOMER") primeCustomerAudio();
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return;
     try {
@@ -78,9 +122,21 @@ export default function RealtimeOperationsRuntime() {
       if (context.state === "suspended") context.resume().then(unlocked).catch(() => {});
       else unlocked();
     } catch {}
-  }, [audioUnlocked, soundEnabled]);
+  }, [audioUnlocked, primeCustomerAudio, soundEnabled, user?.role]);
 
   const playSound = useCallback((event) => {
+    if (user?.role === "CUSTOMER") {
+      const audio = getCustomerAudio();
+      if (!audio) return;
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.volume = 1;
+        audio.play().catch(() => {});
+      } catch {}
+      return;
+    }
+
     const context = audioRef.current;
     if (!context || context.state !== "running") return;
     const urgent = event.priority === "URGENT";
@@ -97,7 +153,7 @@ export default function RealtimeOperationsRuntime() {
       oscillator.start(context.currentTime + offset);
       oscillator.stop(context.currentTime + offset + 0.17);
     }
-  }, []);
+  }, [getCustomerAudio, user?.role]);
 
   const connectRef = useRef(() => {});
   connectRef.current = () => {
@@ -274,6 +330,8 @@ export default function RealtimeOperationsRuntime() {
         onSessionRotationCancelled,
       );
       window.removeEventListener("warkost:session-ended", onSessionEnded);
+      customerAudioRef.current?.pause();
+      customerAudioRef.current = null;
       audioRef.current?.close?.().catch(() => {});
     };
   }, []);
@@ -283,6 +341,7 @@ export default function RealtimeOperationsRuntime() {
       stop();
       return;
     }
+    if (user.role === "CUSTOMER") getCustomerAudio();
     connectRef.current();
     return () => {
       sourceRef.current?.close();
@@ -291,7 +350,7 @@ export default function RealtimeOperationsRuntime() {
         window.clearTimeout(stableConnectionRef.current);
       stableConnectionRef.current = null;
     };
-  }, [user?.id, user?.role]);
+  }, [getCustomerAudio, user?.id, user?.role]);
 
   useEffect(() => {
     if (!soundEnabled || audioUnlocked) return;
@@ -318,6 +377,8 @@ export default function RealtimeOperationsRuntime() {
           setSoundEnabled(enabled);
           if (enabled) unlockAudio(true);
           else {
+            customerAudioRef.current?.pause();
+            if (customerAudioRef.current) customerAudioRef.current.currentTime = 0;
             audioUnlockedRef.current = false;
             setAudioUnlocked(false);
           }
