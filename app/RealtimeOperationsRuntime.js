@@ -16,7 +16,7 @@ const CONNECTION_LABELS = {
   OFFLINE: "OFFLINE",
 };
 
-const CUSTOMER_NOTIFICATION_SOUND = "/sounds/customer-order-update.wav";
+const CUSTOMER_NOTIFICATION_SOUND = "/sounds/customer-order-update-v2.mp3";
 
 export default function RealtimeOperationsRuntime() {
   const [user, setUser] = useState(null);
