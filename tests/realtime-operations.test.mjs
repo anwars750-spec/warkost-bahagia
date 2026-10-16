@@ -29,7 +29,12 @@ const {
 const { db } = await import("../lib/db.mjs");
 const { issueSession } = await import("../lib/auth.mjs");
 
-test.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+test.after(() => {
+  try {
+    db().close();
+  } catch {}
+  fs.rmSync(temp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+});
 
 test("SSE menolak request tanpa sesi dan menerima cookie sesi existing", async () => {
   await assert.rejects(
