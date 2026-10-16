@@ -37,9 +37,20 @@ test("incoming order ringtone mulai dan berhenti sesuai role tanpa replay", () =
     { type: "STOP", orderId: 101 },
   );
 
+  assert.deepEqual(
+    incomingOrderRingtoneAction("KITCHEN", {
+      type: "ORDER_STATUS_CHANGED",
+      audible: true,
+      replayed: false,
+      payload: { orderId: 101, status: "CONFIRMED" },
+    }),
+    { type: "START", orderId: 101 },
+  );
+
   assert.equal(
     incomingOrderRingtoneAction("KITCHEN", {
       type: "ORDER_STATUS_CHANGED",
+      audible: false,
       replayed: false,
       payload: { orderId: 101, status: "CONFIRMED" },
     }),
