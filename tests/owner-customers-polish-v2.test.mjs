@@ -64,7 +64,7 @@ test("Owner customer mobile row keeps metrics and actions balanced", () => {
 });
 
 test("Final Owner customer polish is loaded after other Owner styles", () => {
-  assert.match(layout, /owner-settings-dedicated-view\.css";\nimport "\.\/owner-customers-final-polish\.css";\nimport "\.\/print-branding\.css/);
+  assert.match(layout, /owner-settings-dedicated-view\.css";\r?\nimport "\.\/owner-customers-final-polish\.css";\r?\nimport "\.\/print-branding\.css/);
 });
 
 test("Final customer detail keeps header fixed and scroll isolated to body", () => {
