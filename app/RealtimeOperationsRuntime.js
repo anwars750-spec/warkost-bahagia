@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { incomingOrderRingtoneAction } from "../lib/incoming-order-ringtone.mjs";
 import {
   nextRealtimeBackoff,
   readSoundPreference,
@@ -17,6 +18,7 @@ const CONNECTION_LABELS = {
 };
 
 const CUSTOMER_NOTIFICATION_SOUND = "/sounds/customer-order-update-v2.mp3";
+const INCOMING_ORDER_RINGTONE = "/sounds/incoming-order-admin-kitchen-v1.mp3";
 
 export default function RealtimeOperationsRuntime() {
   const [user, setUser] = useState(null);
@@ -32,6 +34,8 @@ export default function RealtimeOperationsRuntime() {
   const soundedEventsRef = useRef(new Set());
   const audioRef = useRef(null);
   const customerAudioRef = useRef(null);
+  const incomingOrderAudioRef = useRef(null);
+  const pendingIncomingOrdersRef = useRef(new Set());
   const soundEnabledRef = useRef(true);
   const audioUnlockedRef = useRef(false);
   const mountedRef = useRef(false);
@@ -41,6 +45,43 @@ export default function RealtimeOperationsRuntime() {
   const probeSessionRef = useRef(() => {});
   const connectedBeforeRef = useRef(false);
   const recoveryPendingRef = useRef(false);
+
+  const pauseIncomingOrderRingtone = useCallback((clearPending = false) => {
+    const audio = incomingOrderAudioRef.current;
+    if (audio) {
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+      } catch {}
+    }
+    if (clearPending) pendingIncomingOrdersRef.current.clear();
+  }, []);
+
+  const getIncomingOrderAudio = useCallback(() => {
+    if (typeof Audio === "undefined") return null;
+    if (!incomingOrderAudioRef.current) {
+      const audio = new Audio(INCOMING_ORDER_RINGTONE);
+      audio.preload = "auto";
+      audio.loop = true;
+      incomingOrderAudioRef.current = audio;
+    }
+    return incomingOrderAudioRef.current;
+  }, []);
+
+  const startIncomingOrderRingtone = useCallback(
+    (forceGesture = false) => {
+      if (!soundEnabledRef.current || !pendingIncomingOrdersRef.current.size) return;
+      if (!audioUnlockedRef.current && !forceGesture) return;
+      const audio = getIncomingOrderAudio();
+      if (!audio) return;
+      try {
+        audio.loop = true;
+        audio.volume = 1;
+        if (audio.paused) audio.play().catch(() => {});
+      } catch {}
+    },
+    [getIncomingOrderAudio],
+  );
 
   const stop = useCallback(() => {
     sourceRef.current?.close();
@@ -53,19 +94,23 @@ export default function RealtimeOperationsRuntime() {
     attemptRef.current = 0;
     connectedBeforeRef.current = false;
     recoveryPendingRef.current = false;
+    pauseIncomingOrderRingtone(true);
     setConnection("OFFLINE");
-  }, []);
+  }, [pauseIncomingOrderRingtone]);
 
-  const invalidateApplicationSession = useCallback((reason = "session-invalid") => {
-    if (!hadAuthenticatedSessionRef.current) return;
-    hadAuthenticatedSessionRef.current = false;
-    setUser(null);
-    soundedEventsRef.current.clear();
-    stop();
-    window.dispatchEvent(
-      new CustomEvent("warkost:session-invalidated", { detail: { reason } }),
-    );
-  }, [stop]);
+  const invalidateApplicationSession = useCallback(
+    (reason = "session-invalid") => {
+      if (!hadAuthenticatedSessionRef.current) return;
+      hadAuthenticatedSessionRef.current = false;
+      setUser(null);
+      soundedEventsRef.current.clear();
+      stop();
+      window.dispatchEvent(
+        new CustomEvent("warkost:session-invalidated", { detail: { reason } }),
+      );
+    },
+    [stop],
+  );
 
   const getCustomerAudio = useCallback(() => {
     if (typeof Audio === "undefined") return null;
@@ -107,53 +152,109 @@ export default function RealtimeOperationsRuntime() {
     }
   }, [getCustomerAudio, user?.role]);
 
-  const unlockAudio = useCallback((force = false) => {
-    if ((!soundEnabled && !force) || audioUnlocked) return;
-    if (user?.role === "CUSTOMER") primeCustomerAudio();
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
-    try {
-      const context = audioRef.current || new AudioContext();
-      audioRef.current = context;
-      const unlocked = () => {
-        audioUnlockedRef.current = true;
-        setAudioUnlocked(true);
-      };
-      if (context.state === "suspended") context.resume().then(unlocked).catch(() => {});
-      else unlocked();
-    } catch {}
-  }, [audioUnlocked, primeCustomerAudio, soundEnabled, user?.role]);
-
-  const playSound = useCallback((event) => {
-    if (user?.role === "CUSTOMER") {
-      const audio = getCustomerAudio();
-      if (!audio) return;
-      try {
-        audio.pause();
-        audio.currentTime = 0;
-        audio.volume = 1;
-        audio.play().catch(() => {});
-      } catch {}
+  const primeIncomingOrderAudio = useCallback(() => {
+    if (!["ADMIN", "KITCHEN"].includes(user?.role)) return;
+    if (pendingIncomingOrdersRef.current.size) {
+      startIncomingOrderRingtone(true);
       return;
     }
-
-    const context = audioRef.current;
-    if (!context || context.state !== "running") return;
-    const urgent = event.priority === "URGENT";
-    const tones = urgent ? [0, 0.14] : [0];
-    for (const offset of tones) {
-      const oscillator = context.createOscillator();
-      const gain = context.createGain();
-      oscillator.type = "sine";
-      oscillator.frequency.value = urgent ? 740 : 620;
-      gain.gain.setValueAtTime(0.0001, context.currentTime + offset);
-      gain.gain.exponentialRampToValueAtTime(0.08, context.currentTime + offset + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + offset + 0.16);
-      oscillator.connect(gain).connect(context.destination);
-      oscillator.start(context.currentTime + offset);
-      oscillator.stop(context.currentTime + offset + 0.17);
+    const audio = getIncomingOrderAudio();
+    if (!audio) return;
+    const previousVolume = audio.volume;
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.volume = 0;
+      const playback = audio.play();
+      if (playback?.then)
+        playback
+          .then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.volume = previousVolume;
+          })
+          .catch(() => {
+            audio.volume = previousVolume;
+          });
+      else {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.volume = previousVolume;
+      }
+    } catch {
+      audio.volume = previousVolume;
     }
-  }, [getCustomerAudio, user?.role]);
+  }, [getIncomingOrderAudio, startIncomingOrderRingtone, user?.role]);
+
+  const unlockAudio = useCallback(
+    (force = false) => {
+      if ((!soundEnabled && !force) || audioUnlocked) return;
+      if (user?.role === "CUSTOMER") primeCustomerAudio();
+      if (["ADMIN", "KITCHEN"].includes(user?.role)) primeIncomingOrderAudio();
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      try {
+        const context = audioRef.current || new AudioContext();
+        audioRef.current = context;
+        const unlocked = () => {
+          audioUnlockedRef.current = true;
+          setAudioUnlocked(true);
+          startIncomingOrderRingtone();
+        };
+        if (context.state === "suspended")
+          context.resume().then(unlocked).catch(() => {});
+        else unlocked();
+      } catch {}
+    },
+    [
+      audioUnlocked,
+      primeCustomerAudio,
+      primeIncomingOrderAudio,
+      soundEnabled,
+      startIncomingOrderRingtone,
+      user?.role,
+    ],
+  );
+
+  const playSound = useCallback(
+    (event) => {
+      if (user?.role === "CUSTOMER") {
+        const audio = getCustomerAudio();
+        if (!audio) return;
+        try {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.volume = 1;
+          audio.play().catch(() => {});
+        } catch {}
+        return;
+      }
+
+      const context = audioRef.current;
+      if (!context || context.state !== "running") return;
+      const urgent = event.priority === "URGENT";
+      const tones = urgent ? [0, 0.14] : [0];
+      for (const offset of tones) {
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = "sine";
+        oscillator.frequency.value = urgent ? 740 : 620;
+        gain.gain.setValueAtTime(0.0001, context.currentTime + offset);
+        gain.gain.exponentialRampToValueAtTime(
+          0.08,
+          context.currentTime + offset + 0.015,
+        );
+        gain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          context.currentTime + offset + 0.16,
+        );
+        oscillator.connect(gain).connect(context.destination);
+        oscillator.start(context.currentTime + offset);
+        oscillator.stop(context.currentTime + offset + 0.17);
+      }
+    },
+    [getCustomerAudio, user?.role],
+  );
 
   const connectRef = useRef(() => {});
   connectRef.current = () => {
@@ -198,6 +299,7 @@ export default function RealtimeOperationsRuntime() {
         if (event.reason === "session-rotated") {
           rotationPendingRef.current = true;
           if (connectedBeforeRef.current) recoveryPendingRef.current = true;
+          pauseIncomingOrderRingtone(true);
           source.close();
           if (sourceRef.current === source) sourceRef.current = null;
           setConnection("RECONNECTING");
@@ -217,7 +319,20 @@ export default function RealtimeOperationsRuntime() {
       window.dispatchEvent(new CustomEvent("warkost:realtime", { detail: event }));
       if (["COD_STATUS_CHANGED", "SETTLEMENT_STATUS_CHANGED"].includes(event.type))
         window.dispatchEvent(new CustomEvent("warkost:cod-batch-updated"));
+
+      const incomingAction = incomingOrderRingtoneAction(user.role, event);
+      let incomingStartHandled = false;
+      if (incomingAction?.type === "START") {
+        pendingIncomingOrdersRef.current.add(incomingAction.orderId);
+        incomingStartHandled = true;
+        startIncomingOrderRingtone();
+      } else if (incomingAction?.type === "STOP") {
+        pendingIncomingOrdersRef.current.delete(incomingAction.orderId);
+        if (!pendingIncomingOrdersRef.current.size) pauseIncomingOrderRingtone();
+      }
+
       if (
+        !incomingStartHandled &&
         shouldPlayRealtimeSound({
           event,
           unlocked: audioUnlockedRef.current,
@@ -230,6 +345,7 @@ export default function RealtimeOperationsRuntime() {
       }
     };
     source.onerror = async () => {
+      pauseIncomingOrderRingtone(true);
       source.close();
       if (stableConnectionRef.current)
         window.clearTimeout(stableConnectionRef.current);
@@ -276,15 +392,17 @@ export default function RealtimeOperationsRuntime() {
     const storedSoundPreference = readSoundPreference(window.localStorage);
     soundEnabledRef.current = storedSoundPreference;
     setSoundEnabled(storedSoundPreference);
-    probeSession();
-    const onSessionStarted = () => probeSession();
+    probeSessionRef.current();
+    const onSessionStarted = () => probeSessionRef.current();
     const onSessionRotationStarted = () => {
       rotationPendingRef.current = true;
       rotationCookieReadyRef.current = false;
+      pauseIncomingOrderRingtone(true);
     };
     const onSessionRotated = () => {
       rotationCookieReadyRef.current = true;
       if (connectedBeforeRef.current) recoveryPendingRef.current = true;
+      pauseIncomingOrderRingtone(true);
       sourceRef.current?.close();
       sourceRef.current = null;
       rotationPendingRef.current = false;
@@ -314,7 +432,7 @@ export default function RealtimeOperationsRuntime() {
       onSessionRotationCancelled,
     );
     window.addEventListener("warkost:session-ended", onSessionEnded);
-    probeRef.current = window.setInterval(probeSession, 120000);
+    probeRef.current = window.setInterval(() => probeSessionRef.current(), 120000);
     return () => {
       mountedRef.current = false;
       stop();
@@ -332,6 +450,9 @@ export default function RealtimeOperationsRuntime() {
       window.removeEventListener("warkost:session-ended", onSessionEnded);
       customerAudioRef.current?.pause();
       customerAudioRef.current = null;
+      incomingOrderAudioRef.current?.pause();
+      incomingOrderAudioRef.current = null;
+      pendingIncomingOrdersRef.current.clear();
       audioRef.current?.close?.().catch(() => {});
     };
   }, []);
@@ -342,15 +463,24 @@ export default function RealtimeOperationsRuntime() {
       return;
     }
     if (user.role === "CUSTOMER") getCustomerAudio();
+    if (["ADMIN", "KITCHEN"].includes(user.role)) getIncomingOrderAudio();
     connectRef.current();
     return () => {
       sourceRef.current?.close();
       sourceRef.current = null;
+      pauseIncomingOrderRingtone(true);
       if (stableConnectionRef.current)
         window.clearTimeout(stableConnectionRef.current);
       stableConnectionRef.current = null;
     };
-  }, [getCustomerAudio, user?.id, user?.role]);
+  }, [
+    getCustomerAudio,
+    getIncomingOrderAudio,
+    pauseIncomingOrderRingtone,
+    stop,
+    user?.id,
+    user?.role,
+  ]);
 
   useEffect(() => {
     if (!soundEnabled || audioUnlocked) return;
@@ -365,8 +495,14 @@ export default function RealtimeOperationsRuntime() {
 
   if (!user) return null;
   return (
-    <aside className={`realtime-status realtime-status-${connection.toLowerCase()}`} aria-label="Status realtime">
-      <span><i />{CONNECTION_LABELS[connection]}</span>
+    <aside
+      className={`realtime-status realtime-status-${connection.toLowerCase()}`}
+      aria-label="Status realtime"
+    >
+      <span>
+        <i />
+        {CONNECTION_LABELS[connection]}
+      </span>
       <button
         type="button"
         aria-pressed={soundEnabled}
@@ -379,6 +515,7 @@ export default function RealtimeOperationsRuntime() {
           else {
             customerAudioRef.current?.pause();
             if (customerAudioRef.current) customerAudioRef.current.currentTime = 0;
+            pauseIncomingOrderRingtone();
             audioUnlockedRef.current = false;
             setAudioUnlocked(false);
           }
