@@ -491,7 +491,7 @@ test("self password rotation menjaga sesi baru dan remote revocation fail-closed
     .run(hashPassword("password-awal-yang-panjang"), "628111111111", "1995-05-10", ids.customerA);
 
   const oldToken = await issueSession({ id: ids.customerA, role: "CUSTOMER" });
-  const oldRequest = { cookies: { get: () => ({ value: oldToken }) };
+  const oldRequest = { cookies: { get: () => ({ value: oldToken }) } };
   const closed = [];
   resetRealtimeForTests();
   subscribeRealtime(
