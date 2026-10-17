@@ -45,6 +45,17 @@ export default function AdminOrderCardEnhancer() {
       timer = window.setTimeout(decorate, delay);
     };
 
+    const scheduleAfterReactRender = () => {
+      if (disposed) return;
+      if (typeof window.requestAnimationFrame !== "function") {
+        schedule(50);
+        return;
+      }
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => schedule(0));
+      });
+    };
+
     const loadOrders = async () => {
       if (orderRequest) return orderRequest;
       orderRequest = fetch("/api/orders", { cache: "no-store" })
@@ -98,6 +109,28 @@ export default function AdminOrderCardEnhancer() {
         note.className = "admin-chat-backend-note";
         note.textContent = "Chat internal akan diaktifkan saat backend komunikasi selesai.";
         button.insertAdjacentElement("afterend", note);
+      }
+    };
+
+    const classifyActionButtons = (card) => {
+      const buttons = [
+        ...card.querySelectorAll(":scope > .actions > button"),
+        ...card.querySelectorAll(":scope > button"),
+      ];
+      for (const button of [...new Set(buttons)]) {
+        button.classList.remove(
+          "admin-action-confirm",
+          "admin-action-prepare",
+          "admin-action-ready",
+        );
+        const label = button.textContent.trim().toLowerCase();
+        if (/lanjutkan ke confirmed/.test(label)) {
+          button.classList.add("admin-action-confirm");
+        } else if (/mulai siapkan minuman/.test(label)) {
+          button.classList.add("admin-action-prepare");
+        } else if (/minuman siap/.test(label)) {
+          button.classList.add("admin-action-ready");
+        }
       }
     };
 
@@ -203,6 +236,7 @@ export default function AdminOrderCardEnhancer() {
       if (!itemCache.has(id)) loadItems(id);
       renderPreview(card, id);
       enhanceDetailMessage(card);
+      classifyActionButtons(card);
 
       const detailButton = [...card.querySelectorAll(":scope > button")].find((button) =>
         /detail|riwayat/i.test(button.textContent),
@@ -228,13 +262,13 @@ export default function AdminOrderCardEnhancer() {
 
     loadOrders();
     schedule(0);
-    const onOrdersRendered = () => schedule();
+    const onOrdersRendered = () => scheduleAfterReactRender();
     const onOrdersRefreshed = (event) => {
       ordersById.clear();
       (event.detail?.orders || []).forEach((order) =>
         ordersById.set(Number(order.id), order),
       );
-      schedule(0);
+      scheduleAfterReactRender();
     };
     window.addEventListener("warkost:admin-orders-rendered", onOrdersRendered);
     window.addEventListener("warkost:orders-refreshed", onOrdersRefreshed);
