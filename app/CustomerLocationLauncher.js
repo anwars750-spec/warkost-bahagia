@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import CustomerLocationVisualLock from "./CustomerLocationVisualLock";
 
 export default function CustomerLocationLauncher() {
   useEffect(() => {
@@ -62,5 +63,5 @@ export default function CustomerLocationLauncher() {
     };
   }, []);
 
-  return null;
+  return <CustomerLocationVisualLock />;
 }
