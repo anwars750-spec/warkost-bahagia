@@ -18,14 +18,13 @@ const CONNECTION_LABELS = {
 };
 
 const CUSTOMER_NOTIFICATION_SOUND = "/sounds/customer-order-update-v2.mp3";
-const INCOMING_ORDER_RINGTONE = "/sounds/incoming-order-admin-kitchen-v1.mp3";
+const INCOMING_ORDER_RINGTONE = "/sounds/incoming-order-admin-kitchen-v2.mp3";
 
 export default function RealtimeOperationsRuntime() {
   const [user, setUser] = useState(null);
   const [connection, setConnection] = useState("OFFLINE");
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
-  const [incomingOrderMediaReady, setIncomingOrderMediaReady] = useState(false);
   const sourceRef = useRef(null);
   const retryRef = useRef(null);
   const stableConnectionRef = useRef(null);
@@ -40,6 +39,7 @@ export default function RealtimeOperationsRuntime() {
   const soundEnabledRef = useRef(true);
   const audioUnlockedRef = useRef(false);
   const incomingOrderMediaReadyRef = useRef(false);
+  const incomingOrderPrimeInFlightRef = useRef(false);
   const mountedRef = useRef(false);
   const hadAuthenticatedSessionRef = useRef(false);
   const rotationPendingRef = useRef(false);
@@ -85,6 +85,34 @@ export default function RealtimeOperationsRuntime() {
     [getIncomingOrderAudio],
   );
 
+  const primeIncomingOrderAudio = useCallback(async () => {
+    if (!soundEnabledRef.current || incomingOrderMediaReadyRef.current) return true;
+    if (incomingOrderPrimeInFlightRef.current) return false;
+    const audio = getIncomingOrderAudio();
+    if (!audio) return false;
+    incomingOrderPrimeInFlightRef.current = true;
+    const previousVolume = audio.volume;
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.volume = 0;
+      const playback = audio.play();
+      if (playback?.then) await playback;
+      audio.pause();
+      audio.currentTime = 0;
+      audio.volume = previousVolume;
+      incomingOrderMediaReadyRef.current = true;
+      if (pendingIncomingOrdersRef.current.size) startIncomingOrderRingtone(true);
+      return true;
+    } catch {
+      audio.volume = previousVolume;
+      incomingOrderMediaReadyRef.current = false;
+      return false;
+    } finally {
+      incomingOrderPrimeInFlightRef.current = false;
+    }
+  }, [getIncomingOrderAudio, startIncomingOrderRingtone]);
+
   const stop = useCallback(() => {
     sourceRef.current?.close();
     sourceRef.current = null;
@@ -105,7 +133,6 @@ export default function RealtimeOperationsRuntime() {
       if (!hadAuthenticatedSessionRef.current) return;
       hadAuthenticatedSessionRef.current = false;
       incomingOrderMediaReadyRef.current = false;
-      setIncomingOrderMediaReady(false);
       setUser(null);
       soundedEventsRef.current.clear();
       stop();
@@ -156,32 +183,6 @@ export default function RealtimeOperationsRuntime() {
     }
   }, [getCustomerAudio, user?.role]);
 
-  const primeIncomingOrderAudio = useCallback(async () => {
-    if (!["ADMIN", "KITCHEN"].includes(user?.role)) return false;
-    const audio = getIncomingOrderAudio();
-    if (!audio) return false;
-    const previousVolume = audio.volume;
-    try {
-      audio.pause();
-      audio.currentTime = 0;
-      audio.volume = 0;
-      const playback = audio.play();
-      if (playback?.then) await playback;
-      audio.pause();
-      audio.currentTime = 0;
-      audio.volume = previousVolume;
-      incomingOrderMediaReadyRef.current = true;
-      setIncomingOrderMediaReady(true);
-      if (pendingIncomingOrdersRef.current.size) startIncomingOrderRingtone(true);
-      return true;
-    } catch {
-      audio.volume = previousVolume;
-      incomingOrderMediaReadyRef.current = false;
-      setIncomingOrderMediaReady(false);
-      return false;
-    }
-  }, [getIncomingOrderAudio, startIncomingOrderRingtone, user?.role]);
-
   const unlockAudio = useCallback(
     (force = false) => {
       if ((!soundEnabled && !force) || audioUnlocked) return;
@@ -201,25 +202,8 @@ export default function RealtimeOperationsRuntime() {
         else unlocked();
       } catch {}
     },
-    [
-      audioUnlocked,
-      primeCustomerAudio,
-      soundEnabled,
-      startIncomingOrderRingtone,
-      user?.role,
-    ],
+    [audioUnlocked, primeCustomerAudio, soundEnabled, startIncomingOrderRingtone, user?.role],
   );
-
-  const activateIncomingOrderSound = useCallback(async () => {
-    if (!["ADMIN", "KITCHEN"].includes(user?.role)) return;
-    if (!soundEnabledRef.current) {
-      const enabled = writeSoundPreference(window.localStorage, true);
-      soundEnabledRef.current = enabled;
-      setSoundEnabled(enabled);
-    }
-    unlockAudio(true);
-    await primeIncomingOrderAudio();
-  }, [primeIncomingOrderAudio, unlockAudio, user?.role]);
 
   const playSound = useCallback(
     (event) => {
@@ -423,10 +407,13 @@ export default function RealtimeOperationsRuntime() {
     const onSessionEnded = () => {
       hadAuthenticatedSessionRef.current = false;
       incomingOrderMediaReadyRef.current = false;
-      setIncomingOrderMediaReady(false);
       setUser(null);
       soundedEventsRef.current.clear();
       stop();
+    };
+    const primeOperationalAudio = () => {
+      unlockAudio(true);
+      primeIncomingOrderAudio();
     };
     window.addEventListener("warkost:session-started", onSessionStarted);
     window.addEventListener(
@@ -439,6 +426,8 @@ export default function RealtimeOperationsRuntime() {
       onSessionRotationCancelled,
     );
     window.addEventListener("warkost:session-ended", onSessionEnded);
+    window.addEventListener("pointerdown", primeOperationalAudio, { passive: true });
+    window.addEventListener("keydown", primeOperationalAudio);
     probeRef.current = window.setInterval(() => probeSessionRef.current(), 120000);
     return () => {
       mountedRef.current = false;
@@ -455,6 +444,8 @@ export default function RealtimeOperationsRuntime() {
         onSessionRotationCancelled,
       );
       window.removeEventListener("warkost:session-ended", onSessionEnded);
+      window.removeEventListener("pointerdown", primeOperationalAudio);
+      window.removeEventListener("keydown", primeOperationalAudio);
       customerAudioRef.current?.pause();
       customerAudioRef.current = null;
       incomingOrderAudioRef.current?.pause();
@@ -463,7 +454,7 @@ export default function RealtimeOperationsRuntime() {
       incomingOrderMediaReadyRef.current = false;
       audioRef.current?.close?.().catch(() => {});
     };
-  }, []);
+  }, [primeIncomingOrderAudio, stop, unlockAudio]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -471,7 +462,10 @@ export default function RealtimeOperationsRuntime() {
       return;
     }
     if (user.role === "CUSTOMER") getCustomerAudio();
-    if (["ADMIN", "KITCHEN"].includes(user.role)) getIncomingOrderAudio();
+    if (["ADMIN", "KITCHEN"].includes(user.role)) {
+      getIncomingOrderAudio();
+      primeIncomingOrderAudio();
+    }
     connectRef.current();
     return () => {
       sourceRef.current?.close();
@@ -485,6 +479,7 @@ export default function RealtimeOperationsRuntime() {
     getCustomerAudio,
     getIncomingOrderAudio,
     pauseIncomingOrderRingtone,
+    primeIncomingOrderAudio,
     stop,
     user?.id,
     user?.role,
@@ -502,7 +497,6 @@ export default function RealtimeOperationsRuntime() {
   }, [soundEnabled, audioUnlocked, unlockAudio]);
 
   if (!user) return null;
-  const incomingOrderRole = ["ADMIN", "KITCHEN"].includes(user.role);
   return (
     <aside
       className={`realtime-status realtime-status-${connection.toLowerCase()}`}
@@ -512,23 +506,6 @@ export default function RealtimeOperationsRuntime() {
         <i />
         {CONNECTION_LABELS[connection]}
       </span>
-      {incomingOrderRole && (
-        <button
-          type="button"
-          aria-pressed={incomingOrderMediaReady}
-          title={
-            incomingOrderMediaReady
-              ? "Suara pesanan sudah aktif"
-              : "Aktifkan ringtone pesanan masuk untuk browser ini"
-          }
-          disabled={incomingOrderMediaReady}
-          onClick={activateIncomingOrderSound}
-        >
-          {incomingOrderMediaReady
-            ? "🔊 Suara Pesanan Aktif"
-            : "🔊 Aktifkan Suara Pesanan"}
-        </button>
-      )}
       <button
         type="button"
         aria-pressed={soundEnabled}
@@ -537,12 +514,15 @@ export default function RealtimeOperationsRuntime() {
           const enabled = writeSoundPreference(window.localStorage, !soundEnabled);
           soundEnabledRef.current = enabled;
           setSoundEnabled(enabled);
-          if (enabled) unlockAudio(true);
-          else {
+          if (enabled) {
+            unlockAudio(true);
+            primeIncomingOrderAudio();
+          } else {
             customerAudioRef.current?.pause();
             if (customerAudioRef.current) customerAudioRef.current.currentTime = 0;
             pauseIncomingOrderRingtone();
             audioUnlockedRef.current = false;
+            incomingOrderMediaReadyRef.current = false;
             setAudioUnlocked(false);
           }
         }}
