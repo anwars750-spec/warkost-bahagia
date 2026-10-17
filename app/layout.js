@@ -141,6 +141,7 @@ import CustomerCatalogPolish from "./CustomerCatalogPolish";
 import CustomerQuantityUnitPolish from "./CustomerQuantityUnitPolish";
 import CustomerHelpRoutingRuntime from "./CustomerHelpRoutingRuntime";
 import CustomerGeneralSupportRuntime from "./CustomerGeneralSupportRuntime";
+import CustomerLocationLauncher from "./CustomerLocationLauncher";
 import CustomerLocationPickerUx from "./CustomerLocationPickerUx";
 import ManagerDashboardUiPolish from "./ManagerDashboardUiPolish";
 import ManagerSubcategoryPolish from "./ManagerSubcategoryPolish";
@@ -197,6 +198,7 @@ export default function RootLayout({ children }) {
         <CustomerQuantityUnitPolish />
         <CustomerHelpRoutingRuntime />
         <CustomerGeneralSupportRuntime />
+        <CustomerLocationLauncher />
         <CustomerLocationPickerUx />
         <ManagerDashboardUiPolish />
         <ManagerSubcategoryPolish />
