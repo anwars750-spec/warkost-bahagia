@@ -71,8 +71,27 @@ test("view controllers no longer infer routes or observe the global body", () =>
   assert.doesNotMatch(pageEnhancer, /button\.querySelector\("\.admin-nav-icon"\)/);
   assert.doesNotMatch(orderEnhancer, /new MutationObserver/);
   assert.match(orderEnhancer, /warkost:admin-orders-rendered/);
+  assert.match(orderEnhancer, /requestAnimationFrame/);
   assert.doesNotMatch(pageEnhancer, /headingText ===/);
   assert.doesNotMatch(orderEnhancer, /heading === "Pantau pesanan hari ini"/);
+});
+
+test("Admin order actions use distinct semantic visual cues", () => {
+  const orderEnhancer = read("app/AdminOrderCardEnhancer.js");
+  const cardCss = read("app/admin-order-cards-v2.css");
+
+  for (const actionClass of [
+    "admin-action-confirm",
+    "admin-action-prepare",
+    "admin-action-ready",
+  ]) {
+    assert.match(orderEnhancer, new RegExp(actionClass));
+    assert.match(cardCss, new RegExp(actionClass));
+  }
+
+  assert.match(orderEnhancer, /lanjutkan ke confirmed/);
+  assert.match(orderEnhancer, /mulai siapkan minuman/);
+  assert.match(orderEnhancer, /minuman siap/);
 });
 
 test("obsolete competing controllers and route-fence CSS are removed", () => {
