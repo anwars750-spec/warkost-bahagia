@@ -25,6 +25,7 @@ export default function RealtimeOperationsRuntime() {
   const [connection, setConnection] = useState("OFFLINE");
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [incomingOrderMediaReady, setIncomingOrderMediaReady] = useState(false);
   const sourceRef = useRef(null);
   const retryRef = useRef(null);
   const stableConnectionRef = useRef(null);
@@ -102,11 +103,13 @@ export default function RealtimeOperationsRuntime() {
       audio.currentTime = 0;
       audio.volume = previousVolume;
       incomingOrderMediaReadyRef.current = true;
+      setIncomingOrderMediaReady(true);
       if (pendingIncomingOrdersRef.current.size) startIncomingOrderRingtone(true);
       return true;
     } catch {
       audio.volume = previousVolume;
       incomingOrderMediaReadyRef.current = false;
+      setIncomingOrderMediaReady(false);
       return false;
     } finally {
       incomingOrderPrimeInFlightRef.current = false;
@@ -133,6 +136,7 @@ export default function RealtimeOperationsRuntime() {
       if (!hadAuthenticatedSessionRef.current) return;
       hadAuthenticatedSessionRef.current = false;
       incomingOrderMediaReadyRef.current = false;
+      setIncomingOrderMediaReady(false);
       setUser(null);
       soundedEventsRef.current.clear();
       stop();
@@ -314,6 +318,7 @@ export default function RealtimeOperationsRuntime() {
       if (incomingAction?.type === "START") {
         pendingIncomingOrdersRef.current.add(incomingAction.orderId);
         incomingStartHandled = true;
+        if (!incomingOrderMediaReadyRef.current) void primeIncomingOrderAudio();
         startIncomingOrderRingtone();
       } else if (incomingAction?.type === "STOP") {
         pendingIncomingOrdersRef.current.delete(incomingAction.orderId);
@@ -407,13 +412,10 @@ export default function RealtimeOperationsRuntime() {
     const onSessionEnded = () => {
       hadAuthenticatedSessionRef.current = false;
       incomingOrderMediaReadyRef.current = false;
+      setIncomingOrderMediaReady(false);
       setUser(null);
       soundedEventsRef.current.clear();
       stop();
-    };
-    const primeOperationalAudio = () => {
-      unlockAudio(true);
-      primeIncomingOrderAudio();
     };
     window.addEventListener("warkost:session-started", onSessionStarted);
     window.addEventListener(
@@ -426,8 +428,6 @@ export default function RealtimeOperationsRuntime() {
       onSessionRotationCancelled,
     );
     window.addEventListener("warkost:session-ended", onSessionEnded);
-    window.addEventListener("pointerdown", primeOperationalAudio, { passive: true });
-    window.addEventListener("keydown", primeOperationalAudio);
     probeRef.current = window.setInterval(() => probeSessionRef.current(), 120000);
     return () => {
       mountedRef.current = false;
@@ -444,8 +444,6 @@ export default function RealtimeOperationsRuntime() {
         onSessionRotationCancelled,
       );
       window.removeEventListener("warkost:session-ended", onSessionEnded);
-      window.removeEventListener("pointerdown", primeOperationalAudio);
-      window.removeEventListener("keydown", primeOperationalAudio);
       customerAudioRef.current?.pause();
       customerAudioRef.current = null;
       incomingOrderAudioRef.current?.pause();
@@ -454,7 +452,7 @@ export default function RealtimeOperationsRuntime() {
       incomingOrderMediaReadyRef.current = false;
       audioRef.current?.close?.().catch(() => {});
     };
-  }, [primeIncomingOrderAudio, stop, unlockAudio]);
+  }, []);
 
   useEffect(() => {
     if (!user?.id) {
@@ -462,10 +460,7 @@ export default function RealtimeOperationsRuntime() {
       return;
     }
     if (user.role === "CUSTOMER") getCustomerAudio();
-    if (["ADMIN", "KITCHEN"].includes(user.role)) {
-      getIncomingOrderAudio();
-      primeIncomingOrderAudio();
-    }
+    if (["ADMIN", "KITCHEN"].includes(user.role)) getIncomingOrderAudio();
     connectRef.current();
     return () => {
       sourceRef.current?.close();
@@ -479,9 +474,31 @@ export default function RealtimeOperationsRuntime() {
     getCustomerAudio,
     getIncomingOrderAudio,
     pauseIncomingOrderRingtone,
-    primeIncomingOrderAudio,
     stop,
     user?.id,
+    user?.role,
+  ]);
+
+  useEffect(() => {
+    if (!["ADMIN", "KITCHEN"].includes(user?.role)) return;
+    if (!soundEnabled || incomingOrderMediaReady) return;
+
+    void primeIncomingOrderAudio();
+    const primeFromNormalInteraction = () => {
+      unlockAudio(true);
+      void primeIncomingOrderAudio();
+    };
+    window.addEventListener("pointerdown", primeFromNormalInteraction, { passive: true });
+    window.addEventListener("keydown", primeFromNormalInteraction);
+    return () => {
+      window.removeEventListener("pointerdown", primeFromNormalInteraction);
+      window.removeEventListener("keydown", primeFromNormalInteraction);
+    };
+  }, [
+    incomingOrderMediaReady,
+    primeIncomingOrderAudio,
+    soundEnabled,
+    unlockAudio,
     user?.role,
   ]);
 
@@ -516,13 +533,14 @@ export default function RealtimeOperationsRuntime() {
           setSoundEnabled(enabled);
           if (enabled) {
             unlockAudio(true);
-            primeIncomingOrderAudio();
+            void primeIncomingOrderAudio();
           } else {
             customerAudioRef.current?.pause();
             if (customerAudioRef.current) customerAudioRef.current.currentTime = 0;
             pauseIncomingOrderRingtone();
             audioUnlockedRef.current = false;
             incomingOrderMediaReadyRef.current = false;
+            setIncomingOrderMediaReady(false);
             setAudioUnlocked(false);
           }
         }}
