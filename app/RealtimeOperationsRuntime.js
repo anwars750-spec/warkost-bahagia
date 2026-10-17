@@ -18,6 +18,7 @@ const CONNECTION_LABELS = {
 };
 
 const CUSTOMER_NOTIFICATION_SOUND = "/sounds/customer-order-update-v2.mp3";
+const DRIVER_NOTIFICATION_SOUND = "/sounds/driver-order-ready-v1.wav";
 const INCOMING_ORDER_RINGTONE = "/sounds/incoming-order-admin-kitchen-v2.mp3";
 
 export default function RealtimeOperationsRuntime() {
@@ -35,6 +36,7 @@ export default function RealtimeOperationsRuntime() {
   const soundedEventsRef = useRef(new Set());
   const audioRef = useRef(null);
   const customerAudioRef = useRef(null);
+  const driverAudioRef = useRef(null);
   const incomingOrderAudioRef = useRef(null);
   const pendingIncomingOrdersRef = useRef(new Set());
   const soundEnabledRef = useRef(true);
@@ -157,6 +159,17 @@ export default function RealtimeOperationsRuntime() {
     return customerAudioRef.current;
   }, []);
 
+  const getDriverAudio = useCallback(() => {
+    if (typeof Audio === "undefined") return null;
+    if (!driverAudioRef.current) {
+      const audio = new Audio(DRIVER_NOTIFICATION_SOUND);
+      audio.preload = "auto";
+      audio.loop = false;
+      driverAudioRef.current = audio;
+    }
+    return driverAudioRef.current;
+  }, []);
+
   const primeCustomerAudio = useCallback(() => {
     if (user?.role !== "CUSTOMER") return;
     const audio = getCustomerAudio();
@@ -187,10 +200,41 @@ export default function RealtimeOperationsRuntime() {
     }
   }, [getCustomerAudio, user?.role]);
 
+  const primeDriverAudio = useCallback(() => {
+    if (user?.role !== "DRIVER") return;
+    const audio = getDriverAudio();
+    if (!audio) return;
+    const previousVolume = audio.volume;
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.volume = 0;
+      const playback = audio.play();
+      if (playback?.then)
+        playback
+          .then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.volume = previousVolume;
+          })
+          .catch(() => {
+            audio.volume = previousVolume;
+          });
+      else {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.volume = previousVolume;
+      }
+    } catch {
+      audio.volume = previousVolume;
+    }
+  }, [getDriverAudio, user?.role]);
+
   const unlockAudio = useCallback(
     (force = false) => {
       if ((!soundEnabled && !force) || audioUnlocked) return;
       if (user?.role === "CUSTOMER") primeCustomerAudio();
+      if (user?.role === "DRIVER") primeDriverAudio();
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       if (!AudioContext) return;
       try {
@@ -206,7 +250,14 @@ export default function RealtimeOperationsRuntime() {
         else unlocked();
       } catch {}
     },
-    [audioUnlocked, primeCustomerAudio, soundEnabled, startIncomingOrderRingtone, user?.role],
+    [
+      audioUnlocked,
+      primeCustomerAudio,
+      primeDriverAudio,
+      soundEnabled,
+      startIncomingOrderRingtone,
+      user?.role,
+    ],
   );
 
   const playSound = useCallback(
@@ -217,6 +268,19 @@ export default function RealtimeOperationsRuntime() {
         try {
           audio.pause();
           audio.currentTime = 0;
+          audio.volume = 1;
+          audio.play().catch(() => {});
+        } catch {}
+        return;
+      }
+
+      if (user?.role === "DRIVER") {
+        const audio = getDriverAudio();
+        if (!audio) return;
+        try {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.loop = false;
           audio.volume = 1;
           audio.play().catch(() => {});
         } catch {}
@@ -246,7 +310,7 @@ export default function RealtimeOperationsRuntime() {
         oscillator.stop(context.currentTime + offset + 0.17);
       }
     },
-    [getCustomerAudio, user?.role],
+    [getCustomerAudio, getDriverAudio, user?.role],
   );
 
   const connectRef = useRef(() => {});
@@ -446,6 +510,8 @@ export default function RealtimeOperationsRuntime() {
       window.removeEventListener("warkost:session-ended", onSessionEnded);
       customerAudioRef.current?.pause();
       customerAudioRef.current = null;
+      driverAudioRef.current?.pause();
+      driverAudioRef.current = null;
       incomingOrderAudioRef.current?.pause();
       incomingOrderAudioRef.current = null;
       pendingIncomingOrdersRef.current.clear();
@@ -460,6 +526,7 @@ export default function RealtimeOperationsRuntime() {
       return;
     }
     if (user.role === "CUSTOMER") getCustomerAudio();
+    if (user.role === "DRIVER") getDriverAudio();
     if (["ADMIN", "KITCHEN"].includes(user.role)) getIncomingOrderAudio();
     connectRef.current();
     return () => {
@@ -472,6 +539,7 @@ export default function RealtimeOperationsRuntime() {
     };
   }, [
     getCustomerAudio,
+    getDriverAudio,
     getIncomingOrderAudio,
     pauseIncomingOrderRingtone,
     stop,
@@ -537,6 +605,8 @@ export default function RealtimeOperationsRuntime() {
           } else {
             customerAudioRef.current?.pause();
             if (customerAudioRef.current) customerAudioRef.current.currentTime = 0;
+            driverAudioRef.current?.pause();
+            if (driverAudioRef.current) driverAudioRef.current.currentTime = 0;
             pauseIncomingOrderRingtone();
             audioUnlockedRef.current = false;
             incomingOrderMediaReadyRef.current = false;
