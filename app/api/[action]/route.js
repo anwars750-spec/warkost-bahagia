@@ -140,11 +140,12 @@ function error(e) {
   return out({ error: "Terjadi kesalahan server" }, 500);
 }
 function cookieOptions(request) {
+  const isDemo = process.env.DEPLOYMENT_ENV === "demo";
   return {
     httpOnly: true,
     sameSite: "lax",
     secure:
-      process.env.NODE_ENV === "production" ||
+      (!isDemo && process.env.NODE_ENV === "production") ||
       request.nextUrl.protocol === "https:",
     path: "/",
     maxAge: 7 * 86400,
