@@ -48,6 +48,7 @@ import "./customer-catalog-polish.css";
 import "./customer-catalog-final-polish.css";
 import "./customer-quantity-unit-final.css";
 import "./customer-location-picker-ux.css";
+import "./customer-location-picker-warkost-polish.css";
 import "./manager-control-center.css";
 import "./manager-dashboard-ui-polish.css";
 import "./manager-dashboard-title-size.css";
