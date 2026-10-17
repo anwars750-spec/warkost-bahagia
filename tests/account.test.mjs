@@ -69,11 +69,15 @@ test("perubahan alamat mempertahankan histori dan menghalangi checkout alamat no
   const second = await addAddress(customer, {
     label: "Rumah orang tua",
     detail: "Jalan Kedua Nomor 300",
+    latitude: -6.91,
+    longitude: 106.94,
   });
   await setDefaultAddress(customer, second.id);
   const third = await addAddress(customer, {
     label: "Kantor cabang",
     detail: "Jalan Ketiga Nomor 400",
+    latitude: -6.9,
+    longitude: 106.95,
   });
   assert.equal(
     database

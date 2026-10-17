@@ -32,9 +32,36 @@
 - Driver Multi-order Trip + Grouped COD UI implementation: `d506e466ad999a708be69fbd1a5d582978c8dadf`
 - Manager Control Center V1 implementation: `0289d0eb593f162900c5f2f039ef0100f96bde96`
 - Promotion Engine V1 implementation: `757f5a79e6afa721df80a6b836c3caf06af90393`
-- Current milestone: Promotion Engine V1
-- Current status: **VERIFIED**
-- Verification date: 2026-10-10
+- Current milestone: Google Delivery Location V1 — Zero-Bill Guardrail
+- Current status: **AUTOMATED VERIFIED / GOOGLE CLOUD CONFIGURATION + MANUAL UAT REQUIRED**
+- Verification date: 2026-10-17
+
+## Google Delivery Location V1 — Zero-Bill Guardrail
+
+### Provider and delivery contract
+
+- Added authenticated server-side adapters for Places Autocomplete (New), Place Details (New), Geocoding/reverse geocoding, and Routes Compute Routes. Maps Embed remains a browser-only visual preview using a separate restricted public key.
+- Places requests use session tokens and minimum field masks; Place Details requests only `id`, `formattedAddress`, and `location`. Routes requests only driving `distanceMeters` and `duration`.
+- Production delivery quote and order creation use Google driving-route distance from the configured Warkost coordinates to the saved customer pin. Haversine remains test-only and cannot become a production pricing fallback.
+- Existing delivery rules remain authoritative: 0–3 km free, over 3–10 km charged using the configured fee per km, and over 10 km unavailable. Checkout recalculates distance and fee server-side and ignores client-submitted delivery values.
+- New customer addresses require a valid coordinate pair; stored coordinates remain the source of truth for quote, order, Admin delivery context, and external Driver navigation. Customer location-picker UI remains a separate workstream and was not redesigned here.
+
+### Persistent zero-bill guardrail
+
+- Migration `029_google_maps_usage.sql` and the SQLite runtime schema add persistent per-service day/month usage buckets with attempted and successful call counters.
+- Daily hard cap is 200 and monthly hard cap is 6,000 independently for Autocomplete, Place Details, Geocoding, and Routes. Environment values may lower or explicitly configure each cap.
+- Counter reservation is transaction-protected before any upstream request. A missing key, exhausted application cap, provider error, or missing route fails closed with a controlled unavailable response and never fabricates a delivery quote.
+- Server and Embed keys are separate environment variables. No secret is embedded in source or exposed to the browser.
+
+### Verification and remaining deployment work
+
+- Google Delivery Location focused plus Checkout/Address/MySQL/Driver regression: **31/31 PASS**.
+- Full unit suite: **389/389 PASS**.
+- Production build with no Google key configured: **PASS**.
+- `git diff --check`: **PASS**.
+- Critical defects: **0**. High defects: **0**.
+- Before production UAT, Google Cloud must enable only Places API (New), Geocoding API, Routes API, and Maps Embed API; configure separate API-restricted server/browser keys; apply browser referrer restrictions; configure Cloud quota/budget alerts; and set the required environment variables. This external configuration is not an implementation defect.
+- Manual end-to-end UAT with restricted staging keys remains required for search, place selection, device reverse geocoding, road-distance quote, saved-address checkout, and Driver external navigation.
 
 ## Promotion Engine V1
 
