@@ -57,13 +57,31 @@ test("incoming order ringtone mulai dan berhenti sesuai role tanpa replay", () =
     null,
   );
 
+  assert.equal(
+    incomingOrderRingtoneAction("KITCHEN", {
+      type: "ORDER_STATUS_CHANGED",
+      replayed: false,
+      payload: { orderId: 101, status: "PREPARING", station: "CASHIER" },
+    }),
+    null,
+  );
+
   assert.deepEqual(
+    incomingOrderRingtoneAction("KITCHEN", {
+      type: "ORDER_STATUS_CHANGED",
+      replayed: false,
+      payload: { orderId: 101, status: "PREPARING", station: "KITCHEN" },
+    }),
+    { type: "STOP", orderId: 101 },
+  );
+
+  assert.equal(
     incomingOrderRingtoneAction("KITCHEN", {
       type: "ORDER_STATUS_CHANGED",
       replayed: false,
       payload: { orderId: 101, status: "PREPARING" },
     }),
-    { type: "STOP", orderId: 101 },
+    null,
   );
 
   assert.equal(
@@ -86,4 +104,11 @@ test("incoming order ringtone mulai dan berhenti sesuai role tanpa replay", () =
   assert.match(runtime, /pointerdown/);
   assert.doesNotMatch(runtime, /Aktifkan Suara Pesanan/);
   assert.doesNotMatch(runtime, /Suara Pesanan Aktif/);
+
+  const realtime = fs.readFileSync(
+    path.resolve(process.cwd(), "lib/realtime.mjs"),
+    "utf8",
+  );
+  assert.match(realtime, /LEFT JOIN products p ON p\.id=oi\.product_id/);
+  assert.match(realtime, /station \? \{ station \} : \{\}/);
 });
