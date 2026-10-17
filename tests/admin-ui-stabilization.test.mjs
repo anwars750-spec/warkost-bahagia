@@ -77,9 +77,11 @@ test("view controllers no longer infer routes or observe the global body", () =>
 });
 
 test("Admin order actions use distinct semantic visual cues", () => {
+  const layout = read("app/layout.js");
   const page = read("app/page.js");
   const orderEnhancer = read("app/AdminOrderCardEnhancer.js");
   const cardCss = read("app/admin-order-cards-v2.css");
+  const finalActionCss = read("app/admin-action-colors-final.css");
 
   assert.match(
     page,
@@ -109,6 +111,23 @@ test("Admin order actions use distinct semantic visual cues", () => {
 
   assert.doesNotMatch(orderEnhancer, /classifyActionButtons|actionToneStyle/);
   assert.doesNotMatch(orderEnhancer, /admin-action-(confirm|prepare|ready)/);
+
+  assert.ok(
+    layout.indexOf('import "./admin-action-colors-final.css";') >
+      layout.indexOf('import "./realtime-operations.css";'),
+  );
+  assert.match(
+    finalActionCss,
+    /main\[data-admin-view="orders"\][\s\S]{0,160}button\.primary\.admin-action-confirm[\s\S]{0,180}#7a3422[\s\S]{0,80}#5a2117[\s\S]{0,40}!important/,
+  );
+  assert.match(
+    finalActionCss,
+    /main\[data-admin-view="orders"\][\s\S]{0,160}button\.primary\.admin-action-prepare[\s\S]{0,180}#f39a18[\s\S]{0,80}#d97706[\s\S]{0,40}!important/,
+  );
+  assert.match(
+    finalActionCss,
+    /main\[data-admin-view="orders"\][\s\S]{0,160}button\.primary\.admin-action-ready[\s\S]{0,180}#28a95c[\s\S]{0,80}#18753b[\s\S]{0,40}!important/,
+  );
 });
 
 test("obsolete competing controllers and route-fence CSS are removed", () => {
