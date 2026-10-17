@@ -7,11 +7,19 @@ const launcher = fs.readFileSync(
   "utf8",
 );
 
-test("account address settings reuse the location picker", () => {
-  assert.match(launcher, /#account-address/);
+test("account address settings reuse the location picker without layout-id coupling", () => {
+  assert.match(launcher, /findAddressFormCandidates/);
+  assert.match(launcher, /\["label", "detail", "latitude", "longitude"\]/);
   assert.match(launcher, /Pilih titik lokasi/);
   assert.match(launcher, /wloc-account-picker-trigger/);
   assert.match(launcher, /quick-address-toggle/);
+  assert.doesNotMatch(launcher, /querySelector\("#account-address"\)/);
+});
+
+test("legacy account location action is detected by class or visible label", () => {
+  assert.match(launcher, /findLegacyLocationButton/);
+  assert.match(launcher, /\.location-button/);
+  assert.match(launcher, /gunakan lokasi perangkat/);
 });
 
 test("account address save requires valid coordinates", () => {
