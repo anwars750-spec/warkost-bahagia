@@ -14,6 +14,15 @@ function setNativeValue(field, value) {
 }
 
 function isCoordinatePairValid(latitude, longitude) {
+  if (
+    latitude === null ||
+    latitude === undefined ||
+    longitude === null ||
+    longitude === undefined ||
+    String(latitude).trim() === "" ||
+    String(longitude).trim() === ""
+  )
+    return false;
   const lat = Number(latitude);
   const lng = Number(longitude);
   return (
@@ -338,7 +347,8 @@ export default function CustomerLocationLauncher() {
         const pointSummaryText = pointSummary.querySelector("span");
         const pickerButton = document.createElement("button");
         pickerButton.type = "button";
-        pickerButton.className = "wloc-account-picker-button";
+        pickerButton.className =
+          "wloc-account-picker-button wloc-account-picker-trigger";
         pickerButton.textContent = "Pilih titik lokasi";
 
         const status = document.createElement("span");

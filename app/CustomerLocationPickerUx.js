@@ -353,13 +353,24 @@ export default function CustomerLocationPickerUx() {
   }
 
   function useCurrentLocation() {
-    if (!navigator.geolocation) {
-      setLocationError("Perangkat ini tidak mendukung akses lokasi.");
+    if (!window.isSecureContext) {
+      setLocationBusy(false);
+      setLocationError(
+        "GPS memerlukan koneksi aman (HTTPS). Gunakan pencarian alamat atau buka Warkost melalui HTTPS.",
+      );
+      return;
+    }
+    const geolocation = window.navigator?.geolocation;
+    if (!geolocation) {
+      setLocationBusy(false);
+      setLocationError(
+        "GPS tidak tersedia di perangkat ini. Gunakan pencarian alamat untuk memilih titik pengantaran.",
+      );
       return;
     }
     setLocationBusy(true);
     setLocationError("");
-    navigator.geolocation.getCurrentPosition(
+    geolocation.getCurrentPosition(
       async ({ coords }) => {
         const fallback = {
           placeId: "",
@@ -397,10 +408,12 @@ export default function CustomerLocationPickerUx() {
           setLocationBusy(false);
         }
       },
-      () => {
+      (error) => {
         setLocationBusy(false);
         setLocationError(
-          "Lokasi perangkat tidak dapat diakses. Cari alamat atau gunakan alamat manual.",
+          error?.code === 1
+            ? "Izin lokasi ditolak. Izinkan akses lokasi di browser atau gunakan pencarian alamat."
+            : "Lokasi perangkat tidak dapat ditemukan. Coba lagi atau gunakan pencarian alamat.",
         );
       },
       { enableHighAccuracy: true, timeout: 10000 },

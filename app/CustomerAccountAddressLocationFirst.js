@@ -128,6 +128,45 @@ function makeStep(number, title, description) {
   return box;
 }
 
+function hasValidCoordinatePair(latitudeField, longitudeField) {
+  const latitudeValue = String(latitudeField?.value ?? "").trim();
+  const longitudeValue = String(longitudeField?.value ?? "").trim();
+  if (!latitudeValue || !longitudeValue) return false;
+  const latitude = Number(latitudeValue);
+  const longitude = Number(longitudeValue);
+  return (
+    Number.isFinite(latitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    Number.isFinite(longitude) &&
+    longitude >= -180 &&
+    longitude <= 180
+  );
+}
+
+export function syncAccountPointReadyState(
+  form,
+  latitudeField,
+  longitudeField,
+  sections,
+) {
+  const ready =
+    form.dataset.wlocPointReady === "1" &&
+    hasValidCoordinatePair(latitudeField, longitudeField);
+
+  const nextReady = ready ? "1" : "0";
+  if (form.dataset.wlocPointReady !== nextReady) {
+    form.dataset.wlocPointReady = nextReady;
+  }
+  for (const section of sections) {
+    const hidden = !ready;
+    if (section.classList.contains("wloc-native-step-hidden") !== hidden) {
+      section.classList.toggle("wloc-native-step-hidden", hidden);
+    }
+  }
+  return ready;
+}
+
 function enhance(form) {
   if (!form || form.dataset.wlocNativeLocationFirst === "1") return;
 
@@ -216,15 +255,12 @@ function enhance(form) {
   if (legacyLocationCard) legacyLocationCard.classList.add("wloc-native-step-hidden");
 
   function sync() {
-    const ready =
-      form.dataset.wlocPointReady === "1" &&
-      Number.isFinite(Number(latitudeField?.value)) &&
-      Number.isFinite(Number(longitudeField?.value));
-
-    form.dataset.wlocPointReady = ready ? "1" : "0";
-    for (const section of [detailSection, labelSection, defaultSection, saveSection]) {
-      section.classList.toggle("wloc-native-step-hidden", !ready);
-    }
+    syncAccountPointReadyState(form, latitudeField, longitudeField, [
+      detailSection,
+      labelSection,
+      defaultSection,
+      saveSection,
+    ]);
   }
 
   sync();
@@ -235,10 +271,12 @@ function enhance(form) {
     attributeFilter: ["data-wloc-point-ready"],
   });
 
-  const timer = window.setInterval(sync, 250);
+  latitudeField?.addEventListener("input", sync);
+  longitudeField?.addEventListener("input", sync);
   form._wlocNativeCleanup = () => {
     observer.disconnect();
-    window.clearInterval(timer);
+    latitudeField?.removeEventListener("input", sync);
+    longitudeField?.removeEventListener("input", sync);
   };
 }
 

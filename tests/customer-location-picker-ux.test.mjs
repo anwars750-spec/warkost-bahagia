@@ -34,6 +34,13 @@ test("location picker keeps current, saved and manual fallbacks", () => {
   assert.match(component, /quickAddressDetail/);
 });
 
+test("GPS fails gracefully outside a secure context", () => {
+  assert.match(component, /window\.isSecureContext/);
+  assert.match(component, /GPS memerlukan koneksi aman \(HTTPS\)/);
+  assert.match(component, /window\.navigator\?\.geolocation/);
+  assert.match(component, /Izin lokasi ditolak/);
+});
+
 test("location confirmation exposes delivery UX contract", () => {
   assert.match(component, /Konfirmasi lokasi/);
   assert.match(component, /Jarak dari Warkost/);

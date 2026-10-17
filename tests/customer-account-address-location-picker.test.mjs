@@ -75,3 +75,14 @@ test("account bridge is excluded from legacy checkout form hiding", () => {
     /checkout-quick-address:not\(\.wloc-account-bridge-form\)/,
   );
 });
+
+test("account opens picker through a dedicated event without synthetic checkout click", () => {
+  assert.match(launcher, /ACCOUNT_PICKER_EVENT = "warkost:location-picker-open"/);
+  assert.match(launcher, /detail: \{ source: "account" \}/);
+  assert.doesNotMatch(launcher, /oldLocationButton\.click\(/);
+});
+
+test("blank coordinate values are never accepted as zero coordinates", () => {
+  assert.match(launcher, /String\(latitude\)\.trim\(\) === ""/);
+  assert.match(launcher, /String\(longitude\)\.trim\(\) === ""/);
+});
