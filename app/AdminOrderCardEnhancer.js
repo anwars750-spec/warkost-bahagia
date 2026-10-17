@@ -30,6 +30,21 @@ const orderIdFromCard = (card) => {
   return match ? Number(match[1]) : null;
 };
 
+const actionToneStyle = {
+  confirm: {
+    border: "#6d2f20",
+    background: "linear-gradient(135deg, #7a3422, #5a2117)",
+  },
+  prepare: {
+    border: "#c96a08",
+    background: "linear-gradient(135deg, #f39a18, #d97706)",
+  },
+  ready: {
+    border: "#18753b",
+    background: "linear-gradient(135deg, #28a95c, #18753b)",
+  },
+};
+
 export default function AdminOrderCardEnhancer() {
   useEffect(() => {
     const ordersById = new Map();
@@ -112,24 +127,43 @@ export default function AdminOrderCardEnhancer() {
       }
     };
 
+    const clearActionTone = (button) => {
+      button.classList.remove(
+        "admin-action-confirm",
+        "admin-action-prepare",
+        "admin-action-ready",
+      );
+      if (!button.dataset.adminActionTone) return;
+      delete button.dataset.adminActionTone;
+      button.style.removeProperty("border-color");
+      button.style.removeProperty("background");
+      button.style.removeProperty("color");
+    };
+
+    const applyActionTone = (button, tone) => {
+      const style = actionToneStyle[tone];
+      if (!style) return;
+      button.dataset.adminActionTone = tone;
+      button.classList.add(`admin-action-${tone}`);
+      button.style.setProperty("border-color", style.border, "important");
+      button.style.setProperty("background", style.background, "important");
+      button.style.setProperty("color", "#fff", "important");
+    };
+
     const classifyActionButtons = (card) => {
       const buttons = [
         ...card.querySelectorAll(":scope > .actions > button"),
         ...card.querySelectorAll(":scope > button"),
       ];
       for (const button of [...new Set(buttons)]) {
-        button.classList.remove(
-          "admin-action-confirm",
-          "admin-action-prepare",
-          "admin-action-ready",
-        );
+        clearActionTone(button);
         const label = button.textContent.trim().toLowerCase();
         if (/lanjutkan ke confirmed/.test(label)) {
-          button.classList.add("admin-action-confirm");
+          applyActionTone(button, "confirm");
         } else if (/mulai siapkan minuman/.test(label)) {
-          button.classList.add("admin-action-prepare");
+          applyActionTone(button, "prepare");
         } else if (/minuman siap/.test(label)) {
-          button.classList.add("admin-action-ready");
+          applyActionTone(button, "ready");
         }
       }
     };
@@ -237,6 +271,11 @@ export default function AdminOrderCardEnhancer() {
       renderPreview(card, id);
       enhanceDetailMessage(card);
       classifyActionButtons(card);
+      if (typeof window.requestAnimationFrame === "function") {
+        window.requestAnimationFrame(() => {
+          if (card.isConnected) classifyActionButtons(card);
+        });
+      }
 
       const detailButton = [...card.querySelectorAll(":scope > button")].find((button) =>
         /detail|riwayat/i.test(button.textContent),
