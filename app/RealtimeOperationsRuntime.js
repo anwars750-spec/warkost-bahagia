@@ -6,7 +6,9 @@ import {
   nextRealtimeBackoff,
   readSoundPreference,
   rememberRealtimeId,
+  resolveRealtimeSoundEnabled,
   isRealtimeRecoveryConnection,
+  shouldRenderRealtimeControls,
   shouldPlayRealtimeSound,
   writeSoundPreference,
 } from "../lib/realtime-client.mjs";
@@ -521,6 +523,13 @@ export default function RealtimeOperationsRuntime() {
   }, []);
 
   useEffect(() => {
+    if (!user?.role) return;
+    const enabled = resolveRealtimeSoundEnabled(user.role, window.localStorage);
+    soundEnabledRef.current = enabled;
+    setSoundEnabled(enabled);
+  }, [user?.role]);
+
+  useEffect(() => {
     if (!user?.id) {
       stop();
       return;
@@ -581,7 +590,7 @@ export default function RealtimeOperationsRuntime() {
     };
   }, [soundEnabled, audioUnlocked, unlockAudio]);
 
-  if (!user) return null;
+  if (!user || !shouldRenderRealtimeControls(user.role)) return null;
   return (
     <aside
       className={`realtime-status realtime-status-${connection.toLowerCase()}`}

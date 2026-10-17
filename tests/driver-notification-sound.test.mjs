@@ -3,7 +3,12 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
-import { shouldPlayRealtimeSound } from "../lib/realtime-client.mjs";
+import {
+  resolveRealtimeSoundEnabled,
+  shouldPlayRealtimeSound,
+  shouldRenderRealtimeControls,
+  usesAutomaticRealtimeSound,
+} from "../lib/realtime-client.mjs";
 
 const runtimePath = path.resolve(process.cwd(), "app/RealtimeOperationsRuntime.js");
 const runtime = fs.readFileSync(runtimePath, "utf8");
@@ -61,4 +66,33 @@ test("policy replay dan deduplikasi suara realtime tidak berubah", () => {
     }),
     false,
   );
+});
+
+test("kontrol realtime disembunyikan hanya untuk Customer dan Driver", () => {
+  assert.equal(shouldRenderRealtimeControls("CUSTOMER"), false);
+  assert.equal(shouldRenderRealtimeControls("DRIVER"), false);
+
+  for (const role of ["ADMIN", "KITCHEN", "MANAGER", "OWNER"])
+    assert.equal(shouldRenderRealtimeControls(role), true, role);
+
+  assert.match(
+    runtime,
+    /if \(!user \|\| !shouldRenderRealtimeControls\(user\.role\)\) return null;/,
+  );
+});
+
+test("suara Customer dan Driver otomatis aktif tanpa mengubah preferensi role lain", () => {
+  const disabledStorage = { getItem: () => "off" };
+
+  assert.equal(usesAutomaticRealtimeSound("CUSTOMER"), true);
+  assert.equal(usesAutomaticRealtimeSound("DRIVER"), true);
+  assert.equal(resolveRealtimeSoundEnabled("CUSTOMER", disabledStorage), true);
+  assert.equal(resolveRealtimeSoundEnabled("DRIVER", disabledStorage), true);
+
+  for (const role of ["ADMIN", "KITCHEN", "MANAGER", "OWNER"])
+    assert.equal(resolveRealtimeSoundEnabled(role, disabledStorage), false, role);
+
+  assert.match(runtime, /resolveRealtimeSoundEnabled\(user\.role, window\.localStorage\)/);
+  assert.match(runtime, /if \(user\?\.role === "CUSTOMER"\) primeCustomerAudio\(\);/);
+  assert.match(runtime, /if \(user\?\.role === "DRIVER"\) primeDriverAudio\(\);/);
 });
