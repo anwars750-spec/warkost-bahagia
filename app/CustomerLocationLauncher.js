@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import CustomerLocationVisualLock from "./CustomerLocationVisualLock";
 
 const ACCOUNT_STYLE_ID = "wloc-account-address-style";
+const ACCOUNT_PICKER_EVENT = "warkost:location-picker-open";
 
 function setNativeValue(field, value) {
   if (!field) return;
@@ -242,7 +243,7 @@ export default function CustomerLocationLauncher() {
       for (const container of actions) {
         if (container.dataset.wlocLauncherReady === "1") continue;
         const original = container.querySelector(
-          ".quick-address-toggle:not(.wloc-location-launcher):not(.wloc-account-picker-trigger)",
+          ".quick-address-toggle:not(.wloc-location-launcher)",
         );
         if (!original) continue;
 
@@ -363,13 +364,6 @@ export default function CustomerLocationLauncher() {
         `;
         document.body.append(bridgeForm);
 
-        const trigger = document.createElement("button");
-        trigger.type = "button";
-        trigger.className = "quick-address-toggle wloc-account-picker-trigger";
-        trigger.style.display = "none";
-        trigger.setAttribute("aria-hidden", "true");
-        document.body.append(trigger);
-
         const applyButton = bridgeForm.querySelector(".primary");
         const saveButton = saveActions?.querySelector(".primary") || null;
 
@@ -431,14 +425,20 @@ export default function CustomerLocationLauncher() {
           detailField.focus();
         }
 
-        function openPicker() {
+        function openPicker(event) {
+          event?.preventDefault();
+          event?.stopPropagation();
           bridgeForm.querySelector('[name="quickAddressLabel"]').value =
             labelField.value || "";
           bridgeForm.querySelector('[name="quickAddressDetail"]').value = "";
           bridgeForm.querySelector('[name="quickAddressLatitude"]').value = "";
           bridgeForm.querySelector('[name="quickAddressLongitude"]').value = "";
           document.body.classList.add("wloc-account-mode");
-          trigger.click();
+          window.dispatchEvent(
+            new CustomEvent(ACCOUNT_PICKER_EVENT, {
+              detail: { source: "account" },
+            }),
+          );
         }
 
         function guardAccurateSubmit(event) {
@@ -466,7 +466,6 @@ export default function CustomerLocationLauncher() {
           detailHint,
           pickerButton,
           bridgeForm,
-          trigger,
           applyButton,
           openPicker,
           handleApply,
@@ -508,7 +507,6 @@ export default function CustomerLocationLauncher() {
         entry.card.remove();
         entry.detailHint.remove();
         entry.bridgeForm.remove();
-        entry.trigger.remove();
         entry.form.classList.remove("wloc-account-location-first");
         entry.labelWrap?.classList.remove("wloc-account-label-field");
         entry.detailWrap?.classList.remove("wloc-account-detail-field");
