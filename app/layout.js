@@ -47,6 +47,7 @@ import "./customer-quantity-mobile-polish.css";
 import "./customer-catalog-polish.css";
 import "./customer-catalog-final-polish.css";
 import "./customer-quantity-unit-final.css";
+import "./customer-location-picker-ux.css";
 import "./manager-control-center.css";
 import "./manager-dashboard-ui-polish.css";
 import "./manager-dashboard-title-size.css";
@@ -140,6 +141,7 @@ import CustomerCatalogPolish from "./CustomerCatalogPolish";
 import CustomerQuantityUnitPolish from "./CustomerQuantityUnitPolish";
 import CustomerHelpRoutingRuntime from "./CustomerHelpRoutingRuntime";
 import CustomerGeneralSupportRuntime from "./CustomerGeneralSupportRuntime";
+import CustomerLocationPickerUx from "./CustomerLocationPickerUx";
 import ManagerDashboardUiPolish from "./ManagerDashboardUiPolish";
 import ManagerSubcategoryPolish from "./ManagerSubcategoryPolish";
 import ManagerNotificationPopover from "./ManagerNotificationPopover";
@@ -195,6 +197,7 @@ export default function RootLayout({ children }) {
         <CustomerQuantityUnitPolish />
         <CustomerHelpRoutingRuntime />
         <CustomerGeneralSupportRuntime />
+        <CustomerLocationPickerUx />
         <ManagerDashboardUiPolish />
         <ManagerSubcategoryPolish />
         <ManagerNotificationPopover />
