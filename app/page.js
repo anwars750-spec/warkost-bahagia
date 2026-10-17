@@ -6279,7 +6279,7 @@ function Order({
         <div className="actions">
           {adminNext[o.status] && (
             <button
-              className="primary"
+              className="primary admin-action-confirm"
               disabled={busy}
               onClick={() =>
                 action("status", { orderId: o.id, status: adminNext[o.status] })
@@ -6290,7 +6290,7 @@ function Order({
           )}
           {role === "ADMIN" && o.cashier_status === "QUEUED" && (
             <button
-              className="primary"
+              className="primary admin-action-prepare"
               disabled={busy}
               onClick={() =>
                 action("station-status", { orderId: o.id, status: "PREPARING" })
@@ -6301,7 +6301,7 @@ function Order({
           )}
           {role === "ADMIN" && o.cashier_status === "PREPARING" && (
             <button
-              className="primary"
+              className="primary admin-action-ready"
               disabled={busy}
               onClick={() =>
                 action("station-status", { orderId: o.id, status: "READY" })

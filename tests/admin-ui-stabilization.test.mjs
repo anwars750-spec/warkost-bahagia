@@ -77,21 +77,38 @@ test("view controllers no longer infer routes or observe the global body", () =>
 });
 
 test("Admin order actions use distinct semantic visual cues", () => {
+  const page = read("app/page.js");
   const orderEnhancer = read("app/AdminOrderCardEnhancer.js");
   const cardCss = read("app/admin-order-cards-v2.css");
 
-  for (const actionClass of [
-    "admin-action-confirm",
-    "admin-action-prepare",
-    "admin-action-ready",
-  ]) {
-    assert.match(orderEnhancer, new RegExp(actionClass));
-    assert.match(cardCss, new RegExp(actionClass));
-  }
+  assert.match(
+    page,
+    /className="primary admin-action-confirm"[\s\S]{0,400}Lanjutkan ke \{adminNext\[o\.status\]\}/,
+  );
+  assert.match(
+    page,
+    /className="primary admin-action-prepare"[\s\S]{0,400}Mulai siapkan minuman/,
+  );
+  assert.match(
+    page,
+    /className="primary admin-action-ready"[\s\S]{0,400}Minuman siap/,
+  );
 
-  assert.match(orderEnhancer, /lanjutkan ke confirmed/);
-  assert.match(orderEnhancer, /mulai siapkan minuman/);
-  assert.match(orderEnhancer, /minuman siap/);
+  assert.match(
+    cardCss,
+    /button\.admin-action-confirm[\s\S]{0,240}#7a3422[\s\S]{0,80}#5a2117[\s\S]{0,40}!important/,
+  );
+  assert.match(
+    cardCss,
+    /button\.admin-action-prepare[\s\S]{0,240}#f39a18[\s\S]{0,80}#d97706[\s\S]{0,40}!important/,
+  );
+  assert.match(
+    cardCss,
+    /button\.admin-action-ready[\s\S]{0,240}#28a95c[\s\S]{0,80}#18753b[\s\S]{0,40}!important/,
+  );
+
+  assert.doesNotMatch(orderEnhancer, /classifyActionButtons|actionToneStyle/);
+  assert.doesNotMatch(orderEnhancer, /admin-action-(confirm|prepare|ready)/);
 });
 
 test("obsolete competing controllers and route-fence CSS are removed", () => {
