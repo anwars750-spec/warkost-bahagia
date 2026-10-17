@@ -144,6 +144,7 @@ import CustomerHelpRoutingRuntime from "./CustomerHelpRoutingRuntime";
 import CustomerGeneralSupportRuntime from "./CustomerGeneralSupportRuntime";
 import CustomerLocationLauncher from "./CustomerLocationLauncher";
 import CustomerLocationPickerUx from "./CustomerLocationPickerUx";
+import CustomerAccountAddressLocationFirst from "./CustomerAccountAddressLocationFirst";
 import ManagerDashboardUiPolish from "./ManagerDashboardUiPolish";
 import ManagerSubcategoryPolish from "./ManagerSubcategoryPolish";
 import ManagerNotificationPopover from "./ManagerNotificationPopover";
@@ -201,6 +202,7 @@ export default function RootLayout({ children }) {
         <CustomerGeneralSupportRuntime />
         <CustomerLocationLauncher />
         <CustomerLocationPickerUx />
+        <CustomerAccountAddressLocationFirst />
         <ManagerDashboardUiPolish />
         <ManagerSubcategoryPolish />
         <ManagerNotificationPopover />
