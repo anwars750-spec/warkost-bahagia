@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 const SEARCH_MIN_LENGTH = 3;
 const SEARCH_DEBOUNCE_MS = 500;
+const ACCOUNT_PICKER_EVENT = "warkost:location-picker-open";
 
 function joinAddress(detail, extra) {
   const primary = String(detail || "").trim();
@@ -107,6 +108,7 @@ export default function CustomerLocationPickerUx() {
   const [locationError, setLocationError] = useState("");
   const sessionToken = useRef("");
   const searchSequence = useRef(0);
+  const sourceRef = useRef("checkout");
 
   const embedKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY || "";
 
@@ -181,16 +183,29 @@ export default function CustomerLocationPickerUx() {
   }
 
   useEffect(() => {
+    function openPicker(source) {
+      sourceRef.current = source;
+      resetPicker();
+      setOpen(true);
+    }
+
     function handleQuickAddressClick(event) {
       const trigger = event.target.closest?.(".quick-address-toggle");
       if (!trigger) return;
-      window.setTimeout(() => {
-        resetPicker();
-        setOpen(true);
-      }, 0);
+      window.setTimeout(() => openPicker("checkout"), 0);
     }
+
+    function handleAccountPickerOpen(event) {
+      if (event?.detail?.source !== "account") return;
+      window.setTimeout(() => openPicker("account"), 0);
+    }
+
     document.addEventListener("click", handleQuickAddressClick, true);
-    return () => document.removeEventListener("click", handleQuickAddressClick, true);
+    window.addEventListener(ACCOUNT_PICKER_EVENT, handleAccountPickerOpen);
+    return () => {
+      document.removeEventListener("click", handleQuickAddressClick, true);
+      window.removeEventListener(ACCOUNT_PICKER_EVENT, handleAccountPickerOpen);
+    };
   }, []);
 
   useEffect(() => {
@@ -203,6 +218,7 @@ export default function CustomerLocationPickerUx() {
     window.addEventListener("keydown", handleEscape);
     return () => {
       document.body.style.overflow = previousOverflow;
+      document.body.classList.remove("wloc-account-mode");
       window.removeEventListener("keydown", handleEscape);
     };
   }, [open]);
@@ -392,7 +408,12 @@ export default function CustomerLocationPickerUx() {
   }
 
   function applyToExistingCheckout() {
-    const quickForm = document.querySelector(".checkout-quick-address");
+    const quickForm =
+      sourceRef.current === "account"
+        ? document.querySelector(".wloc-account-bridge-form")
+        : document.querySelector(
+            ".checkout-quick-address:not(.wloc-account-bridge-form)",
+          );
     if (!quickForm) return;
     const labelField = quickForm.querySelector('[name="quickAddressLabel"]');
     const detailField = quickForm.querySelector('[name="quickAddressDetail"]');
