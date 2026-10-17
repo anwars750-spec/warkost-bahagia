@@ -276,19 +276,22 @@
   background: linear-gradient(135deg, #7a3422, #5a2117) !important;
 }
 
-.admin-ui-mode .admin-order-card-v2 button.admin-action-confirm {
+.admin-ui-mode .admin-order-card-v2 > .actions > button.admin-action-confirm,
+.admin-ui-mode .admin-order-card-v2 > button.admin-action-confirm {
   border-color: #6d2f20 !important;
   color: #fff !important;
   background: linear-gradient(135deg, #7a3422, #5a2117) !important;
 }
 
-.admin-ui-mode .admin-order-card-v2 button.admin-action-prepare {
+.admin-ui-mode .admin-order-card-v2 > .actions > button.admin-action-prepare,
+.admin-ui-mode .admin-order-card-v2 > button.admin-action-prepare {
   border-color: #c96a08 !important;
   color: #fff !important;
   background: linear-gradient(135deg, #f39a18, #d97706) !important;
 }
 
-.admin-ui-mode .admin-order-card-v2 button.admin-action-ready {
+.admin-ui-mode .admin-order-card-v2 > .actions > button.admin-action-ready,
+.admin-ui-mode .admin-order-card-v2 > button.admin-action-ready {
   border-color: #18753b !important;
   color: #fff !important;
   background: linear-gradient(135deg, #28a95c, #18753b) !important;
