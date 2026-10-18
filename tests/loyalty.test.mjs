@@ -9,11 +9,13 @@ process.env.DATABASE_PATH = path.join(
   "test.db",
 );
 process.env.SESSION_SECRET = "loyalty-test-secret-with-more-than-32-characters";
+process.env.PAYMENT_PROVIDER_MODE = "simulation";
 
 const { db } = await import("../lib/db.mjs");
 const { createOrder, changeStatus, claimDelivery, updateStationStatus } =
   await import("../lib/domain.mjs");
 const {
+  awardOrderPoints,
   calculateEarnPoints,
   calculateLoyaltyDiscount,
   listCustomerRewards,
@@ -21,7 +23,7 @@ const {
   saveRewardRule,
 } = await import("../lib/loyalty.mjs");
 const { claimVoucher } = await import("../lib/vouchers.mjs");
-const { verifyPayment } = await import("../lib/payments.mjs");
+const store = await import("../lib/store.mjs");
 const database = db();
 
 database.exec(`
@@ -74,7 +76,6 @@ function balance(customerId = 10) {
 }
 
 async function complete(orderId, { pay = true } = {}) {
-  if (pay) await verifyPayment(admin, orderId, "PAID");
   await changeStatus(admin, orderId, "CONFIRMED");
   await updateStationStatus(kitchen, orderId, "PREPARING");
   await updateStationStatus(kitchen, orderId, "READY");
@@ -82,6 +83,17 @@ async function complete(orderId, { pay = true } = {}) {
   await changeStatus(driver, orderId, "PICKED_UP");
   await changeStatus(driver, orderId, "ON_DELIVERY");
   await changeStatus(driver, orderId, "DELIVERED");
+  if (pay) await settleCompletedOrder(orderId);
+}
+
+async function settleCompletedOrder(orderId) {
+  database
+    .prepare(
+      "UPDATE payments SET status='PAID',paid_at=CURRENT_TIMESTAMP WHERE order_id=?",
+    )
+    .run(orderId);
+  const order = database.prepare("SELECT * FROM orders WHERE id=?").get(orderId);
+  return store.transaction((tx, mysql) => awardOrderPoints(tx, mysql, order));
 }
 
 function orderInput({
@@ -95,7 +107,7 @@ function orderInput({
 } = {}) {
   return {
     addressId,
-    method: "BANK_TRANSFER",
+    method: "CASH",
     items: [{ productId, quantity: 1 }],
     loyaltyRewardId,
     promotionId,
@@ -161,7 +173,7 @@ test("poin hanya masuk setelah DELIVERED dan ongkir tidak menjadi earn base", as
   assert.equal(balance(), 0);
   await complete(order.id, { pay: false });
   assert.equal(balance(), 0);
-  await verifyPayment(admin, order.id, "PAID");
+  await settleCompletedOrder(order.id);
   assert.equal(balance(), 1);
   assert.equal(
     database
@@ -184,14 +196,13 @@ test("poin hanya masuk setelah DELIVERED dan ongkir tidak menjadi earn base", as
 test("payment FAILED dan EXPIRED tidak menghasilkan poin", async () => {
   setBalance(10, 0);
   const failed = await createOrder(customerA, orderInput({ productId: 4 }));
-  await verifyPayment(admin, failed.id, "FAILED");
+  database
+    .prepare("UPDATE payments SET status='FAILED' WHERE order_id=?")
+    .run(failed.id);
   await complete(failed.id, { pay: false });
   assert.equal(balance(), 0);
 
-  const expired = await createOrder(customerA, {
-    ...orderInput({ productId: 4 }),
-    method: "BANK_TRANSFER",
-  });
+  const expired = await createOrder(customerA, orderInput({ productId: 4 }));
   database
     .prepare("UPDATE payments SET status='EXPIRED' WHERE order_id=?")
     .run(expired.id);
@@ -425,6 +436,7 @@ test("voucher + loyalty tidak stacking dan foundation voucher tetap berlaku", as
       orderInput({
         promotionId: 900,
         loyaltyRewardId: fixedRule.id,
+        extra: { method: "QRIS" },
       }),
     ),
     /tidak dapat digunakan bersamaan/,

@@ -10,6 +10,7 @@ process.env.DATABASE_PATH = path.join(
 );
 process.env.SESSION_SECRET =
   "cod-batch-test-secret-with-more-than-32-characters";
+process.env.PAYMENT_PROVIDER_MODE = "simulation";
 
 const { db } = await import("../lib/db.mjs");
 const { createOrder, COD_MAX_ORDER_AMOUNT } = await import("../lib/domain.mjs");
@@ -515,11 +516,11 @@ test("batas COD memakai final payable: <=150000 boleh, >150000 ditolak, non-cash
   );
   const nonCash = await createOrder(customer(26), {
     addressId: 26,
-    method: "BANK_TRANSFER",
+    method: "QRIS",
     items: [{ productId: 2, quantity: 1 }],
   });
   assert.equal(nonCash.total, 150001);
-  assert.equal(nonCash.payment.method, "BANK_TRANSFER");
+  assert.equal(nonCash.payment.method, "QRIS");
 });
 
 test("API contract menyediakan operasi Driver dan Admin batch tanpa UI redesign", () => {

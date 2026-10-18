@@ -10,6 +10,7 @@ process.env.DATABASE_PATH = path.join(
   "test.db",
 );
 process.env.SESSION_SECRET = "unified-inventory-v1-secret-more-than-32-bytes";
+process.env.PAYMENT_PROVIDER_MODE = "simulation";
 
 const projectRoot = fileURLToPath(new URL("..", import.meta.url));
 const source = (file) => fs.readFileSync(path.join(projectRoot, file), "utf8");
@@ -360,7 +361,7 @@ test("weighted order di bawah minimum, bukan kelipatan, dan di atas stok ditolak
     await assert.rejects(
       createOrder(customer, {
         addressId: 1,
-        method: "BANK_TRANSFER",
+        method: "CASH",
         items: [{ productId: coffee.id, quantity }],
       }),
       /satuan penjualan/,
@@ -368,7 +369,7 @@ test("weighted order di bawah minimum, bukan kelipatan, dan di atas stok ditolak
   await assert.rejects(
     createOrder(customer, {
       addressId: 1,
-      method: "BANK_TRANSFER",
+      method: "QRIS",
       items: [{ productId: coffee.id, quantity: 10100 }],
     }),
     /tidak mencukupi/,
@@ -391,7 +392,7 @@ test("produk pada subkategori inactive tidak dapat dibeli", async () => {
   await assert.rejects(
     createOrder(customer, {
       addressId: 1,
-      method: "BANK_TRANSFER",
+      method: "CASH",
       items: [{ productId: coffee.id, quantity: 100 }],
     }),
     /tidak tersedia/,
@@ -408,7 +409,7 @@ test("produk pada subkategori inactive tidak dapat dibeli", async () => {
 test("mixed order dirutekan Food ke Kitchen dan Drink/Raw ke Admin", async () => {
   const order = await createOrder(customer, {
     addressId: 1,
-    method: "BANK_TRANSFER",
+    method: "CASH",
     items: [
       {
         productId: products["Nasi Goreng Warkost"].id,

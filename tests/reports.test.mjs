@@ -54,9 +54,14 @@ test("laporan hanya Owner, tanggal valid, revenue dari pembayaran lunas", async 
   await assert.rejects(dailyReport(owner, "2026-02-30"), /Tanggal/);
   const paidOrder = await createOrder(customer, {
     addressId: 1,
-    method: "BANK_TRANSFER",
+    method: "CASH",
     items: [{ productId: 1, quantity: 2 }],
   });
+  database
+    .prepare(
+      "UPDATE payments SET method='BANK_TRANSFER',status='PENDING' WHERE order_id=?",
+    )
+    .run(paidOrder.id);
   const cancelledOrder = await createOrder(customer, {
     addressId: 1,
     method: "CASH",

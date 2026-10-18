@@ -3138,19 +3138,24 @@ export default function App() {
                           value: "BANK_TRANSFER",
                           label: "TRANSFER BANK",
                           description:
-                            "Transfer dan tunggu verifikasi pembayaran oleh Admin.",
+                            "Transfer Bank sedang disiapkan dan belum dapat digunakan.",
+                          availability: "Segera hadir",
+                          disabled: true,
                         },
                       ].map((method) => (
                         <label
-                          className={`payment-method-option ${selectedPaymentMethod === method.value ? "selected" : ""}`}
+                          className={`payment-method-option ${selectedPaymentMethod === method.value ? "selected" : ""} ${method.disabled ? "disabled" : ""}`}
                           key={method.value}
+                          aria-disabled={method.disabled || undefined}
                         >
                           <input
                             type="radio"
                             name="method"
                             value={method.value}
                             checked={selectedPaymentMethod === method.value}
+                            disabled={method.disabled}
                             onChange={() =>
+                              !method.disabled &&
                               setSelectedPaymentMethod(method.value)
                             }
                           />
@@ -3158,7 +3163,12 @@ export default function App() {
                             <WalletIcon />
                           </span>
                           <span>
-                            <strong>{method.label}</strong>
+                            <span className="payment-method-title">
+                              <strong>{method.label}</strong>
+                              {method.availability && (
+                                <em>{method.availability}</em>
+                              )}
+                            </span>
                             <small>{method.description}</small>
                           </span>
                           <span className="payment-method-check">

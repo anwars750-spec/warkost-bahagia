@@ -36,9 +36,14 @@ const kitchen = { id: 4, role: "KITCHEN" };
 test("notifikasi terikat status, role, pembacaan dan duplikasi", async () => {
   const order = await createOrder(customer, {
     addressId: 1,
-    method: "BANK_TRANSFER",
+    method: "CASH",
     items: [{ productId: 1, quantity: 1 }],
   });
+  database
+    .prepare(
+      "UPDATE payments SET method='BANK_TRANSFER',status='PENDING' WHERE order_id=?",
+    )
+    .run(order.id);
   assert.equal((await listNotifications(admin)).unread, 1);
   const first = (await listNotifications(customer)).notifications[0];
   await readNotification(admin, first.id);

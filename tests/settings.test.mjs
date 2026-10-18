@@ -85,9 +85,14 @@ test("pengaturan global hanya Owner, brand tersimpan dan earn rate tetap Rp10.00
   assert.equal((await listCatalog()).brand, "Kafe Test");
   const order = await createOrder(customer, {
     addressId: 1,
-    method: "BANK_TRANSFER",
+    method: "CASH",
     items: [{ productId: 1, quantity: 1 }],
   });
+  database
+    .prepare(
+      "UPDATE payments SET method='BANK_TRANSFER',status='PENDING' WHERE order_id=?",
+    )
+    .run(order.id);
   await changeStatus(admin, order.id, "CONFIRMED");
   await verifyPayment(admin, order.id, "PAID");
   await updateStationStatus(kitchen, order.id, "PREPARING");

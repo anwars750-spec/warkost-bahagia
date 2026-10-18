@@ -10,6 +10,7 @@ process.env.DATABASE_PATH = path.join(
 );
 process.env.SESSION_SECRET =
   "delivery-communications-secret-with-over-32-characters";
+process.env.PAYMENT_PROVIDER_MODE = "simulation";
 
 const { db } = await import("../lib/db.mjs");
 const {
@@ -204,7 +205,7 @@ test("checkout menghitung ongkir di server dan print job idempotent per station"
   );
 });
 
-test("transfer kedaluwarsa tercatat dan contact driver mengikuti privacy window", async () => {
+test("pembayaran QRIS kedaluwarsa tercatat dan contact driver mengikuti privacy window", async () => {
   database
     .prepare(
       "INSERT INTO addresses(id,user_id,label,detail,latitude,longitude) VALUES(2,5,'Kantor','Alamat kantor customer',0,0)",
@@ -212,7 +213,7 @@ test("transfer kedaluwarsa tercatat dan contact driver mengikuti privacy window"
     .run();
   const order = await createOrder(customer, {
     addressId: 2,
-    method: "BANK_TRANSFER",
+    method: "QRIS",
     items: [{ productId: 1, quantity: 1 }],
   });
   database

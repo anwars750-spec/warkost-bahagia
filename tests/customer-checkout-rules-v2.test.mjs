@@ -208,15 +208,15 @@ test("member COD menolak voucher reguler tetapi menerima birthday dan loyalty", 
   assert.equal(loyalty.loyaltyDiscount, 10000);
 });
 
-test("member non-cash tetap dapat voucher dan loyalty yang eligible", async () => {
+test("member QRIS tetap dapat voucher dan loyalty yang eligible", async () => {
   await claimVoucher(member, 102);
-  const transfer = await createOrder(member, {
+  const qrisVoucher = await createOrder(member, {
     addressId: 10,
-    method: "BANK_TRANSFER",
+    method: "QRIS",
     promotionId: 102,
     items: [{ productId: 1, quantity: 1 }],
   });
-  assert.equal(transfer.voucherDiscount, 5000);
+  assert.equal(qrisVoucher.voucherDiscount, 5000);
 
   const qris = await createOrder(member, {
     addressId: 10,

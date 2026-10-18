@@ -9,6 +9,7 @@ process.env.DATABASE_PATH = path.join(
   "test.db",
 );
 process.env.SESSION_SECRET = "voucher-test-secret-with-more-than-32-characters";
+process.env.PAYMENT_PROVIDER_MODE = "simulation";
 
 const { db } = await import("../lib/db.mjs");
 const { createOrder } = await import("../lib/domain.mjs");
@@ -83,7 +84,7 @@ function addVoucher({
 function orderInput(customer, promotionId, overrides = {}) {
   return {
     addressId: customer.id,
-    method: "BANK_TRANSFER",
+    method: "QRIS",
     promotionId,
     items: [{ productId: 2, quantity: 1 }],
     ...overrides,

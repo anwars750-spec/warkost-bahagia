@@ -9,6 +9,7 @@ process.env.DATABASE_PATH = path.join(
   "test.db",
 );
 process.env.SESSION_SECRET = "promotion-engine-v1-secret-more-than-32-bytes";
+process.env.PAYMENT_PROVIDER_MODE = "simulation";
 
 const { db } = await import("../lib/db.mjs");
 const { createOrder, changeStatus } = await import("../lib/domain.mjs");
@@ -104,7 +105,7 @@ async function promo(overrides = {}) {
 
 const input = (customer, promotionId, extra = {}) => ({
   addressId: customer.id,
-  method: "BANK_TRANSFER",
+  method: "QRIS",
   promotionId,
   items: [{ productId: 1, quantity: 1 }],
   ...extra,
@@ -157,6 +158,11 @@ test("free item ikut reservasi, routing, commit, dan restore", async () => {
       .get(order.id).quantity,
     1,
   );
+  database
+    .prepare(
+      "UPDATE payments SET method='BANK_TRANSFER',status='PENDING' WHERE order_id=?",
+    )
+    .run(order.id);
   await changeStatus(admin, order.id, "CONFIRMED");
   assert.equal(
     database.prepare("SELECT stock_quantity FROM products WHERE id=2").get()

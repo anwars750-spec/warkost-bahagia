@@ -83,9 +83,14 @@ test("order sampai delivered, poin tepat sekali, otorisasi dan status tervalidas
   );
   const o = await createOrder(people.CUSTOMER, {
     addressId: 1,
-    method: "BANK_TRANSFER",
+    method: "CASH",
     items: [{ productId: 1, quantity: 2 }],
   });
+  database
+    .prepare(
+      "UPDATE payments SET method='BANK_TRANSFER',status='PENDING' WHERE order_id=?",
+    )
+    .run(o.id);
   assert.equal(o.total, 50000);
   await assert.rejects(
     changeStatus(people.ADMIN, o.id, "DELIVERED"),
