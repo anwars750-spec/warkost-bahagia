@@ -82,7 +82,7 @@ test("BANK_TRANSFER dan metode arbitrary ditolak server sebelum order dibuat", a
   );
 });
 
-test("UI mempertahankan COD dan QRIS selectable serta menonaktifkan Transfer Bank", () => {
+test("UI hanya menampilkan COD dan QRIS tanpa Transfer Bank", () => {
   const page = fs.readFileSync(
     fileURLToPath(new URL("../app/page.js", import.meta.url)),
     "utf8",
@@ -95,10 +95,7 @@ test("UI mempertahankan COD dan QRIS selectable serta menonaktifkan Transfer Ban
   assert.match(page, /useState\("CASH"\)/);
   assert.match(page, /value: "CASH",\s+label: "COD"/);
   assert.match(page, /value: "QRIS",\s+label: "QRIS"/);
-  assert.match(
-    page,
-    /value: "BANK_TRANSFER",[\s\S]*?availability: "Segera hadir",\s+disabled: true/,
-  );
-  assert.match(page, /disabled=\{method\.disabled\}/);
-  assert.match(styles, /\.payment-method-option\.disabled\s*\{/);
+  assert.doesNotMatch(page, /value: "BANK_TRANSFER"/);
+  assert.doesNotMatch(page, /Segera hadir/);
+  assert.doesNotMatch(styles, /\.payment-method-option\.disabled\s*\{/);
 });

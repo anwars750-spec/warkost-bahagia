@@ -3134,28 +3134,17 @@ export default function App() {
                           description:
                             "Bayar non-tunai melalui QRIS dan nikmati benefit member yang eligible.",
                         },
-                        {
-                          value: "BANK_TRANSFER",
-                          label: "TRANSFER BANK",
-                          description:
-                            "Transfer Bank sedang disiapkan dan belum dapat digunakan.",
-                          availability: "Segera hadir",
-                          disabled: true,
-                        },
                       ].map((method) => (
                         <label
-                          className={`payment-method-option ${selectedPaymentMethod === method.value ? "selected" : ""} ${method.disabled ? "disabled" : ""}`}
+                          className={`payment-method-option ${selectedPaymentMethod === method.value ? "selected" : ""}`}
                           key={method.value}
-                          aria-disabled={method.disabled || undefined}
                         >
                           <input
                             type="radio"
                             name="method"
                             value={method.value}
                             checked={selectedPaymentMethod === method.value}
-                            disabled={method.disabled}
                             onChange={() =>
-                              !method.disabled &&
                               setSelectedPaymentMethod(method.value)
                             }
                           />
@@ -3163,12 +3152,7 @@ export default function App() {
                             <WalletIcon />
                           </span>
                           <span>
-                            <span className="payment-method-title">
-                              <strong>{method.label}</strong>
-                              {method.availability && (
-                                <em>{method.availability}</em>
-                              )}
-                            </span>
+                            <strong>{method.label}</strong>
                             <small>{method.description}</small>
                           </span>
                           <span className="payment-method-check">
