@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import CustomerQrisRuntime from "./CustomerQrisRuntime";
 
 const HELP_CHAT_SELECTOR = ".customer-help .help-actions a:not([href^='tel:'])";
 const ADMIN_SUPPORT_SELECTOR = ".support-admin-action";
@@ -124,5 +125,5 @@ export default function CustomerHelpRoutingRuntime() {
     };
   }, []);
 
-  return null;
+  return <CustomerQrisRuntime />;
 }
