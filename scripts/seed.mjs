@@ -20,8 +20,8 @@ async function seed() {
   );
   for (const [key, value] of [
     ["business_whatsapp", "6281546407856"],
-    ["business_latitude", "-6.9217"],
-    ["business_longitude", "106.9272"],
+    ["business_latitude", "-6.9213456"],
+    ["business_longitude", "106.9309032"],
     ["delivery_free_km", "3"],
     ["delivery_fee_per_km", "2500"],
     ["delivery_max_km", "10"],
