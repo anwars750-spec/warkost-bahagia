@@ -21,57 +21,75 @@ function ensureStyles() {
     .qris-payment-panel > code[data-qris-runtime-hidden="true"] {
       display: none !important;
     }
-    .${RUNTIME_CLASS} {
+    .qris-payment-panel > .${RUNTIME_CLASS} {
       margin-top: 14px;
-      display: grid;
+      display: grid !important;
+      width: 100%;
+      min-width: 0;
       justify-items: center;
+      align-items: initial;
+      justify-content: initial;
       gap: 10px;
       padding: 16px;
       border: 1px solid rgba(15, 23, 42, 0.1);
       border-radius: 18px;
       background: #fff;
+      overflow: visible;
     }
     .${RUNTIME_CLASS} canvas {
       display: block;
-      width: min(220px, 76vw) !important;
+      width: min(220px, 100%) !important;
       height: auto !important;
       max-width: 100%;
       border-radius: 12px;
     }
     .${RUNTIME_CLASS} .qris-runtime-title {
       margin: 0;
+      width: 100%;
       font-weight: 800;
       font-size: 14px;
+      line-height: 1.4;
       text-align: center;
     }
     .${RUNTIME_CLASS} .qris-runtime-note {
       margin: 0;
+      width: 100%;
       max-width: 290px;
       font-size: 12px;
       line-height: 1.45;
       text-align: center;
       color: #64748b;
+      overflow-wrap: anywhere;
     }
     .${RUNTIME_CLASS} .qris-runtime-demo-badge {
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      max-width: 100%;
       padding: 5px 9px;
       border-radius: 999px;
       font-size: 11px;
       font-weight: 800;
       letter-spacing: .04em;
+      text-align: center;
       background: #fff7ed;
       color: #c2410c;
       border: 1px solid #fed7aa;
     }
     .${RUNTIME_CLASS} .qris-runtime-demo-button {
+      display: block;
       width: 100%;
+      max-width: 320px;
+      min-width: 0;
       border: 0;
       border-radius: 12px;
       padding: 11px 14px;
       font: inherit;
+      font-size: 13px;
+      line-height: 1.35;
       font-weight: 800;
+      white-space: normal;
+      overflow-wrap: anywhere;
       cursor: pointer;
       background: #111827;
       color: #fff;
@@ -82,9 +100,27 @@ function ensureStyles() {
     }
     .${RUNTIME_CLASS} .qris-runtime-error {
       margin: 0;
+      width: 100%;
       color: #b91c1c;
       font-size: 12px;
+      line-height: 1.4;
       text-align: center;
+      overflow-wrap: anywhere;
+    }
+    @media (max-width: 480px) {
+      .qris-payment-panel > .${RUNTIME_CLASS} {
+        margin-top: 10px;
+        gap: 8px;
+        padding: 12px;
+        border-radius: 14px;
+      }
+      .${RUNTIME_CLASS} canvas {
+        width: min(190px, 100%) !important;
+      }
+      .${RUNTIME_CLASS} .qris-runtime-demo-button {
+        max-width: 100%;
+        padding: 10px 12px;
+      }
     }
   `;
   document.head.appendChild(style);
