@@ -52,6 +52,7 @@ import "./customer-location-picker-warkost-polish.css";
 import "./customer-promo-slideshow.css";
 import "./manager-control-center.css";
 import "./manager-dashboard-ui-polish.css";
+import "./manager-mobile-nav-single-row.css";
 import "./manager-dashboard-title-size.css";
 import "./manager-icon-precision.css";
 import "./manager-products-ui-polish.css";
