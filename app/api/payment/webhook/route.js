@@ -16,7 +16,10 @@ export async function POST(request) {
         "payment",
         null,
         { orderId: Number(payment?.order_id || result?.orderId || 0) },
-        { status: payment?.status || result?.status },
+        {
+          status: payment?.status || result?.status,
+          replayed: Boolean(result?.replayed),
+        },
       );
     } catch (realtimeError) {
       console.error("Payment realtime publication failed", realtimeError);
