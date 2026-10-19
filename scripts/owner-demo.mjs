@@ -68,6 +68,8 @@ async function main() {
     DATABASE_URL: "",
     DATABASE_PATH: databasePath,
     DEPLOYMENT_ENV: "demo",
+    PAYMENT_PROVIDER_MODE: "simulation",
+    PAYMENT_WEBHOOK_SECRET: crypto.randomBytes(48).toString("hex"),
     SEED_DEMO_PASSWORD: process.env.OWNER_DEMO_PASSWORD,
     SESSION_SECRET: crypto.randomBytes(48).toString("hex"),
     UPLOAD_DIRECTORY: path.join(directory, "uploads"),
