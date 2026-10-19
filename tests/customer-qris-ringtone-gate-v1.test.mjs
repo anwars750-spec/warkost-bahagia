@@ -57,3 +57,16 @@ test("Checkout route menandai QRIS belum PAID sebagai realtime replayed/non-audi
   assert.match(route, /result\?\.payment\?\.status !== "PAID"/);
   assert.match(route, /unpaidQris \? \{ \.\.\.result, replayed: true \} : result/);
 });
+
+test("Payment callback routes meneruskan replayed agar PAID idempotent tidak membunyikan ringtone dua kali", () => {
+  for (const relativePath of [
+    "../app/api/payment/webhook/route.js",
+    "../app/api/payment/demo-complete/route.js",
+  ]) {
+    const route = fs.readFileSync(
+      fileURLToPath(new URL(relativePath, import.meta.url)),
+      "utf8",
+    );
+    assert.match(route, /replayed:\s*Boolean\(result\?\.replayed\)/);
+  }
+});
