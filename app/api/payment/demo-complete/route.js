@@ -85,7 +85,10 @@ export async function POST(request) {
         "payment",
         user,
         { orderId },
-        { status: result.payment?.status || "PAID" },
+        {
+          status: result.payment?.status || "PAID",
+          replayed: Boolean(result?.replayed),
+        },
       );
     } catch (realtimeError) {
       console.error("QRIS demo realtime publication failed", realtimeError);
