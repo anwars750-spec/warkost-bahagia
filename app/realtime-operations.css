@@ -53,3 +53,11 @@
     opacity: 0.9;
   }
 }
+
+/* Manager & Owner: keep realtime controls on tablet/desktop, remove the floating pill on phone layouts. */
+@media (max-width: 560px) {
+  body.manager-dashboard-polished .realtime-status,
+  body.owner-navigation-v2-active .realtime-status {
+    display: none !important;
+  }
+}
