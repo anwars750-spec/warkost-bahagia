@@ -310,6 +310,35 @@ export default function RealtimeOperationsRuntime() {
 
   const playSound = useCallback(
     (event) => {
+      if (event?.type === "CONVERSATION_CHANGED") {
+        const context = audioRef.current;
+        if (!context || context.state !== "running") return;
+        const notes = [
+          { offset: 0, frequency: 784 },
+          { offset: 0.09, frequency: 988 },
+          { offset: 0.18, frequency: 1175 },
+        ];
+        for (const note of notes) {
+          const oscillator = context.createOscillator();
+          const gain = context.createGain();
+          oscillator.type = "triangle";
+          oscillator.frequency.value = note.frequency;
+          gain.gain.setValueAtTime(0.0001, context.currentTime + note.offset);
+          gain.gain.exponentialRampToValueAtTime(
+            0.055,
+            context.currentTime + note.offset + 0.012,
+          );
+          gain.gain.exponentialRampToValueAtTime(
+            0.0001,
+            context.currentTime + note.offset + 0.12,
+          );
+          oscillator.connect(gain).connect(context.destination);
+          oscillator.start(context.currentTime + note.offset);
+          oscillator.stop(context.currentTime + note.offset + 0.13);
+        }
+        return;
+      }
+
       if (user?.role === "CUSTOMER") {
         const audio = getCustomerAudio();
         if (!audio) return;
@@ -437,7 +466,6 @@ export default function RealtimeOperationsRuntime() {
       window.dispatchEvent(new CustomEvent("warkost:realtime", { detail: event }));
       if (["COD_STATUS_CHANGED", "SETTLEMENT_STATUS_CHANGED"].includes(event.type))
         window.dispatchEvent(new CustomEvent("warkost:cod-batch-updated"));
-
       const incomingAction = incomingOrderRingtoneAction(user.role, event);
       let incomingStartHandled = false;
       if (incomingAction?.type === "START") {
