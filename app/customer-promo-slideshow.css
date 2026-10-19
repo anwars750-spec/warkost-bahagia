@@ -1,0 +1,98 @@
+.home-promo .promo-controls > button[aria-label="Promo sebelumnya"],
+.home-promo .promo-controls > button[aria-label="Promo berikutnya"] {
+  display: none !important;
+}
+
+.home-promo .promo-card {
+  touch-action: pan-y;
+  user-select: none;
+  cursor: pointer;
+  transform: translateX(var(--promo-drag-x, 0));
+  opacity: var(--promo-drag-opacity, 1);
+  transition:
+    transform 220ms ease,
+    opacity 220ms ease;
+  animation: warkost-promo-slide-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+
+.home-promo .promo-card.is-promo-dragging {
+  cursor: grabbing;
+  animation: none;
+  transition: none;
+}
+
+.home-promo .promo-card button,
+.home-promo .promo-card a,
+.home-promo .promo-card input,
+.home-promo .promo-card select,
+.home-promo .promo-card textarea,
+.home-promo .promo-card label,
+.home-promo .promo-controls button {
+  user-select: auto;
+  cursor: pointer;
+}
+
+.home-promo .promo-controls {
+  gap: 8px;
+}
+
+.home-promo .promo-dots {
+  min-height: 28px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(75, 33, 22, 0.52);
+  backdrop-filter: blur(8px);
+}
+
+.home-promo .promo-dots button {
+  transition:
+    width 180ms ease,
+    background 180ms ease,
+    opacity 180ms ease;
+  opacity: 0.75;
+}
+
+.home-promo .promo-dots button.active {
+  width: 22px;
+  border-radius: 999px;
+  opacity: 1;
+}
+
+@keyframes warkost-promo-slide-in {
+  from {
+    opacity: 0.82;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (pointer: coarse) {
+  .home-promo .promo-card {
+    cursor: default;
+  }
+}
+
+@media (max-width: 620px) {
+  .home-promo .promo-controls {
+    right: 50%;
+    bottom: 10px;
+    transform: translateX(50%);
+  }
+
+  .home-promo .promo-dots {
+    min-height: 26px;
+    padding: 6px 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-promo .promo-card,
+  .home-promo .promo-dots button {
+    animation: none !important;
+    transition: none !important;
+  }
+}
