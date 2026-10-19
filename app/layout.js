@@ -49,6 +49,7 @@ import "./customer-catalog-final-polish.css";
 import "./customer-quantity-unit-final.css";
 import "./customer-location-picker-ux.css";
 import "./customer-location-picker-warkost-polish.css";
+import "./customer-promo-slideshow.css";
 import "./manager-control-center.css";
 import "./manager-dashboard-ui-polish.css";
 import "./manager-dashboard-title-size.css";
@@ -145,6 +146,7 @@ import CustomerGeneralSupportRuntime from "./CustomerGeneralSupportRuntime";
 import CustomerLocationLauncher from "./CustomerLocationLauncher";
 import CustomerLocationPickerUx from "./CustomerLocationPickerUx";
 import CustomerAccountAddressLocationFirst from "./CustomerAccountAddressLocationFirst";
+import CustomerPromoSlideshowRuntime from "./CustomerPromoSlideshowRuntime";
 import ManagerDashboardUiPolish from "./ManagerDashboardUiPolish";
 import ManagerSubcategoryPolish from "./ManagerSubcategoryPolish";
 import ManagerNotificationPopover from "./ManagerNotificationPopover";
@@ -161,6 +163,7 @@ export default function RootLayout({ children }) {
     <html lang="id">
       <body>
         {children}
+        <CustomerPromoSlideshowRuntime />
         <RealtimeOperationsRuntime />
         <DriverRuntimeBootstrap />
         <DriverLogoFix />
