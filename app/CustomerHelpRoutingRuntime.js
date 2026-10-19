@@ -7,8 +7,34 @@ const ADMIN_SUPPORT_SELECTOR = ".support-admin-action";
 const ORDER_SUPPORT_SELECTOR = ".support-communication-card.primary-chat:not(:disabled)";
 const STYLE_ID = "warkost-customer-help-routing-style";
 
+function uuidV4FromRandomValues(cryptoApi) {
+  const bytes = new Uint8Array(16);
+  cryptoApi.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, "0"));
+  return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex.slice(6, 8).join("")}-${hex.slice(8, 10).join("")}-${hex.slice(10, 16).join("")}`;
+}
+
+function ensureCheckoutUuidSupport() {
+  const cryptoApi = globalThis.crypto;
+  if (
+    !cryptoApi ||
+    typeof cryptoApi.randomUUID === "function" ||
+    typeof cryptoApi.getRandomValues !== "function"
+  )
+    return;
+
+  Object.defineProperty(cryptoApi, "randomUUID", {
+    configurable: true,
+    value: () => uuidV4FromRandomValues(cryptoApi),
+  });
+}
+
 export default function CustomerHelpRoutingRuntime() {
   useEffect(() => {
+    ensureCheckoutUuidSupport();
+
     let style = document.getElementById(STYLE_ID);
     if (!style) {
       style = document.createElement("style");
