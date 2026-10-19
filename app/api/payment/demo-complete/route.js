@@ -1,20 +1,20 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
-import { currentUser } from "../../../../../lib/auth.mjs";
-import { DomainError } from "../../../../../lib/domain.mjs";
+import { currentUser } from "../../../../lib/auth.mjs";
+import { DomainError } from "../../../../lib/domain.mjs";
 import {
   getPaymentStatus,
   processTrustedProviderEvent,
-} from "../../../../../lib/payments.mjs";
+} from "../../../../lib/payments.mjs";
 import {
   LOCAL_QRIS_PROVIDER,
   paymentProviderConfiguration,
-} from "../../../../../lib/payment-provider.mjs";
-import { publishActionRealtime } from "../../../../../lib/realtime.mjs";
+} from "../../../../lib/payment-provider.mjs";
+import { publishActionRealtime } from "../../../../lib/realtime.mjs";
 import {
   assertSameOrigin,
   readJsonBody,
-} from "../../../../../lib/request.mjs";
+} from "../../../../lib/request.mjs";
 
 export const runtime = "nodejs";
 
