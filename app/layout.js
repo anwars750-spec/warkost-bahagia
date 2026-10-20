@@ -153,6 +153,7 @@ import ManagerSubcategoryPolish from "./ManagerSubcategoryPolish";
 import ManagerNotificationPopover from "./ManagerNotificationPopover";
 import ManagerNotificationOutsideClose from "./ManagerNotificationOutsideClose";
 import RealtimeOperationsRuntime from "./RealtimeOperationsRuntime";
+import MobileForegroundAlertBoost from "./MobileForegroundAlertBoost";
 
 export const metadata = {
   title: "Warkost Bahagia",
@@ -166,6 +167,7 @@ export default function RootLayout({ children }) {
         {children}
         <CustomerPromoSlideshowRuntime />
         <RealtimeOperationsRuntime />
+        <MobileForegroundAlertBoost />
         <DriverRuntimeBootstrap />
         <DriverLogoFix />
         <KitchenFlashGuard />
