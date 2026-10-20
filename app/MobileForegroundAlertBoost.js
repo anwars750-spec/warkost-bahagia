@@ -48,31 +48,32 @@ export default function MobileForegroundAlertBoost() {
         const chat = event?.type === "CONVERSATION_CHANGED";
         const urgent = event?.priority === "URGENT";
         const notes = chat
-          ? [880, 1175, 1397]
+          ? [1047, 1319, 1568, 1047, 1319, 1568]
           : urgent
-            ? [880, 660, 880]
-            : [784, 988];
-        const spacing = chat ? 0.12 : 0.14;
-        const peakGain = chat ? 0.32 : urgent ? 0.3 : 0.26;
+            ? [988, 740, 988, 740]
+            : [880, 1109, 880];
+        const spacing = chat ? 0.16 : 0.15;
+        const duration = chat ? 0.34 : 0.28;
+        const peakGain = chat ? 0.95 : urgent ? 0.72 : 0.62;
 
         notes.forEach((frequency, index) => {
           const offset = index * spacing;
           const oscillator = context.createOscillator();
           const gain = context.createGain();
-          oscillator.type = chat ? "triangle" : "square";
+          oscillator.type = "square";
           oscillator.frequency.value = frequency;
           gain.gain.setValueAtTime(0.0001, context.currentTime + offset);
           gain.gain.exponentialRampToValueAtTime(
             peakGain,
-            context.currentTime + offset + 0.015,
+            context.currentTime + offset + 0.012,
           );
           gain.gain.exponentialRampToValueAtTime(
             0.0001,
-            context.currentTime + offset + 0.22,
+            context.currentTime + offset + duration,
           );
           oscillator.connect(gain).connect(context.destination);
           oscillator.start(context.currentTime + offset);
-          oscillator.stop(context.currentTime + offset + 0.23);
+          oscillator.stop(context.currentTime + offset + duration + 0.01);
         });
       };
 
@@ -86,14 +87,14 @@ export default function MobileForegroundAlertBoost() {
     const vibrate = (event) => {
       if (typeof navigator.vibrate !== "function") return;
       if (event?.type === "CONVERSATION_CHANGED") {
-        navigator.vibrate([140, 70, 140]);
+        navigator.vibrate([220, 90, 220, 90, 320]);
         return;
       }
       if (event?.priority === "URGENT") {
-        navigator.vibrate([260, 100, 260, 100, 360]);
+        navigator.vibrate([300, 100, 300, 100, 420]);
         return;
       }
-      navigator.vibrate([180, 80, 180]);
+      navigator.vibrate([220, 90, 220]);
     };
 
     const onRealtime = (message) => {
