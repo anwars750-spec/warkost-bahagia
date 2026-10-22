@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { currentUser } from "../../../lib/auth.mjs";
 import { createOrder, DomainError } from "../../../lib/domain.mjs";
+import { ensurePickupAddress } from "../../../lib/pickup.mjs";
 import { publishActionRealtime } from "../../../lib/realtime.mjs";
 import { assertSameOrigin, readJsonBody } from "../../../lib/request.mjs";
 
@@ -19,6 +20,8 @@ const integer = (value) =>
 
 function errorResponse(error) {
   if (error instanceof DomainError) return out({ error: error.message }, error.status);
+  if (Number.isInteger(error?.status))
+    return out({ error: error.message }, error.status);
   console.error("Checkout API error", error);
   return out({ error: "Terjadi kesalahan server" }, 500);
 }
@@ -31,9 +34,17 @@ export async function POST(request) {
     if (!body.idempotencyKey)
       throw new DomainError("Kunci checkout wajib diisi");
 
+    const fulfillmentType = String(body.fulfillmentType || "DELIVERY").toUpperCase();
+    let addressId = integer(body.addressId);
+    if (fulfillmentType === "PICKUP" && user) {
+      const pickupAddress = await ensurePickupAddress(user.id);
+      addressId = pickupAddress.id;
+    }
+
     const result = await createOrder(user, {
       ...body,
-      addressId: integer(body.addressId),
+      fulfillmentType,
+      addressId,
       promotionId:
         body.promotionId == null ? null : integer(body.promotionId),
       loyaltyRewardId:
