@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 
 const PICKUP_LABEL = "Ambil di Warkost";
+const MODE_KEY = "warkost:fulfillment-mode";
+const PICKUP_RELOAD_KEY = "warkost:pickup-address-reload";
 
 function installStyles() {
   if (document.getElementById("warkost-customer-fulfillment-style")) return;
@@ -37,11 +39,16 @@ function setNativeSelectValue(select, value) {
   select.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
+function isPickupOption(option) {
+  return String(option?.textContent || "").includes(PICKUP_LABEL);
+}
+
 export default function CustomerFulfillmentRuntime() {
   useEffect(() => {
     installStyles();
 
-    let mode = "DELIVERY";
+    let mode =
+      sessionStorage.getItem(MODE_KEY) === "PICKUP" ? "PICKUP" : "DELIVERY";
     let pickupAddress = null;
     let previousDeliveryAddress = "";
     let pickupRequest = null;
@@ -87,37 +94,59 @@ export default function CustomerFulfillmentRuntime() {
       applying = true;
       try {
         updateButtons(card);
+
         if (mode === "DELIVERY") {
+          sessionStorage.setItem(MODE_KEY, "DELIVERY");
+          sessionStorage.removeItem(PICKUP_RELOAD_KEY);
           deliveryCard.style.removeProperty("display");
+
+          const deliveryOption =
+            [...select.options].find(
+              (option) =>
+                option.value === previousDeliveryAddress && !isPickupOption(option),
+            ) || [...select.options].find((option) => !isPickupOption(option));
+
           if (
-            previousDeliveryAddress &&
-            select.value !== previousDeliveryAddress &&
-            [...select.options].some((option) => option.value === previousDeliveryAddress)
+            deliveryOption &&
+            (isPickupOption(select.selectedOptions[0]) ||
+              select.value !== deliveryOption.value)
           ) {
-            setNativeSelectValue(select, previousDeliveryAddress);
+            setNativeSelectValue(select, deliveryOption.value);
           }
           return;
         }
 
-        if (select.value && select.selectedOptions[0]?.textContent !== PICKUP_LABEL)
+        sessionStorage.setItem(MODE_KEY, "PICKUP");
+
+        if (select.value && !isPickupOption(select.selectedOptions[0]))
           previousDeliveryAddress = select.value;
 
         const pickup = await getPickupAddress();
-        let option = [...select.options].find(
+        const option = [...select.options].find(
           (item) => item.value === String(pickup.id),
         );
+
+        // The pickup endpoint may create the internal address after React has
+        // already loaded account.addresses. Reload once so the address becomes
+        // part of React state, allowing the normal delivery quote effect to
+        // validate a 0 km / Rp0 pickup checkout instead of leaving it locked.
         if (!option) {
-          option = document.createElement("option");
-          option.value = String(pickup.id);
-          option.textContent = PICKUP_LABEL;
-          select.appendChild(option);
+          if (sessionStorage.getItem(PICKUP_RELOAD_KEY) !== String(pickup.id)) {
+            sessionStorage.setItem(PICKUP_RELOAD_KEY, String(pickup.id));
+            window.location.reload();
+            return;
+          }
+          throw new Error("Alamat pickup belum tersinkron ke checkout");
         }
+
+        sessionStorage.removeItem(PICKUP_RELOAD_KEY);
         if (select.value !== String(pickup.id))
           setNativeSelectValue(select, pickup.id);
         deliveryCard.style.setProperty("display", "none", "important");
       } catch (error) {
         console.error("Pickup selector error", error);
         mode = "DELIVERY";
+        sessionStorage.setItem(MODE_KEY, "DELIVERY");
         updateButtons(card);
         deliveryCard.style.removeProperty("display");
       } finally {
@@ -142,7 +171,7 @@ export default function CustomerFulfillmentRuntime() {
               <strong>🏪 Ambil di tempat</strong>
               <span>Ambil langsung di Warkost. Tanpa ongkir dan tanpa alamat pengantaran.</span>
             </button>
-            <button type="button" class="customer-fulfillment-option is-active" data-fulfillment-mode="DELIVERY" aria-pressed="true">
+            <button type="button" class="customer-fulfillment-option" data-fulfillment-mode="DELIVERY">
               <strong>🛵 Dikirim ke lokasi</strong>
               <span>Pilih alamat, hitung jarak, dan ongkir otomatis seperti biasa.</span>
             </button>
@@ -156,9 +185,11 @@ export default function CustomerFulfillmentRuntime() {
           const button = event.target.closest("[data-fulfillment-mode]");
           if (!button) return;
           mode = button.dataset.fulfillmentMode;
+          sessionStorage.setItem(MODE_KEY, mode);
           void applyMode();
         });
       }
+      updateButtons(card);
       void applyMode();
     };
 
