@@ -13,6 +13,8 @@ import { driverContactIsVisible } from "../../../lib/delivery.mjs";
 
 export const runtime = "nodejs";
 
+const PICKUP_DETAIL = "Warkost Bahagia · Ambil di tempat";
+
 const out = (data, status = 200) =>
   NextResponse.json(data, {
     status,
@@ -53,7 +55,9 @@ export async function GET(request) {
         ...(before === null ? [] : [before]),
       );
     } else if (user.role === "DRIVER") {
-      orders = await listDriverOrders(user, before);
+      orders = (await listDriverOrders(user, before)).filter(
+        (order) => String(order.address || "") !== PICKUP_DETAIL,
+      );
     } else if (user.role === "KITCHEN") {
       orders = await store.all(
         "SELECT o.*,u.name customer_name,s.status kitchen_status FROM orders o JOIN order_stations s ON s.order_id=o.id AND s.station='KITCHEN' JOIN users u ON u.id=o.customer_id WHERE o.status IN ('CONFIRMED','PREPARING','READY')" +
@@ -63,7 +67,7 @@ export async function GET(request) {
       );
     } else {
       orders = await store.all(
-        "SELECT o.*,u.name customer_name,a.detail address,p.method,p.status payment_status,p.amount payment_amount,d.driver_id,s.id settlement_id,s.status settlement_status,s.expected_amount,s.cash_amount,s.evidence_reference,s.submitted_at,s.admin_verifier_id,s.verified_at,s.discrepancy_amount,(SELECT status FROM order_stations WHERE order_id=o.id AND station='KITCHEN') kitchen_status,(SELECT status FROM order_stations WHERE order_id=o.id AND station='CASHIER') cashier_status FROM orders o JOIN users u ON u.id=o.customer_id JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id LEFT JOIN cod_settlements s ON s.order_id=o.id WHERE (p.method!='QRIS' OR p.status='PAID')" +
+        "SELECT o.*,u.name customer_name,a.label address_label,a.detail address,p.method,p.status payment_status,p.amount payment_amount,d.driver_id,s.id settlement_id,s.status settlement_status,s.expected_amount,s.cash_amount,s.evidence_reference,s.submitted_at,s.admin_verifier_id,s.verified_at,s.discrepancy_amount,(SELECT status FROM order_stations WHERE order_id=o.id AND station='KITCHEN') kitchen_status,(SELECT status FROM order_stations WHERE order_id=o.id AND station='CASHIER') cashier_status FROM orders o JOIN users u ON u.id=o.customer_id JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id LEFT JOIN cod_settlements s ON s.order_id=o.id WHERE (p.method!='QRIS' OR p.status='PAID')" +
           bound +
           " ORDER BY o.id DESC LIMIT 26",
         ...(before === null ? [] : [before]),
@@ -83,16 +87,23 @@ export async function GET(request) {
         )?.value || "6281546407856";
 
       for (const order of page) {
-        order.driver_delay_notice = customerDriverWaitNotice(order, availability);
+        const pickup = order.address_label === "Ambil di Warkost";
+        order.fulfillment_type = pickup ? "PICKUP" : "DELIVERY";
+        order.driver_delay_notice = pickup
+          ? 0
+          : customerDriverWaitNotice(order, availability);
         order.admin_whatsapp = businessWhatsApp;
-        order.driver_whatsapp = driverContactIsVisible(
-          order.accepted_at,
-          order.delivered_at,
-        )
-          ? order.driver_phone
-          : null;
+        order.driver_whatsapp = pickup
+          ? null
+          : driverContactIsVisible(order.accepted_at, order.delivered_at)
+            ? order.driver_phone
+            : null;
         delete order.driver_phone;
       }
+    } else if (["ADMIN", "OWNER"].includes(user.role)) {
+      for (const order of page)
+        order.fulfillment_type =
+          order.address_label === "Ambil di Warkost" ? "PICKUP" : "DELIVERY";
     }
 
     return out({
