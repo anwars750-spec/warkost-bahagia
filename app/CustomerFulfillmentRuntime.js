@@ -149,7 +149,9 @@ export default function CustomerFulfillmentRuntime() {
           </div>
           <div class="customer-pickup-note">Pesanan akan disiapkan untuk diambil langsung di Warkost. Ongkir Rp0.</div>
         `;
-        deliveryCard.parentNode?.insertBefore(card, deliveryCard);
+        const cartCard = document.querySelector(".cart-checkout-card");
+        const anchor = cartCard || deliveryCard;
+        anchor.parentNode?.insertBefore(card, anchor);
         card.addEventListener("click", (event) => {
           const button = event.target.closest("[data-fulfillment-mode]");
           if (!button) return;
