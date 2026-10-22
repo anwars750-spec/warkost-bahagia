@@ -3,25 +3,40 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 
-const runtime = fs.readFileSync(
-  fileURLToPath(new URL("../app/CustomerFulfillmentRuntime.js", import.meta.url)),
-  "utf8",
-);
-const route = fs.readFileSync(
-  fileURLToPath(new URL("../app/api/pickup-address/route.js", import.meta.url)),
-  "utf8",
-);
+const read = (relativePath) =>
+  fs.readFileSync(fileURLToPath(new URL(relativePath, import.meta.url)), "utf8");
 
-test("customer fulfillment UI menawarkan pickup dan delivery sebelum cart", () => {
-  assert.match(runtime, /Ambil di tempat/);
-  assert.match(runtime, /Dikirim ke lokasi/);
-  assert.match(runtime, /cart-checkout-card/);
-  assert.match(runtime, /delivery-checkout-card/);
+const page = read("../app/page.js");
+const domain = read("../lib/domain.mjs");
+const migration = read("../migrations/029_pickup_fulfillment_type.sql");
+const runtime = read("../app/CustomerQrisOnlyRuntime.js");
+const pickupAddressRoute = read("../app/api/pickup-address/route.js");
+
+test("checkout renders pickup and delivery natively in React", () => {
+  assert.match(page, /Ambil di tempat/);
+  assert.match(page, /Dikirim ke lokasi/);
+  assert.match(page, /selectFulfillmentMode/);
+  assert.match(page, /fulfillmentType:\s*fulfillmentMode/);
+  assert.doesNotMatch(runtime, /CustomerFulfillmentRuntime/);
 });
 
-test("pickup memakai alamat internal Warkost dengan koordinat bisnis", () => {
-  assert.match(route, /Ambil di Warkost/);
-  assert.match(route, /business_latitude/);
-  assert.match(route, /business_longitude/);
-  assert.match(route, /is_default,active\) VALUES\(\?,\?,\?,\?,\?,0,1\)/);
+test("pickup is persisted as an explicit fulfillment type", () => {
+  assert.match(migration, /fulfillment_type/);
+  assert.match(migration, /'DELIVERY','PICKUP'/);
+  assert.match(domain, /FULFILLMENT_PICKUP/);
+  assert.match(domain, /INSERT INTO orders\([\s\S]*fulfillment_type/);
+});
+
+test("pickup uses the protected internal Warkost address and zero delivery fee", () => {
+  assert.match(pickupAddressRoute, /Ambil di Warkost/);
+  assert.match(pickupAddressRoute, /business_latitude/);
+  assert.match(pickupAddressRoute, /business_longitude/);
+  assert.match(domain, /deliveryFee:\s*0/);
+  assert.match(domain, /distanceMeters:\s*0/);
+});
+
+test("customer pickup labels distinguish READY and completed states", () => {
+  assert.match(page, /Siap Diambil/);
+  assert.match(page, /Sudah Diambil \/ Selesai/);
+  assert.match(page, /Ambil langsung di Warkost · tanpa Driver/);
 });

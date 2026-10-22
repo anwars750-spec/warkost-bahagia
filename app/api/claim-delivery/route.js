@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { currentUser } from "../../../lib/auth.mjs";
-import * as store from "../../../lib/store.mjs";
 import { claimDelivery, DomainError, required } from "../../../lib/domain.mjs";
 import { publishActionRealtime } from "../../../lib/realtime.mjs";
 import { assertSameOrigin, readJsonBody } from "../../../lib/request.mjs";
 
 export const runtime = "nodejs";
-
-const PICKUP_LABEL = "Ambil di Warkost";
 
 const out = (data, status = 200) =>
   NextResponse.json(data, {
@@ -29,14 +26,6 @@ export async function POST(request) {
     const orderId = integer(body.orderId);
     if (!Number.isSafeInteger(orderId))
       throw new DomainError("Order tidak valid");
-
-    const order = await store.get(
-      "SELECT o.id,a.label address_label FROM orders o JOIN addresses a ON a.id=o.address_id WHERE o.id=?",
-      orderId,
-    );
-    if (!order) throw new DomainError("Order tidak ditemukan", 404);
-    if (order.address_label === PICKUP_LABEL)
-      throw new DomainError("Pesanan ambil di tempat tidak membutuhkan driver", 409);
 
     const result = await claimDelivery(user, orderId);
     try {

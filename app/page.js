@@ -52,6 +52,9 @@ const orderItemPriceLabel = (item) =>
 const orderItemTotal = (item) => productLineTotal(item, item.quantity);
 const whatsappLink = (number, text) =>
   `https://wa.me/${String(number || "").replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
+const PICKUP_LABEL = "Ambil di Warkost";
+const FULFILLMENT_DELIVERY = "DELIVERY";
+const FULFILLMENT_PICKUP = "PICKUP";
 const localDateTime = (value) => {
   const date = value
     ? new Date(
@@ -90,6 +93,12 @@ const ORDER_STAGES = [
   { key: "delivery", label: "Diantar" },
   { key: "delivered", label: "Sampai" },
 ];
+const PICKUP_ORDER_STAGES = [
+  { key: "received", label: "Diterima" },
+  { key: "preparing", label: "Diproses" },
+  { key: "ready", label: "Siap Diambil" },
+  { key: "completed", label: "Selesai" },
+];
 const orderStage = (status) => {
   if (["PENDING", "CONFIRMED"].includes(status)) return 0;
   if (["PREPARING", "READY"].includes(status)) return 1;
@@ -97,7 +106,29 @@ const orderStage = (status) => {
   if (status === "DELIVERED") return 3;
   return -1;
 };
-const orderStatusMeta = (status) => {
+const pickupOrderStage = (status) => {
+  if (["PENDING", "CONFIRMED"].includes(status)) return 0;
+  if (status === "PREPARING") return 1;
+  if (status === "READY") return 2;
+  if (status === "DELIVERED") return 3;
+  return -1;
+};
+const orderStatusMeta = (status, fulfillmentType = FULFILLMENT_DELIVERY) => {
+  if (fulfillmentType === FULFILLMENT_PICKUP) {
+    const pickupStatuses = {
+      PENDING: ["Pesanan Diterima", "pending"],
+      CONFIRMED: ["Pesanan Dikonfirmasi", "pending"],
+      PREPARING: ["Dalam Proses", "process"],
+      READY: ["Siap Diambil", "process"],
+      DELIVERED: ["Sudah Diambil / Selesai", "done"],
+      CANCELLED: ["Dibatalkan", "cancelled"],
+    };
+    const [label, tone] = pickupStatuses[status] || [
+      String(status || "Pesanan").replaceAll("_", " "),
+      "pending",
+    ];
+    return { label, tone };
+  }
   const statuses = {
     PENDING: ["Pesanan Diterima", "pending"],
     CONFIRMED: ["Pesanan Dikonfirmasi", "pending"],
@@ -115,7 +146,15 @@ const orderStatusMeta = (status) => {
   ];
   return { label, tone };
 };
-const orderHeadline = (status) => {
+const orderHeadline = (status, fulfillmentType = FULFILLMENT_DELIVERY) => {
+  if (fulfillmentType === FULFILLMENT_PICKUP) {
+    if (["PENDING", "CONFIRMED"].includes(status))
+      return "Pesanan sudah kami terima";
+    if (status === "PREPARING") return "Pesanan sedang disiapkan";
+    if (status === "READY") return "Pesanan siap diambil di Warkost";
+    if (status === "DELIVERED") return "Pesanan sudah diambil di Warkost";
+    if (status === "CANCELLED") return "Pesanan dibatalkan";
+  }
   if (["PENDING", "CONFIRMED"].includes(status))
     return "Pesanan sudah kami terima";
   if (["PREPARING", "READY"].includes(status))
@@ -251,6 +290,8 @@ export default function App() {
     [focusedOrderId, setFocusedOrderId] = useState(null),
     [supportOrderId, setSupportOrderId] = useState(null),
     [chatTarget, setChatTarget] = useState(null),
+    [fulfillmentMode, setFulfillmentMode] = useState(FULFILLMENT_DELIVERY),
+    [pickupAddressBusy, setPickupAddressBusy] = useState(false),
     [checkoutAddressId, setCheckoutAddressId] = useState(""),
     [deliveryQuote, setDeliveryQuote] = useState(null),
     [deliveryQuoteBusy, setDeliveryQuoteBusy] = useState(false),
@@ -865,10 +906,18 @@ export default function App() {
     completed: orders.filter((order) => order.status === "DELIVERED").length,
     cancelled: orders.filter((order) => order.status === "CANCELLED").length,
   };
+  const pickupAddress = account.addresses.find(
+    (address) => address.label === PICKUP_LABEL,
+  );
+  const deliveryAddresses = account.addresses.filter(
+    (address) => address.label !== PICKUP_LABEL,
+  );
   const selectedCheckoutAddress =
-    account.addresses.find(
-      (address) => String(address.id) === String(checkoutAddressId),
-    ) || account.addresses[0];
+    fulfillmentMode === FULFILLMENT_PICKUP
+      ? pickupAddress
+      : deliveryAddresses.find(
+          (address) => String(address.id) === String(checkoutAddressId),
+        ) || deliveryAddresses[0];
   const checkoutFinalTotal =
     total -
     Number(voucherQuote?.voucher_discount || 0) -
@@ -911,6 +960,18 @@ export default function App() {
       setDeliveryQuoteBusy(false);
       return;
     }
+    if (fulfillmentMode === FULFILLMENT_PICKUP) {
+      setDeliveryQuote({
+        available: true,
+        distance_km: 0,
+        delivery_fee: 0,
+        free_delivery: true,
+        message: "Ambil langsung di Warkost · tanpa ongkir.",
+      });
+      setDeliveryQuoteError("");
+      setDeliveryQuoteBusy(false);
+      return;
+    }
     const controller = new AbortController();
     setDeliveryQuote(null);
     setDeliveryQuoteError("");
@@ -928,7 +989,7 @@ export default function App() {
         if (!controller.signal.aborted) setDeliveryQuoteBusy(false);
       });
     return () => controller.abort();
-  }, [role, view, selectedCheckoutAddress?.id]);
+  }, [role, view, selectedCheckoutAddress?.id, fulfillmentMode]);
   useEffect(() => {
     if (role !== "CUSTOMER" || view !== "cart" || !selectedVoucherId) {
       setVoucherQuote(null);
@@ -1155,6 +1216,37 @@ export default function App() {
       },
       { enableHighAccuracy: true, timeout: 10000 },
     );
+  }
+  async function selectFulfillmentMode(nextMode) {
+    if (nextMode === fulfillmentMode || pickupAddressBusy) return;
+    setError("");
+    setDeliveryQuote(null);
+    setDeliveryQuoteError("");
+    if (nextMode === FULFILLMENT_DELIVERY) {
+      setFulfillmentMode(FULFILLMENT_DELIVERY);
+      setCheckoutAddressId((current) => {
+        const currentIsDelivery = deliveryAddresses.some(
+          (address) => String(address.id) === String(current),
+        );
+        return currentIsDelivery
+          ? current
+          : String(deliveryAddresses[0]?.id || "");
+      });
+      return;
+    }
+    setPickupAddressBusy(true);
+    try {
+      const prepared = await api("pickup-address", {});
+      const refreshedAccount = await api("account");
+      setAccount(refreshedAccount);
+      setCheckoutAddressId(String(prepared.id));
+      setFulfillmentMode(FULFILLMENT_PICKUP);
+    } catch (pickupError) {
+      setFulfillmentMode(FULFILLMENT_DELIVERY);
+      setError(pickupError.message);
+    } finally {
+      setPickupAddressBusy(false);
+    }
   }
   async function saveQuickAddress(event) {
     const form = event.currentTarget.form;
@@ -2548,6 +2640,7 @@ export default function App() {
                   run(async () => {
                     const payload = {
                       addressId: Number(f.get("address")),
+                      fulfillmentType: fulfillmentMode,
                       method: selectedPaymentMethod,
                       promotionId: selectedVoucherId,
                       loyaltyRewardId: selectedRewardId,
@@ -2578,6 +2671,65 @@ export default function App() {
                 }}
               >
                 <div className="checkout-stack">
+                  <section
+                    className="checkout-card customer-fulfillment-card"
+                    data-mode={fulfillmentMode}
+                  >
+                    <div className="checkout-card-heading">
+                      <span className="section-icon">
+                        <LocationIcon />
+                      </span>
+                      <h2>Cara menerima pesanan</h2>
+                    </div>
+                    <p>
+                      Pilih ambil sendiri di Warkost atau kirim ke alamat kamu.
+                    </p>
+                    <div
+                      className="customer-fulfillment-options"
+                      role="group"
+                      aria-label="Cara menerima pesanan"
+                    >
+                      <button
+                        type="button"
+                        className={`customer-fulfillment-option ${fulfillmentMode === FULFILLMENT_PICKUP ? "is-active" : ""}`}
+                        aria-pressed={
+                          fulfillmentMode === FULFILLMENT_PICKUP
+                        }
+                        disabled={pickupAddressBusy}
+                        onClick={() =>
+                          void selectFulfillmentMode(FULFILLMENT_PICKUP)
+                        }
+                      >
+                        <strong>Ambil di tempat</strong>
+                        <span>
+                          Ambil langsung di Warkost. Tanpa ongkir dan tanpa
+                          alamat pengantaran.
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`customer-fulfillment-option ${fulfillmentMode === FULFILLMENT_DELIVERY ? "is-active" : ""}`}
+                        aria-pressed={
+                          fulfillmentMode === FULFILLMENT_DELIVERY
+                        }
+                        disabled={pickupAddressBusy}
+                        onClick={() =>
+                          void selectFulfillmentMode(FULFILLMENT_DELIVERY)
+                        }
+                      >
+                        <strong>Dikirim ke lokasi</strong>
+                        <span>
+                          Pilih alamat, hitung jarak, dan ongkir otomatis.
+                        </span>
+                      </button>
+                    </div>
+                    {fulfillmentMode === FULFILLMENT_PICKUP && (
+                      <div className="customer-pickup-note" role="status">
+                        Pesanan akan disiapkan untuk diambil langsung di
+                        Warkost. Ongkir Rp0.
+                      </div>
+                    )}
+                  </section>
                   <section className="checkout-card cart-checkout-card">
                     <div className="checkout-card-heading">
                       <span className="section-icon">
@@ -2941,6 +3093,7 @@ export default function App() {
                     </section>
                   )}
 
+                  {fulfillmentMode === FULFILLMENT_DELIVERY ? (
                   <section className="checkout-card delivery-checkout-card">
                     <div className="checkout-card-heading">
                       <span className="section-icon">
@@ -2960,7 +3113,7 @@ export default function App() {
                           setCheckoutAddressId(event.target.value);
                         }}
                       >
-                        {account.addresses.map((address) => (
+                        {deliveryAddresses.map((address) => (
                           <option key={address.id} value={address.id}>
                             {address.label} · {address.detail}
                           </option>
@@ -3108,6 +3261,32 @@ export default function App() {
                       </div>
                     )}
                   </section>
+                  ) : (
+                    <section className="checkout-card pickup-location-card">
+                      <input
+                        type="hidden"
+                        name="address"
+                        value={selectedCheckoutAddress?.id || ""}
+                      />
+                      <div className="checkout-card-heading">
+                        <span className="section-icon">
+                          <LocationIcon />
+                        </span>
+                        <h2>Lokasi Pengambilan</h2>
+                      </div>
+                      <div className="delivery-summary">
+                        <LocationIcon />
+                        <span>
+                          <strong>{PICKUP_LABEL}</strong>
+                          <small>Warkost Bahagia · Ambil di tempat</small>
+                        </span>
+                      </div>
+                      <div className="delivery-quote-state free" role="status">
+                        <strong>GRATIS · TANPA ONGKIR</strong>
+                        <span>Pesanan diambil langsung di Warkost.</span>
+                      </div>
+                    </section>
+                  )}
 
                   <section className="checkout-card payment-method-card">
                     <div className="checkout-card-heading">
@@ -3176,13 +3355,19 @@ export default function App() {
                     <strong>{money(total)}</strong>
                   </div>
                   <div className="payment-line">
-                    <span>Ongkir</span>
+                    <span>
+                      {fulfillmentMode === FULFILLMENT_PICKUP
+                        ? "Pengambilan"
+                        : "Ongkir"}
+                    </span>
                     <strong
                       className={
                         deliveryQuote?.available ? "" : "pending-value"
                       }
                     >
-                      {deliveryQuoteBusy
+                      {fulfillmentMode === FULFILLMENT_PICKUP
+                        ? "GRATIS"
+                        : deliveryQuoteBusy
                         ? "Menghitung…"
                         : deliveryQuote?.available
                           ? deliveryQuote.free_delivery
@@ -3231,7 +3416,7 @@ export default function App() {
                       loyaltyQuoteBusy ||
                       Boolean(selectedVoucherId && !voucherQuote) ||
                       Boolean(selectedRewardId && !loyaltyQuote) ||
-                      !account.addresses.length ||
+                      !selectedCheckoutAddress?.id ||
                       !deliveryQuote?.available
                     }
                   >
@@ -5685,15 +5870,26 @@ function CheckIcon() {
     </SvgIcon>
   );
 }
-function OrderProgress({ status, compact = false }) {
-  const activeStage = orderStage(status);
+function OrderProgress({
+  status,
+  compact = false,
+  fulfillmentType = FULFILLMENT_DELIVERY,
+}) {
+  const activeStage =
+    fulfillmentType === FULFILLMENT_PICKUP
+      ? pickupOrderStage(status)
+      : orderStage(status);
+  const stages =
+    fulfillmentType === FULFILLMENT_PICKUP
+      ? PICKUP_ORDER_STAGES
+      : ORDER_STAGES;
   if (status === "CANCELLED") return null;
   return (
     <div
       className={`order-progress ${compact ? "compact" : ""}`}
-      aria-label={`Progress pesanan: ${orderStatusMeta(status).label}`}
+      aria-label={`Progress pesanan: ${orderStatusMeta(status, fulfillmentType).label}`}
     >
-      {ORDER_STAGES.map((stage, index) => (
+      {stages.map((stage, index) => (
         <div
           className={`progress-step ${index <= activeStage ? "complete" : ""} ${index === activeStage ? "current" : ""}`}
           key={stage.key}
@@ -5766,7 +5962,8 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
         <p>Data pesanan sedang disinkronkan.</p>
       </section>
     );
-  const status = orderStatusMeta(order.status);
+  const pickup = order.fulfillment_type === FULFILLMENT_PICKUP;
+  const status = orderStatusMeta(order.status, order.fulfillment_type);
   const paymentExpiry = payment?.expires_at
     ? new Date(String(payment.expires_at).replace(" ", "T") + "Z").getTime()
     : 0;
@@ -5799,7 +5996,11 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
               </span>
               <div>
                 <strong>Pesanan #{order.id} berhasil dibuat</strong>
-                <small>Pesanan sedang diproses dan akan segera diantar.</small>
+                <small>
+                  {pickup
+                    ? "Pesanan sedang diproses untuk diambil di Warkost."
+                    : "Pesanan sedang diproses dan akan segera diantar."}
+                </small>
               </div>
             </section>
           )}
@@ -5819,15 +6020,18 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
                 <TruckIcon />
               </span>
               <div>
-                <small>Status Pengantaran</small>
-                <h2>{orderHeadline(order.status)}</h2>
+                <small>{pickup ? "Status Pesanan" : "Status Pengantaran"}</small>
+                <h2>{orderHeadline(order.status, order.fulfillment_type)}</h2>
               </div>
               <span className={`order-status-pill ${status.tone}`}>
                 {status.label}
               </span>
             </div>
-            <OrderProgress status={order.status} />
-            {order.driver_delay_notice === 1 && (
+            <OrderProgress
+              status={order.status}
+              fulfillmentType={order.fulfillment_type}
+            />
+            {!pickup && order.driver_delay_notice === 1 && (
               <div className="driver-delay-notice">
                 <strong>Driver sedang mengantar pesanan lain</strong>
                 <span>
@@ -5844,7 +6048,7 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
               >
                 <ChatIcon /> Hubungi Admin
               </button>
-              {order.driver_id &&
+              {!pickup && order.driver_id &&
               ["ASSIGNED", "PICKED_UP", "ON_DELIVERY"].includes(
                 order.status,
               ) ? (
@@ -5855,7 +6059,7 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
                 >
                   <ChatIcon /> Chat dengan Driver
                 </button>
-              ) : (
+              ) : !pickup ? (
                 <button type="button" disabled>
                   <PhoneIcon /> Hubungi Driver{" "}
                   <small>
@@ -5864,7 +6068,7 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
                       : "Driver belum ditugaskan"}
                   </small>
                 </button>
-              )}
+              ) : null}
             </div>
           </section>
           <section className="tracking-card tracking-info-card">
@@ -5873,14 +6077,15 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
                 <LocationIcon />
               </span>
               <div>
-                <small>Alamat Pengiriman</small>
+                <small>{pickup ? "Lokasi Pengambilan" : "Alamat Pengiriman"}</small>
                 <h2>{order.address_label || "Alamat"}</h2>
               </div>
             </div>
             <p>{order.address}</p>
             <small>
-              {(Number(order.distance_meters) / 1000).toFixed(1)} km dari
-              Warkost
+              {pickup
+                ? "Ambil langsung di Warkost · tanpa Driver"
+                : `${(Number(order.distance_meters) / 1000).toFixed(1)} km dari Warkost`}
             </small>
           </section>
           <section className="tracking-card tracking-info-card">
@@ -6035,7 +6240,8 @@ function Order({
     };
   }, [o.id, role]);
   if (role === "CUSTOMER") {
-    const status = orderStatusMeta(o.status);
+    const pickup = o.fulfillment_type === FULFILLMENT_PICKUP;
+    const status = orderStatusMeta(o.status, o.fulfillment_type);
     const active = !["DELIVERED", "CANCELLED"].includes(o.status);
     return (
       <article className="panel order customer-order-card">
@@ -6073,7 +6279,10 @@ function Order({
             )}
           </div>
           <div className="order-summary-copy">
-            <h2>{orderHeadline(o.status)}</h2>
+            {pickup && (
+              <span className="pickup-order-badge">Ambil di tempat</span>
+            )}
+            <h2>{orderHeadline(o.status, o.fulfillment_type)}</h2>
             <p>
               {active
                 ? "Pantau perkembangan pesananmu di bawah ini."
@@ -6083,9 +6292,13 @@ function Order({
             </p>
             <strong>{money(o.total)}</strong>
           </div>
-          <OrderProgress status={o.status} compact />
+          <OrderProgress
+            status={o.status}
+            compact
+            fulfillmentType={o.fulfillment_type}
+          />
         </div>
-        {o.driver_delay_notice === 1 && (
+        {!pickup && o.driver_delay_notice === 1 && (
           <div className="driver-delay-notice compact">
             <strong>Driver sedang mengantar pesanan lain</strong>
             <span>
@@ -6103,7 +6316,7 @@ function Order({
           </button>
           {active && (
             <button className="primary" onClick={() => onTrack?.(o.id)}>
-              <TruckIcon /> Lacak Pesanan
+              {pickup ? <ReceiptIcon /> : <TruckIcon />} {pickup ? "Lihat Status" : "Lacak Pesanan"}
             </button>
           )}
           {o.status === "DELIVERED" && (
@@ -6157,6 +6370,9 @@ function Order({
         </div>
         <span className="badge">{o.status.replaceAll("_", " ")}</span>
       </div>
+      {o.fulfillment_type === FULFILLMENT_PICKUP && (
+        <span className="pickup-order-badge">Ambil di tempat</span>
+      )}
       <p>{o.address || ""}</p>
       <div className="line">
         <strong>{money(o.total)}</strong>
@@ -6338,6 +6554,24 @@ function Order({
                 }
               >
                 Verifikasi setoran COD
+              </button>
+            )}
+          {["ADMIN", "OWNER"].includes(role) &&
+            o.fulfillment_type === FULFILLMENT_PICKUP &&
+            o.status === "READY" && (
+              <button
+                className="primary pickup-complete-button"
+                disabled={busy || o.method !== "QRIS" || o.payment_status !== "PAID"}
+                title={
+                  o.payment_status === "PAID"
+                    ? "Konfirmasi pesanan sudah diterima customer"
+                    : "Pembayaran QRIS belum terverifikasi"
+                }
+                onClick={() =>
+                  action("pickup-complete", { orderId: o.id })
+                }
+              >
+                Pesanan Sudah Diambil
               </button>
             )}
         </div>

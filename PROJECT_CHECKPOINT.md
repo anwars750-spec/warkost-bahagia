@@ -1167,3 +1167,46 @@ Status: **VERIFIED**
 
 - No realtime, ringtone, Kitchen history, Android/PWA work, new loyalty/voucher logic, unrelated UI redesign, or dependency upgrade.
 - Locked Customer, payment, communication, Driver, COD settlement, and Admin operational flows remain covered by the passing full suite.
+
+---
+
+## Customer Pickup / Ambil di Tempat — End-to-End Stabilization
+
+Date: 2026-10-22
+
+Status: **IMPLEMENTED / AUTOMATED VERIFIED / PRODUCT OWNER UAT REQUIRED**
+
+### Source-control baseline
+
+- Branch: `work/customer-qris-demo-uat-v1`.
+- Parent checkpoint: `65c709c64bb6baba529fe65de48623ab5649c48b`.
+- Existing QRIS-only Customer checkout and delivery behavior remain unchanged outside the pickup integration.
+
+### Root cause and architecture correction
+
+- Pickup previously depended on the customer address label plus imperative `MutationObserver` runtimes that changed React-owned checkout/order DOM. This left fulfillment state inconsistent between checkout, Driver filtering, completion controls, and customer status rendering.
+- `orders.fulfillment_type` is now the persisted server-authoritative source of truth (`DELIVERY` or `PICKUP`), with a narrow MySQL migration and matching SQLite runtime upgrade/backfill.
+- Pickup selection, status labels, progress, and Admin/Owner completion controls are now rendered by the native React flow. The obsolete pickup DOM takeover runtimes were removed.
+- Pickup checkout is validated server-side, uses the protected Warkost pickup address, and always stores zero distance and zero delivery fee. Delivery still uses the existing quote/radius rules.
+
+### Operational integrity
+
+- Pickup orders cannot enter Driver lists, individual Driver claim, batch claim, batch pickup, or Driver status transitions.
+- Admin/Owner can complete only a `PICKUP` order in `READY` with verified `QRIS/PAID`; completion is transactional and idempotent, creates no delivery record, records audit/history, notifies the customer, and awards loyalty exactly once.
+- Customer pickup labels are explicit: `READY` = `Siap Diambil`; terminal `DELIVERED` = `Sudah Diambil / Selesai`. Pickup tracking contains no Driver assignment/contact/delivery wording.
+- Pickup READY/terminal realtime events refresh the relevant operational/customer views without alerting Driver. Existing DELIVERY realtime and Driver behavior remain unchanged.
+
+### Verification
+
+- Focused pickup tests: **9/9 PASS**.
+- Affected payment/order/QRIS/loyalty/Driver/realtime regression: **72/72 PASS**.
+- MySQL migration plus pickup focused retest: **13/13 PASS**.
+- Full unit suite: **451/451 PASS**.
+- Production build: **PASS**.
+- `git diff --check`: **PASS**.
+- Product Owner manual desktop/mobile UAT remains required before this pickup milestone can be accepted or locked.
+
+### Guardrails preserved
+
+- No merge, deployment, unrelated feature, Customer redesign, COD removal, payment-rule change, delivery-pricing change, or role-module redesign.
+- This checkpoint must not be reported as Product Owner accepted until the manual pickup flow is completed successfully.

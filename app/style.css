@@ -798,6 +798,76 @@ footer {
 .checkout-card {
   padding: 17px 20px;
 }
+.customer-fulfillment-card > p {
+  margin: 8px 0 14px;
+  color: #78675f;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.customer-fulfillment-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.customer-fulfillment-option {
+  min-height: 86px;
+  padding: 14px;
+  border: 1px solid #e6d8cf;
+  border-radius: 16px;
+  background: #fffaf6;
+  color: #2d211c;
+  text-align: left;
+  cursor: pointer;
+  transition: 160ms ease;
+}
+.customer-fulfillment-option strong,
+.customer-fulfillment-option span {
+  display: block;
+}
+.customer-fulfillment-option strong {
+  margin-bottom: 4px;
+  font-size: 15px;
+}
+.customer-fulfillment-option span {
+  color: #7b6a61;
+  font-size: 12px;
+  line-height: 1.35;
+}
+.customer-fulfillment-option.is-active {
+  border-color: #9e3a1d;
+  background: #fff4ed;
+  box-shadow: 0 0 0 1px #9e3a1d inset;
+}
+.customer-fulfillment-option:disabled {
+  cursor: wait;
+  opacity: 0.66;
+}
+.customer-pickup-note {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #eef8ee;
+  color: #245d2d;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.pickup-order-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin: 8px 0;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #edf8f1;
+  color: #176c42;
+  font-size: 12px;
+  font-weight: 700;
+}
+button.pickup-complete-button {
+  border-color: #176c42;
+  background: #176c42;
+  color: #fff;
+}
 .checkout-card-heading,
 .tracking-card-heading {
   display: flex;
@@ -4702,6 +4772,12 @@ footer {
 }
 
 @media (max-width: 620px) {
+  .customer-fulfillment-options {
+    grid-template-columns: 1fr;
+  }
+  .customer-fulfillment-option {
+    min-height: auto;
+  }
   .customer-product .qty small {
     max-width: 52px;
     font-size: 8px;

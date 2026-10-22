@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import CustomerFulfillmentRuntime from "./CustomerFulfillmentRuntime";
-import PickupOrderCompletionRuntime from "./PickupOrderCompletionRuntime";
 
 function enforceQrisOnly(root = document) {
   const cashInputs = root.querySelectorAll(
@@ -65,10 +63,5 @@ export default function CustomerQrisOnlyRuntime() {
     return () => observer.disconnect();
   }, []);
 
-  return (
-    <>
-      <CustomerFulfillmentRuntime />
-      <PickupOrderCompletionRuntime />
-    </>
-  );
+  return null;
 }

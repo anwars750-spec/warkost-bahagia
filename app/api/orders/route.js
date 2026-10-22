@@ -13,8 +13,6 @@ import { driverContactIsVisible } from "../../../lib/delivery.mjs";
 
 export const runtime = "nodejs";
 
-const PICKUP_DETAIL = "Warkost Bahagia · Ambil di tempat";
-
 const out = (data, status = 200) =>
   NextResponse.json(data, {
     status,
@@ -55,9 +53,7 @@ export async function GET(request) {
         ...(before === null ? [] : [before]),
       );
     } else if (user.role === "DRIVER") {
-      orders = (await listDriverOrders(user, before)).filter(
-        (order) => String(order.address || "") !== PICKUP_DETAIL,
-      );
+      orders = await listDriverOrders(user, before);
     } else if (user.role === "KITCHEN") {
       orders = await store.all(
         "SELECT o.*,u.name customer_name,s.status kitchen_status FROM orders o JOIN order_stations s ON s.order_id=o.id AND s.station='KITCHEN' JOIN users u ON u.id=o.customer_id WHERE o.status IN ('CONFIRMED','PREPARING','READY')" +
@@ -87,8 +83,7 @@ export async function GET(request) {
         )?.value || "6281546407856";
 
       for (const order of page) {
-        const pickup = order.address_label === "Ambil di Warkost";
-        order.fulfillment_type = pickup ? "PICKUP" : "DELIVERY";
+        const pickup = order.fulfillment_type === "PICKUP";
         order.driver_delay_notice = pickup
           ? 0
           : customerDriverWaitNotice(order, availability);
@@ -100,10 +95,6 @@ export async function GET(request) {
             : null;
         delete order.driver_phone;
       }
-    } else if (["ADMIN", "OWNER"].includes(user.role)) {
-      for (const order of page)
-        order.fulfillment_type =
-          order.address_label === "Ambil di Warkost" ? "PICKUP" : "DELIVERY";
     }
 
     return out({
