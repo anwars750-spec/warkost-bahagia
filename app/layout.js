@@ -149,6 +149,7 @@ import CustomerLocationPickerUx from "./CustomerLocationPickerUx";
 import CustomerAccountAddressLocationFirst from "./CustomerAccountAddressLocationFirst";
 import CustomerPromoSlideshowRuntime from "./CustomerPromoSlideshowRuntime";
 import CustomerQrisOnlyRuntime from "./CustomerQrisOnlyRuntime";
+import CustomerLoyaltyPickerRuntime from "./CustomerLoyaltyPickerRuntime";
 import ManagerDashboardUiPolish from "./ManagerDashboardUiPolish";
 import ManagerSubcategoryPolish from "./ManagerSubcategoryPolish";
 import ManagerNotificationPopover from "./ManagerNotificationPopover";
@@ -168,6 +169,7 @@ export default function RootLayout({ children }) {
         {children}
         <CustomerPromoSlideshowRuntime />
         <CustomerQrisOnlyRuntime />
+        <CustomerLoyaltyPickerRuntime />
         <RealtimeOperationsRuntime />
         <MobileForegroundAlertBoost />
         <DriverRuntimeBootstrap />
