@@ -28,7 +28,7 @@ beforeEach(() => {
   `);
 });
 
-after(() => fs.rmSync(directory, { recursive: true, force: true }));
+after(() => { try { database.close(); } catch {} fs.rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); });
 
 test("driver queue and single claim exclude pickup from persisted fulfillment type", async () => {
   const driver = { id: 4, role: "DRIVER" };

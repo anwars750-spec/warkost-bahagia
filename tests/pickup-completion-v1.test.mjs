@@ -31,7 +31,7 @@ beforeEach(() => {
   `);
 });
 
-after(() => fs.rmSync(directory, { recursive: true, force: true }));
+after(() => { try { database.close(); } catch {} fs.rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); });
 
 function insertOrder({ id, fulfillment = "PICKUP", status = "READY", payment = "PAID" }) {
   database
