@@ -38,6 +38,67 @@
 - Current status: **PRODUCT OWNER UAT PASS / FULL REGRESSION PASS / CHECKPOINT CLOSURE**
 - Verification date: 2026-10-23
 
+
+## Milestone B ? Store Operations V2
+
+Status: **COMPLETED ? 4/4**
+
+### Completed scope
+
+- ? Store Operating Hours V1
+- ? Auto Confirm QRIS Paid ? 1 minute
+- ? Preparing ETA V1
+- ? Unlimited Stock V1
+
+### Preparing ETA V1
+
+- Server-authoritative preparation ETA based on existing station start timestamps.
+- Default preparation duration: 15 minutes per preparation station.
+- Mixed orders follow the station with the latest estimated completion.
+- Pickup and Delivery use the same ETA rule.
+- Informational only; no automatic order-status transition.
+- Implementation commit: `276f11f7f04529a1082be9d7a5ab56b15246f953`.
+- Dedicated tests: **7/7 PASS**.
+- Full regression at closure: **485/485 PASS**.
+- Production build: **PASS**.
+- `git diff --check`: **PASS**.
+
+### Unlimited Stock V1
+
+- Product Master supports a true Unlimited Stock flag; no fake large stock quantity is used.
+- Unlimited products remain orderable regardless of physical stock and active reservations.
+- Existing physical stock value is preserved while Unlimited is active.
+- Unlimited orders keep reservation lifecycle/idempotency but do not decrement physical stock and do not create SALE inventory movements.
+- Mixed normal + unlimited orders retain normal physical-stock enforcement for finite products.
+- Manager Stock marks unlimited products as **Unlimited** and disables ordinary stock adjustment.
+- Low-stock KPI excludes unlimited products.
+- Customer storefront keeps `unlimited_stock` internal and exposes only the existing public-safe availability contract.
+- SQLite runtime schema and MySQL migration `031_unlimited_stock_v1.sql` added.
+- Implementation commit: `885dd30`.
+- Dedicated tests: **6/6 PASS**.
+- Full regression: **491/491 PASS**.
+- Production build with Next.js 16.3.6: **PASS**.
+- `git diff --check`: **PASS**.
+
+### Closure boundary
+
+- Product Owner explicitly requested no repeated manual UAT for this P1 roadmap.
+- Verification is based on dedicated automated tests, full regression, production build, and diff integrity.
+- No merge performed.
+- No deployment performed.
+- Production integrations remain deferred.
+
+### Next milestone
+
+**MILESTONE C ? MENU & DISPLAY MANAGEMENT V2**
+
+Planned P1 scope:
+- grouped category
+- collapse / expand
+- hide / unhide
+- Manager Banner Management
+- horizontal slideshow
+
 ## Store Operating Hours V1
 
 Date: 2026-10-23
