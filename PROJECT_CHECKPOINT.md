@@ -2,7 +2,7 @@
 
 ## Active baseline
 
-- Branch: `ui/admin-operasional-v1`
+- Branch: `work/customer-qris-demo-uat-v1`
 - Accepted Customer UI baseline: `42fc282cad623492413b33db849f5765c7a4e50d`
 - Shipping core implementation commit: `f2007d5d02376981c8d7d402cba048ca651e398a`
 - Shipping core checkpoint: `b1c5c27b4f3f016a48fea7a80dab543da9b597e1`
@@ -32,9 +32,9 @@
 - Driver Multi-order Trip + Grouped COD UI implementation: `d506e466ad999a708be69fbd1a5d582978c8dadf`
 - Manager Control Center V1 implementation: `0289d0eb593f162900c5f2f039ef0100f96bde96`
 - Promotion Engine V1 implementation: `757f5a79e6afa721df80a6b836c3caf06af90393`
-- Current milestone: Promotion Engine V1
-- Current status: **VERIFIED**
-- Verification date: 2026-10-10
+- Current milestone: Auto Confirm QRIS Paid V1
+- Current status: **IMPLEMENTED / AUTOMATED VERIFIED / PRODUCT OWNER UAT REQUIRED**
+- Verification date: 2026-10-23
 
 ## Promotion Engine V1
 
@@ -1210,3 +1210,35 @@ Status: **IMPLEMENTED / AUTOMATED VERIFIED / PRODUCT OWNER UAT REQUIRED**
 
 - No merge, deployment, unrelated feature, Customer redesign, COD removal, payment-rule change, delivery-pricing change, or role-module redesign.
 - This checkpoint must not be reported as Product Owner accepted until the manual pickup flow is completed successfully.
+
+---
+
+## Auto Confirm QRIS Paid V1
+
+Date: 2026-10-23
+
+Status: **IMPLEMENTED / AUTOMATED VERIFIED / PRODUCT OWNER UAT REQUIRED**
+
+### Server-side confirmation architecture
+
+- A Node-side sweep starts from the Next.js instrumentation lifecycle, runs independently of Customer/Admin browsers, and uses an unreferenced interval so tests and shutdown are not held open.
+- Eligibility is server-authoritative: only `QRIS` payments in `PAID` with a persisted `paid_at`, a still-`PENDING` order, and an elapsed time of at least 60 seconds can transition to `CONFIRMED`.
+- The sweep re-locks and revalidates each order/payment inside the existing SQLite/MySQL transaction abstraction. Overlapping sweeps and a concurrent manual confirmation become safe no-ops after the first committed transition.
+- Manual and automatic confirmation share the same domain confirmation helper. Existing PAID effects remain authoritative: stock commit and print-job enqueue are not repeated; their existing unique/idempotent guards remain intact.
+- Automatic transitions write one `ORDER_AUTO_CONFIRMED` audit record with `orderId`, `paidAt`, delay, and worker source, plus the normal status-change audit and Customer notification.
+- After commit, the existing realtime action publisher sends the normal `CONFIRMED` update to the relevant Customer, Admin/Owner/Manager, and Kitchen only when persisted routing indicates Kitchen work. No second realtime system was introduced.
+- The rule applies equally to `DELIVERY` and `PICKUP`; it does not create Driver/delivery ownership or alter fulfillment type.
+
+### Verification
+
+- Dedicated Auto Confirm QRIS tests: **7/7 PASS**, including the exact 60-second boundary, PAID-only gate, manual-confirm no-op, overlapping sweep idempotency, stock/print/audit/notification deduplication, realtime delivery, and PICKUP/DELIVERY coverage.
+- Payment/order/pickup/realtime affected regression: **58/58 PASS**.
+- Full unit suite: **458/458 PASS**.
+- Production build with Next.js 16.3.6: **PASS**.
+- `git diff --check`: **PASS**.
+
+### Guardrails and UAT boundary
+
+- No payment-provider redesign, migration, Customer UI redesign, COD change, delivery-pricing change, merge, or deployment was performed.
+- The worker is process-local and assumes the documented persistent Node hosting target; database transaction guards keep repeated or overlapping process sweeps idempotent.
+- Product Owner UAT remains required before this milestone may be marked accepted or locked.
