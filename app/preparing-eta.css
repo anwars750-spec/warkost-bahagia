@@ -1,0 +1,71 @@
+.preparing-eta-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid #ead8c6;
+  border-radius: 14px;
+  background: #fffaf4;
+  color: #5d3925;
+}
+
+.preparing-eta-banner .preparing-eta-icon {
+  display: grid;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 999px;
+  background: #f2dfca;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.preparing-eta-banner > span:last-child {
+  display: grid;
+  gap: 2px;
+}
+
+.preparing-eta-banner strong {
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
+.preparing-eta-banner small {
+  color: #806b5e;
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.preparing-eta-banner.active {
+  border-color: #cdb28f;
+  background: #fff8ed;
+}
+
+.preparing-eta-banner.overdue {
+  border-color: #dfb0a5;
+  background: #fff3f0;
+  color: #8d2d22;
+}
+
+.preparing-eta-banner.overdue .preparing-eta-icon {
+  background: #f7d8d1;
+}
+
+.kitchen-time-chip [data-preparing-eta-value] {
+  margin-left: 4px;
+}
+
+@media (max-width: 620px) {
+  .preparing-eta-banner {
+    gap: 10px;
+    padding: 11px 12px;
+  }
+
+  .preparing-eta-banner .preparing-eta-icon {
+    flex-basis: 32px;
+    width: 32px;
+    height: 32px;
+  }
+}

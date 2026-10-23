@@ -106,6 +106,7 @@ import "./owner-customers-final-polish.css";
 import "./print-branding.css";
 import "./store-operating-hours.css";
 import "./realtime-operations.css";
+import "./preparing-eta.css";
 import "./admin-action-colors-final.css";
 import DriverRuntimeBootstrap from "./DriverRuntimeBootstrap";
 import DriverLogoFix from "./DriverLogoFix";
@@ -156,6 +157,7 @@ import ManagerSubcategoryPolish from "./ManagerSubcategoryPolish";
 import ManagerNotificationPopover from "./ManagerNotificationPopover";
 import ManagerNotificationOutsideClose from "./ManagerNotificationOutsideClose";
 import RealtimeOperationsRuntime from "./RealtimeOperationsRuntime";
+import PreparingEtaRuntime from "./PreparingEtaRuntime";
 import MobileForegroundAlertBoost from "./MobileForegroundAlertBoost";
 
 export const metadata = {
@@ -172,6 +174,7 @@ export default function RootLayout({ children }) {
         <CustomerQrisOnlyRuntime />
         <CustomerLoyaltyPickerRuntime />
         <RealtimeOperationsRuntime />
+        <PreparingEtaRuntime />
         <MobileForegroundAlertBoost />
         <DriverRuntimeBootstrap />
         <DriverLogoFix />
