@@ -48,6 +48,90 @@ function installFulfillmentStyles() {
       box-shadow: 0 8px 20px rgba(154, 52, 31, .14);
     }
 
+    .customer-benefit-action {
+      min-width: 96px !important;
+      min-height: 42px !important;
+      padding: 10px 15px !important;
+      border-radius: 12px !important;
+      font-size: 13px !important;
+      font-weight: 800 !important;
+      letter-spacing: .01em !important;
+      box-shadow: 0 5px 14px rgba(73, 42, 29, .07) !important;
+      transition:
+        transform 160ms ease,
+        border-color 160ms ease,
+        background 160ms ease,
+        color 160ms ease,
+        box-shadow 160ms ease !important;
+    }
+
+    .customer-benefit-action.is-voucher.is-available {
+      border-color: #d9987c !important;
+      background: #fff8f3 !important;
+      color: #9a3d24 !important;
+    }
+
+    .customer-benefit-action.is-voucher.is-available:hover {
+      border-color: #b95c3d !important;
+      background: #fff0e8 !important;
+      box-shadow: 0 7px 18px rgba(154, 61, 36, .13) !important;
+      transform: translateY(-1px);
+    }
+
+    .customer-benefit-action.is-loyalty.is-available {
+      border-color: #dfba6a !important;
+      background: #fff9e8 !important;
+      color: #8a5a08 !important;
+    }
+
+    .customer-benefit-action.is-loyalty.is-available:hover {
+      border-color: #c9962d !important;
+      background: #fff3cf !important;
+      box-shadow: 0 7px 18px rgba(161, 112, 18, .14) !important;
+      transform: translateY(-1px);
+    }
+
+    .customer-benefit-action.is-claim {
+      border-color: #d7a84c !important;
+      background: linear-gradient(135deg, #fff7dc, #ffedb6) !important;
+      color: #795008 !important;
+      box-shadow: 0 6px 16px rgba(157, 108, 18, .12) !important;
+    }
+
+    .customer-benefit-action.is-claim:hover {
+      border-color: #bb8622 !important;
+      background: linear-gradient(135deg, #fff2c6, #ffe49a) !important;
+      transform: translateY(-1px);
+    }
+
+    .customer-benefit-action.is-selected {
+      border-color: #2f7d4a !important;
+      background: linear-gradient(135deg, #2f7d4a, #24673d) !important;
+      color: #fff !important;
+      box-shadow: 0 7px 18px rgba(47, 125, 74, .22) !important;
+    }
+
+    .customer-benefit-action.is-selected:hover {
+      border-color: #245f3a !important;
+      background: linear-gradient(135deg, #2a7345, #205b36) !important;
+    }
+
+    .customer-benefit-action:disabled,
+    .customer-benefit-action.is-disabled {
+      border-color: #e4ddd5 !important;
+      background: #f7f4ef !important;
+      color: #a29991 !important;
+      box-shadow: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+
+    .voucher-option.selected {
+      border-color: #9bc8aa !important;
+      background: linear-gradient(135deg, #fffdf9, #f2fbf5) !important;
+      box-shadow: 0 0 0 2px rgba(47, 125, 74, .08) !important;
+    }
+
     @media (max-width: 620px) {
       .customer-fulfillment-option {
         min-height: 86px !important;
@@ -59,6 +143,12 @@ function installFulfillmentStyles() {
         width: 38px;
         height: 38px;
         background-size: 21px 21px;
+      }
+
+      .customer-benefit-action {
+        min-width: 94px !important;
+        min-height: 40px !important;
+        padding: 9px 13px !important;
       }
     }
   `;
@@ -126,6 +216,68 @@ function normalizeCheckoutAddressActions(root = document) {
   }
 }
 
+function polishBenefitActions(root = document) {
+  const checkout = root.querySelector(".customer-checkout");
+  if (!checkout) return;
+
+  const loyaltyButtons = checkout.querySelectorAll(
+    ".loyalty-checkout-card .voucher-option > button",
+  );
+
+  loyaltyButtons.forEach((button) => {
+    const option = button.closest(".voucher-option");
+    const selected = option?.classList.contains("selected") ?? false;
+
+    button.classList.add("customer-benefit-action", "is-loyalty");
+    button.classList.toggle("is-selected", selected);
+    button.classList.toggle("is-available", !selected && !button.disabled);
+    button.classList.toggle("is-disabled", button.disabled);
+    button.setAttribute("aria-pressed", selected ? "true" : "false");
+
+    if (selected && button.textContent?.trim() !== "✓ Dipakai") {
+      button.textContent = "✓ Dipakai";
+    } else if (
+      !selected &&
+      !button.disabled &&
+      ["Dipilih", "Dipakai", "✓ Dipakai"].includes(button.textContent?.trim())
+    ) {
+      button.textContent = "Pakai";
+    }
+  });
+
+  const voucherButtons = checkout.querySelectorAll(
+    ".voucher-checkout-card .voucher-option > button",
+  );
+
+  voucherButtons.forEach((button) => {
+    const option = button.closest(".voucher-option");
+    const selected = option?.classList.contains("selected") ?? false;
+    const label = button.textContent?.trim() || "";
+    const claim = label === "Klaim";
+
+    button.classList.add("customer-benefit-action", "is-voucher");
+    button.classList.toggle("is-claim", claim && !button.disabled);
+    button.classList.toggle("is-selected", selected);
+    button.classList.toggle(
+      "is-available",
+      !claim && !selected && !button.disabled,
+    );
+    button.classList.toggle("is-disabled", button.disabled);
+    button.setAttribute("aria-pressed", selected ? "true" : "false");
+
+    if (selected && button.textContent?.trim() !== "✓ Dipakai") {
+      button.textContent = "✓ Dipakai";
+    } else if (
+      !selected &&
+      !button.disabled &&
+      !claim &&
+      ["Dipilih", "Dipakai", "✓ Dipakai"].includes(button.textContent?.trim())
+    ) {
+      button.textContent = "Pakai";
+    }
+  });
+}
+
 function enforceQrisOnly(root = document) {
   const cashInputs = root.querySelectorAll(
     'input[name="method"][value="CASH"]',
@@ -170,6 +322,7 @@ export default function CustomerQrisOnlyRuntime() {
     const apply = () => {
       enforceQrisOnly(document);
       normalizeCheckoutAddressActions(document);
+      polishBenefitActions(document);
     };
 
     const run = () => {
@@ -188,7 +341,7 @@ export default function CustomerQrisOnlyRuntime() {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["checked", "class", "data-mode"],
+      attributeFilter: ["checked", "class", "data-mode", "disabled"],
     });
 
     return () => observer.disconnect();
