@@ -6,6 +6,7 @@ import {
   productPriceLabel,
 } from "../lib/product-units.mjs";
 import ManagerPromotionCenter from "./ManagerPromotionCenter";
+import StoreOperatingHoursPanel from "./StoreOperatingHoursPanel";
 
 const money = (value) => "Rp" + Number(value || 0).toLocaleString("id-ID");
 function Delta({ value, suffix = "dari periode sebelumnya" }) {
@@ -1301,6 +1302,7 @@ export default function ManagerControlCenter({
           onChanged={refresh}
         />
       )}
+      {view === "store-hours" && <StoreOperatingHoursPanel request={api} />}
       {moreOpen && (
         <div className="manager-more-menu">
           <button
@@ -1310,6 +1312,14 @@ export default function ManagerControlCenter({
             }}
           >
             Subkategori
+          </button>
+          <button
+            onClick={() => {
+              setView("store-hours");
+              setMoreOpen(false);
+            }}
+          >
+            Jam Operasional
           </button>
           <button
             onClick={() => {
@@ -1349,7 +1359,9 @@ export default function ManagerControlCenter({
         </button>
         <button
           className={
-            ["subcategories", "notifications"].includes(view) ? "active" : ""
+            ["subcategories", "store-hours", "notifications"].includes(view)
+              ? "active"
+              : ""
           }
           onClick={() => setMoreOpen((open) => !open)}
         >

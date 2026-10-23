@@ -1,0 +1,237 @@
+.store-hours-panel {
+  width: min(100%, 920px);
+  margin: 0 auto 28px;
+  padding: clamp(18px, 3vw, 30px);
+  border: 1px solid #eadfce;
+  border-radius: 24px;
+  background: #fffdf8;
+  box-shadow: 0 16px 46px rgba(76, 48, 24, 0.08);
+  color: #332218;
+}
+
+.store-hours-head,
+.store-hours-times,
+.store-hours-panel footer {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.store-hours-head > div:first-child > span,
+.store-hours-summary > span {
+  color: #9b5f23;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.store-hours-head h2 {
+  margin: 5px 0;
+  font-size: clamp(1.35rem, 3vw, 2rem);
+}
+
+.store-hours-head p,
+.store-hours-help,
+.store-hours-summary small {
+  color: #78695d;
+}
+
+.store-hours-effective {
+  min-width: 142px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: #f5eee4;
+}
+
+.store-hours-effective i,
+.customer-store-status i {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 10px;
+  border-radius: 50%;
+  background: #a84a3f;
+  box-shadow: 0 0 0 5px rgba(168, 74, 63, 0.12);
+}
+
+.store-hours-effective.open i,
+.customer-store-status.open i {
+  background: #2f8a5b;
+  box-shadow: 0 0 0 5px rgba(47, 138, 91, 0.13);
+}
+
+.store-hours-effective span {
+  display: grid;
+  gap: 2px;
+}
+
+.store-hours-effective small {
+  color: #7c6b5e;
+}
+
+.store-hours-form {
+  display: grid;
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.store-hours-panel fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.store-hours-panel legend,
+.store-hours-times label > span,
+.store-hours-reason > span {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 750;
+}
+
+.store-hours-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.store-hours-toggle label {
+  padding: 14px 16px;
+  border: 1px solid #dfd2c2;
+  border-radius: 14px;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.store-hours-toggle label.active.open {
+  border-color: #5a9b74;
+  background: #edf8f1;
+}
+
+.store-hours-toggle label.active.closed {
+  border-color: #b8685f;
+  background: #fff2ef;
+}
+
+.store-hours-toggle input {
+  margin-right: 8px;
+}
+
+.store-hours-help {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.78rem;
+}
+
+.store-hours-times > label {
+  flex: 1;
+}
+
+.store-hours-times input,
+.store-hours-reason input {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 13px;
+  border: 1px solid #d9cbbb;
+  border-radius: 12px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.store-hours-summary {
+  display: grid;
+  gap: 4px;
+  padding: 15px 17px;
+  border-radius: 14px;
+  background: #f7f0e5;
+}
+
+.store-hours-feedback {
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+
+.store-hours-feedback.error {
+  background: #fff0ed;
+  color: #8c382f;
+}
+
+.store-hours-feedback.success {
+  background: #edf8f1;
+  color: #246c47;
+}
+
+.store-hours-panel footer {
+  justify-content: flex-end;
+}
+
+.customer-store-status {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin: 8px 0 10px;
+  padding: 9px 13px;
+  border: 1px solid rgba(104, 69, 38, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.9);
+  color: #4c3322;
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+.customer-store-status.closed {
+  background: #fff2ef;
+  color: #7b352e;
+}
+
+.checkout-store-closed {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border: 1px solid #e3b4ac;
+  border-radius: 14px;
+  background: #fff2ef;
+  color: #71342d;
+}
+
+.checkout-store-closed strong,
+.checkout-store-closed span {
+  display: block;
+}
+
+@media (max-width: 700px) {
+  .store-hours-panel {
+    border-radius: 18px;
+    padding: 17px;
+  }
+
+  .store-hours-head,
+  .store-hours-times {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .store-hours-effective {
+    min-width: 0;
+  }
+
+  .store-hours-toggle {
+    grid-template-columns: 1fr;
+  }
+
+  .store-hours-panel footer {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .store-hours-panel footer button {
+    width: 100%;
+  }
+}

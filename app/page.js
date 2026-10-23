@@ -257,6 +257,7 @@ export default function App() {
       adminPrinter: "LAN 80mm Admin (simulasi)",
       kitchenPrinter: "LAN 80mm Kitchen (simulasi)",
     }),
+    [storeStatus, setStoreStatus] = useState(null),
     [cart, setCart] = useState({}),
     [itemNotes, setItemNotes] = useState({}),
     [noteEditorId, setNoteEditorId] = useState(null),
@@ -343,11 +344,13 @@ export default function App() {
     refreshController.current = controller;
     const signal = controller.signal;
     try {
-      const [m, me] = await Promise.all([
+      const [m, me, currentStoreStatus] = await Promise.all([
         api("menu", undefined, signal),
         api("me", undefined, signal),
+        api("store-hours", undefined, signal),
       ]);
       setMenu(m);
+      setStoreStatus(currentStoreStatus);
       setSelectedCategory((current) => current || m.categories[0]?.id || 0);
       setUser(me.user);
       if (me.user && me.user.role !== "CUSTOMER")
@@ -419,7 +422,9 @@ export default function App() {
   useEffect(() => {
     if (user?.id)
       window.dispatchEvent(
-        new CustomEvent("warkost:session-started", { detail: { role: user.role } }),
+        new CustomEvent("warkost:session-started", {
+          detail: { role: user.role },
+        }),
       );
   }, [user?.id, user?.role]);
   useEffect(
@@ -467,6 +472,7 @@ export default function App() {
           );
         }
         setAlerts(latestAlerts);
+        setStoreStatus(await api("store-hours", undefined, controller.signal));
         if (["ADMIN", "OWNER"].includes(user.role))
           setDashboard(await api("dashboard", undefined, controller.signal));
         if (user.role === "CUSTOMER")
@@ -505,7 +511,10 @@ export default function App() {
       setView("auth");
       setError("Sesi Anda telah berakhir. Silakan masuk kembali.");
     };
-    window.addEventListener("warkost:session-invalidated", onSessionInvalidated);
+    window.addEventListener(
+      "warkost:session-invalidated",
+      onSessionInvalidated,
+    );
     return () =>
       window.removeEventListener(
         "warkost:session-invalidated",
@@ -526,7 +535,9 @@ export default function App() {
           jobs.push(
             api("orders").then((latestOrders) => {
               setOrders((previous) => {
-                const fresh = new Set(latestOrders.orders.map((order) => order.id));
+                const fresh = new Set(
+                  latestOrders.orders.map((order) => order.id),
+                );
                 return [
                   ...latestOrders.orders,
                   ...previous.filter((order) => !fresh.has(order.id)),
@@ -555,8 +566,15 @@ export default function App() {
           ["ADMIN", "KITCHEN", "MANAGER"].includes(user.role)
         )
           jobs.push(api("stock").then(setStock));
-        if (groups.has("promotions") && ["MANAGER", "OWNER"].includes(user.role))
-          jobs.push(api("promotions").then((data) => setPromotions(data.promotions)));
+        if (
+          groups.has("promotions") &&
+          ["MANAGER", "OWNER"].includes(user.role)
+        )
+          jobs.push(
+            api("promotions").then((data) => setPromotions(data.promotions)),
+          );
+        if (groups.has("store-status"))
+          jobs.push(api("store-hours").then(setStoreStatus));
         if (groups.has("printer") && ["ADMIN", "KITCHEN"].includes(user.role))
           jobs.push(api("print-jobs").then((data) => setPrintJobs(data.jobs)));
         await Promise.all(jobs);
@@ -565,10 +583,12 @@ export default function App() {
       }
     };
     const scheduleRefresh = (groups) => {
-      for (const group of groups)
-        realtimeRefreshGroups.current.add(group);
+      for (const group of groups) realtimeRefreshGroups.current.add(group);
       if (!realtimeRefreshTimer.current)
-        realtimeRefreshTimer.current = window.setTimeout(flushRealtimeRefresh, 180);
+        realtimeRefreshTimer.current = window.setTimeout(
+          flushRealtimeRefresh,
+          180,
+        );
     };
     const onRealtime = (event) =>
       scheduleRefresh(refreshGroupsForEvent(event.detail?.type));
@@ -1452,6 +1472,9 @@ export default function App() {
                   </button>
                   <button onClick={() => setView("stock")}>Stok</button>
                   <button onClick={() => setView("promotions")}>Promo</button>
+                  <button onClick={() => setView("store-hours")}>
+                    Jam Operasional
+                  </button>
                 </>
               )}
               {role === "OWNER" && (
@@ -1583,6 +1606,7 @@ export default function App() {
               "products",
               "subcategories",
               "stock",
+              "store-hours",
             ].includes(view)
           ) &&
           !customerBatchView && (
@@ -2230,6 +2254,21 @@ export default function App() {
             >
               <div className="customer-hero-copy">
                 <span className="eyebrow">DAPUR WARKOST</span>
+                {storeStatus && (
+                  <div
+                    className={`customer-store-status ${storeStatus.isOpen ? "open" : "closed"}`}
+                    role="status"
+                  >
+                    <i />
+                    <span>
+                      {storeStatus.isOpen
+                        ? `Buka · ${storeStatus.openTime}–${storeStatus.closeTime}`
+                        : storeStatus.manualClosed
+                          ? `Tutup${storeStatus.closedReason ? ` · ${storeStatus.closedReason}` : ""}`
+                          : `Tutup · Buka kembali ${storeStatus.nextOpenTime || storeStatus.openTime}`}
+                    </span>
+                  </div>
+                )}
                 <h1>Mau makan apa hari ini?</h1>
                 <p className="hero-lead">Lebih hemat, tetap nikmat.</p>
                 <div className="hero-benefits" aria-label="Keunggulan layanan">
@@ -2614,6 +2653,17 @@ export default function App() {
                 aman oleh server.
               </p>
             </div>
+            {storeStatus?.isOpen === false && (
+              <div className="checkout-store-closed" role="alert">
+                <strong>Warkost sedang tutup</strong>
+                <span>
+                  {storeStatus.closedReason ||
+                    (storeStatus.nextOpenTime
+                      ? `Buka kembali pukul ${storeStatus.nextOpenTime} WIB.`
+                      : "Pesanan baru belum dapat dibuat.")}
+                </span>
+              </div>
+            )}
             {!count ? (
               <div className="panel empty-state checkout-empty">
                 <CartIcon />
@@ -2628,6 +2678,12 @@ export default function App() {
                 className="checkout-form"
                 onSubmit={(e) => {
                   e.preventDefault();
+                  if (storeStatus?.isOpen !== true) {
+                    setError(
+                      "Warkost sedang tutup. Pesanan baru belum dapat dibuat.",
+                    );
+                    return;
+                  }
                   if (!deliveryQuote?.available) {
                     setError(
                       deliveryQuote?.message ||
@@ -2692,9 +2748,7 @@ export default function App() {
                       <button
                         type="button"
                         className={`customer-fulfillment-option ${fulfillmentMode === FULFILLMENT_PICKUP ? "is-active" : ""}`}
-                        aria-pressed={
-                          fulfillmentMode === FULFILLMENT_PICKUP
-                        }
+                        aria-pressed={fulfillmentMode === FULFILLMENT_PICKUP}
                         disabled={pickupAddressBusy}
                         onClick={() =>
                           void selectFulfillmentMode(FULFILLMENT_PICKUP)
@@ -2709,9 +2763,7 @@ export default function App() {
                       <button
                         type="button"
                         className={`customer-fulfillment-option ${fulfillmentMode === FULFILLMENT_DELIVERY ? "is-active" : ""}`}
-                        aria-pressed={
-                          fulfillmentMode === FULFILLMENT_DELIVERY
-                        }
+                        aria-pressed={fulfillmentMode === FULFILLMENT_DELIVERY}
                         disabled={pickupAddressBusy}
                         onClick={() =>
                           void selectFulfillmentMode(FULFILLMENT_DELIVERY)
@@ -3094,173 +3146,174 @@ export default function App() {
                   )}
 
                   {fulfillmentMode === FULFILLMENT_DELIVERY ? (
-                  <section className="checkout-card delivery-checkout-card">
-                    <div className="checkout-card-heading">
-                      <span className="section-icon">
-                        <LocationIcon />
-                      </span>
-                      <h2>Pengiriman</h2>
-                    </div>
-                    <label className="checkout-select-label">
-                      Alamat pengantaran
-                      <select
-                        name="address"
-                        required
-                        value={selectedCheckoutAddress?.id || ""}
-                        onChange={(event) => {
-                          setDeliveryQuote(null);
-                          setDeliveryQuoteError("");
-                          setCheckoutAddressId(event.target.value);
-                        }}
-                      >
-                        {deliveryAddresses.map((address) => (
-                          <option key={address.id} value={address.id}>
-                            {address.label} · {address.detail}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <div className="checkout-address-actions">
-                      <button
-                        type="button"
-                        className="quick-address-toggle"
-                        aria-expanded={quickAddressOpen}
-                        onClick={() => setQuickAddressOpen((open) => !open)}
-                      >
-                        {quickAddressOpen
-                          ? "Tutup form alamat"
-                          : "+ Tambah lokasi lain"}
-                      </button>
-                    </div>
-                    {quickAddressOpen && (
-                      <div
-                        className="checkout-quick-address"
-                        aria-label="Tambah lokasi pengantaran"
-                      >
-                        <div className="quick-address-heading">
+                    <section className="checkout-card delivery-checkout-card">
+                      <div className="checkout-card-heading">
+                        <span className="section-icon">
+                          <LocationIcon />
+                        </span>
+                        <h2>Pengiriman</h2>
+                      </div>
+                      <label className="checkout-select-label">
+                        Alamat pengantaran
+                        <select
+                          name="address"
+                          required
+                          value={selectedCheckoutAddress?.id || ""}
+                          onChange={(event) => {
+                            setDeliveryQuote(null);
+                            setDeliveryQuoteError("");
+                            setCheckoutAddressId(event.target.value);
+                          }}
+                        >
+                          {deliveryAddresses.map((address) => (
+                            <option key={address.id} value={address.id}>
+                              {address.label} · {address.detail}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <div className="checkout-address-actions">
+                        <button
+                          type="button"
+                          className="quick-address-toggle"
+                          aria-expanded={quickAddressOpen}
+                          onClick={() => setQuickAddressOpen((open) => !open)}
+                        >
+                          {quickAddressOpen
+                            ? "Tutup form alamat"
+                            : "+ Tambah lokasi lain"}
+                        </button>
+                      </div>
+                      {quickAddressOpen && (
+                        <div
+                          className="checkout-quick-address"
+                          aria-label="Tambah lokasi pengantaran"
+                        >
+                          <div className="quick-address-heading">
+                            <LocationIcon />
+                            <span>
+                              <strong>Lokasi pengantaran baru</strong>
+                              <small>
+                                {isGuest
+                                  ? "Lokasi hanya dipakai untuk checkout guest ini."
+                                  : "Alamat disimpan ke akun dan langsung dipakai untuk checkout ini."}
+                              </small>
+                            </span>
+                          </div>
+                          <div className="quick-address-fields">
+                            <label>
+                              Label alamat
+                              <input
+                                name="quickAddressLabel"
+                                placeholder="Rumah / Kantor / Lainnya"
+                                minLength="2"
+                                disabled={quickAddressBusy}
+                              />
+                            </label>
+                            <label>
+                              Alamat lengkap
+                              <textarea
+                                name="quickAddressDetail"
+                                placeholder="Nama jalan, nomor, patokan, RT/RW"
+                                minLength="10"
+                                disabled={quickAddressBusy}
+                              />
+                            </label>
+                          </div>
+                          <div className="quick-address-location">
+                            <button
+                              type="button"
+                              className="location-button"
+                              data-latitude-field="quickAddressLatitude"
+                              data-longitude-field="quickAddressLongitude"
+                              onClick={useDeviceLocation}
+                              disabled={quickAddressBusy}
+                            >
+                              Gunakan lokasi perangkat
+                            </button>
+                            <input name="quickAddressLatitude" type="hidden" />
+                            <input name="quickAddressLongitude" type="hidden" />
+                            <small>
+                              Titik lokasi dipakai untuk kalkulasi ongkir. Input
+                              koordinat teknis tidak ditampilkan.
+                            </small>
+                          </div>
+                          <div className="quick-address-buttons">
+                            <button
+                              type="button"
+                              className="primary"
+                              disabled={quickAddressBusy}
+                              onClick={saveQuickAddress}
+                            >
+                              {quickAddressBusy
+                                ? "Menyimpan…"
+                                : isGuest
+                                  ? "Gunakan alamat"
+                                  : "Simpan dan gunakan alamat"}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={quickAddressBusy}
+                              onClick={() => setQuickAddressOpen(false)}
+                            >
+                              Batal
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {selectedCheckoutAddress ? (
+                        <div className="delivery-summary">
                           <LocationIcon />
                           <span>
-                            <strong>Lokasi pengantaran baru</strong>
-                            <small>
-                              {isGuest
-                                ? "Lokasi hanya dipakai untuk checkout guest ini."
-                                : "Alamat disimpan ke akun dan langsung dipakai untuk checkout ini."}
-                            </small>
+                            <strong>{selectedCheckoutAddress.label}</strong>
+                            <small>{selectedCheckoutAddress.detail}</small>
                           </span>
                         </div>
-                        <div className="quick-address-fields">
-                          <label>
-                            Label alamat
-                            <input
-                              name="quickAddressLabel"
-                              placeholder="Rumah / Kantor / Lainnya"
-                              minLength="2"
-                              disabled={quickAddressBusy}
-                            />
-                          </label>
-                          <label>
-                            Alamat lengkap
-                            <textarea
-                              name="quickAddressDetail"
-                              placeholder="Nama jalan, nomor, patokan, RT/RW"
-                              minLength="10"
-                              disabled={quickAddressBusy}
-                            />
-                          </label>
-                        </div>
-                        <div className="quick-address-location">
-                          <button
-                            type="button"
-                            className="location-button"
-                            data-latitude-field="quickAddressLatitude"
-                            data-longitude-field="quickAddressLongitude"
-                            onClick={useDeviceLocation}
-                            disabled={quickAddressBusy}
-                          >
-                            Gunakan lokasi perangkat
-                          </button>
-                          <input name="quickAddressLatitude" type="hidden" />
-                          <input name="quickAddressLongitude" type="hidden" />
-                          <small>
-                            Titik lokasi dipakai untuk kalkulasi ongkir. Input
-                            koordinat teknis tidak ditampilkan.
-                          </small>
-                        </div>
-                        <div className="quick-address-buttons">
-                          <button
-                            type="button"
-                            className="primary"
-                            disabled={quickAddressBusy}
-                            onClick={saveQuickAddress}
-                          >
-                            {quickAddressBusy
-                              ? "Menyimpan…"
-                              : isGuest
-                                ? "Gunakan alamat"
-                                : "Simpan dan gunakan alamat"}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={quickAddressBusy}
-                            onClick={() => setQuickAddressOpen(false)}
-                          >
-                            Batal
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    {selectedCheckoutAddress ? (
-                      <div className="delivery-summary">
-                        <LocationIcon />
+                      ) : (
+                        <p className="checkout-warning">
+                          Tambahkan lokasi pengantaran untuk melanjutkan
+                          checkout.
+                        </p>
+                      )}
+                      <div className="delivery-rules">
+                        <TruckIcon />
                         <span>
-                          <strong>{selectedCheckoutAddress.label}</strong>
-                          <small>{selectedCheckoutAddress.detail}</small>
+                          <strong>Jarak dan ongkir dihitung otomatis</strong>
+                          <small>
+                            Gratis hingga {deliveryQuote?.free_radius_km ?? 3}{" "}
+                            km. Di atasnya mengikuti konfigurasi pengiriman dan
+                            radius layanan maksimal{" "}
+                            {deliveryQuote?.max_radius_km ?? 10} km.
+                          </small>
                         </span>
                       </div>
-                    ) : (
-                      <p className="checkout-warning">
-                        Tambahkan lokasi pengantaran untuk melanjutkan checkout.
-                      </p>
-                    )}
-                    <div className="delivery-rules">
-                      <TruckIcon />
-                      <span>
-                        <strong>Jarak dan ongkir dihitung otomatis</strong>
-                        <small>
-                          Gratis hingga {deliveryQuote?.free_radius_km ?? 3} km.
-                          Di atasnya mengikuti konfigurasi pengiriman dan radius
-                          layanan maksimal {deliveryQuote?.max_radius_km ?? 10}{" "}
-                          km.
-                        </small>
-                      </span>
-                    </div>
-                    {deliveryQuoteBusy && (
-                      <div className="delivery-quote-state" role="status">
-                        Menghitung jarak dan ongkir…
-                      </div>
-                    )}
-                    {deliveryQuoteError && (
-                      <div
-                        className="delivery-quote-state unavailable"
-                        role="alert"
-                      >
-                        {deliveryQuoteError}
-                      </div>
-                    )}
-                    {deliveryQuote && (
-                      <div
-                        className={`delivery-quote-state ${deliveryQuote.available ? (deliveryQuote.free_delivery ? "free" : "paid") : "unavailable"}`}
-                        role={deliveryQuote.available ? "status" : "alert"}
-                      >
-                        <strong>
-                          {deliveryQuote.available
-                            ? `${Number(deliveryQuote.distance_km).toFixed(1)} km · ${deliveryQuote.free_delivery ? "GRATIS ONGKIR" : money(deliveryQuote.delivery_fee)}`
-                            : "Area belum terjangkau"}
-                        </strong>
-                        <span>{deliveryQuote.message}</span>
-                      </div>
-                    )}
-                  </section>
+                      {deliveryQuoteBusy && (
+                        <div className="delivery-quote-state" role="status">
+                          Menghitung jarak dan ongkir…
+                        </div>
+                      )}
+                      {deliveryQuoteError && (
+                        <div
+                          className="delivery-quote-state unavailable"
+                          role="alert"
+                        >
+                          {deliveryQuoteError}
+                        </div>
+                      )}
+                      {deliveryQuote && (
+                        <div
+                          className={`delivery-quote-state ${deliveryQuote.available ? (deliveryQuote.free_delivery ? "free" : "paid") : "unavailable"}`}
+                          role={deliveryQuote.available ? "status" : "alert"}
+                        >
+                          <strong>
+                            {deliveryQuote.available
+                              ? `${Number(deliveryQuote.distance_km).toFixed(1)} km · ${deliveryQuote.free_delivery ? "GRATIS ONGKIR" : money(deliveryQuote.delivery_fee)}`
+                              : "Area belum terjangkau"}
+                          </strong>
+                          <span>{deliveryQuote.message}</span>
+                        </div>
+                      )}
+                    </section>
                   ) : (
                     <section className="checkout-card pickup-location-card">
                       <input
@@ -3368,14 +3421,14 @@ export default function App() {
                       {fulfillmentMode === FULFILLMENT_PICKUP
                         ? "GRATIS"
                         : deliveryQuoteBusy
-                        ? "Menghitung…"
-                        : deliveryQuote?.available
-                          ? deliveryQuote.free_delivery
-                            ? "GRATIS"
-                            : money(deliveryQuote.delivery_fee)
-                          : deliveryQuote
-                            ? "Di luar jangkauan"
-                            : "Belum dihitung"}
+                          ? "Menghitung…"
+                          : deliveryQuote?.available
+                            ? deliveryQuote.free_delivery
+                              ? "GRATIS"
+                              : money(deliveryQuote.delivery_fee)
+                            : deliveryQuote
+                              ? "Di luar jangkauan"
+                              : "Belum dihitung"}
                     </strong>
                   </div>
                   <div className="payment-line">
@@ -3414,6 +3467,7 @@ export default function App() {
                       deliveryQuoteBusy ||
                       voucherQuoteBusy ||
                       loyaltyQuoteBusy ||
+                      storeStatus?.isOpen !== true ||
                       Boolean(selectedVoucherId && !voucherQuote) ||
                       Boolean(selectedRewardId && !loyaltyQuote) ||
                       !selectedCheckoutAddress?.id ||
@@ -3422,11 +3476,13 @@ export default function App() {
                   >
                     {busy
                       ? "Membuat Pesanan…"
-                      : deliveryQuoteBusy
-                        ? "Menghitung Ongkir…"
-                        : deliveryQuote && !deliveryQuote.available
-                          ? "Alamat Di Luar Jangkauan"
-                          : "Buat Pesanan"}
+                      : storeStatus?.isOpen !== true
+                        ? "Toko Sedang Tutup"
+                        : deliveryQuoteBusy
+                          ? "Menghitung Ongkir…"
+                          : deliveryQuote && !deliveryQuote.available
+                            ? "Alamat Di Luar Jangkauan"
+                            : "Buat Pesanan"}
                     <ArrowIcon />
                   </button>
                   <div className="checkout-trust">
@@ -3628,7 +3684,9 @@ export default function App() {
                       } catch (profileError) {
                         if (newPassword)
                           window.dispatchEvent(
-                            new CustomEvent("warkost:session-rotation-cancelled"),
+                            new CustomEvent(
+                              "warkost:session-rotation-cancelled",
+                            ),
                           );
                         throw profileError;
                       }
@@ -5533,7 +5591,9 @@ export default function App() {
                     <button
                       onClick={async () => {
                         await api("logout", {});
-                        window.dispatchEvent(new CustomEvent("warkost:session-ended"));
+                        window.dispatchEvent(
+                          new CustomEvent("warkost:session-ended"),
+                        );
                         setUser(null);
                         setOverlay(null);
                         setMode("login");
@@ -5880,9 +5940,7 @@ function OrderProgress({
       ? pickupOrderStage(status)
       : orderStage(status);
   const stages =
-    fulfillmentType === FULFILLMENT_PICKUP
-      ? PICKUP_ORDER_STAGES
-      : ORDER_STAGES;
+    fulfillmentType === FULFILLMENT_PICKUP ? PICKUP_ORDER_STAGES : ORDER_STAGES;
   if (status === "CANCELLED") return null;
   return (
     <div
@@ -5940,7 +5998,9 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
         .catch((error) => active && setPaymentError(error.message));
     const onRealtime = (event) => {
       if (
-        ["PAYMENT_STATUS_CHANGED", "PAYMENT_PAID"].includes(event.detail?.type) &&
+        ["PAYMENT_STATUS_CHANGED", "PAYMENT_PAID"].includes(
+          event.detail?.type,
+        ) &&
         Number(event.detail?.payload?.orderId) === Number(order.id)
       )
         refreshPayment();
@@ -6020,7 +6080,9 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
                 <TruckIcon />
               </span>
               <div>
-                <small>{pickup ? "Status Pesanan" : "Status Pengantaran"}</small>
+                <small>
+                  {pickup ? "Status Pesanan" : "Status Pengantaran"}
+                </small>
                 <h2>{orderHeadline(order.status, order.fulfillment_type)}</h2>
               </div>
               <span className={`order-status-pill ${status.tone}`}>
@@ -6048,7 +6110,8 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
               >
                 <ChatIcon /> Hubungi Admin
               </button>
-              {!pickup && order.driver_id &&
+              {!pickup &&
+              order.driver_id &&
               ["ASSIGNED", "PICKED_UP", "ON_DELIVERY"].includes(
                 order.status,
               ) ? (
@@ -6077,7 +6140,9 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
                 <LocationIcon />
               </span>
               <div>
-                <small>{pickup ? "Lokasi Pengambilan" : "Alamat Pengiriman"}</small>
+                <small>
+                  {pickup ? "Lokasi Pengambilan" : "Alamat Pengiriman"}
+                </small>
                 <h2>{order.address_label || "Alamat"}</h2>
               </div>
             </div>
@@ -6316,7 +6381,8 @@ function Order({
           </button>
           {active && (
             <button className="primary" onClick={() => onTrack?.(o.id)}>
-              {pickup ? <ReceiptIcon /> : <TruckIcon />} {pickup ? "Lihat Status" : "Lacak Pesanan"}
+              {pickup ? <ReceiptIcon /> : <TruckIcon />}{" "}
+              {pickup ? "Lihat Status" : "Lacak Pesanan"}
             </button>
           )}
           {o.status === "DELIVERED" && (
@@ -6561,15 +6627,15 @@ function Order({
             o.status === "READY" && (
               <button
                 className="primary pickup-complete-button"
-                disabled={busy || o.method !== "QRIS" || o.payment_status !== "PAID"}
+                disabled={
+                  busy || o.method !== "QRIS" || o.payment_status !== "PAID"
+                }
                 title={
                   o.payment_status === "PAID"
                     ? "Konfirmasi pesanan sudah diterima customer"
                     : "Pembayaran QRIS belum terverifikasi"
                 }
-                onClick={() =>
-                  action("pickup-complete", { orderId: o.id })
-                }
+                onClick={() => action("pickup-complete", { orderId: o.id })}
               >
                 Pesanan Sudah Diambil
               </button>

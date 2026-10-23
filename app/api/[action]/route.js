@@ -61,6 +61,10 @@ import {
 } from "../../../lib/cod-settlement-batches.mjs";
 import { getSettings, saveSettings } from "../../../lib/settings.mjs";
 import {
+  getStoreOperatingStatus,
+  saveStoreOperatingHours,
+} from "../../../lib/store-operating-hours.mjs";
+import {
   listNotifications,
   readNotification,
 } from "../../../lib/notifications.mjs";
@@ -126,7 +130,10 @@ async function mutation(action, user, body, operation, status = 200) {
   try {
     await publishActionRealtime(action, user, body, result);
   } catch (realtimeError) {
-    console.error("Realtime publication failed", { action, error: realtimeError });
+    console.error("Realtime publication failed", {
+      action,
+      error: realtimeError,
+    });
   }
   return out(result, status);
 }
@@ -196,6 +203,7 @@ export async function GET(request, { params }) {
       );
     }
     if (action === "settings") return out(await getSettings(user));
+    if (action === "store-hours") return out(await getStoreOperatingStatus());
     if (action === "promotions")
       return out({ promotions: await listPromotions(user) });
     if (action === "vouchers")
@@ -636,11 +644,15 @@ export async function POST(request, { params }) {
         }),
       );
     if (action === "chat-message")
-      return mutation(action, user, body, () =>
-        sendConversationMessage(user, {
-          conversationId: integer(body.conversationId),
-          message: body.message,
-        }),
+      return mutation(
+        action,
+        user,
+        body,
+        () =>
+          sendConversationMessage(user, {
+            conversationId: integer(body.conversationId),
+            message: body.message,
+          }),
         201,
       );
     if (action === "chat-status")
@@ -666,11 +678,7 @@ export async function POST(request, { params }) {
       });
       if (result.passwordChanged) {
         const nextSession = await issueSession(result.user);
-        response.cookies.set(
-          "wb_session",
-          nextSession,
-          cookieOptions(request),
-        );
+        response.cookies.set("wb_session", nextSession, cookieOptions(request));
         disconnectRealtimeUser(user.id, "session-rotated");
       }
       return response;
@@ -678,15 +686,21 @@ export async function POST(request, { params }) {
     if (action === "checkout") {
       if (!body.idempotencyKey)
         throw new DomainError("Kunci checkout wajib diisi");
-      return mutation(action, user, body, () =>
-        createOrder(user, {
-          ...body,
-          addressId: integer(body.addressId),
-          promotionId:
-            body.promotionId == null ? null : integer(body.promotionId),
-          loyaltyRewardId:
-            body.loyaltyRewardId == null ? null : integer(body.loyaltyRewardId),
-        }),
+      return mutation(
+        action,
+        user,
+        body,
+        () =>
+          createOrder(user, {
+            ...body,
+            addressId: integer(body.addressId),
+            promotionId:
+              body.promotionId == null ? null : integer(body.promotionId),
+            loyaltyRewardId:
+              body.loyaltyRewardId == null
+                ? null
+                : integer(body.loyaltyRewardId),
+          }),
         201,
       );
     }
@@ -780,26 +794,44 @@ export async function POST(request, { params }) {
       );
     if (action === "settings")
       return mutation(action, user, body, () => saveSettings(user, body));
+    if (action === "store-hours")
+      return mutation(action, user, body, () =>
+        saveStoreOperatingHours(user, body),
+      );
     if (action === "driver")
       return mutation(action, user, body, () => createDriver(user, body), 201);
     if (action === "staff")
       return mutation(action, user, body, () => createStaff(user, body), 201);
     if (action === "staff-password")
       return mutation(action, user, body, async () => {
-        const result = await resetStaffPassword(user, integer(body.id), body.password);
+        const result = await resetStaffPassword(
+          user,
+          integer(body.id),
+          body.password,
+        );
         disconnectRealtimeUser(result.id, "session-revoked");
         return result;
       });
     if (action === "driver-active")
       return mutation(action, user, body, async () => {
-        const result = await setDriverActive(user, integer(body.id), body.active);
-        if (!result.active) disconnectRealtimeUser(result.id, "session-revoked");
+        const result = await setDriverActive(
+          user,
+          integer(body.id),
+          body.active,
+        );
+        if (!result.active)
+          disconnectRealtimeUser(result.id, "session-revoked");
         return result;
       });
     if (action === "customer-active")
       return mutation(action, user, body, async () => {
-        const result = await setCustomerActive(user, integer(body.id), body.active);
-        if (!result.active) disconnectRealtimeUser(result.id, "session-revoked");
+        const result = await setCustomerActive(
+          user,
+          integer(body.id),
+          body.active,
+        );
+        if (!result.active)
+          disconnectRealtimeUser(result.id, "session-revoked");
         return result;
       });
     if (action === "product")

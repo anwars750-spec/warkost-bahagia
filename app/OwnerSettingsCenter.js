@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import StoreOperatingHoursPanel from "./StoreOperatingHoursPanel";
 
 const EMPTY = {
   brandName: "Warkost Bahagia",
@@ -26,13 +27,12 @@ function ownerSignature() {
 }
 
 function findLegacySettingsPanel() {
-  return [...document.querySelectorAll("main > section.panel")].find(
-    (node) =>
-      node
-        .querySelector("h2")
-        ?.textContent?.trim()
-        .toLowerCase()
-        .startsWith("pengaturan caf"),
+  return [...document.querySelectorAll("main > section.panel")].find((node) =>
+    node
+      .querySelector("h2")
+      ?.textContent?.trim()
+      .toLowerCase()
+      .startsWith("pengaturan caf"),
   );
 }
 
@@ -228,7 +228,11 @@ export default function OwnerSettingsCenter() {
             dan perangkat operasional Warkost dari satu tempat.
           </p>
         </div>
-        <button type="button" onClick={() => load()} disabled={loading || saving}>
+        <button
+          type="button"
+          onClick={() => load()}
+          disabled={loading || saving}
+        >
           ↻ {loading ? "Memuat…" : "Perbarui"}
         </button>
       </header>
@@ -241,7 +245,9 @@ export default function OwnerSettingsCenter() {
         </article>
         <article>
           <span>Delivery</span>
-          <strong>{form.deliveryFreeKm}–{form.deliveryMaxKm} km</strong>
+          <strong>
+            {form.deliveryFreeKm}–{form.deliveryMaxKm} km
+          </strong>
           <small>{form.deliveryFreeKm} km pertama gratis</small>
         </article>
         <article>
@@ -256,6 +262,8 @@ export default function OwnerSettingsCenter() {
         </article>
       </section>
 
+      <StoreOperatingHoursPanel />
+
       {error && <div className="osc-feedback error">{error}</div>}
       {message && <div className="osc-feedback success">{message}</div>}
 
@@ -265,7 +273,10 @@ export default function OwnerSettingsCenter() {
           <div>
             <span>INFORMASI BISNIS</span>
             <h2>Identitas & kontak</h2>
-            <p>Informasi dasar yang dipakai pada pengalaman customer dan operasional.</p>
+            <p>
+              Informasi dasar yang dipakai pada pengalaman customer dan
+              operasional.
+            </p>
           </div>
         </header>
         <div className="osc-fields two">
@@ -288,7 +299,10 @@ export default function OwnerSettingsCenter() {
               required
               onChange={(e) => patch("businessWhatsApp", e.target.value)}
             />
-            <small>Saat ini: {whatsappDisplay(form.businessWhatsApp)} · dipakai untuk bantuan customer.</small>
+            <small>
+              Saat ini: {whatsappDisplay(form.businessWhatsApp)} · dipakai untuk
+              bantuan customer.
+            </small>
           </label>
         </div>
       </section>
@@ -299,12 +313,17 @@ export default function OwnerSettingsCenter() {
           <div>
             <span>LOKASI OUTLET</span>
             <h2>Titik asal pengantaran</h2>
-            <p>Koordinat ini menjadi titik awal perhitungan jarak dan ongkir.</p>
+            <p>
+              Koordinat ini menjadi titik awal perhitungan jarak dan ongkir.
+            </p>
           </div>
         </header>
         <div className="osc-callout warning">
           <b>Dampak langsung ke ongkir</b>
-          <span>Ubah koordinat hanya jika lokasi operasional Warkost benar-benar berpindah.</span>
+          <span>
+            Ubah koordinat hanya jika lokasi operasional Warkost benar-benar
+            berpindah.
+          </span>
         </div>
         <div className="osc-fields two">
           <label>
@@ -340,7 +359,9 @@ export default function OwnerSettingsCenter() {
           <div>
             <span>DELIVERY RULES</span>
             <h2>Radius & ongkir</h2>
-            <p>Radius inti mengikuti Checkout Business Rules yang sudah dikunci.</p>
+            <p>
+              Radius inti mengikuti Checkout Business Rules yang sudah dikunci.
+            </p>
           </div>
         </header>
         <div className="osc-rule-preview">
@@ -349,7 +370,10 @@ export default function OwnerSettingsCenter() {
         </div>
         <div className="osc-callout locked">
           <b>Radius tidak diedit dari Owner Settings</b>
-          <span>Gratis 3 km dan maksimum 10 km dijaga tetap sama dengan validasi checkout server. Owner dapat menyesuaikan tarif per km berikutnya.</span>
+          <span>
+            Gratis 3 km dan maksimum 10 km dijaga tetap sama dengan validasi
+            checkout server. Owner dapat menyesuaikan tarif per km berikutnya.
+          </span>
         </div>
         <div className="osc-fields three">
           <label>
@@ -402,7 +426,9 @@ export default function OwnerSettingsCenter() {
           <div>
             <span>PAYMENT CONTROL</span>
             <h2>Batas waktu pembayaran</h2>
-            <p>Menentukan berapa lama transaksi non-tunai menunggu pembayaran.</p>
+            <p>
+              Menentukan berapa lama transaksi non-tunai menunggu pembayaran.
+            </p>
           </div>
         </header>
         <div className="osc-fields payment">
@@ -420,7 +446,10 @@ export default function OwnerSettingsCenter() {
               />
               <em>menit</em>
             </div>
-            <small>Order yang tidak dibayar setelah periode ini dapat masuk status kedaluwarsa.</small>
+            <small>
+              Order yang tidak dibayar setelah periode ini dapat masuk status
+              kedaluwarsa.
+            </small>
           </label>
         </div>
       </section>
@@ -442,7 +471,9 @@ export default function OwnerSettingsCenter() {
           aria-checked={form.printerSimulation}
           onClick={() => patch("printerSimulation", !form.printerSimulation)}
         >
-          <span className="osc-switch"><i /></span>
+          <span className="osc-switch">
+            <i />
+          </span>
           <span>
             <strong>Mode simulasi printer</strong>
             <small>
@@ -483,21 +514,33 @@ export default function OwnerSettingsCenter() {
         <div>i</div>
         <p>
           <strong>Jejak perubahan tetap tercatat.</strong>
-          Setiap penyimpanan pengaturan masuk ke Audit Aktivitas agar Owner dapat
-          melihat kapan konfigurasi penting diubah.
+          Setiap penyimpanan pengaturan masuk ke Audit Aktivitas agar Owner
+          dapat melihat kapan konfigurasi penting diubah.
         </p>
       </section>
 
       <footer className="osc-actionbar">
         <div>
-          <span>{dirty ? "Ada perubahan belum disimpan" : "Semua perubahan sudah tersimpan"}</span>
-          <small>{dirty ? "Periksa kembali sebelum menerapkan ke operasional." : "Konfigurasi server dan tampilan ini sudah sinkron."}</small>
+          <span>
+            {dirty
+              ? "Ada perubahan belum disimpan"
+              : "Semua perubahan sudah tersimpan"}
+          </span>
+          <small>
+            {dirty
+              ? "Periksa kembali sebelum menerapkan ke operasional."
+              : "Konfigurasi server dan tampilan ini sudah sinkron."}
+          </small>
         </div>
         <div className="osc-actions">
           <button type="button" onClick={reset} disabled={!dirty || saving}>
             Batalkan perubahan
           </button>
-          <button className="primary" type="submit" disabled={!dirty || saving}>
+          <button
+            className="primary"
+            type="submit"
+            disabled={!dirty || saving}
+          >
             {saving ? "Menyimpan…" : "Simpan Pengaturan"}
           </button>
         </div>

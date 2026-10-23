@@ -130,6 +130,7 @@ test("deduplikasi event, backoff terbatas, dan refresh map deterministik", () =>
     "notifications",
     "account",
     "catalog",
+    "store-status",
   ]);
   assert.deepEqual(recoveryRefreshGroupsForRole("ADMIN"), [
     "orders",
@@ -137,6 +138,7 @@ test("deduplikasi event, backoff terbatas, dan refresh map deterministik", () =>
     "dashboard",
     "stock",
     "printer",
+    "store-status",
   ]);
   assert.equal(
     isRealtimeRecoveryConnection({

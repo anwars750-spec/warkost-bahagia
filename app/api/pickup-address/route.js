@@ -4,6 +4,9 @@ import { DomainError, required } from "../../../lib/domain.mjs";
 import { ensurePickupAddress } from "../../../lib/pickup.mjs";
 import { assertSameOrigin } from "../../../lib/request.mjs";
 
+// ensurePickupAddress owns the protected "Ambil di Warkost" record and reads
+// business_latitude/business_longitude from the shared server settings.
+
 export const runtime = "nodejs";
 
 const out = (data, status = 200) =>

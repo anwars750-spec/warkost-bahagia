@@ -32,9 +32,47 @@
 - Driver Multi-order Trip + Grouped COD UI implementation: `d506e466ad999a708be69fbd1a5d582978c8dadf`
 - Manager Control Center V1 implementation: `0289d0eb593f162900c5f2f039ef0100f96bde96`
 - Promotion Engine V1 implementation: `757f5a79e6afa721df80a6b836c3caf06af90393`
-- Current milestone: Auto Confirm QRIS Paid V1
+- Remote baseline before Store Operating Hours V1: `3f193e3b8c50c35b0606ced8fd2ae8c7275b968d`
+- Auto Confirm QRIS Paid V1 status: **PRODUCT OWNER UAT PASS** (single item and mixed order)
+- Current milestone: Store Operating Hours V1
 - Current status: **IMPLEMENTED / AUTOMATED VERIFIED / PRODUCT OWNER UAT REQUIRED**
 - Verification date: 2026-10-23
+
+## Store Operating Hours V1
+
+Date: 2026-10-23
+
+Status: **IMPLEMENTED / AUTOMATED VERIFIED / PRODUCT OWNER UAT REQUIRED**
+
+### Server-authoritative configuration and order guard
+
+- Store operating settings reuse the shared `settings` table with MySQL migration `030_store_operating_hours_v1.sql` and matching SQLite defaults: open time, close time, manual `OPEN`/`CLOSED`, and an optional short closed reason.
+- Effective status is calculated only on the server in `Asia/Jakarta`. Manual `CLOSED` always wins; manual `OPEN` means the configured daily schedule determines whether new orders are accepted. Overnight schedules are supported and equal open/close times are rejected as invalid.
+- `createOrder` checks the effective store status inside the existing SQLite/MySQL transaction and rejects a genuinely new order while closed. The same settings rows are locked on MySQL to serialize an order attempt against an operating-hours update.
+- An idempotent replay for an order created while open remains readable after closure; the guard runs only after the existing checkout key has been checked. No existing order, payment, inventory reservation, fulfillment, or station lifecycle is cancelled or rewritten.
+- Existing QRIS payments remain payable after closure, and the existing PAID auto-confirm worker continues to confirm eligible orders after closure without duplicating stock, print, audit, notification, or realtime effects.
+
+### RBAC, audit, realtime, and UI
+
+- Dedicated `store-hours.read`/`store-hours.write` capabilities are assigned only to Owner and Manager for mutation. Customer, Admin, Kitchen, and Driver cannot change operating settings; unauthenticated mutation returns `401` and unauthorized authenticated mutation returns `403`.
+- Each update writes `STORE_OPERATING_HOURS_UPDATED` with previous/next configuration, effective status, actor role, and `Asia/Jakarta` timezone.
+- The existing realtime hub now publishes `STORE_STATUS_CHANGED` to connected roles and refreshes the shared public store-status endpoint; no second realtime system was added.
+- Owner receives the control within existing Owner Settings. Manager receives a dedicated responsive `Jam Operasional` view in desktop and mobile navigation.
+- Customer homepage displays `Buka · HH:MM–HH:MM` or the applicable closed state/reason/next opening time. Menu browsing remains available while closed; checkout shows a closed notice and disables submission, while the server-side guard remains authoritative.
+
+### Verification
+
+- Dedicated Store Operating Hours V1 tests: **8/8 PASS**, covering Jakarta time, scheduled open/closed status, manual closure precedence, validation, Owner/Manager access, unauthorized rejection, audit, realtime, idempotent replay, existing-order processing, and QRIS auto-confirm after closure.
+- Targeted settings/order/payment/Auto Confirm QRIS/pickup/customer/RBAC/realtime/MySQL regression: **65/65 PASS**.
+- Full unit suite: **478/478 PASS**.
+- Production build with Next.js 16.3.6: **PASS**.
+- `git diff --check`: **PASS**.
+
+### Guardrails and UAT boundary
+
+- No QRIS architecture, Auto Confirm logic, promotion, loyalty, pickup/delivery rules, Midtrans production integration, printer architecture, deployment, or unrelated feature behavior was changed.
+- No merge or deployment was performed.
+- Product Owner desktop/mobile UAT remains required before Store Operating Hours V1 may be marked accepted or locked.
 
 ## Promotion Engine V1
 
@@ -1217,7 +1255,7 @@ Status: **IMPLEMENTED / AUTOMATED VERIFIED / PRODUCT OWNER UAT REQUIRED**
 
 Date: 2026-10-23
 
-Status: **IMPLEMENTED / AUTOMATED VERIFIED / PRODUCT OWNER UAT REQUIRED**
+Status: **PRODUCT OWNER UAT PASS**
 
 ### Server-side confirmation architecture
 
@@ -1241,4 +1279,4 @@ Status: **IMPLEMENTED / AUTOMATED VERIFIED / PRODUCT OWNER UAT REQUIRED**
 
 - No payment-provider redesign, migration, Customer UI redesign, COD change, delivery-pricing change, merge, or deployment was performed.
 - The worker is process-local and assumes the documented persistent Node hosting target; database transaction guards keep repeated or overlapping process sweeps idempotent.
-- Product Owner UAT remains required before this milestone may be marked accepted or locked.
+- Product Owner UAT passed for single-item and mixed orders before Store Operating Hours V1 began.
