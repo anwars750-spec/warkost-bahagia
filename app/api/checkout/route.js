@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { currentUser } from "../../../lib/auth.mjs";
 import { createOrder, DomainError } from "../../../lib/domain.mjs";
+import { assertCustomerCheckoutPaymentMethod } from "../../../lib/customer-checkout-payment-policy.mjs";
 import { ensurePickupAddress } from "../../../lib/pickup.mjs";
 import { publishActionRealtime } from "../../../lib/realtime.mjs";
 import { assertSameOrigin, readJsonBody } from "../../../lib/request.mjs";
@@ -34,6 +35,7 @@ export async function POST(request) {
     if (!body.idempotencyKey)
       throw new DomainError("Kunci checkout wajib diisi");
 
+    const method = assertCustomerCheckoutPaymentMethod(body.method);
     const fulfillmentType = String(body.fulfillmentType || "DELIVERY").toUpperCase();
     let addressId = integer(body.addressId);
     if (fulfillmentType === "PICKUP" && user) {
@@ -43,6 +45,7 @@ export async function POST(request) {
 
     const result = await createOrder(user, {
       ...body,
+      method,
       fulfillmentType,
       addressId,
       promotionId:
