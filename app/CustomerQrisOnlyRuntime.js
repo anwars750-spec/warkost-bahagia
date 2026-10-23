@@ -132,6 +132,122 @@ function installFulfillmentStyles() {
       box-shadow: 0 0 0 2px rgba(47, 125, 74, .08) !important;
     }
 
+    .warkost-voucher-picker-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 12px;
+      padding: 14px 15px;
+      border: 1px solid #eadfd6;
+      border-radius: 15px;
+      background: linear-gradient(135deg, #fffdf9, #fff7ef);
+    }
+
+    .warkost-voucher-picker-summary.has-selection {
+      border-color: #a8d0b4;
+      background: linear-gradient(135deg, #fffdf9, #f1faf4);
+    }
+
+    .warkost-voucher-picker-copy {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+    }
+
+    .warkost-voucher-picker-copy strong {
+      color: #3b2922;
+      font-size: 14px;
+      line-height: 1.3;
+    }
+
+    .warkost-voucher-picker-summary.has-selection .warkost-voucher-picker-copy strong {
+      color: #24673d;
+    }
+
+    .warkost-voucher-picker-copy small {
+      color: #7a6b63;
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .warkost-voucher-picker-trigger {
+      flex: 0 0 auto;
+      min-height: 42px;
+      padding: 10px 16px;
+      border-color: #a94a2d !important;
+      background: #fff8f3 !important;
+      color: #943a23 !important;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .warkost-voucher-picker-trigger:hover {
+      background: #fff0e8 !important;
+      border-color: #8f331f !important;
+    }
+
+    .voucher-checkout-card .voucher-list.warkost-voucher-picker-list {
+      display: none !important;
+    }
+
+    .voucher-checkout-card.is-voucher-picker-open .voucher-list.warkost-voucher-picker-list {
+      position: fixed !important;
+      z-index: 132 !important;
+      top: 50% !important;
+      left: 50% !important;
+      display: grid !important;
+      width: min(640px, calc(100vw - 36px)) !important;
+      max-height: min(74vh, 680px) !important;
+      margin: 0 !important;
+      padding: 74px 20px 22px !important;
+      overflow-y: auto !important;
+      transform: translate(-50%, -50%) !important;
+      border: 1px solid #e6d7cb !important;
+      border-radius: 24px !important;
+      background: #fffdf9 !important;
+      box-shadow: 0 30px 90px rgba(48, 27, 20, .28) !important;
+    }
+
+    .voucher-checkout-card.is-voucher-picker-open .voucher-list.warkost-voucher-picker-list::before {
+      content: "Pilih Promo";
+      position: absolute;
+      top: 19px;
+      left: 21px;
+      color: #35241f;
+      font-size: 20px;
+      font-weight: 850;
+      letter-spacing: -.025em;
+    }
+
+    .voucher-checkout-card.is-voucher-picker-open .voucher-list.warkost-voucher-picker-list::after {
+      content: "Pilih satu promo yang paling sesuai. Promo tidak dapat digabungkan.";
+      position: absolute;
+      top: 46px;
+      left: 21px;
+      right: 21px;
+      color: #786960;
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .warkost-voucher-picker-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 131;
+      display: none;
+      background: rgba(36, 24, 20, .48);
+      backdrop-filter: blur(4px);
+    }
+
+    .warkost-voucher-picker-backdrop.is-open {
+      display: block;
+    }
+
+    body.warkost-voucher-picker-lock {
+      overflow: hidden !important;
+    }
+
     @media (max-width: 620px) {
       .customer-fulfillment-option {
         min-height: 86px !important;
@@ -149,6 +265,27 @@ function installFulfillmentStyles() {
         min-width: 94px !important;
         min-height: 40px !important;
         padding: 9px 13px !important;
+      }
+
+      .warkost-voucher-picker-summary {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 11px;
+      }
+
+      .warkost-voucher-picker-trigger {
+        width: 100%;
+      }
+
+      .voucher-checkout-card.is-voucher-picker-open .voucher-list.warkost-voucher-picker-list {
+        top: auto !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        max-height: 78vh !important;
+        padding: 72px 16px 20px !important;
+        transform: none !important;
+        border-radius: 24px 24px 0 0 !important;
       }
     }
   `;
@@ -278,6 +415,101 @@ function polishBenefitActions(root = document) {
   });
 }
 
+function closeVoucherPicker(root = document) {
+  root
+    .querySelectorAll(".voucher-checkout-card.is-voucher-picker-open")
+    .forEach((card) => card.classList.remove("is-voucher-picker-open"));
+  document
+    .querySelector(".warkost-voucher-picker-backdrop")
+    ?.classList.remove("is-open");
+  document.body.classList.remove("warkost-voucher-picker-lock");
+}
+
+function polishVoucherPicker(root = document) {
+  const checkout = root.querySelector(".customer-checkout");
+  const card = checkout?.querySelector(".voucher-checkout-card");
+
+  if (!card) {
+    closeVoucherPicker(root);
+    return;
+  }
+
+  const list = card.querySelector(".voucher-list");
+  const options = list ? Array.from(list.querySelectorAll(".voucher-option")) : [];
+
+  if (!list || !options.length) {
+    card.querySelector(".warkost-voucher-picker-summary")?.remove();
+    list?.classList.remove("warkost-voucher-picker-list");
+    closeVoucherPicker(root);
+    return;
+  }
+
+  list.classList.add("warkost-voucher-picker-list");
+
+  let summary = card.querySelector(".warkost-voucher-picker-summary");
+  if (!summary) {
+    summary = document.createElement("div");
+    summary.className = "warkost-voucher-picker-summary";
+    summary.innerHTML = `
+      <span class="warkost-voucher-picker-copy">
+        <strong>Promo tersedia</strong>
+        <small>Pilih satu promo yang ingin digunakan.</small>
+      </span>
+      <button type="button" class="warkost-voucher-picker-trigger">Pilih Promo</button>
+    `;
+    list.insertAdjacentElement("beforebegin", summary);
+  }
+
+  const selectedOption = list.querySelector(".voucher-option.selected");
+  const selectedTitle = selectedOption?.querySelector("strong")?.textContent?.trim();
+  const copy = summary.querySelector(".warkost-voucher-picker-copy");
+  const trigger = summary.querySelector(".warkost-voucher-picker-trigger");
+
+  summary.classList.toggle("has-selection", Boolean(selectedOption));
+  if (copy) {
+    const title = copy.querySelector("strong");
+    const detail = copy.querySelector("small");
+    if (title)
+      title.textContent = selectedTitle || `${options.length} promo tersedia`;
+    if (detail)
+      detail.textContent = selectedOption
+        ? "Promo ini sedang dipakai pada pesananmu."
+        : "Pilih satu promo yang paling menguntungkan untuk pesanan ini.";
+  }
+  if (trigger)
+    trigger.textContent = selectedOption ? "Ganti Promo" : "Pilih Promo";
+
+  let backdrop = document.querySelector(".warkost-voucher-picker-backdrop");
+  if (!backdrop) {
+    backdrop = document.createElement("div");
+    backdrop.className = "warkost-voucher-picker-backdrop";
+    backdrop.setAttribute("aria-hidden", "true");
+    backdrop.addEventListener("click", () => closeVoucherPicker(document));
+    document.body.appendChild(backdrop);
+  }
+
+  if (card.dataset.warkostVoucherPickerReady !== "1") {
+    card.dataset.warkostVoucherPickerReady = "1";
+    card.addEventListener("click", (event) => {
+      const pickerTrigger = event.target.closest(".warkost-voucher-picker-trigger");
+      if (pickerTrigger) {
+        card.classList.add("is-voucher-picker-open");
+        document
+          .querySelector(".warkost-voucher-picker-backdrop")
+          ?.classList.add("is-open");
+        document.body.classList.add("warkost-voucher-picker-lock");
+        return;
+      }
+
+      const benefitButton = event.target.closest(".voucher-option > button");
+      if (!benefitButton) return;
+      const label = benefitButton.textContent?.trim() || "";
+      if (label === "Klaim") return;
+      window.setTimeout(() => closeVoucherPicker(document), 0);
+    });
+  }
+}
+
 function enforceQrisOnly(root = document) {
   const cashInputs = root.querySelectorAll(
     'input[name="method"][value="CASH"]',
@@ -323,6 +555,7 @@ export default function CustomerQrisOnlyRuntime() {
       enforceQrisOnly(document);
       normalizeCheckoutAddressActions(document);
       polishBenefitActions(document);
+      polishVoucherPicker(document);
     };
 
     const run = () => {
@@ -334,7 +567,12 @@ export default function CustomerQrisOnlyRuntime() {
       });
     };
 
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") closeVoucherPicker(document);
+    };
+
     apply();
+    document.addEventListener("keydown", onKeyDown);
 
     const observer = new MutationObserver(run);
     observer.observe(document.body, {
@@ -344,7 +582,11 @@ export default function CustomerQrisOnlyRuntime() {
       attributeFilter: ["checked", "class", "data-mode", "disabled"],
     });
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("keydown", onKeyDown);
+      closeVoucherPicker(document);
+    };
   }, []);
 
   return null;
