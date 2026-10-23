@@ -34,15 +34,15 @@
 - Promotion Engine V1 implementation: `757f5a79e6afa721df80a6b836c3caf06af90393`
 - Remote baseline before Store Operating Hours V1: `3f193e3b8c50c35b0606ced8fd2ae8c7275b968d`
 - Auto Confirm QRIS Paid V1 status: **PRODUCT OWNER UAT PASS** (single item and mixed order)
-- Current milestone: Store Operating Hours V1
-- Current status: **IMPLEMENTED / AUTOMATED VERIFIED / PRODUCT OWNER UAT REQUIRED**
+- Current milestone: SYSTEM-WIDE REALTIME OPERATIONS V1 — COMPLETED
+- Current status: **PRODUCT OWNER UAT PASS / FULL REGRESSION PASS / CHECKPOINT CLOSURE**
 - Verification date: 2026-10-23
 
 ## Store Operating Hours V1
 
 Date: 2026-10-23
 
-Status: **IMPLEMENTED / AUTOMATED VERIFIED / PRODUCT OWNER UAT REQUIRED**
+Status: **PRODUCT OWNER UAT PASS / ACCEPTED**
 
 ### Server-authoritative configuration and order guard
 
@@ -72,7 +72,7 @@ Status: **IMPLEMENTED / AUTOMATED VERIFIED / PRODUCT OWNER UAT REQUIRED**
 
 - No QRIS architecture, Auto Confirm logic, promotion, loyalty, pickup/delivery rules, Midtrans production integration, printer architecture, deployment, or unrelated feature behavior was changed.
 - No merge or deployment was performed.
-- Product Owner desktop/mobile UAT remains required before Store Operating Hours V1 may be marked accepted or locked.
+- Product Owner desktop/mobile UAT: **PASS**. Store Operating Hours V1 is accepted.
 
 ## Promotion Engine V1
 
@@ -1280,3 +1280,4 @@ Status: **PRODUCT OWNER UAT PASS**
 - No payment-provider redesign, migration, Customer UI redesign, COD change, delivery-pricing change, merge, or deployment was performed.
 - The worker is process-local and assumes the documented persistent Node hosting target; database transaction guards keep repeated or overlapping process sweeps idempotent.
 - Product Owner UAT passed for single-item and mixed orders before Store Operating Hours V1 began.
+\n\n## Final Regression Closure — 2026-10-23\n\n- SYSTEM-WIDE REALTIME OPERATIONS V1: **PRODUCT OWNER UAT PASS / COMPLETED**.\n- Customer payment contract: **QRIS ONLY**, server-authoritative. CASH/COD and BANK_TRANSFER are rejected for new Customer checkout; legacy COD data/settlement support remains preserved.\n- QRIS-only contract tests: **4/4 PASS**.\n- Store Operating Hours V1 dedicated tests: **8/8 PASS**.\n- Pickup completion + Driver isolation verification: **5/5 PASS**.\n- Final full regression: **478/478 PASS, 0 FAIL**.\n- Regression stabilization commit: 3e2a1d2.\n- No merge and no deployment performed.\n
