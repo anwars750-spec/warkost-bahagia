@@ -513,6 +513,7 @@ function ProductForm({
             minimumOrderQuantity: Number(form.get("minimumOrderQuantity")),
             orderStepQuantity: Number(form.get("orderStepQuantity")),
             lowStockThreshold: Number(form.get("lowStockThreshold")),
+            unlimitedStock: form.get("unlimitedStock") === "on",
             active: form.get("active") === "on",
           },
           form.get("image"),
@@ -654,6 +655,14 @@ function ProductForm({
           />{" "}
           Produk aktif
         </label>
+        <label className="manager-switch">
+          <input
+            name="unlimitedStock"
+            type="checkbox"
+            defaultChecked={Number(product?.unlimited_stock || 0) === 1}
+          />{" "}
+          Stok unlimited
+        </label>
       </div>
       <p className="manager-routing-hint">
         Routing otomatis: Customer +{" "}
@@ -701,6 +710,7 @@ function Products({
   });
   const low = inventory.products.filter(
     (row) =>
+      Number(row.unlimited_stock) !== 1 &&
       Number(
         stockById.get(Number(row.id))?.available_quantity ?? row.stock_quantity,
       ) <= Number(row.low_stock_threshold || 0),
@@ -822,11 +832,13 @@ function Products({
                       <td>{row.subcategory_name || "Umum"}</td>
                       <td>{productPriceLabel(row, money)}</td>
                       <td>
-                        {formatStockQuantity(
-                          currentStock?.available_quantity ??
-                            row.stock_quantity,
-                          row.stock_unit,
-                        )}
+                        {Number(row.unlimited_stock) === 1
+                          ? "Unlimited"
+                          : formatStockQuantity(
+                              currentStock?.available_quantity ??
+                                row.stock_quantity,
+                              row.stock_unit,
+                            )}
                       </td>
                       <td>
                         <span
@@ -992,7 +1004,13 @@ function Stock({ stock, busy, mutate }) {
   );
   const isActive = (row) => row.active === true || Number(row.active) === 1;
   const healthLabel = (status) =>
-    status === "OUT" ? "Habis" : status === "LOW" ? "Rendah" : "Aman";
+    status === "UNLIMITED"
+      ? "Unlimited"
+      : status === "OUT"
+        ? "Habis"
+        : status === "LOW"
+          ? "Rendah"
+          : "Aman";
   const products = stock.products.filter((row) => {
     const active = isActive(row);
     return (
@@ -1072,6 +1090,7 @@ function Stock({ stock, busy, mutate }) {
             <option value="OK">Aman</option>
             <option value="LOW">Rendah</option>
             <option value="OUT">Habis</option>
+            <option value="UNLIMITED">Unlimited</option>
           </select>
         </label>
       </div>
@@ -1099,19 +1118,25 @@ function Stock({ stock, busy, mutate }) {
               <div>
                 <dt>Current</dt>
                 <dd>
-                  {formatStockQuantity(row.stock_quantity, row.stock_unit)}
+{Number(row.unlimited_stock) === 1
+                    ? "∞"
+                    : formatStockQuantity(row.stock_quantity, row.stock_unit)}
                 </dd>
               </div>
               <div>
                 <dt>Reserved</dt>
                 <dd>
-                  {formatStockQuantity(row.reserved_quantity, row.stock_unit)}
+{Number(row.unlimited_stock) === 1
+                    ? "—"
+                    : formatStockQuantity(row.reserved_quantity, row.stock_unit)}
                 </dd>
               </div>
               <div>
                 <dt>Available</dt>
                 <dd>
-                  {formatStockQuantity(row.available_quantity, row.stock_unit)}
+{Number(row.unlimited_stock) === 1
+                    ? "∞"
+                    : formatStockQuantity(row.available_quantity, row.stock_unit)}
                 </dd>
               </div>
               <div>
@@ -1128,9 +1153,10 @@ function Stock({ stock, busy, mutate }) {
             <button
               type="button"
               className="manager-stock-action"
+              disabled={Number(row.unlimited_stock) === 1}
               onClick={() => setSelectedProductId(row.id)}
             >
-              Atur Stok
+              {Number(row.unlimited_stock) === 1 ? "Unlimited" : "Atur Stok"}
             </button>
           </article>
         ))}
