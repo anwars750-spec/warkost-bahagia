@@ -264,3 +264,145 @@
     font-size: 0.66rem;
   }
 }
+
+/* =============================
+   Product list responsive action polish
+   ============================= */
+/* The previous 7% action column clipped the secondary visibility control.
+   Keep all controls inside the table without changing product behaviour. */
+@media (min-width: 761px) {
+  .manager-dashboard-polished .manager-product-list table {
+    min-width: 1120px !important;
+  }
+
+  .manager-dashboard-polished .manager-product-list th:nth-child(1),
+  .manager-dashboard-polished .manager-product-list td:nth-child(1) { width: 25% !important; }
+  .manager-dashboard-polished .manager-product-list th:nth-child(2),
+  .manager-dashboard-polished .manager-product-list td:nth-child(2) { width: 10% !important; }
+  .manager-dashboard-polished .manager-product-list th:nth-child(3),
+  .manager-dashboard-polished .manager-product-list td:nth-child(3) { width: 11% !important; }
+  .manager-dashboard-polished .manager-product-list th:nth-child(4),
+  .manager-dashboard-polished .manager-product-list td:nth-child(4) { width: 12% !important; }
+  .manager-dashboard-polished .manager-product-list th:nth-child(5),
+  .manager-dashboard-polished .manager-product-list td:nth-child(5) { width: 8% !important; }
+  .manager-dashboard-polished .manager-product-list th:nth-child(6),
+  .manager-dashboard-polished .manager-product-list td:nth-child(6) { width: 8% !important; }
+  .manager-dashboard-polished .manager-product-list th:nth-child(7),
+  .manager-dashboard-polished .manager-product-list td:nth-child(7) { width: 11% !important; }
+  .manager-dashboard-polished .manager-product-list th:nth-child(8),
+  .manager-dashboard-polished .manager-product-list td:nth-child(8) {
+    width: 15% !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+  }
+
+  .manager-dashboard-polished .manager-product-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .manager-dashboard-polished .manager-product-actions button {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 36px;
+    padding: 6px 7px !important;
+    white-space: nowrap;
+    font-size: 0.7rem;
+  }
+}
+
+/* Replace the fallback "?" character with a deterministic CSS chevron. */
+.manager-dashboard-polished .manager-product-group-chevron {
+  position: relative;
+  display: inline-grid !important;
+  place-items: center;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 !important;
+  overflow: hidden;
+  border: 1px solid #ead8cb;
+  border-radius: 11px;
+  background: #fffaf6;
+  color: transparent !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.manager-dashboard-polished .manager-product-group-chevron::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid #8b4c34;
+  border-bottom: 2px solid #8b4c34;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 170ms ease;
+}
+
+.manager-dashboard-polished .manager-product-group-chevron.collapsed::before {
+  transform: translateX(-2px) rotate(-45deg);
+}
+
+.manager-dashboard-polished .manager-product-group-header:hover .manager-product-group-chevron,
+.manager-dashboard-polished .manager-product-group-header:focus-visible .manager-product-group-chevron {
+  border-color: #d9b7a5;
+  background: #fff3ea;
+}
+
+/* Tablet: preserve readable metadata and let the table scroll only when needed. */
+@media (min-width: 761px) and (max-width: 1100px) {
+  .manager-dashboard-polished .manager-product-list table {
+    min-width: 1080px !important;
+  }
+
+  .manager-dashboard-polished .manager-product-actions button {
+    font-size: 0.67rem;
+    padding-inline: 5px !important;
+  }
+}
+
+/* Mobile cards: actions remain fully visible and easy to tap. */
+@media (max-width: 760px) {
+  .manager-dashboard-polished .manager-product-group-header {
+    gap: 10px;
+  }
+
+  .manager-dashboard-polished .manager-product-group-actions {
+    flex: 0 0 auto;
+    gap: 8px;
+  }
+
+  .manager-dashboard-polished .manager-product-group-chevron {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    border-radius: 10px;
+  }
+
+  .manager-dashboard-polished .manager-product-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  .manager-dashboard-polished .manager-product-list tbody td:nth-child(8) .manager-product-actions button {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 42px;
+    padding: 8px 10px !important;
+    white-space: normal !important;
+    line-height: 1.2;
+  }
+}
+
+@media (max-width: 390px) {
+  .manager-dashboard-polished .manager-product-actions {
+    grid-template-columns: 1fr;
+  }
+}
