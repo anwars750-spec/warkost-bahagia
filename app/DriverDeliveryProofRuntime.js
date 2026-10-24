@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import styles from "./DriverDeliveryProofRuntime.module.css";
+import captureStyles from "./DriverDeliveryProofCapture.module.css";
 
 function orderIdFromCard(card) {
   const text = card?.querySelector("h3")?.textContent || "";
@@ -15,6 +16,8 @@ export default function DriverDeliveryProofRuntime() {
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const cameraInputRef = useRef(null);
+  const attachmentInputRef = useRef(null);
 
   const preview = useMemo(() => (file ? URL.createObjectURL(file) : ""), [file]);
 
@@ -58,6 +61,18 @@ export default function DriverDeliveryProofRuntime() {
     setTarget(null);
     setFile(null);
     setError("");
+  };
+
+  const chooseFile = (event) => {
+    const selected = event.target.files?.[0] || null;
+    if (selected && selected.size > 8 * 1024 * 1024) {
+      setError("Ukuran foto maksimal 8 MB");
+      event.target.value = "";
+      return;
+    }
+    setError("");
+    setFile(selected);
+    event.target.value = "";
   };
 
   const submit = async () => {
@@ -111,26 +126,46 @@ export default function DriverDeliveryProofRuntime() {
               <button type="button" onClick={() => setFile(null)} disabled={busy}>Ganti foto</button>
             </div>
           ) : (
-            <label className={styles.upload}>
+            <div className={`${styles.upload} ${captureStyles.capturePanel}`}>
               <input
+                ref={cameraInputRef}
+                className={captureStyles.hiddenInput}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={chooseFile}
+              />
+              <input
+                ref={attachmentInputRef}
+                className={captureStyles.hiddenInput}
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/avif"
-                capture="environment"
-                onChange={(event) => {
-                  const selected = event.target.files?.[0] || null;
-                  if (selected && selected.size > 8 * 1024 * 1024) {
-                    setError("Ukuran foto maksimal 8 MB");
-                    event.target.value = "";
-                    return;
-                  }
-                  setError("");
-                  setFile(selected);
-                }}
+                onChange={chooseFile}
               />
               <span className={styles.camera} aria-hidden="true">◎</span>
-              <strong>Ambil / pilih foto bukti</strong>
-              <small>Pastikan pesanan yang diterima terlihat jelas. JPG, PNG, WEBP, atau AVIF · maks. 8 MB.</small>
-            </label>
+              <strong>Pilih cara mengambil bukti</strong>
+              <small>Gunakan kamera saat serah terima atau lampirkan foto yang sudah tersimpan. Maks. 8 MB.</small>
+              <div className={captureStyles.sourceActions}>
+                <button
+                  type="button"
+                  className={captureStyles.cameraButton}
+                  onClick={() => cameraInputRef.current?.click()}
+                  disabled={busy}
+                >
+                  <span aria-hidden="true">📷</span>
+                  <span><strong>Ambil Foto</strong><small>Buka kamera belakang</small></span>
+                </button>
+                <button
+                  type="button"
+                  className={captureStyles.attachmentButton}
+                  onClick={() => attachmentInputRef.current?.click()}
+                  disabled={busy}
+                >
+                  <span aria-hidden="true">🖼️</span>
+                  <span><strong>Lampirkan Foto</strong><small>Pilih dari galeri / file</small></span>
+                </button>
+              </div>
+            </div>
           )}
 
           <div className={styles.note}>
