@@ -38,7 +38,9 @@ function makeOwnerLauncher(open) {
       </svg>
     </span>
     <div><strong>Riwayat Delivery</strong><small>Bukti pengantaran dan timeline order selesai.</small></div>
-    <span class="${styles.ownerArrow}" aria-hidden="true">→</span>
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="M5 12h14m-5-5 5 5-5 5" />
+    </svg>
   `;
   button.addEventListener("click", open);
   grid.appendChild(button);

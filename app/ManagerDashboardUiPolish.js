@@ -73,6 +73,11 @@ function activeNavFromHeading(heading) {
   return "dashboard";
 }
 
+function activeNavFromContext(root, heading) {
+  if (root?.querySelector(".manager-dashboard")) return "dashboard";
+  return activeNavFromHeading(heading);
+}
+
 export default function ManagerDashboardUiPolish() {
   useEffect(() => {
     let frame = 0;
@@ -99,7 +104,7 @@ export default function ManagerDashboardUiPolish() {
           .map((node) => node.textContent)
           .join(" ") || document.querySelector("main h1, main h2")?.textContent,
       );
-      const activeNav = activeNavFromHeading(heading);
+      const activeNav = activeNavFromContext(root, heading);
 
       navButtons.forEach((button) => {
         const text = clean(button.textContent);
