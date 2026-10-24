@@ -56,6 +56,38 @@ Status: **COMPLETED / PRODUCT OWNER PASS**
 
 ---
 
+## MILESTONE E - FINAL PRODUCT ACCEPTANCE & RELEASE CANDIDATE
+
+Date closed: 2026-10-24
+
+Status: **COMPLETED - RELEASE CANDIDATE**
+
+### Product Owner Acceptance
+
+- Standalone Banner Management V1: **PASS / ACCEPTED**
+- Customer Pickup / Ambil di Tempat End-to-End: **PASS / ACCEPTED**
+- Final Cross-Role UAT Customer -> Admin -> Kitchen -> Driver -> Manager -> Owner: **PASS**
+- QRIS Delivery lifecycle through Delivery Proof and DELIVERED: **PASS**
+- Mixed food + beverage routing and preparation: **PASS**
+- Manager Delivery History verification: **PASS**
+- Owner Delivery History verification: **PASS**
+
+### Release Candidate Verification
+
+- Full regression: **521/521 PASS**
+- Production build - Next.js 16.3.6: **PASS**
+- Static page generation: **33/33 PASS**
+- Working tree: **CLEAN**
+
+### Release Boundary
+
+- Feature development is frozen unless a real regression is found.
+- No merge performed.
+- No deployment performed.
+- Next phase: deployment preparation for **IDCloudHost VPS** after release-candidate closure.
+
+---
+
 ## Active baseline
 
 - Branch: `work/customer-qris-demo-uat-v1`
@@ -91,7 +123,7 @@ Status: **COMPLETED / PRODUCT OWNER PASS**
 - Remote baseline before Store Operating Hours V1: `3f193e3b8c50c35b0606ced8fd2ae8c7275b968d`
 - Auto Confirm QRIS Paid V1 status: **PRODUCT OWNER UAT PASS** (single item and mixed order)
 - Current milestone: MILESTONE E - FINAL PRODUCT ACCEPTANCE & RELEASE CANDIDATE
-- Current status: **ACTIVE - FINAL CLOSURE & RELEASE READINESS**
+- Current status: **COMPLETED - RELEASE CANDIDATE**
 - Verification date: 2026-10-24
 - Authoritative Banner parent baseline: `b81649d`
 
