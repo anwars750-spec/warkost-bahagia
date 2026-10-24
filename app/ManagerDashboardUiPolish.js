@@ -45,11 +45,15 @@ const navKeys = [
   ["Subkategori", "subcategories"],
   ["Stok", "stock"],
   ["Promo", "promotions"],
+  ["Banner", "banners"],
+  ["Jam Operasional", "store-hours"],
   ["Notifikasi", "notifications"],
   ["Keluar", "logout"],
 ];
 
 function activeNavFromHeading(heading) {
+  if (/kelola banner|banner customer/i.test(heading)) return "banners";
+  if (/jam operasional/i.test(heading)) return "store-hours";
   if (/produk/i.test(heading)) return "products";
   if (/subkategori/i.test(heading)) return "subcategories";
   if (/stok/i.test(heading)) return "stock";
@@ -80,7 +84,11 @@ export default function ManagerDashboardUiPolish() {
       header?.classList.add("manager-role-header");
 
       const heading = clean(
-        root?.querySelector(".manager-page-title h1")?.textContent ||
+        [
+          ...(root?.querySelectorAll("h1, h2") || []),
+        ]
+          .map((node) => node.textContent)
+          .join(" ") ||
           document.querySelector("main h1, main h2")?.textContent,
       );
       const activeNav = activeNavFromHeading(heading);
