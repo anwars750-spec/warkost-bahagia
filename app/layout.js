@@ -158,6 +158,7 @@ import ManagerNotificationPopover from "./ManagerNotificationPopover";
 import ManagerNotificationOutsideClose from "./ManagerNotificationOutsideClose";
 import RealtimeOperationsRuntime from "./RealtimeOperationsRuntime";
 import PreparingEtaRuntime from "./PreparingEtaRuntime";
+import DeliveryHistoryRuntime from "./DeliveryHistoryRuntime";
 import MobileForegroundAlertBoost from "./MobileForegroundAlertBoost";
 
 export const metadata = {
@@ -175,6 +176,7 @@ export default function RootLayout({ children }) {
         <CustomerLoyaltyPickerRuntime />
         <RealtimeOperationsRuntime />
         <PreparingEtaRuntime />
+        <DeliveryHistoryRuntime />
         <MobileForegroundAlertBoost />
         <DriverRuntimeBootstrap />
         <DriverLogoFix />
