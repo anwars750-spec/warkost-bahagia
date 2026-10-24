@@ -88,16 +88,44 @@ Status: **COMPLETED ? 4/4**
 - No deployment performed.
 - Production integrations remain deferred.
 
-### Next milestone
+### Completed milestone
 
 **MILESTONE C ? MENU & DISPLAY MANAGEMENT V2**
 
-Planned P1 scope:
-- grouped category
-- collapse / expand
-- hide / unhide
-- Manager Banner Management
-- horizontal slideshow
+Date closed: 2026-10-24
+
+Status: **COMPLETED ? AUTOMATED VERIFICATION PASS**
+
+Scope completed:
+- Grouped Category V1 ? `33c20ad`
+- Collapse / Expand V1 ? `9df2977`
+- Hide / Unhide V1 ? `bb33f16`
+- Manager Banner Management V1 ? `ca49364`
+- Horizontal Slideshow ? existing Customer capability retained and verified through current build/regression
+
+Implementation notes:
+- Manager Products are grouped by category while preserving the existing product table/mobile-card structure.
+- Category groups can be collapsed and expanded without backend or schema changes.
+- Manager can hide/unhide products using the existing authoritative product `active` state.
+- Inactive products remain excluded from the public Customer catalog by the existing server query.
+- Manager Banner Management reuses Promotion Center as the single source of truth; no duplicate banner engine or schema was introduced.
+- Banner preview uses active promotions and reflects Customer ordering: `starts_at DESC, id DESC`.
+- Customer horizontal promo slideshow already provides autoplay, swipe navigation, dots navigation, and multi-promo rotation; no duplicate slideshow implementation was added.
+
+Verification:
+- Manager Banner Management: `git diff --check` PASS
+- Production build: PASS
+- Full regression: **491/491 PASS**
+- Working tree was clean before push
+- Latest remote baseline: `ca49364`
+
+Guardrails:
+- No merge.
+- No deploy.
+- No production integration changes.
+- Existing promo business rules remain authoritative.
+- Existing Customer slideshow behavior remains intact.
+
 
 ## Store Operating Hours V1
 
