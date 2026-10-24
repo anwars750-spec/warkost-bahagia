@@ -406,3 +406,156 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* =============================
+   Subcategory-owned visibility V1
+   ============================= */
+/* Visibility is controlled at subcategory level. Keep the per-product button
+   in the DOM for compatibility, but remove it from the Manager quick-action UI. */
+.manager-dashboard-polished .manager-product-actions > button:nth-child(2) {
+  display: none !important;
+}
+
+@media (min-width: 761px) {
+  .manager-dashboard-polished .manager-product-list th:nth-child(1),
+  .manager-dashboard-polished .manager-product-list td:nth-child(1) { width: 28% !important; }
+  .manager-dashboard-polished .manager-product-list th:nth-child(2),
+  .manager-dashboard-polished .manager-product-list td:nth-child(2) { width: 11% !important; }
+  .manager-dashboard-polished .manager-product-list th:nth-child(3),
+  .manager-dashboard-polished .manager-product-list td:nth-child(3) { width: 13% !important; }
+  .manager-dashboard-polished .manager-product-list th:nth-child(4),
+  .manager-dashboard-polished .manager-product-list td:nth-child(4) { width: 13% !important; }
+  .manager-dashboard-polished .manager-product-list th:nth-child(5),
+  .manager-dashboard-polished .manager-product-list td:nth-child(5) { width: 8% !important; }
+  .manager-dashboard-polished .manager-product-list th:nth-child(6),
+  .manager-dashboard-polished .manager-product-list td:nth-child(6) { width: 9% !important; }
+  .manager-dashboard-polished .manager-product-list th:nth-child(7),
+  .manager-dashboard-polished .manager-product-list td:nth-child(7) { width: 12% !important; }
+  .manager-dashboard-polished .manager-product-list th:nth-child(8),
+  .manager-dashboard-polished .manager-product-list td:nth-child(8) {
+    width: 6% !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+    text-align: center;
+  }
+
+  .manager-dashboard-polished .manager-product-actions {
+    display: block !important;
+    width: 100%;
+  }
+
+  .manager-dashboard-polished .manager-product-actions > button:first-child {
+    width: 100% !important;
+    min-width: 58px !important;
+    min-height: 36px;
+    padding: 6px 10px !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .manager-dashboard-polished .manager-product-actions {
+    display: block !important;
+  }
+
+  .manager-dashboard-polished .manager-product-list tbody td:nth-child(8) .manager-product-actions > button:first-child {
+    width: 100% !important;
+    min-height: 42px;
+  }
+}
+
+/* Make the existing server-authoritative subcategory toggle the primary
+   visibility control without changing its mutation contract. */
+.manager-dashboard-polished .manager-subcategory-page .manager-subcategory-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid #eaded5;
+  border-radius: 15px;
+  background: #fffdfa;
+}
+
+.manager-dashboard-polished .manager-subcategory-page .manager-subcategory-row + .manager-subcategory-row {
+  margin-top: 10px;
+}
+
+.manager-dashboard-polished .manager-subcategory-page .manager-subcategory-row > div:first-child {
+  min-width: 0;
+}
+
+.manager-dashboard-polished .manager-subcategory-page .manager-subcategory-row strong {
+  display: block;
+  color: #2e1a12;
+  font-size: 0.9rem;
+}
+
+.manager-dashboard-polished .manager-subcategory-page .manager-subcategory-row small {
+  display: block;
+  margin-top: 4px;
+  color: #8a766b;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.manager-dashboard-polished .manager-subcategory-page .manager-subcategory-row > div:last-child {
+  display: grid;
+  grid-template-columns: auto minmax(118px, auto);
+  gap: 8px;
+  align-items: center;
+}
+
+.manager-dashboard-polished .manager-subcategory-page .manager-subcategory-row button {
+  min-height: 38px;
+  padding: 0 13px;
+  border-radius: 11px !important;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.manager-dashboard-polished .manager-subcategory-page .manager-subcategory-row > div:last-child button:last-child {
+  min-width: 118px;
+  border-color: #e5bfa9 !important;
+  background: #fff4ec !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  position: relative;
+}
+
+.manager-dashboard-polished .manager-subcategory-page .manager-subcategory-row > div:last-child button:last-child::after {
+  content: "Tampil / Sembunyi";
+  color: #9b4025;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.manager-dashboard-polished .manager-subcategory-page .manager-subcategory-row > div:last-child button:last-child:hover {
+  background: #ffece1 !important;
+  border-color: #d99b7d !important;
+}
+
+@media (max-width: 760px) {
+  .manager-dashboard-polished .manager-subcategory-page .manager-subcategory-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 13px;
+  }
+
+  .manager-dashboard-polished .manager-subcategory-page .manager-subcategory-row > div:last-child {
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .manager-dashboard-polished .manager-subcategory-page .manager-subcategory-row button {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+  }
+}
+
+@media (max-width: 390px) {
+  .manager-dashboard-polished .manager-subcategory-page .manager-subcategory-row > div:last-child {
+    grid-template-columns: 1fr;
+  }
+}
