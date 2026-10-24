@@ -688,6 +688,20 @@ function Products({
   const [subcategory, setSubcategory] = useState("all");
   const [status, setStatus] = useState("all");
   const [editing, setEditing] = useState(initialAdd ? "new" : null);
+  const [collapsedCategories, setCollapsedCategories] = useState(
+    () => new Set(),
+  );
+  const toggleCategory = (categoryId) => {
+    setCollapsedCategories((current) => {
+      const next = new Set(current);
+      if (next.has(categoryId)) {
+        next.delete(categoryId);
+      } else {
+        next.add(categoryId);
+      }
+      return next;
+    });
+  };
   useEffect(() => {
     if (initialAdd) {
       setEditing("new");
@@ -827,19 +841,35 @@ function Products({
           <div className="manager-product-groups">
             {groupedRows.map((group) => (
               <section className="manager-product-group" key={group.id}>
-                <div className="manager-product-group-header">
+                <button
+                  type="button"
+                  className="manager-product-group-header"
+                  aria-expanded={!collapsedCategories.has(group.id)}
+                  onClick={() => toggleCategory(group.id)}
+                >
                   <div>
                     <span>KATEGORI</span>
                     <h3>{group.name}</h3>
                   </div>
-                  <div className="manager-product-group-meta">
-                    <strong>{group.rows.length}</strong>
-                    <small>
-                      produk ? {group.rows.filter((row) => row.active).length} aktif
-                    </small>
+                  <div className="manager-product-group-actions">
+                    <div className="manager-product-group-meta">
+                      <strong>{group.rows.length}</strong>
+                      <small>
+                        produk ? {group.rows.filter((row) => row.active).length} aktif
+                      </small>
+                    </div>
+                    <span
+                      className={`manager-product-group-chevron ${
+                        collapsedCategories.has(group.id) ? "collapsed" : ""
+                      }`}
+                      aria-hidden="true"
+                    >
+                      ?
+                    </span>
                   </div>
-                </div>
+                </button>
 
+                {!collapsedCategories.has(group.id) && (
                 <div className="manager-table-wrap">
                   <table>
                     <thead>
@@ -908,6 +938,7 @@ function Products({
                     </tbody>
                   </table>
                 </div>
+                )}
               </section>
             ))}
           </div>
