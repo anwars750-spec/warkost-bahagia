@@ -74,9 +74,13 @@ Status: **COMPLETED - RELEASE CANDIDATE**
 
 ### Release Candidate Verification
 
-- Full regression: **521/521 PASS**
-- Production build - Next.js 16.3.6: **PASS**
+- Full regression after deployment refactor + security patch: **521/521 PASS**
+- Staging environment guardrail: **3/3 PASS**
+- Production build - Next.js 16.4.3: **PASS**
 - Static page generation: **33/33 PASS**
+- Production dependency audit: **0 vulnerabilities**
+- Provider-neutral deployment cleanup: **PASS** (Hostinger references: 0)
+- Security patch commit: 6b83350`r
 - Working tree: **CLEAN**
 
 ### Release Boundary
