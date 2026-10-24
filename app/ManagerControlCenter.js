@@ -88,6 +88,14 @@ export default function ManagerControlCenter(props) {
         <div className="manager-more-menu">
           <button
             onClick={() => {
+              setView("banners");
+              setMoreOpen(false);
+            }}
+          >
+            Banner
+          </button>
+          <button
+            onClick={() => {
               setView("subcategories");
               setMoreOpen(false);
             }}
@@ -135,7 +143,12 @@ export default function ManagerControlCenter(props) {
         </button>
         <button
           className={
-            ["subcategories", "store-hours", "notifications"].includes(view)
+            [
+              "banners",
+              "subcategories",
+              "store-hours",
+              "notifications",
+            ].includes(view)
               ? "active"
               : ""
           }

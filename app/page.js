@@ -67,12 +67,6 @@ const localDateTime = (value) => {
     .toISOString()
     .slice(0, 16);
 };
-const promoDate = (value) =>
-  new Date(String(value).replace(" ", "T") + "Z").toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
 const demoProductImage = (name) => {
   const normalized = String(name || "").toLowerCase();
   if (normalized.includes("nasi goreng"))
@@ -243,6 +237,7 @@ export default function App() {
     [report, setReport] = useState(null),
     [printJobs, setPrintJobs] = useState([]),
     [promotions, setPromotions] = useState([]),
+    [banners, setBanners] = useState([]),
     [loyaltyRules, setLoyaltyRules] = useState([]),
     [settings, setSettings] = useState({
       brandName: "Warkost Bahagia",
@@ -280,7 +275,7 @@ export default function App() {
     [selectedSubcategory, setSelectedSubcategory] = useState(0),
     [stockCategoryFilter, setStockCategoryFilter] = useState("all"),
     [productSearch, setProductSearch] = useState(""),
-    [promoIndex, setPromoIndex] = useState(0),
+    [bannerIndex, setBannerIndex] = useState(0),
     [overlay, setOverlay] = useState(null),
     [supportTopic, setSupportTopic] = useState(null),
     [orderFilter, setOrderFilter] = useState("all"),
@@ -398,6 +393,7 @@ export default function App() {
           setPromotions(
             (await api("promotions", undefined, signal)).promotions,
           );
+          setBanners((await api("banners", undefined, signal)).banners);
         }
         if (["MANAGER", "OWNER", "ADMIN", "KITCHEN"].includes(me.user.role))
           setStock(await api("stock", undefined, signal));
@@ -876,10 +872,17 @@ export default function App() {
       );
     };
   }, [role]);
-  const activePromotions = menu.promotions || [];
-  const activePromo = activePromotions.length
-    ? activePromotions[promoIndex % activePromotions.length]
-    : null;
+  const activeBanners = menu.banners || [];
+  const displayedBanners = activeBanners.length
+    ? activeBanners
+    : [
+        {
+          id: "fallback",
+          image_url: "/demo/promo-warkost.webp",
+        },
+      ];
+  const activeBannerIndex = bannerIndex % displayedBanners.length;
+  const activeBanner = displayedBanners[activeBannerIndex];
   const filteredMenuProducts = menu.products.filter((product) => {
     const categoryMatches =
       !selectedCategory || product.category_id === selectedCategory;
@@ -1472,6 +1475,7 @@ export default function App() {
                   </button>
                   <button onClick={() => setView("stock")}>Stok</button>
                   <button onClick={() => setView("promotions")}>Promo</button>
+                  <button onClick={() => setView("banners")}>Banner</button>
                   <button onClick={() => setView("store-hours")}>
                     Jam Operasional
                   </button>
@@ -2249,9 +2253,7 @@ export default function App() {
         ) : null}
         {(!role || role === "CUSTOMER") && view === "menu" && (
           <>
-            <section
-              className={`customer-hero ${activePromo ? "" : "no-promo"}`}
-            >
+            <section className="customer-hero">
               <div className="customer-hero-copy">
                 <span className="eyebrow">DAPUR WARKOST</span>
                 {storeStatus && (
@@ -2297,97 +2299,39 @@ export default function App() {
                   </span>
                 </div>
               </div>
-              {activePromo && (
-                <section
-                  className="promo-section home-promo"
-                  aria-label="Promo berlangsung"
-                >
-                  <article className="promo-card" key={activePromo.id}>
-                    <div className="promo-copy">
-                      <span className="promo-badge">{activePromo.badge}</span>
-                      <h2>{activePromo.title}</h2>
-                      <p>{activePromo.description}</p>
-                      <small className="promo-period">
-                        {promoDate(activePromo.starts_at)} –{" "}
-                        {promoDate(activePromo.ends_at)}
-                      </small>
-                      <small className="promo-terms">{activePromo.terms}</small>
-                      <button
-                        className="primary"
-                        onClick={() =>
-                          document
-                            .getElementById("menu-grid")
-                            ?.scrollIntoView({ behavior: "smooth" })
-                        }
-                      >
-                        {activePromo.cta_label}
-                        <ArrowIcon />
-                      </button>
-                    </div>
-                    <div className="promo-media">
-                      {activePromo.image_url ? (
-                        <Image
-                          className="promo-image"
-                          src={activePromo.image_url}
-                          alt={`Visual ${activePromo.title}`}
-                          fill
-                          sizes="(max-width: 620px) 58vw, 43vw"
-                          unoptimized
-                        />
-                      ) : (
-                        <Image
-                          className="promo-image"
-                          src="/demo/promo-warkost.webp"
-                          alt="Nasi goreng, mie ayam, dan kopi susu Warkost"
-                          fill
-                          sizes="(max-width: 620px) 58vw, 43vw"
-                          priority
-                        />
-                      )}
-                      <div
-                        className="promo-controls"
-                        aria-label="Kontrol promo"
-                      >
-                        {activePromotions.length > 1 && (
+              <section className="home-banner" aria-label="Banner Warkost">
+                <article className="banner-card" key={activeBanner.id}>
+                  <img
+                    className="banner-image"
+                    src={activeBanner.image_url}
+                    alt={
+                      activeBanner.id === "fallback"
+                        ? "Pilihan menu Warkost Bahagia"
+                        : `Banner Warkost ${activeBannerIndex + 1}`
+                    }
+                  />
+                  {activeBanners.length > 1 && (
+                    <div
+                      className="banner-controls"
+                      aria-label="Kontrol banner"
+                    >
+                      <span className="banner-dots">
+                        {activeBanners.map((banner, index) => (
                           <button
-                            aria-label="Promo sebelumnya"
-                            onClick={() =>
-                              setPromoIndex(
-                                (promoIndex - 1 + activePromotions.length) %
-                                  activePromotions.length,
-                              )
+                            key={banner.id}
+                            type="button"
+                            aria-label={`Tampilkan banner ${index + 1}`}
+                            className={
+                              index === activeBannerIndex ? "active" : ""
                             }
-                          >
-                            ←
-                          </button>
-                        )}
-                        <span className="promo-dots">
-                          {activePromotions.map((promo, index) => (
-                            <button
-                              key={promo.id}
-                              aria-label={`Tampilkan promo ${index + 1}`}
-                              className={index === promoIndex ? "active" : ""}
-                              onClick={() => setPromoIndex(index)}
-                            />
-                          ))}
-                        </span>
-                        {activePromotions.length > 1 && (
-                          <button
-                            aria-label="Promo berikutnya"
-                            onClick={() =>
-                              setPromoIndex(
-                                (promoIndex + 1) % activePromotions.length,
-                              )
-                            }
-                          >
-                            →
-                          </button>
-                        )}
-                      </div>
+                            onClick={() => setBannerIndex(index)}
+                          />
+                        ))}
+                      </span>
                     </div>
-                  </article>
-                </section>
-              )}
+                  )}
+                </article>
+              </section>
             </section>
             <section className="customer-catalog" aria-labelledby="menu-title">
               <div className="catalog-tools">
@@ -4227,6 +4171,7 @@ export default function App() {
             run={run}
             saveProduct={saveProductWithImage}
             promotions={promotions}
+            banners={banners}
             refresh={refresh}
             logout={logout}
           />

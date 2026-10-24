@@ -104,6 +104,11 @@ import { listPrintJobs, retryPrintJob } from "../../../lib/printer.mjs";
 import { driverContactIsVisible } from "../../../lib/delivery.mjs";
 import { listPromotions, savePromotion } from "../../../lib/promotions.mjs";
 import {
+  deleteBanner,
+  listBanners,
+  saveBanner,
+} from "../../../lib/banners.mjs";
+import {
   claimVoucher,
   listCustomerVouchers,
   quoteVoucher,
@@ -206,6 +211,7 @@ export async function GET(request, { params }) {
     if (action === "store-hours") return out(await getStoreOperatingStatus());
     if (action === "promotions")
       return out({ promotions: await listPromotions(user) });
+    if (action === "banners") return out({ banners: await listBanners(user) });
     if (action === "vouchers")
       return out({ vouchers: await listCustomerVouchers(user) });
     if (action === "loyalty-rewards")
@@ -838,6 +844,12 @@ export async function POST(request, { params }) {
       return mutation(action, user, body, () => saveProduct(user, body));
     if (action === "promotion")
       return mutation(action, user, body, () => savePromotion(user, body));
+    if (action === "banner")
+      return mutation(action, user, body, () => saveBanner(user, body));
+    if (action === "banner-delete")
+      return mutation(action, user, body, () =>
+        deleteBanner(user, integer(body.id)),
+      );
     if (action === "loyalty-reward")
       return mutation(action, user, body, () => saveRewardRule(user, body));
     if (action === "category")

@@ -4,68 +4,40 @@ import { useEffect } from "react";
 
 const AUTOPLAY_MS = 5500;
 const SWIPE_THRESHOLD_PX = 45;
-const INTERACTIVE_SELECTOR = "button,a,input,select,textarea,label";
 
-function promoDots() {
+function bannerDots() {
   return Array.from(
-    document.querySelectorAll(".home-promo .promo-dots button"),
+    document.querySelectorAll(".home-banner .banner-dots button"),
   );
 }
 
-function hideLegacyArrows() {
-  document
-    .querySelectorAll(
-      '.home-promo .promo-controls > button[aria-label="Promo sebelumnya"], .home-promo .promo-controls > button[aria-label="Promo berikutnya"]',
-    )
-    .forEach((button) => {
-      button.hidden = true;
-      button.tabIndex = -1;
-      button.setAttribute("aria-hidden", "true");
-    });
-
-  document.querySelectorAll(".home-promo .promo-card").forEach((card) => {
-    card.dataset.promoSlideshow = "true";
-  });
-}
-
-export default function CustomerPromoSlideshowRuntime() {
+export default function CustomerBannerCarouselRuntime() {
   useEffect(() => {
     let lastInteractionAt = Date.now();
-    let suppressClickUntil = 0;
     let drag = null;
-    let decorateFrame = null;
+    let suppressClickUntil = 0;
 
-    const scheduleDecorate = () => {
-      if (decorateFrame !== null) return;
-      decorateFrame = window.requestAnimationFrame(() => {
-        decorateFrame = null;
-        hideLegacyArrows();
-      });
-    };
-
-    const movePromo = (direction, manual = false) => {
-      const dots = promoDots();
+    const moveBanner = (direction, manual = false) => {
+      const dots = bannerDots();
       if (dots.length < 2) return false;
       let index = dots.findIndex((dot) => dot.classList.contains("active"));
       if (index < 0) index = 0;
-      const next = (index + direction + dots.length) % dots.length;
       if (manual) lastInteractionAt = Date.now();
-      dots[next]?.click();
-      scheduleDecorate();
+      dots[(index + direction + dots.length) % dots.length]?.click();
       return true;
     };
 
     const resetDragVisual = (card) => {
       if (!card) return;
-      card.classList.remove("is-promo-dragging");
-      card.style.removeProperty("--promo-drag-x");
-      card.style.removeProperty("--promo-drag-opacity");
+      card.classList.remove("is-banner-dragging");
+      card.style.removeProperty("--banner-drag-x");
+      card.style.removeProperty("--banner-drag-opacity");
     };
 
     const onPointerDown = (event) => {
       if (event.button !== undefined && event.button !== 0) return;
-      const card = event.target.closest?.(".home-promo .promo-card");
-      if (!card || event.target.closest?.(INTERACTIVE_SELECTOR)) return;
+      const card = event.target.closest?.(".home-banner .banner-card");
+      if (!card || bannerDots().length < 2) return;
       drag = {
         card,
         pointerId: event.pointerId,
@@ -73,7 +45,7 @@ export default function CustomerPromoSlideshowRuntime() {
         startY: event.clientY,
       };
       lastInteractionAt = Date.now();
-      card.classList.add("is-promo-dragging");
+      card.classList.add("is-banner-dragging");
       try {
         card.setPointerCapture?.(event.pointerId);
       } catch {}
@@ -85,9 +57,9 @@ export default function CustomerPromoSlideshowRuntime() {
       const dy = event.clientY - drag.startY;
       if (Math.abs(dx) < 5 || Math.abs(dx) <= Math.abs(dy)) return;
       if (event.cancelable) event.preventDefault();
-      drag.card.style.setProperty("--promo-drag-x", `${dx * 0.32}px`);
+      drag.card.style.setProperty("--banner-drag-x", `${dx * 0.32}px`);
       drag.card.style.setProperty(
-        "--promo-drag-opacity",
+        "--banner-drag-opacity",
         String(Math.max(0.84, 1 - Math.abs(dx) / 900)),
       );
     };
@@ -106,23 +78,18 @@ export default function CustomerPromoSlideshowRuntime() {
         Math.abs(dx) > Math.abs(dy) * 1.15
       ) {
         suppressClickUntil = Date.now() + 450;
-        movePromo(dx < 0 ? 1 : -1, true);
+        moveBanner(dx < 0 ? 1 : -1, true);
       }
     };
 
     const onPointerUp = (event) => finishDrag(event, false);
     const onPointerCancel = (event) => finishDrag(event, true);
-
     const onClick = (event) => {
-      const card = event.target.closest?.(".home-promo .promo-card");
-      if (!card || event.target.closest?.(INTERACTIVE_SELECTOR)) return;
-      if (Date.now() < suppressClickUntil) return;
+      const card = event.target.closest?.(".home-banner .banner-card");
+      if (!card || Date.now() < suppressClickUntil) return;
       if (!window.matchMedia?.("(pointer: fine)").matches) return;
-      movePromo(1, true);
+      moveBanner(1, true);
     };
-
-    const observer = new MutationObserver(scheduleDecorate);
-    observer.observe(document.body, { childList: true, subtree: true });
 
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("pointermove", onPointerMove, { passive: false });
@@ -130,17 +97,14 @@ export default function CustomerPromoSlideshowRuntime() {
     document.addEventListener("pointercancel", onPointerCancel);
     document.addEventListener("click", onClick);
 
-    scheduleDecorate();
     const timer = window.setInterval(() => {
       if (document.hidden) return;
       if (Date.now() - lastInteractionAt < AUTOPLAY_MS) return;
-      if (movePromo(1, false)) lastInteractionAt = Date.now();
+      if (moveBanner(1, false)) lastInteractionAt = Date.now();
     }, 1000);
 
     return () => {
-      observer.disconnect();
       window.clearInterval(timer);
-      if (decorateFrame !== null) window.cancelAnimationFrame(decorateFrame);
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("pointermove", onPointerMove);
       document.removeEventListener("pointerup", onPointerUp);

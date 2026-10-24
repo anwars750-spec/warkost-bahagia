@@ -1,4 +1,4 @@
-import "./style.css";
+﻿import "./style.css";
 import "./admin-ui.css";
 import "./admin-icons.css";
 import "./admin-detail.css";
@@ -49,7 +49,7 @@ import "./customer-catalog-final-polish.css";
 import "./customer-quantity-unit-final.css";
 import "./customer-location-picker-ux.css";
 import "./customer-location-picker-warkost-polish.css";
-import "./customer-promo-slideshow.css";
+import "./customer-banner-carousel.css";
 import "./manager-control-center.css";
 import "./manager-dashboard-ui-polish.css";
 import "./manager-mobile-nav-single-row.css";
@@ -149,7 +149,7 @@ import CustomerGeneralSupportRuntime from "./CustomerGeneralSupportRuntime";
 import CustomerLocationLauncher from "./CustomerLocationLauncher";
 import CustomerLocationPickerUx from "./CustomerLocationPickerUx";
 import CustomerAccountAddressLocationFirst from "./CustomerAccountAddressLocationFirst";
-import CustomerPromoSlideshowRuntime from "./CustomerPromoSlideshowRuntime";
+import CustomerBannerCarouselRuntime from "./CustomerBannerCarouselRuntime";
 import CustomerQrisOnlyRuntime from "./CustomerQrisOnlyRuntime";
 import CustomerLoyaltyPickerRuntime from "./CustomerLoyaltyPickerRuntime";
 import ManagerDashboardUiPolish from "./ManagerDashboardUiPolish";
@@ -170,7 +170,7 @@ export default function RootLayout({ children }) {
     <html lang="id">
       <body>
         {children}
-        <CustomerPromoSlideshowRuntime />
+        <CustomerBannerCarouselRuntime />
         <CustomerQrisOnlyRuntime />
         <CustomerLoyaltyPickerRuntime />
         <RealtimeOperationsRuntime />
@@ -226,3 +226,4 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
+

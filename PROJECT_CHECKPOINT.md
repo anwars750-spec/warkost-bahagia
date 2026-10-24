@@ -1,4 +1,4 @@
-# Warkost Bahagia — Project Checkpoint
+﻿# Warkost Bahagia â€” Project Checkpoint
 
 ## Active baseline
 
@@ -34,10 +34,42 @@
 - Promotion Engine V1 implementation: `757f5a79e6afa721df80a6b836c3caf06af90393`
 - Remote baseline before Store Operating Hours V1: `3f193e3b8c50c35b0606ced8fd2ae8c7275b968d`
 - Auto Confirm QRIS Paid V1 status: **PRODUCT OWNER UAT PASS** (single item and mixed order)
-- Current milestone: MILESTONE C ? MENU & DISPLAY MANAGEMENT V2 ? COMPLETED
-- Current status: **MILESTONE C CLOSED / AUTOMATED VERIFICATION PASS / REMOTE CHECKPOINT PUSHED**
+- Current milestone: STANDALONE BANNER MANAGEMENT V1
+- Current status: **AUTOMATED VERIFIED / PRODUCT OWNER UAT REQUIRED**
 - Verification date: 2026-10-24
-- Current remote checkpoint baseline: `c710a57`
+- Authoritative Banner parent baseline: `b81649d`
+
+## Standalone Banner Management V1
+
+Date: 2026-10-24
+
+Status: **AUTOMATED VERIFIED / PRODUCT OWNER UAT REQUIRED**
+
+### Standalone data and authorization
+
+- Customer banners now use the dedicated `banners` resource and no longer read title, description, CTA, badge, period, ordering, or active state from `promotions`.
+- Banner records contain `id`, Manager-only `internal_name`, `image_url`, `active`, `sort_order`, `created_at`, and `updated_at`.
+- SQLite runtime schema and MySQL migration `032_standalone_banner_management_v1.sql` provide matching standalone storage and active/order indexing.
+- Manager has dedicated banner read/write capabilities. Owner retains read-only oversight; unauthorized roles are rejected server-side.
+- Banner create, update, activate/deactivate, ordering, and deletion use dedicated service operations and audit records. Promotion Engine rules and records remain unchanged and independent.
+
+### Manager and Customer UI
+
+- Manager has a dedicated responsive Banner workspace with thumbnail, internal name, status, sort order, add, edit, image replacement, activate/deactivate, and confirmed delete actions.
+- Customer homepage renders only the selected banner image; promo title, description, badge, period, CTA, and database text overlays are absent.
+- Active banners are ordered by `sort_order ASC, id ASC`. Autoplay, desktop click advance, mobile swipe, and dot navigation are retained; navigation is omitted for a single banner.
+- Banner imagery uses intrinsic sizing and `object-fit: contain`, prioritizing complete image visibility on desktop, tablet, and mobile without cropping.
+- When no active banner exists, Customer receives the safe local Warkost hero image and does not error.
+
+### Verification
+
+- Targeted banner/promo/RBAC/migration/Manager regression: **39/39 PASS**.
+- Full unit regression: **502/502 PASS**.
+- Production build with Next.js 16.3.6: **PASS**, 30 routes.
+- `git diff --check`: **PASS**.
+- Authoritative parent baseline: `b81649d` (`fix(stock): widen product name layout`).
+- Remote Stock UI V2/V3 commits `c101d93`, `1a4f289`, and `b81649d` are preserved as direct ancestors of this milestone.
+- Prepared for UAT branch push; no merge or deployment performed.
 
 
 ## Milestone B ? Store Operations V2
@@ -149,7 +181,7 @@ Status: **PRODUCT OWNER UAT PASS / ACCEPTED**
 - Each update writes `STORE_OPERATING_HOURS_UPDATED` with previous/next configuration, effective status, actor role, and `Asia/Jakarta` timezone.
 - The existing realtime hub now publishes `STORE_STATUS_CHANGED` to connected roles and refreshes the shared public store-status endpoint; no second realtime system was added.
 - Owner receives the control within existing Owner Settings. Manager receives a dedicated responsive `Jam Operasional` view in desktop and mobile navigation.
-- Customer homepage displays `Buka · HH:MM–HH:MM` or the applicable closed state/reason/next opening time. Menu browsing remains available while closed; checkout shows a closed notice and disables submission, while the server-side guard remains authoritative.
+- Customer homepage displays `Buka Â· HH:MMâ€“HH:MM` or the applicable closed state/reason/next opening time. Menu browsing remains available while closed; checkout shows a closed notice and disables submission, while the server-side guard remains authoritative.
 
 ### Verification
 
@@ -223,7 +255,7 @@ Status: **PRODUCT OWNER UAT PASS / ACCEPTED**
 - Product create/edit/deactivate continues to mutate the existing shared `products` record. No per-role product copy or analytics table was introduced.
 - Product image upload reuses the existing validated media pipeline; Product Master includes a safe local fallback thumbnail.
 - Category/subcategory ownership, active-state, PCS/GRAM, price unit, minimum, step, stock threshold, and integer-Rupiah validation remain server-side.
-- Routing stays derived from the main category: Makanan → Customer + Kitchen; Minuman/Bahan Baku → Customer + Admin.
+- Routing stays derived from the main category: Makanan â†’ Customer + Kitchen; Minuman/Bahan Baku â†’ Customer + Admin.
 - New API requests immediately read the latest Product Master. Existing authenticated screens use bounded 20-second refresh for relevant catalog/stock visibility without introducing a broad realtime engine.
 - Deactivated products disappear from the orderable Customer catalog while historical `order_items` name/price/unit snapshots remain intact.
 - Manager stock reuses the unified inventory engine and exposes Current, Reserved, Available, unit, low-stock state, and reasoned/audited adjustment. Existing Admin/Kitchen read-only scopes are unchanged.
@@ -339,7 +371,7 @@ Status: **PRODUCT OWNER UAT PASS / ACCEPTED**
 
 - Focused Admin filter architecture tests: **6/6 PASS**.
 - Combined Admin filter + Admin UI stabilization + COD regression: **15/15 PASS**.
-- Three complete `Semua → Menunggu → Selesai → Menunggu → Semua` cycles: **PASS**.
+- Three complete `Semua â†’ Menunggu â†’ Selesai â†’ Menunggu â†’ Semua` cycles: **PASS**.
 - Delivered-only count/visibility contract, combined search, live status movement, detail contract, and COD settlement contract: **PASS**.
 - Full unit suite: **139/139 PASS**.
 - Production build with Next.js 16.3.6: **PASS**.
@@ -380,7 +412,7 @@ Status: **PRODUCT OWNER UAT PASS / ACCEPTED**
 - Production build with Next.js 16.3.6: **PASS**.
 - Critical defects in milestone scope: **0**.
 - High defects in milestone scope: **0**.
-- Manual UAT remains required for the exact Driver submission → Admin verification click path.
+- Manual UAT remains required for the exact Driver submission â†’ Admin verification click path.
 
 ## Admin UI Final Regression Stabilization
 
@@ -442,8 +474,8 @@ Status: **PRODUCT OWNER UAT PASS / ACCEPTED**
 - Production build: **PASS**
 - Full unit suite: **48/48 PASS**
 - Targeted customer homepage browser test: **2/2 PASS**
-  - Desktop Chromium: 1440 × 900
-  - Mobile Chromium: 390 × 844
+  - Desktop Chromium: 1440 Ã— 900
+  - Mobile Chromium: 390 Ã— 844
 - Fresh SQLite demo database and readiness health check: **PASS**
 - Logo/header, promo CTA, search, category filters, product images, quantity control, cart badge, cart drawer, help actions, and mobile bottom navigation: **PASS**
 - Desktop and mobile horizontal overflow check: **PASS**
@@ -474,7 +506,7 @@ Status: **PRODUCT OWNER UAT PASS / ACCEPTED**
 Do not open another milestone from this checkpoint without a new explicit scope. Use `cac62b9e79fccb7d552196509de44112fe14590f` as the verified functional baseline for the approved Customer Homepage implementation.
 ---
 
-## Customer UI Completion — ACCEPTED
+## Customer UI Completion â€” ACCEPTED
 
 Date: 2026-10-03
 
@@ -532,7 +564,7 @@ Do not redesign Customer UI unless a functional implementation requires a minima
 
 ---
 
-## Customer Functional Completion #1 — Shipping / Ongkir Core
+## Customer Functional Completion #1 â€” Shipping / Ongkir Core
 
 Date: 2026-10-03
 
@@ -546,8 +578,8 @@ Status: **COMPLETED / AUTOMATED VERIFIED**
 
 ### Final delivery rule
 
-- `0–5 km`: gratis ongkir.
-- `>5–15 km`: `ceil(distance_km - free_radius_km) × delivery_fee_per_km`.
+- `0â€“5 km`: gratis ongkir.
+- `>5â€“15 km`: `ceil(distance_km - free_radius_km) Ã— delivery_fee_per_km`.
 - `>15 km`: quote unavailable; checkout blocked and create-order rejected server-side.
 - Default demo configuration remains 5 km free radius, Rp2.500 per started additional kilometer, and 15 km maximum radius.
 - Quote and create-order use the same Haversine/config foundation; create-order always recalculates distance, delivery fee, and final total server-side.
@@ -580,7 +612,7 @@ Status: **COMPLETED / AUTOMATED VERIFIED**
 
 ---
 
-## Customer Functional Completion #2 — Voucher Claim & Redeem
+## Customer Functional Completion #2 â€” Voucher Claim & Redeem
 
 Date: 2026-10-03
 
@@ -620,7 +652,7 @@ Status: **COMPLETED / AUTOMATED VERIFIED**
 
 ---
 
-## Customer Functional Completion #3 — Loyalty Core
+## Customer Functional Completion #3 â€” Loyalty Core
 
 Date: 2026-10-04
 
@@ -662,7 +694,7 @@ Status: **COMPLETED / AUTOMATED VERIFIED**
 
 ---
 
-## Customer Functional Completion #4 — QRIS / Payment Core
+## Customer Functional Completion #4 â€” QRIS / Payment Core
 
 Date: 2026-10-04
 
@@ -730,10 +762,10 @@ Status: **COMPLETED / AUTOMATED VERIFIED**
 
 ### Targeted audit result
 
-- Account/profile: **PARTIAL → PASS**. Existing secure password/session foundation was retained; own-profile response, email/phone/birth-date editing, server validation, and safe public fields were completed.
-- Saved addresses: **PARTIAL → PASS**. Existing ownership/versioned-history/checkout foundation was retained; deterministic default-address behavior and non-technical coordinate UI were completed.
-- Help Center: **PARTIAL → PASS**. Existing internal support/order context and driver gating were retained; required topics, desktop title/drawer contract, and mobile Account-only full-height access were completed.
-- Login/Register: **PARTIAL → PASS**. Existing scrypt/session/rate-limit foundation was retained; email-or-phone login, complete registration fields, password confirmation, consent, and birth-date persistence were completed.
+- Account/profile: **PARTIAL â†’ PASS**. Existing secure password/session foundation was retained; own-profile response, email/phone/birth-date editing, server validation, and safe public fields were completed.
+- Saved addresses: **PARTIAL â†’ PASS**. Existing ownership/versioned-history/checkout foundation was retained; deterministic default-address behavior and non-technical coordinate UI were completed.
+- Help Center: **PARTIAL â†’ PASS**. Existing internal support/order context and driver gating were retained; required topics, desktop title/drawer contract, and mobile Account-only full-height access were completed.
+- Login/Register: **PARTIAL â†’ PASS**. Existing scrypt/session/rate-limit foundation was retained; email-or-phone login, complete registration fields, password confirmation, consent, and birth-date persistence were completed.
 - Google/Apple customer login: **PASS** (not exposed).
 - OTP backend/provider: **DEFERRED BY SCOPE**; no fake OTP success path was introduced.
 
@@ -760,7 +792,7 @@ Status: **COMPLETED / AUTOMATED VERIFIED**
 - Final dedicated Batch B contract test: **5/5 PASS**.
 - Full unit suite after fixes: **89/89 PASS**.
 - Production build: **PASS**.
-- Responsive source contracts for desktop drawer width, mobile full-height Help, three-item mobile navigation, Account→Bantuan access, required topics, and no raw coordinate input: **PASS**.
+- Responsive source contracts for desktop drawer width, mobile full-height Help, three-item mobile navigation, Accountâ†’Bantuan access, required topics, and no raw coordinate input: **PASS**.
 - Live browser visual UAT was not rerun because no existing Chromium/browser executable was available; no browser download or Cloud Browser localhost retry was attempted.
 
 ### Guardrails preserved
@@ -810,8 +842,8 @@ Status: **VERIFIED**
 - Batch B affected plus locked Shipping/Voucher/Loyalty/Payment regression set: **58/58 PASS**.
 - Full unit suite: **97/97 PASS**.
 - Production build: **PASS**.
-- Live HTTP verification: **PASS** — 3 public products, 2 categories, 2 active promotions, private account returns 401 for guest, local customer login returns 200, and authenticated own-account lookup returns 200 without a password hash.
-- Desktop/mobile onboarding source and responsive CSS contracts: **PASS**; updated Playwright UAT now scopes the Login card and covers guest storefront → protected-action Login routing.
+- Live HTTP verification: **PASS** â€” 3 public products, 2 categories, 2 active promotions, private account returns 401 for guest, local customer login returns 200, and authenticated own-account lookup returns 200 without a password hash.
+- Desktop/mobile onboarding source and responsive CSS contracts: **PASS**; updated Playwright UAT now scopes the Login card and covers guest storefront â†’ protected-action Login routing.
 - Browser visual automation was not rerun because no Chromium or `agent-browser` executable exists in the environment. No browser download or Cloud Browser localhost retry was attempted.
 
 ### Guardrails preserved
@@ -822,11 +854,11 @@ Status: **VERIFIED**
 
 ---
 
-## Batch B Final Visual Polish — 8 Corrections
+## Batch B Final Visual Polish â€” 8 Corrections
 
 Date: 2026-10-04
 
-Status: **VERIFIED — NOT YET LOCKED**
+Status: **VERIFIED â€” NOT YET LOCKED**
 
 ### Source-control baseline
 
@@ -838,9 +870,9 @@ Status: **VERIFIED — NOT YET LOCKED**
 
 1. Guest mobile header now reserves clear space between the full logo/brand and a compact elevated Login button at 360px widths.
 2. Guest product action is shortened to `Pesan`; price and action have independent compact space in the two-column mobile card.
-3. Desktop Login/Register logos use their full intrinsic 1672×941 aspect ratio with `object-fit: contain` and no negative offset.
+3. Desktop Login/Register logos use their full intrinsic 1672Ã—941 aspect ratio with `object-fit: contain` and no negative offset.
 4. Desktop onboarding now shows only the active form, defaults to Login, and reveals Register only through the explicit account switch action while retaining the brand hero.
-5. Mobile auth order is branding/header → Login/Register selector → active form → promotional hero, with Login active by default.
+5. Mobile auth order is branding/header â†’ Login/Register selector â†’ active form â†’ promotional hero, with Login active by default.
 6. Customer-facing Intro/Login/Register/OTP/Selesai stage chips were removed without adding or changing OTP backend behavior.
 7. Mobile cart summary now presents cart badge, item count, subtotal, and a compact `Buka` action above the bottom navigation; homepage safe padding prevents content overlap.
 8. Duplicate Account-page shortcut buttons were removed. The primary quick Account menu remains the single navigation entry point for Pesanan Aktif, Riwayat, Tracking, Voucher & Loyalty, Alamat, Pengaturan Akun, Bantuan, and Keluar.
@@ -850,9 +882,9 @@ Status: **VERIFIED — NOT YET LOCKED**
 - Dedicated guest/auth/cart/account visual contract tests: **11/11 PASS**.
 - Local fixture login, wrong-password rejection, inactive-account rejection, guest catalog, active promo, expired/inactive promo filtering, private-account blocking, and production fixture guard remain **PASS** in the same targeted suite.
 - Final production build: **PASS** with `/` and all existing API routes compiled.
-- Mobile breakpoint contracts covering 360×800 and 390×844: **PASS** — two-column products, compact CTA, auth form before hero, full contain logos, cart/nav separation, and safe bottom padding.
-- Desktop breakpoint contracts covering 1366×768 and 1440×900: **PASS** — two-column hero/form composition, one active auth form, full logo, and preserved account navigation.
-- Updated Playwright UAT covers guest `Pesan` → Login, Login/Register explicit switching, absence of stage chips, and mobile form-before-hero order. It was not executed because no existing Chromium or `agent-browser` executable is available; no browser was downloaded.
+- Mobile breakpoint contracts covering 360Ã—800 and 390Ã—844: **PASS** â€” two-column products, compact CTA, auth form before hero, full contain logos, cart/nav separation, and safe bottom padding.
+- Desktop breakpoint contracts covering 1366Ã—768 and 1440Ã—900: **PASS** â€” two-column hero/form composition, one active auth form, full logo, and preserved account navigation.
+- Updated Playwright UAT covers guest `Pesan` â†’ Login, Login/Register explicit switching, absence of stage chips, and mobile form-before-hero order. It was not executed because no existing Chromium or `agent-browser` executable is available; no browser was downloaded.
 
 ### Guardrails preserved
 
@@ -883,7 +915,7 @@ Status: **VERIFIED**
 
 ### `/api/voucher-quote` 422 audit
 
-- The observed 422 was legitimate server validation: the claimed demo voucher requires a Rp30.000 minimum while a common single-item cart can be Rp18.000–Rp25.000.
+- The observed 422 was legitimate server validation: the claimed demo voucher requires a Rp30.000 minimum while a common single-item cart can be Rp18.000â€“Rp25.000.
 - The request payload contained the claimed promotion ID plus the current cart items. The voucher remained selected and the quote effect ran again whenever the item/quantity signature changed; development Strict Mode may also remount effects, but repeated completed invalid requests were avoidable application behavior.
 - The client now checks cart presence, claimed ownership state, minimum subtotal, and voucher/loyalty non-stacking before requesting a quote. Invalid/incomplete state receives local explanatory feedback instead of repeatedly calling the endpoint.
 - Valid voucher quotes and order creation remain server-authoritative. Voucher rules, minimum order, discounts, quota, ownership, shipping totals, and non-stacking were not weakened.
@@ -893,7 +925,7 @@ Status: **VERIFIED**
 - Syntax, dedicated UAT-hotfix contract, and diff validation: **12/12 PASS**.
 - Affected Voucher/Loyalty/QRIS-Payment regression set: **43/43 PASS**.
 - Production build: **PASS** with `/` and all existing API routes compiled.
-- Existing responsive contracts for 360×800, 390×844, and desktop remain **PASS**; no browser executable was available, so no browser download or repeated browser attempt was made.
+- Existing responsive contracts for 360Ã—800, 390Ã—844, and desktop remain **PASS**; no browser executable was available, so no browser download or repeated browser attempt was made.
 - Guest catalog/auth routing and deterministic local customer login remain **PASS** in the affected UAT-hotfix regression.
 
 ### Guardrails preserved
@@ -907,7 +939,7 @@ Status: **VERIFIED**
 
 Date: 2026-10-04
 
-Status: **VERIFIED — NOT YET LOCKED**
+Status: **VERIFIED â€” NOT YET LOCKED**
 
 ### Source-control baseline
 
@@ -918,14 +950,14 @@ Status: **VERIFIED — NOT YET LOCKED**
 ### Corrections completed
 
 1. Removed the redundant `Beranda` action from the customer auth header. Desktop auth navigation is now `Menu | Bantuan | Masuk`; mobile retains its compact auth header without a redundant Beranda action.
-2. Replaced the unreliable transparent PNG used by Login/Register cards with the existing complete 1536×864 Warkost JPG asset. The PNG exposed metadata but failed full pixel decoding with a libpng read error, which made its rendered result unreliable.
+2. Replaced the unreliable transparent PNG used by Login/Register cards with the existing complete 1536Ã—864 Warkost JPG asset. The PNG exposed metadata but failed full pixel decoding with a libpng read error, which made its rendered result unreliable.
 3. Added auth-specific logo sizing for the header and both form states, with intrinsic 16:9 proportion, automatic height, centered `object-fit: contain`, no border-radius mask, no clip path, and visible heading overflow. Mobile uses constrained responsive widths without changing the artwork.
 
 ### Targeted verification
 
 - Guest/auth/local-login and touched visual contract suite: **13/13 PASS**.
 - Desktop contract: Menu, Bantuan, and Masuk remain; Beranda is absent; Login and Register use the full decodable logo asset with contain sizing: **PASS**.
-- Mobile 360×800 and 390×844 source/CSS contract: no Beranda, full contain logo, responsive width, existing form-before-hero order preserved: **PASS**.
+- Mobile 360Ã—800 and 390Ã—844 source/CSS contract: no Beranda, full contain logo, responsive width, existing form-before-hero order preserved: **PASS**.
 - Local customer login, guest catalog, protected-action Login routing, cart summary, account navigation cleanup, voucher auto-dismiss, and voucher quote guard remain **PASS** in the same targeted suite.
 - No browser executable was available and none was downloaded. The previous production build remains the latest build result; no broad build or unrelated suite was rerun for these two presentation-only corrections.
 
@@ -940,7 +972,7 @@ Status: **VERIFIED — NOT YET LOCKED**
 
 Date: 2026-10-04
 
-Status: **VERIFIED — NOT YET LOCKED**
+Status: **VERIFIED â€” NOT YET LOCKED**
 
 ### Source-control baseline
 
@@ -951,7 +983,7 @@ Status: **VERIFIED — NOT YET LOCKED**
 ### Transparent Warkost logo
 
 - The black rectangle belonged to the JPG pixels, not the UI container. The previous transparent PNG exposed metadata but failed full pixel decoding with a libpng read error.
-- Added `public/warkost-bahagia-logo-clean.png`, a valid 1672×941 RGBA asset generated from the approved logo with the complete lettering and dark outline retained while only the outer rectangular background was removed.
+- Added `public/warkost-bahagia-logo-clean.png`, a valid 1672Ã—941 RGBA asset generated from the approved logo with the complete lettering and dark outline retained while only the outer rectangular background was removed.
 - All customer header and Login/Register logo usages now share this transparent asset. Desktop/mobile rendering uses intrinsic proportion, automatic height, centered `object-fit: contain`, and no mask, clipping, or black fallback asset.
 - Pixel verification confirms a valid alpha channel with transparent corners and opaque logo content.
 
@@ -980,7 +1012,7 @@ Status: **VERIFIED — NOT YET LOCKED**
 
 ---
 
-## Customer UI Batch B — Final Acceptance and Lock
+## Customer UI Batch B â€” Final Acceptance and Lock
 
 Date: 2026-10-04
 
@@ -1021,7 +1053,7 @@ Do not start any future milestone without a new explicit scope.
 
 ---
 
-## Customer Functional — OTP Email + Forgot Password
+## Customer Functional â€” OTP Email + Forgot Password
 
 Date: 2026-10-04
 
@@ -1088,10 +1120,10 @@ Status: **VERIFIED / ACCEPTED / LOCKED**
 
 ### Manual UAT acceptance
 
-- User manual Registration OTP UAT: **PASS** — new customer registration succeeded, the OTP verification screen appeared, and the OTP from the local development outbox verified successfully.
-- Account activation UAT: **PASS** — the verified customer became `ACTIVE` and could continue into the normal customer flow.
-- Forgot Password OTP UAT: **PASS** — the reset OTP verified successfully and the password update completed.
-- Post-reset authentication: **PASS** — the old password was rejected and the new password was accepted.
+- User manual Registration OTP UAT: **PASS** â€” new customer registration succeeded, the OTP verification screen appeared, and the OTP from the local development outbox verified successfully.
+- Account activation UAT: **PASS** â€” the verified customer became `ACTIVE` and could continue into the normal customer flow.
+- Forgot Password OTP UAT: **PASS** â€” the reset OTP verified successfully and the password update completed.
+- Post-reset authentication: **PASS** â€” the old password was rejected and the new password was accepted.
 - OTP expiry, resend cooldown, attempt limit, challenge-purpose separation, consumed-code replay protection, and resend invalidation remain **VERIFIED** by automated security coverage.
 - Password reset session revocation is implemented and **VERIFIED**.
 - Automated OTP/Auth verification, the full **111/111** unit suite, and production build all passed before manual acceptance.
@@ -1197,7 +1229,7 @@ Status: **VERIFIED**
 
 Date: 2026-10-05
 
-Status: **VERIFIED — NOT YET ACCEPTED/LOCKED**
+Status: **VERIFIED â€” NOT YET ACCEPTED/LOCKED**
 
 ### Source-control baseline
 
@@ -1222,7 +1254,7 @@ Status: **VERIFIED — NOT YET ACCEPTED/LOCKED**
 - Claim runs in one transaction, locks Driver and order state, persists one delivery row, changes READY to ASSIGNED, records event/audit/notifications, and sets acceptance time for the existing customer-driver contact foundation.
 - Concurrent claims allow only one Driver to win; duplicate same-Driver claim is idempotent; offline Drivers and unauthorized roles cannot claim.
 - Maximum active delivery load remains 5. Capacity is checked atomically and the READY pool is hidden once the Driver is at capacity.
-- Existing Driver transitions PICKED_UP → ON_DELIVERY → DELIVERED and customer contact privacy rules are preserved.
+- Existing Driver transitions PICKED_UP â†’ ON_DELIVERY â†’ DELIVERED and customer contact privacy rules are preserved.
 
 ### Verification
 
@@ -1259,7 +1291,7 @@ Status: **VERIFIED**
 - Real configurable subcategories are stored in `product_subcategories`; Manager can create, edit, sort, activate, deactivate, and assign them without destructive deletion.
 - Products support `PCS` and integer-base `GRAM` stock with price basis, minimum order, order step, and low-stock threshold.
 - Existing food and drink semantics remain `PCS`; routing is derived safely as Makanan to Kitchen and Minuman/Bahan Baku to Admin while the internal legacy `CASHIER` station identifier remains compatible.
-- The local demo catalog includes `Biji Kopi Arabica Sukabumi – Medium Roast`, priced Rp18.000 per 100 g, minimum/step 100 g, initial stock 10 kg, low-stock threshold 2 kg, and a local raw-coffee SVG asset.
+- The local demo catalog includes `Biji Kopi Arabica Sukabumi â€“ Medium Roast`, priced Rp18.000 per 100 g, minimum/step 100 g, initial stock 10 kg, low-stock threshold 2 kg, and a local raw-coffee SVG asset.
 
 ### Unified inventory and role boundary
 
@@ -1299,7 +1331,7 @@ Status: **VERIFIED**
 
 ---
 
-## Customer Pickup / Ambil di Tempat — End-to-End Stabilization
+## Customer Pickup / Ambil di Tempat â€” End-to-End Stabilization
 
 Date: 2026-10-22
 
@@ -1371,4 +1403,5 @@ Status: **PRODUCT OWNER UAT PASS**
 - No payment-provider redesign, migration, Customer UI redesign, COD change, delivery-pricing change, merge, or deployment was performed.
 - The worker is process-local and assumes the documented persistent Node hosting target; database transaction guards keep repeated or overlapping process sweeps idempotent.
 - Product Owner UAT passed for single-item and mixed orders before Store Operating Hours V1 began.
-\n\n## Final Regression Closure — 2026-10-23\n\n- SYSTEM-WIDE REALTIME OPERATIONS V1: **PRODUCT OWNER UAT PASS / COMPLETED**.\n- Customer payment contract: **QRIS ONLY**, server-authoritative. CASH/COD and BANK_TRANSFER are rejected for new Customer checkout; legacy COD data/settlement support remains preserved.\n- QRIS-only contract tests: **4/4 PASS**.\n- Store Operating Hours V1 dedicated tests: **8/8 PASS**.\n- Pickup completion + Driver isolation verification: **5/5 PASS**.\n- Final full regression: **478/478 PASS, 0 FAIL**.\n- Regression stabilization commit: 3e2a1d2.\n- No merge and no deployment performed.\n
+\n\n## Final Regression Closure â€” 2026-10-23\n\n- SYSTEM-WIDE REALTIME OPERATIONS V1: **PRODUCT OWNER UAT PASS / COMPLETED**.\n- Customer payment contract: **QRIS ONLY**, server-authoritative. CASH/COD and BANK_TRANSFER are rejected for new Customer checkout; legacy COD data/settlement support remains preserved.\n- QRIS-only contract tests: **4/4 PASS**.\n- Store Operating Hours V1 dedicated tests: **8/8 PASS**.\n- Pickup completion + Driver isolation verification: **5/5 PASS**.\n- Final full regression: **478/478 PASS, 0 FAIL**.\n- Regression stabilization commit: 3e2a1d2.\n- No merge and no deployment performed.\n
+

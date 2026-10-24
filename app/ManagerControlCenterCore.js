@@ -6,6 +6,7 @@ import {
   productPriceLabel,
 } from "../lib/product-units.mjs";
 import ManagerPromotionCenter from "./ManagerPromotionCenter";
+import ManagerBannerCenter from "./ManagerBannerCenter";
 import StoreOperatingHoursPanel from "./StoreOperatingHoursPanel";
 
 const money = (value) => "Rp" + Number(value || 0).toLocaleString("id-ID");
@@ -1404,6 +1405,7 @@ export default function ManagerControlCenter({
   run,
   saveProduct,
   promotions,
+  banners,
   refresh,
   logout,
 }) {
@@ -1450,9 +1452,20 @@ export default function ManagerControlCenter({
           onChanged={refresh}
         />
       )}
+      {view === "banners" && (
+        <ManagerBannerCenter banners={banners} api={api} onChanged={refresh} />
+      )}
       {view === "store-hours" && <StoreOperatingHoursPanel request={api} />}
       {moreOpen && (
         <div className="manager-more-menu">
+          <button
+            onClick={() => {
+              setView("banners");
+              setMoreOpen(false);
+            }}
+          >
+            Banner
+          </button>
           <button
             onClick={() => {
               setView("subcategories");
@@ -1507,7 +1520,12 @@ export default function ManagerControlCenter({
         </button>
         <button
           className={
-            ["subcategories", "store-hours", "notifications"].includes(view)
+            [
+              "banners",
+              "subcategories",
+              "store-hours",
+              "notifications",
+            ].includes(view)
               ? "active"
               : ""
           }
