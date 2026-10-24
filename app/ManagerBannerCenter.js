@@ -6,6 +6,7 @@ import styles from "./ManagerBannerCenter.module.css";
 function BannerForm({ banner, api, onClose, onSaved }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [selectedFileName, setSelectedFileName] = useState("");
 
   useEffect(() => {
     const closeOnEscape = (event) => event.key === "Escape" && onClose();
@@ -64,11 +65,16 @@ function BannerForm({ banner, api, onClose, onSaved }) {
         onSubmit={submit}
       >
         <header className={styles.drawerHeader}>
-          <div>
+          <div className={styles.drawerTitle}>
             <span>BANNER CUSTOMER</span>
             <h2 id="manager-banner-form-title">
               {banner ? "Edit Banner" : "Tambah Banner"}
             </h2>
+            <p>
+              {banner
+                ? "Perbarui gambar dan pengaturan banner tanpa mengubah promo."
+                : "Tambahkan visual baru untuk carousel utama Customer."}
+            </p>
           </div>
           <button
             type="button"
@@ -79,71 +85,129 @@ function BannerForm({ banner, api, onClose, onSaved }) {
           </button>
         </header>
 
-        {error && (
-          <p className={styles.error} role="alert">
-            {error}
-          </p>
-        )}
+        <div className={styles.drawerBody}>
+          {error && (
+            <p className={styles.error} role="alert">
+              {error}
+            </p>
+          )}
 
-        {banner?.image_url && (
-          <div className={styles.formPreview}>
-            <img src={banner.image_url} alt="Preview banner saat ini" />
-          </div>
-        )}
+          <section className={styles.formSection}>
+            <div className={styles.sectionHeading}>
+              <span className={styles.sectionNumber}>01</span>
+              <div>
+                <h3>Informasi Banner</h3>
+                <p>Nama ini hanya dipakai untuk memudahkan pengelolaan Manager.</p>
+              </div>
+            </div>
 
-        <label className={styles.field}>
-          Nama internal
-          <input
-            name="internalName"
-            required
-            minLength="2"
-            maxLength="100"
-            defaultValue={banner?.internal_name || ""}
-            placeholder="Contoh: Banner Ramadan Utama"
-          />
-          <small>Hanya terlihat oleh Manager.</small>
-        </label>
+            <label className={styles.field}>
+              <span>Nama internal</span>
+              <input
+                name="internalName"
+                required
+                minLength="2"
+                maxLength="100"
+                defaultValue={banner?.internal_name || ""}
+                placeholder="Contoh: Banner Ramadan Utama"
+              />
+              <small>Tidak akan tampil di halaman Customer.</small>
+            </label>
+          </section>
 
-        <label className={styles.field}>
-          {banner ? "Ganti gambar (opsional)" : "Gambar banner"}
-          <input
-            name="image"
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/avif"
-            required={!banner}
-          />
-          <small>PNG, JPG, WEBP, atau AVIF · maks. 8 MB.</small>
-        </label>
+          <section className={styles.formSection}>
+            <div className={styles.sectionHeading}>
+              <span className={styles.sectionNumber}>02</span>
+              <div>
+                <h3>Gambar Banner</h3>
+                <p>Gunakan artwork final karena Customer hanya melihat gambar.</p>
+              </div>
+            </div>
 
-        <label className={styles.field}>
-          Urutan tampil
-          <input
-            name="sortOrder"
-            type="number"
-            min="0"
-            max="9999"
-            required
-            defaultValue={banner?.sort_order ?? 0}
-          />
-          <small>Angka lebih kecil tampil lebih dahulu.</small>
-        </label>
+            {banner?.image_url && (
+              <div className={styles.formPreview}>
+                <span>Preview saat ini</span>
+                <img src={banner.image_url} alt="Preview banner saat ini" />
+              </div>
+            )}
 
-        <label className={styles.switchField}>
-          <input
-            name="active"
-            type="checkbox"
-            defaultChecked={banner ? Boolean(banner.active) : true}
-          />
-          <span>Banner aktif dan tampil di Customer</span>
-        </label>
+            <label className={styles.uploadField}>
+              <input
+                name="image"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/avif"
+                required={!banner}
+                onChange={(event) =>
+                  setSelectedFileName(event.target.files?.[0]?.name || "")
+                }
+              />
+              <span className={styles.uploadIcon} aria-hidden="true">↥</span>
+              <span className={styles.uploadCopy}>
+                <strong>
+                  {selectedFileName ||
+                    (banner ? "Pilih gambar pengganti" : "Pilih gambar banner")}
+                </strong>
+                <small>
+                  {selectedFileName
+                    ? "File siap diunggah saat banner disimpan."
+                    : "PNG, JPG, WEBP, atau AVIF · maks. 8 MB."}
+                </small>
+              </span>
+              <span className={styles.uploadAction}>Pilih File</span>
+            </label>
+          </section>
+
+          <section className={styles.formSection}>
+            <div className={styles.sectionHeading}>
+              <span className={styles.sectionNumber}>03</span>
+              <div>
+                <h3>Pengaturan Tampil</h3>
+                <p>Atur posisi carousel dan tentukan apakah banner langsung aktif.</p>
+              </div>
+            </div>
+
+            <div className={styles.settingsGrid}>
+              <label className={styles.field}>
+                <span>Urutan tampil</span>
+                <input
+                  name="sortOrder"
+                  type="number"
+                  min="0"
+                  max="9999"
+                  required
+                  defaultValue={banner?.sort_order ?? 0}
+                />
+                <small>Angka lebih kecil tampil lebih dahulu.</small>
+              </label>
+
+              <label className={styles.switchField}>
+                <span className={styles.switchCopy}>
+                  <strong>Status banner</strong>
+                  <small>Aktifkan agar tampil di Customer.</small>
+                </span>
+                <span className={styles.toggle}>
+                  <input
+                    name="active"
+                    type="checkbox"
+                    defaultChecked={banner ? Boolean(banner.active) : true}
+                  />
+                  <i aria-hidden="true" />
+                </span>
+              </label>
+            </div>
+          </section>
+        </div>
 
         <footer className={styles.drawerFooter}>
-          <button type="button" onClick={onClose} disabled={busy}>
-            Batal
-          </button>
-          <button className={styles.primary} disabled={busy}>
-            {busy ? "Menyimpan…" : "Simpan Banner"}
-          </button>
+          <span className={styles.footerHint}>Perubahan berlaku setelah disimpan.</span>
+          <div className={styles.footerActions}>
+            <button type="button" onClick={onClose} disabled={busy}>
+              Batal
+            </button>
+            <button className={styles.primary} disabled={busy}>
+              {busy ? "Menyimpan…" : banner ? "Simpan Perubahan" : "Simpan Banner"}
+            </button>
+          </div>
         </footer>
       </form>
     </div>
@@ -201,12 +265,11 @@ export default function ManagerBannerCenter({ banners, api, onChanged }) {
           <span>TAMPILAN CUSTOMER</span>
           <h1>Kelola Banner</h1>
           <p>
-            Banner berdiri sendiri dari promo. Customer hanya melihat gambar
-            aktif sesuai urutan tampil.
+            Atur artwork carousel Customer secara mandiri tanpa mengubah promo.
           </p>
         </div>
         <button className={styles.primary} onClick={() => setEditing("new")}>
-          ＋ Tambah Banner
+          <span aria-hidden="true">＋</span> Tambah Banner
         </button>
       </div>
 
@@ -239,6 +302,12 @@ export default function ManagerBannerCenter({ banners, api, onChanged }) {
               <article className={styles.card} key={banner.id}>
                 <div className={styles.thumbnail}>
                   <img src={banner.image_url} alt="" />
+                  <span
+                    className={banner.active ? styles.active : styles.inactive}
+                  >
+                    <i aria-hidden="true" />
+                    {banner.active ? "Aktif" : "Nonaktif"}
+                  </span>
                 </div>
                 <div className={styles.cardBody}>
                   <div className={styles.cardHeading}>
@@ -246,29 +315,25 @@ export default function ManagerBannerCenter({ banners, api, onChanged }) {
                       <small>NAMA INTERNAL</small>
                       <h2>{banner.internal_name}</h2>
                     </div>
-                    <span
-                      className={
-                        banner.active ? styles.active : styles.inactive
-                      }
-                    >
-                      {banner.active ? "Aktif" : "Nonaktif"}
-                    </span>
                   </div>
-                  <div className={styles.orderRow}>
-                    <span>
-                      Urutan <strong>{banner.sort_order}</strong>
-                    </span>
-                    <small>
-                      Diperbarui {String(banner.updated_at || "").slice(0, 16)}
-                    </small>
+                  <div className={styles.metaGrid}>
+                    <div>
+                      <small>URUTAN</small>
+                      <strong>{banner.sort_order}</strong>
+                    </div>
+                    <div>
+                      <small>TERAKHIR DIPERBARUI</small>
+                      <strong>{String(banner.updated_at || "-").slice(0, 16)}</strong>
+                    </div>
                   </div>
                   <div className={styles.actions}>
                     <button
+                      className={styles.editButton}
                       type="button"
                       onClick={() => setEditing(banner)}
                       disabled={busy}
                     >
-                      Edit
+                      Edit Banner
                     </button>
                     <button
                       type="button"
@@ -287,7 +352,7 @@ export default function ManagerBannerCenter({ banners, api, onChanged }) {
                       onClick={() => removeBanner(banner)}
                       disabled={busy}
                     >
-                      Delete
+                      Hapus
                     </button>
                   </div>
                 </div>
@@ -297,10 +362,10 @@ export default function ManagerBannerCenter({ banners, api, onChanged }) {
         </section>
       ) : (
         <section className={styles.empty}>
+          <span className={styles.emptyIcon} aria-hidden="true">▧</span>
           <strong>Belum ada banner.</strong>
           <p>
-            Customer tetap mendapat fallback visual yang aman sampai banner
-            pertama ditambahkan dan diaktifkan.
+            Tambahkan artwork pertama untuk mulai menampilkan carousel Customer.
           </p>
           <button className={styles.primary} onClick={() => setEditing("new")}>
             Tambah Banner Pertama
