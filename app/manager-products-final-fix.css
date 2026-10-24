@@ -181,6 +181,19 @@
   color: #197a43;
 }
 
+/* Unlimited stock is a separate setting, not a second product-status control. */
+.manager-dashboard-polished .manager-unlimited-stock-switch::before {
+  content: "Stok Unlimited";
+}
+
+.manager-dashboard-polished .manager-unlimited-stock-switch::after {
+  content: "Terbatas";
+}
+
+.manager-dashboard-polished .manager-unlimited-stock-switch:has(input:checked)::after {
+  content: "Unlimited";
+}
+
 .manager-dashboard-polished .manager-switch input[type="checkbox"] {
   appearance: none !important;
   -webkit-appearance: none !important;

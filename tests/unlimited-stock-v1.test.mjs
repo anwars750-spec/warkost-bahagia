@@ -136,3 +136,18 @@ test("saat unlimited dimatikan, stok fisik tersimpan kembali menjadi authoritati
     (error) => error instanceof DomainError && error.status === 409 && /Stok/.test(error.message),
   );
 });
+
+test("form edit membedakan status produk dari kontrol stok unlimited", () => {
+  const hierarchy = fs.readFileSync(path.resolve("app/ManagerProductsHierarchy.js"), "utf8");
+  const preservedCore = fs.readFileSync(path.resolve("app/ManagerControlCenterCore.js"), "utf8");
+  const styles = fs.readFileSync(path.resolve("app/manager-products-final-fix.css"), "utf8");
+
+  for (const component of [hierarchy, preservedCore]) {
+    assert.match(component, /manager-switch manager-product-status-switch[\s\S]*?name="active"/);
+    assert.match(component, /manager-switch manager-unlimited-stock-switch[\s\S]*?name="unlimitedStock"/);
+  }
+
+  assert.match(styles, /manager-unlimited-stock-switch::before\s*\{\s*content: "Stok Unlimited";/);
+  assert.match(styles, /manager-unlimited-stock-switch::after\s*\{\s*content: "Terbatas";/);
+  assert.match(styles, /manager-unlimited-stock-switch:has\(input:checked\)::after\s*\{\s*content: "Unlimited";/);
+});

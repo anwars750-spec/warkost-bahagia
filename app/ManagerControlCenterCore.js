@@ -647,7 +647,7 @@ function ProductForm({
           URL gambar / media internal
           <input name="imageUrl" defaultValue={product?.image_url || ""} />
         </label>
-        <label className="manager-switch">
+        <label className="manager-switch manager-product-status-switch">
           <input
             name="active"
             type="checkbox"
@@ -655,7 +655,7 @@ function ProductForm({
           />{" "}
           Produk aktif
         </label>
-        <label className="manager-switch">
+        <label className="manager-switch manager-unlimited-stock-switch">
           <input
             name="unlimitedStock"
             type="checkbox"
