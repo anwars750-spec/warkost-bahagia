@@ -34,13 +34,30 @@ const bannerInput = (name, sortOrder, active = true) => ({
   sortOrder,
 });
 
+test("banner default customer tersinkron satu kali ke resource mandiri", async () => {
+  const initial = await listBanners(owner);
+  assert.equal(initial.length, 1);
+  assert.equal(initial[0].internal_name, "Banner Utama Warkost");
+  assert.equal(initial[0].image_url, "/demo/promo-warkost.webp");
+  assert.equal(initial[0].active, 1);
+  assert.equal(initial[0].sort_order, 0);
+  assert.equal(
+    database
+      .prepare("SELECT value FROM settings WHERE `key`='standalone_banner_initialized_v1'")
+      .get().value,
+    "1",
+  );
+
+  await deleteBanner(manager, initial[0].id);
+  assert.deepEqual(await listBanners(owner), []);
+});
+
 test("banner memakai resource mandiri, RBAC Manager, dan urutan server", async () => {
   await assert.rejects(saveBanner(admin, bannerInput("Ditolak", 1)), /Akses/);
   await assert.rejects(
     saveBanner(customer, bannerInput("Ditolak", 1)),
     /Akses/,
   );
-  assert.deepEqual(await listBanners(owner), []);
 
   const second = await saveBanner(manager, bannerInput("Kedua", 20));
   const first = await saveBanner(manager, bannerInput("Pertama", 10));
@@ -117,7 +134,7 @@ test("edit, aktivasi, replace image, dan delete tidak menyentuh promo", async ()
         "SELECT COUNT(*) count FROM audit_logs WHERE action IN ('BANNER_CREATED','BANNER_UPDATED','BANNER_DELETED')",
       )
       .get().count,
-    5,
+    6,
   );
 });
 
@@ -135,15 +152,18 @@ test("schema dan API banner terpisah dari promotions", () => {
     "updated_at",
   ])
     assert.match(migration, new RegExp(`\\b${field}\\b`));
+  assert.match(migration, /Banner Utama Warkost/);
+  assert.match(migration, /standalone_banner_initialized_v1/);
   assert.doesNotMatch(migration, /promotion_id|FOREIGN KEY.*promotions/i);
   assert.match(route, /action === "banners"/);
   assert.match(route, /action === "banner"/);
   assert.match(route, /action === "banner-delete"/);
 });
 
-test("Manager menyediakan add, edit, replace, status, order, dan delete confirmation", () => {
+test("Manager menyediakan add, edit, replace, status, order, delete, dan active nav Banner", () => {
   const managerUi = read("app/ManagerBannerCenter.js");
   const page = read("app/page.js");
+  const polish = read("app/ManagerDashboardUiPolish.js");
   assert.match(managerUi, /Tambah Banner/);
   assert.match(managerUi, /Edit Banner/);
   assert.match(managerUi, /Ganti gambar \(opsional\)/);
@@ -152,6 +172,9 @@ test("Manager menyediakan add, edit, replace, status, order, dan delete confirma
   assert.match(managerUi, /window\.confirm/);
   assert.match(managerUi, /banner-delete/);
   assert.match(page, /setView\("banners"\)/);
+  assert.match(polish, /\["Banner", "banners"\]/);
+  assert.match(polish, /return "banners"/);
+  assert.match(polish, /querySelectorAll\("h1, h2"\)/);
 });
 
 test("Customer hanya merender gambar banner penuh dan fallback aman", () => {
