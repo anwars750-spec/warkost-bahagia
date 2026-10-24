@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import DeliveryHistoryCenter from "./DeliveryHistoryCenter";
 import styles from "./DeliveryHistoryRuntime.module.css";
 
-function makeManagerLauncher(open) {
-  const menu = document.querySelector(".manager-more-menu");
-  if (!menu || menu.querySelector('[data-delivery-history-launcher="true"]')) return;
+function attachManagerLauncher(menu, open) {
+  if (!menu || menu.querySelector('[data-delivery-history-launcher="true"]'))
+    return;
   const button = document.createElement("button");
   button.type = "button";
   button.dataset.deliveryHistoryLauncher = "true";
@@ -16,6 +16,11 @@ function makeManagerLauncher(open) {
     (item) => item.textContent.trim() === "Keluar",
   );
   menu.insertBefore(button, logout || null);
+}
+
+function makeManagerLauncher(open) {
+  attachManagerLauncher(document.querySelector("header.top nav"), open);
+  attachManagerLauncher(document.querySelector(".manager-more-menu"), open);
 }
 
 function makeOwnerLauncher(open) {

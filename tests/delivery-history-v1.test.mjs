@@ -48,8 +48,14 @@ test("UI menampilkan bukti foto dan timeline read-only", () => {
   assert.doesNotMatch(center, /status.*POST/);
 });
 
-test("launcher Manager dan Owner terpasang global tanpa mengubah navigation core", () => {
+test("launcher Manager tersedia di header desktop dan menu mobile tanpa mengubah navigation core", () => {
+  assert.match(runtime, /header\.top nav/);
   assert.match(runtime, /manager-more-menu/);
+  assert.match(runtime, /Riwayat Delivery/);
+  assert.match(runtime, /item\.textContent\.trim\(\) === "Keluar"/);
+});
+
+test("launcher Owner tetap terpasang global dan runtime tetap dimount dari layout", () => {
   assert.match(runtime, /owner-control-grid-v3/);
   assert.match(runtime, /Riwayat Delivery/);
   assert.match(layout, /import DeliveryHistoryRuntime/);
