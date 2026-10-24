@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import DriverControlCenter from "./DriverControlCenter";
 import CodBatchSettlementCenter from "./CodBatchSettlementCenter";
+import DriverDeliveryProofRuntime from "./DriverDeliveryProofRuntime";
 
 function hasLegacyDriverSurface() {
   return Boolean(document.querySelector(".driver-trip-workspace"));
@@ -92,6 +93,7 @@ export default function DriverRuntimeBootstrap() {
     <>
       <DriverControlCenter key={`driver-control-${generation}`} />
       <CodBatchSettlementCenter key={`driver-cod-${generation}`} />
+      <DriverDeliveryProofRuntime key={`driver-proof-${generation}`} />
     </>
   );
 }
