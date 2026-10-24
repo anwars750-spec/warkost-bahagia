@@ -748,6 +748,29 @@ function Products({
     });
   }
 
+  const toggleProductVisibility = (row) =>
+    saveProduct(
+      {
+        id: Number(row.id),
+        name: row.name,
+        description: row.description || "",
+        price: Number(row.price),
+        categoryId: Number(row.category_id),
+        subcategoryId: row.subcategory_id
+          ? Number(row.subcategory_id)
+          : null,
+        imageUrl: row.image_url || "",
+        stockUnit: row.stock_unit,
+        priceUnitQuantity: Number(row.price_unit_quantity),
+        minimumOrderQuantity: Number(row.minimum_order_quantity),
+        orderStepQuantity: Number(row.order_step_quantity),
+        lowStockThreshold: Number(row.low_stock_threshold || 0),
+        unlimitedStock: Number(row.unlimited_stock) === 1,
+        active: !Boolean(row.active),
+      },
+      null,
+    );
+
   const low = inventory.products.filter(
     (row) =>
       Number(row.unlimited_stock) !== 1 &&
@@ -928,9 +951,26 @@ function Products({
                                 : "Admin"}
                             </td>
                             <td>
-                              <button onClick={() => setEditing(row)}>
-                                Edit
-                              </button>
+                              <div className="manager-product-actions">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditing(row)}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  className={
+                                    row.active
+                                      ? "manager-product-hide"
+                                      : "manager-product-show"
+                                  }
+                                  disabled={busy}
+                                  onClick={() => toggleProductVisibility(row)}
+                                >
+                                  {row.active ? "Sembunyikan" : "Tampilkan"}
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
