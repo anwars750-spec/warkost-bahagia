@@ -27,6 +27,7 @@ const order = (overrides = {}) => ({
   id: 1,
   status: "PREPARING",
   fulfillment_type: "DELIVERY",
+  created_at: "2026-10-23 04:59:00",
   ...overrides,
 });
 const station = (overrides = {}) => ({
@@ -48,6 +49,7 @@ test("default Preparing ETA V1 terkunci 15 menit dan menunggu start tanpa countd
   );
   assert.equal(result.state, "WAITING_START");
   assert.equal(result.fulfillmentType, "PICKUP");
+  assert.equal(result.createdAt, "2026-10-23 04:59:00");
   assert.equal(result.estimatedReadyAt, null);
   assert.equal(result.remainingSeconds, null);
 });
@@ -101,12 +103,13 @@ test("station queued pada mixed order memakai window awal sampai benar-benar mul
   );
 });
 
-test("Customer hanya menerima ETA order miliknya dan Kitchen hanya order station Kitchen", async () => {
+test("Customer, Kitchen, dan Admin hanya menerima order ETA sesuai scope station", async () => {
   database.exec(`
     INSERT INTO users(id,name,email,password_hash,role,active) VALUES
       (1,'Customer A','eta-a@test.local','x','CUSTOMER',1),
       (2,'Customer B','eta-b@test.local','x','CUSTOMER',1),
-      (3,'Kitchen','eta-kitchen@test.local','x','KITCHEN',1);
+      (3,'Kitchen','eta-kitchen@test.local','x','KITCHEN',1),
+      (4,'Admin','eta-admin@test.local','x','ADMIN',1);
     INSERT INTO addresses(id,user_id,label,detail) VALUES
       (1,1,'Rumah A','Alamat customer A untuk ETA'),
       (2,2,'Rumah B','Alamat customer B untuk ETA');
@@ -135,9 +138,18 @@ test("Customer hanya menerima ETA order miliknya dan Kitchen hanya order station
     kitchen.orders.map((item) => item.orderId),
     [101],
   );
+
+  const admin = await listPreparationEta(
+    { id: 4, role: "ADMIN" },
+    { nowMs: now },
+  );
+  assert.deepEqual(
+    admin.orders.map((item) => item.orderId),
+    [102],
+  );
 });
 
-test("route dan runtime menjaga scope Customer/Kitchen serta wiring realtime", () => {
+test("route dan runtime menjaga scope Customer/Admin/Kitchen, countdown, anti-duplikasi, dan realtime", () => {
   const route = fs.readFileSync(
     path.resolve("app/api/preparing-eta/route.js"),
     "utf8",
@@ -146,12 +158,21 @@ test("route dan runtime menjaga scope Customer/Kitchen serta wiring realtime", (
     path.resolve("app/PreparingEtaRuntime.js"),
     "utf8",
   );
-  assert.match(route, /required\(user, \["CUSTOMER", "KITCHEN"\]\)/);
+  const css = fs.readFileSync(path.resolve("app/preparing-eta.css"), "utf8");
+  assert.match(route, /required\(user, \["CUSTOMER", "KITCHEN", "ADMIN"\]\)/);
   assert.match(route, /listPreparationEta/);
   assert.match(runtime, /\/api\/preparing-eta/);
+  assert.match(runtime, /formatTimer/);
+  assert.match(runtime, /querySelectorAll\("\.preparing-eta-banner"\)/);
   assert.match(runtime, /customer-order-card/);
   assert.match(runtime, /delivery-status-card/);
+  assert.match(runtime, /article\.panel\.order/);
+  assert.match(runtime, /"CASHIER"/);
   assert.match(runtime, /kitchen-time-chip/);
   assert.match(runtime, /STATION_STATUS_CHANGED/);
   assert.match(runtime, /warkost:realtime-recovered/);
+  assert.match(runtime, /window\.setInterval\(apply, 1_000\)/);
+  assert.match(css, /grid-column: 1 \/ -1/);
+  assert.match(css, /font-variant-numeric: tabular-nums/);
+  assert.match(css, /\.preparing-eta-ops/);
 });
