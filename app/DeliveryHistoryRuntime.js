@@ -33,6 +33,18 @@ function makeOwnerLauncher(open) {
   grid.appendChild(button);
 }
 
+function visibleRoleSignature() {
+  if (document.querySelector(".manager-control-center")) return "MANAGER";
+  if (
+    document.querySelector(".owner-control-grid-v3") ||
+    document.querySelector(
+      'header.top nav button[data-owner-nav-key="Dashboard"]',
+    )
+  )
+    return "OWNER";
+  return null;
+}
+
 export default function DeliveryHistoryRuntime() {
   const [role, setRole] = useState(null);
   const [open, setOpen] = useState(false);
@@ -40,24 +52,30 @@ export default function DeliveryHistoryRuntime() {
   useEffect(() => {
     let stopped = false;
     let verifyTimer = null;
+    let currentRole = null;
+
+    const applyRole = (nextRole) => {
+      currentRole = nextRole;
+      if (!stopped) setRole(nextRole);
+    };
 
     const verify = async () => {
       try {
         const response = await fetch("/api/me", { cache: "no-store" });
         const data = await response.json().catch(() => ({}));
-        if (!stopped)
-          setRole(
-            response.ok && ["MANAGER", "OWNER"].includes(data.user?.role)
-              ? data.user.role
-              : null,
-          );
+        applyRole(
+          response.ok && ["MANAGER", "OWNER"].includes(data.user?.role)
+            ? data.user.role
+            : null,
+        );
       } catch {
-        if (!stopped) setRole(null);
+        applyRole(null);
       }
     };
 
     const scheduleVerify = () => {
-      if (verifyTimer || stopped) return;
+      const signature = visibleRoleSignature();
+      if (signature === currentRole || verifyTimer || stopped) return;
       verifyTimer = window.setTimeout(() => {
         verifyTimer = null;
         verify();
