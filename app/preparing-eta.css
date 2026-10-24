@@ -1,51 +1,65 @@
 .preparing-eta-banner {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 14px;
-  padding: 12px 14px;
-  border: 1px solid #ead8c6;
-  border-radius: 14px;
-  background: #fffaf4;
+  gap: 14px;
+  width: 100%;
+  margin-top: 16px;
+  padding: 15px 17px;
+  border: 1px solid #dfc8ae;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fffaf4 0%, #fff5e8 100%);
   color: #5d3925;
+  box-shadow: 0 8px 20px rgba(90, 53, 31, 0.05);
 }
 
 .preparing-eta-banner .preparing-eta-icon {
   display: grid;
-  flex: 0 0 36px;
-  width: 36px;
-  height: 36px;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
   place-items: center;
   border-radius: 999px;
   background: #f2dfca;
-  font-size: 1.15rem;
-  font-weight: 800;
+  font-size: 1.2rem;
+  font-weight: 850;
 }
 
-.preparing-eta-banner > span:last-child {
+.preparing-eta-copy {
   display: grid;
+  min-width: 0;
   gap: 2px;
 }
 
-.preparing-eta-banner strong {
-  font-size: 0.9rem;
-  line-height: 1.3;
+.preparing-eta-eyebrow {
+  color: #9b603b !important;
+  font-size: 0.62rem !important;
+  font-weight: 850;
+  letter-spacing: 0.1em;
 }
 
-.preparing-eta-banner small {
-  color: #806b5e;
-  font-size: 0.76rem;
-  line-height: 1.4;
+.preparing-eta-countdown {
+  margin: 1px 0;
+  font-size: clamp(1.18rem, 2vw, 1.55rem) !important;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.12 !important;
+  letter-spacing: -0.02em;
+}
+
+.preparing-eta-detail {
+  color: #806b5e !important;
+  font-size: 0.76rem !important;
+  line-height: 1.4 !important;
 }
 
 .preparing-eta-banner.active {
-  border-color: #cdb28f;
-  background: #fff8ed;
+  border-color: #d6b88d;
+  background: linear-gradient(135deg, #fff9ef 0%, #fff2dc 100%);
 }
 
 .preparing-eta-banner.overdue {
   border-color: #dfb0a5;
-  background: #fff3f0;
+  background: linear-gradient(135deg, #fff7f4 0%, #ffede8 100%);
   color: #8d2d22;
 }
 
@@ -53,19 +67,117 @@
   background: #f7d8d1;
 }
 
+.preparing-eta-banner.overdue .preparing-eta-eyebrow,
+.preparing-eta-banner.overdue .preparing-eta-detail {
+  color: #a1483c !important;
+}
+
+/* Admin operational timer — compact but impossible to miss. */
+.preparing-eta-ops {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0 2px;
+  padding: 10px 12px;
+  border: 1px solid #ead5bd;
+  border-radius: 13px;
+  background: #fff9f0;
+  color: #5d3925;
+}
+
+.preparing-eta-ops-icon {
+  display: grid;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 10px;
+  background: #f2dfca;
+  font-weight: 850;
+}
+
+.preparing-eta-ops-copy {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  column-gap: 9px;
+  row-gap: 1px;
+}
+
+.preparing-eta-ops-copy small {
+  color: #886c5d;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.preparing-eta-ops-copy strong {
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.preparing-eta-ops-copy em {
+  grid-column: 1 / -1;
+  color: #917b6f;
+  font-size: 0.7rem;
+  font-style: normal;
+}
+
+.preparing-eta-ops.active {
+  border-color: #d9ba8d;
+  background: #fff7e9;
+}
+
+.preparing-eta-ops.overdue {
+  border-color: #e0aca1;
+  background: #fff1ee;
+  color: #922f24;
+}
+
+.preparing-eta-ops.overdue .preparing-eta-ops-icon {
+  background: #f6d5ce;
+}
+
+.preparing-eta-ops.overdue .preparing-eta-ops-copy small,
+.preparing-eta-ops.overdue .preparing-eta-ops-copy em {
+  color: #a34c40;
+}
+
+/* Kitchen uses its existing chip; runtime only replaces the live value. */
 .kitchen-time-chip [data-preparing-eta-value] {
   margin-left: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kitchen-time-chip.urgent [data-preparing-eta-value] {
+  font-weight: 850;
 }
 
 @media (max-width: 620px) {
   .preparing-eta-banner {
-    gap: 10px;
-    padding: 11px 12px;
+    gap: 11px;
+    margin-top: 12px;
+    padding: 12px 13px;
   }
 
   .preparing-eta-banner .preparing-eta-icon {
-    flex-basis: 32px;
-    width: 32px;
-    height: 32px;
+    flex-basis: 36px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .preparing-eta-countdown {
+    font-size: 1.2rem !important;
+  }
+
+  .preparing-eta-ops {
+    padding: 9px 10px;
+  }
+
+  .preparing-eta-ops-copy {
+    column-gap: 7px;
   }
 }
