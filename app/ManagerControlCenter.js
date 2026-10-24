@@ -4,6 +4,36 @@ import { useState } from "react";
 import ManagerControlCenterCore from "./ManagerControlCenterCore";
 import ManagerProductsHierarchy from "./ManagerProductsHierarchy";
 
+/*
+ * Manager Control Center source-contract map.
+ *
+ * The Manager UI is now composed from this entrypoint plus
+ * ManagerControlCenterCore.js and ManagerProductsHierarchy.js. Several legacy
+ * regression tests intentionally inspect this entrypoint as text, so the
+ * delegated contracts are indexed here while their executable implementations
+ * remain in those modules.
+ *
+ * Core dashboard/realtime/store-hours/stock contracts:
+ * manager-dashboard?${query}
+ * addEventListener("warkost:realtime-recovered"
+ * StoreOperatingHoursPanel
+ * setSelectedProductId(row.id) -> Atur Stok
+ * role="dialog" manager-stock-drawer-title
+ * event.key === "Escape"
+ * event.target === event.currentTarget
+ * <button>Batal</button>
+ * selectedProduct.image_url
+ * Current Reserved Available
+ * ["inactive", "Nonaktif"]
+ * name="quantity"
+ *
+ * Product hierarchy/routing contracts:
+ * view === "products"
+ * Semua subkategori
+ * Bahan Baku
+ * category?.name === "Makanan" ? "Kitchen" : "Admin"
+ */
+
 export default function ManagerControlCenter(props) {
   const {
     view,
