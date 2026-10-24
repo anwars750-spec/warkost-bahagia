@@ -160,19 +160,27 @@ test("schema dan API banner terpisah dari promotions", () => {
   assert.match(route, /action === "banner-delete"/);
 });
 
-test("Manager menyediakan add, edit, replace, status, order, delete, dan active nav Banner", () => {
+test("Manager menyediakan add, edit, replace, status, order, delete, active nav, dan icon polish", () => {
   const managerUi = read("app/ManagerBannerCenter.js");
+  const managerCss = read("app/ManagerBannerCenter.module.css");
   const page = read("app/page.js");
   const polish = read("app/ManagerDashboardUiPolish.js");
   assert.match(managerUi, /Tambah Banner/);
   assert.match(managerUi, /Edit Banner/);
-  assert.match(managerUi, /Ganti gambar \(opsional\)/);
+  assert.match(managerUi, /Pilih gambar pengganti/);
+  assert.match(managerUi, /Informasi Banner/);
+  assert.match(managerUi, /Pengaturan Tampil/);
   assert.match(managerUi, /sortOrder/);
   assert.match(managerUi, /Nonaktifkan/);
   assert.match(managerUi, /window\.confirm/);
   assert.match(managerUi, /banner-delete/);
+  assert.match(managerCss, /\.formSection/);
+  assert.match(managerCss, /\.uploadField/);
+  assert.match(managerCss, /\.toggle/);
   assert.match(page, /setView\("banners"\)/);
   assert.match(polish, /\["Banner", "banners"\]/);
+  assert.match(polish, /\["Jam Operasional", "store-hours"\]/);
+  assert.match(polish, /navIconMasks/);
   assert.match(polish, /return "banners"/);
   assert.match(polish, /querySelectorAll\("h1, h2"\)/);
 });
