@@ -25,10 +25,15 @@ function makeManagerLauncher(open) {
 
 function makeOwnerLauncher(open) {
   const grid = document.querySelector(".owner-control-grid-v3");
-  if (!grid || grid.querySelector('[data-delivery-history-launcher="true"]')) return;
+  if (!grid) return;
+
+  const existing = grid.querySelector('[data-delivery-history-launcher="true"]');
+  if (existing?.dataset.deliveryHistoryLauncherVersion === "2") return;
+
   const button = document.createElement("button");
   button.type = "button";
   button.dataset.deliveryHistoryLauncher = "true";
+  button.dataset.deliveryHistoryLauncherVersion = "2";
   button.innerHTML = `
     <span class="${styles.ownerIcon}" aria-hidden="true">
       <svg viewBox="0 0 24 24">
@@ -38,12 +43,14 @@ function makeOwnerLauncher(open) {
       </svg>
     </span>
     <div><strong>Riwayat Delivery</strong><small>Bukti pengantaran dan timeline order selesai.</small></div>
-    <svg aria-hidden="true" viewBox="0 0 24 24">
+    <svg aria-hidden="true" viewBox="0 0 24 24" style="background:transparent;border-radius:0;padding:0">
       <path d="M5 12h14m-5-5 5 5-5 5" />
     </svg>
   `;
   button.addEventListener("click", open);
-  grid.appendChild(button);
+
+  if (existing) existing.replaceWith(button);
+  else grid.appendChild(button);
 }
 
 function visibleRoleSignature() {
