@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   stagingOrigin,
-  validateHostingerEnvironment,
-} from "../lib/hostinger.mjs";
+  validateStagingEnvironment,
+} from "../lib/staging-environment.mjs";
 
 const valid = {
   NODE_ENV: "production",
@@ -16,12 +16,12 @@ const valid = {
   PORT: "3000",
 };
 
-test("konfigurasi Hostinger staging yang lengkap diterima", () => {
-  assert.deepEqual(validateHostingerEnvironment(valid), []);
+test("konfigurasi staging yang lengkap diterima", () => {
+  assert.deepEqual(validateStagingEnvironment(valid), []);
 });
 
-test("Hostinger staging menolak SQLite, path relatif, password lemah, dan port invalid", () => {
-  const errors = validateHostingerEnvironment({
+test("staging menolak SQLite, path relatif, password lemah, dan port invalid", () => {
+  const errors = validateStagingEnvironment({
     ...valid,
     DATABASE_URL: "",
     DATABASE_PATH: "/tmp/app.db",

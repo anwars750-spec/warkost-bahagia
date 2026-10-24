@@ -83,7 +83,7 @@ jobs:
 
       - name: Start production staging server
         run: |
-          nohup npm run start:hostinger >/tmp/warkost-staging.log 2>&1 &
+          nohup npm run start:staging >/tmp/warkost-staging.log 2>&1 &
           echo $! >/tmp/warkost-staging.pid
         env:
           NODE_ENV: production

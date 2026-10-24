@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { stagingOrigin } from "../lib/hostinger.mjs";
+import { stagingOrigin } from "../lib/staging-environment.mjs";
 
 const origin = stagingOrigin(process.env.STAGING_ORIGIN);
 const password = process.env.STAGING_UAT_PASSWORD;
@@ -132,5 +132,5 @@ for (const [cookie] of sessions) {
 }
 
 console.log(
-  "HOSTINGER STAGING PASS: HTTPS health, readiness, CSRF, login enam role, RBAC, catalog",
+  "STAGING PASS: HTTPS health, readiness, CSRF, login enam role, RBAC, catalog",
 );

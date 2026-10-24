@@ -1,8 +1,8 @@
 import * as store from "../lib/store.mjs";
 import { hashPassword } from "../lib/auth.mjs";
-import { validateHostingerEnvironment } from "../lib/hostinger.mjs";
+import { validateStagingEnvironment } from "../lib/staging-environment.mjs";
 
-const errors = validateHostingerEnvironment(process.env);
+const errors = validateStagingEnvironment(process.env);
 if (errors.length) throw Error(errors.join("; "));
 
 const password = process.env.STAGING_UAT_PASSWORD;

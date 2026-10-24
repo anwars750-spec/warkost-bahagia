@@ -1,8 +1,8 @@
 import path from "node:path";
 import { spawn } from "node:child_process";
-import { validateHostingerEnvironment } from "../lib/hostinger.mjs";
+import { validateStagingEnvironment } from "../lib/staging-environment.mjs";
 
-const errors = validateHostingerEnvironment(process.env);
+const errors = validateStagingEnvironment(process.env);
 if (errors.length) {
   for (const message of errors) console.error("- " + message);
   process.exit(1);
