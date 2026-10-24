@@ -588,6 +588,19 @@ export default function ManagerPromotionCenter({
   );
   const count = (value) =>
     promotions.filter((row) => row.status === value).length;
+  const bannerRows = useMemo(
+    () =>
+      promotions
+        .filter((row) => row.status === "ACTIVE")
+        .slice()
+        .sort((a, b) => {
+          const startDiff =
+            new Date(String(b.starts_at).replace(" ", "T") + "Z").getTime() -
+            new Date(String(a.starts_at).replace(" ", "T") + "Z").getTime();
+          return startDiff || Number(b.id) - Number(a.id);
+        }),
+    [promotions],
+  );
   return (
     <div className="manager-promo-center">
       <div className="manager-page-title">
@@ -658,6 +671,74 @@ export default function ManagerPromotionCenter({
           <option value="INACTIVE">Nonaktif</option>
         </select>
       </div>
+      <section className="manager-card promo-banner-management">
+        <header className="promo-banner-management-head">
+          <div>
+            <span>BANNER CUSTOMER</span>
+            <h2>Banner yang Sedang Tayang</h2>
+            <p>
+              Preview mengikuti sumber promo aktif. Urutan tampil mengikuti
+              waktu mulai terbaru seperti pada Customer.
+            </p>
+          </div>
+          <div className="promo-banner-count">
+            <strong>{bannerRows.length}</strong>
+            <small>banner aktif</small>
+          </div>
+        </header>
+
+        {bannerRows.length ? (
+          <div className="promo-banner-strip">
+            {bannerRows.map((row, index) => (
+              <article className="promo-banner-preview" key={row.id}>
+                <img
+                  src={row.image_url || "/demo/promo-warkost.webp"}
+                  alt=""
+                />
+                <div className="promo-banner-overlay">
+                  <div className="promo-banner-topline">
+                    <span className="promo-banner-order">
+                      #{index + 1} TAYANG
+                    </span>
+                    <span className="promo-banner-badge">
+                      {row.badge || "PROMO"}
+                    </span>
+                  </div>
+
+                  <div className="promo-banner-copy">
+                    <strong>{row.title}</strong>
+                    <p>{row.description}</p>
+                    <small>
+                      {String(row.starts_at).slice(0, 10)} ?{" "}
+                      {String(row.ends_at).slice(0, 10)}
+                    </small>
+                  </div>
+
+                  <div className="promo-banner-footer">
+                    <span>{row.cta_label || "Lihat Promo"}</span>
+                    <button
+                      type="button"
+                      onClick={() => setEditing(row)}
+                    >
+                      Edit Banner
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="manager-empty promo-banner-empty">
+            Belum ada promo aktif yang sedang tayang sebagai banner Customer.
+          </div>
+        )}
+
+        <p className="promo-banner-rule">
+          Urutan banner Customer: waktu mulai terbaru lebih dulu. Jika waktu
+          mulai sama, promo terbaru ditampilkan lebih dulu.
+        </p>
+      </section>
+
       <section className="manager-card promo-list">
         <div className="promo-list-head">
           <span>Promo</span>
