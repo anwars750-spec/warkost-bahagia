@@ -11,6 +11,12 @@ function orderIdFromCard(card) {
   return match ? Number(match[1]) : null;
 }
 
+function proofTarget(orderIdValue) {
+  const orderId = Number(orderIdValue);
+  if (!Number.isSafeInteger(orderId) || orderId < 1) return null;
+  return { orderId, code: `WB${String(orderId).padStart(6, "0")}` };
+}
+
 export default function DriverDeliveryProofRuntime() {
   const [target, setTarget] = useState(null);
   const [file, setFile] = useState(null);
@@ -28,18 +34,30 @@ export default function DriverDeliveryProofRuntime() {
   }, [preview]);
 
   useEffect(() => {
+    const openProof = (event) => {
+      const nextTarget = proofTarget(event.detail?.orderId);
+      if (!nextTarget) return;
+      setTarget(nextTarget);
+      setFile(null);
+      setError("");
+    };
+    window.addEventListener("warkost:open-delivery-proof", openProof);
+    return () => window.removeEventListener("warkost:open-delivery-proof", openProof);
+  }, []);
+
+  useEffect(() => {
     const intercept = (event) => {
       const button = event.target.closest?.(".driver-v2-primary");
       if (!button) return;
       const label = button.textContent?.replace(/\s+/g, " ").trim() || "";
       if (!label.startsWith("Pesanan Diterima")) return;
       const card = button.closest(".driver-v2-order-card");
-      const orderId = orderIdFromCard(card);
-      if (!orderId) return;
+      const nextTarget = proofTarget(orderIdFromCard(card));
+      if (!nextTarget) return;
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation?.();
-      setTarget({ orderId, code: `WB${String(orderId).padStart(6, "0")}` });
+      setTarget(nextTarget);
       setFile(null);
       setError("");
     };

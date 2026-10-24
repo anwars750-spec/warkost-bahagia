@@ -103,10 +103,13 @@ test("delivery proof endpoint menyimpan foto lalu memakai completion flow existi
   assert.match(route, /multipart\/form-data/);
 });
 
-test("Driver UI mewajibkan foto, preview, dan mengintercept completion lama", () => {
+test("Driver UI membuka proof capture secara eksplisit sebelum completion", () => {
   const runtime = read("app/DriverDeliveryProofRuntime.js");
+  const control = read("app/DriverControlCenter.js");
   const bootstrap = read("app/DriverRuntimeBootstrap.js");
-  assert.match(runtime, /Pesanan Diterima/);
+  assert.match(control, /body\?\.status === "DELIVERED"/);
+  assert.match(control, /warkost:open-delivery-proof/);
+  assert.match(runtime, /addEventListener\("warkost:open-delivery-proof"/);
   assert.match(runtime, /stopImmediatePropagation/);
   assert.match(runtime, /\/api\/delivery-proof/);
   assert.match(runtime, /capture="environment"/);

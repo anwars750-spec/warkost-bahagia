@@ -306,6 +306,14 @@ export default function DriverControlCenter() {
 
   const performAction = async ({ route, body, label }) => {
     if (busy) return;
+    if (route === "status" && body?.status === "DELIVERED") {
+      window.dispatchEvent(
+        new CustomEvent("warkost:open-delivery-proof", {
+          detail: { orderId: body.orderId },
+        }),
+      );
+      return;
+    }
     setBusy(true);
     setError("");
     try {
