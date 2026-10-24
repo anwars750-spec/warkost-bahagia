@@ -37,6 +37,9 @@ const statusLabel = (value) =>
     CANCELLED: "Dibatalkan",
   })[value] || String(value || "").replaceAll("_", " ");
 
+const paymentLabel = (value) =>
+  ({ CASH: "COD", QRIS: "QRIS", TRANSFER: "Transfer" })[value] || value || "-";
+
 async function loadHistory(before = null) {
   const query = before ? `?before=${encodeURIComponent(before)}` : "";
   const response = await fetch(`/api/delivery-history${query}`, { cache: "no-store" });
@@ -99,46 +102,62 @@ export default function DeliveryHistoryCenter({ onClose = null }) {
   return (
     <section className={styles.center} aria-label="Riwayat Delivery">
       <header className={styles.header}>
-        <div>
+        <div className={styles.titleBlock}>
           <span>OPERASIONAL DELIVERY</span>
           <h1>Riwayat Delivery</h1>
-          <p>Bukti penyelesaian, Driver, pembayaran, dan timeline dalam satu histori read-only.</p>
+          <p>Riwayat pengantaran selesai, bukti foto, pembayaran, dan timeline order.</p>
         </div>
         <div className={styles.headerActions}>
-          <button type="button" onClick={refresh}>{loading ? "Memuat..." : "Perbarui"}</button>
-          {onClose && <button type="button" onClick={onClose}>Tutup</button>}
+          <button type="button" onClick={refresh} disabled={loading}>
+            {loading ? "Memuat..." : "Perbarui"}
+          </button>
+          {onClose && (
+            <button type="button" onClick={onClose}>Tutup</button>
+          )}
         </div>
       </header>
 
-      <div className={styles.metrics}>
-        <article><small>Delivery termuat</small><strong>{rows.length}</strong></article>
-        <article><small>Dengan bukti foto</small><strong>{withProof}</strong></article>
-        <article><small>Histori lama</small><strong>{rows.length - withProof}</strong></article>
+      <div className={styles.summaryBar}>
+        <div><span>Delivery selesai</span><strong>{rows.length}</strong></div>
+        <i />
+        <div><span>Dengan bukti</span><strong>{withProof}</strong></div>
+        <i />
+        <div><span>Histori lama</span><strong>{rows.length - withProof}</strong></div>
       </div>
 
-      <input
-        className={styles.search}
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        placeholder="Cari WB, customer, Driver, alamat..."
-      />
+      <label className={styles.searchWrap}>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="11" cy="11" r="6.5" />
+          <path d="m16 16 4 4" />
+        </svg>
+        <input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Cari nomor order, customer, Driver, atau alamat"
+        />
+      </label>
+
       {error && <div className={styles.error}>{error}</div>}
 
-      <div className={styles.list}>
+      <div className={styles.listHeader} aria-hidden="true">
+        <span>Order</span><span>Driver</span><span>Selesai</span><span>Pembayaran</span><span>Bukti</span><span />
+      </div>
+
+      <div className={styles.historyList}>
         {visibleRows.map((row) => (
-          <article key={row.order_id} className={styles.card}>
-            <div className={styles.cardTop}>
-              <div><span>SELESAI</span><h2>{code(row.order_id)}</h2><p>{row.customer_name}</p></div>
-              <div><small>{row.method}</small><strong>{money(row.payment_amount ?? row.total)}</strong><span>{row.payment_status}</span></div>
-            </div>
-            <dl className={styles.info}>
-              <div><dt>Driver</dt><dd>{row.driver_name || "-"}</dd></div>
-              <div><dt>Selesai</dt><dd>{dateTime(row.delivered_at)}</dd></div>
-              <div><dt>Alamat</dt><dd>{row.address || "-"}</dd></div>
-              <div><dt>Bukti</dt><dd>{row.proof_image_url ? "Tersimpan" : "Histori lama"}</dd></div>
-            </dl>
-            <button type="button" onClick={() => setSelected(row)}>Lihat bukti & timeline</button>
-          </article>
+          <button key={row.order_id} type="button" className={styles.historyRow} onClick={() => setSelected(row)}>
+            <span className={styles.orderCell}>
+              <i />
+              <span><strong>{code(row.order_id)}</strong><small>{row.customer_name || "-"}</small></span>
+            </span>
+            <span className={styles.cell}><strong>{row.driver_name || "-"}</strong><small>{row.address || "-"}</small></span>
+            <span className={styles.cell}><strong>{dateTime(row.delivered_at)}</strong><small>Status selesai</small></span>
+            <span className={styles.cell}><strong>{money(row.payment_amount ?? row.total)}</strong><small>{paymentLabel(row.method)} · {row.payment_status || "-"}</small></span>
+            <span className={`${styles.proofBadge} ${row.proof_image_url ? styles.proofReady : styles.proofLegacy}`}>
+              {row.proof_image_url ? "Ada bukti" : "Histori lama"}
+            </span>
+            <span className={styles.rowArrow} aria-hidden="true">→</span>
+          </button>
         ))}
       </div>
 
@@ -146,20 +165,48 @@ export default function DeliveryHistoryCenter({ onClose = null }) {
       {cursor && !search && <button className={styles.more} type="button" onClick={more}>Muat riwayat sebelumnya</button>}
 
       {selected && (
-        <div className={styles.backdrop} onMouseDown={(event) => event.target === event.currentTarget && setSelected(null)}>
-          <section className={styles.drawer} role="dialog" aria-modal="true">
-            <header><div><span>DETAIL DELIVERY</span><h2>{code(selected.order_id)}</h2></div><button type="button" onClick={() => setSelected(null)}>x</button></header>
-            <div className={styles.proof}>
-              <small>BUKTI PENGANTARAN</small>
-              {selected.proof_image_url ? <img src={selected.proof_image_url} alt="Bukti pengantaran" /> : <p>Delivery ini selesai sebelum Delivery Proof V1 diterapkan.</p>}
-              {selected.proof_created_at && <span>Disimpan {dateTime(selected.proof_created_at)}</span>}
+        <div className={styles.detailBackdrop} onMouseDown={(event) => event.target === event.currentTarget && setSelected(null)}>
+          <section className={styles.detailDialog} role="dialog" aria-modal="true">
+            <header className={styles.detailHeader}>
+              <div><span>DETAIL DELIVERY</span><h2>{code(selected.order_id)}</h2><p>{selected.customer_name || "-"}</p></div>
+              <button type="button" aria-label="Tutup detail delivery" onClick={() => setSelected(null)}>×</button>
+            </header>
+
+            <div className={styles.detailMeta}>
+              <div><span>Driver</span><strong>{selected.driver_name || "-"}</strong></div>
+              <div><span>Selesai</span><strong>{dateTime(selected.delivered_at)}</strong></div>
+              <div><span>Pembayaran</span><strong>{paymentLabel(selected.method)} · {selected.payment_status || "-"}</strong></div>
+              <div><span>Nilai order</span><strong>{money(selected.payment_amount ?? selected.total)}</strong></div>
+              <div className={styles.addressMeta}><span>Alamat pengantaran</span><strong>{selected.address || "-"}</strong></div>
             </div>
-            <section className={styles.timeline}>
-              <small>TIMELINE ORDER</small>
-              {(selected.events || []).map((event, index) => (
-                <div key={`${event.created_at}-${index}`}><i /><span><strong>{statusLabel(event.next_status)}</strong><small>{dateTime(event.created_at)} - {event.actor_name || event.actor_role || "Sistem"}</small></span></div>
-              ))}
-            </section>
+
+            <div className={styles.detailContent}>
+              <section className={styles.proofSection}>
+                <div className={styles.sectionTitle}><span>BUKTI PENGANTARAN</span><small>{selected.proof_image_url ? "Tersimpan" : "Histori lama"}</small></div>
+                {selected.proof_image_url ? (
+                  <img src={selected.proof_image_url} alt="Bukti pengantaran" />
+                ) : (
+                  <div className={styles.legacyProof}>Delivery ini selesai sebelum Delivery Proof V1 diterapkan.</div>
+                )}
+                {selected.proof_created_at && <p>Disimpan {dateTime(selected.proof_created_at)}</p>}
+              </section>
+
+              <section className={styles.timeline}>
+                <div className={styles.sectionTitle}><span>TIMELINE ORDER</span><small>{(selected.events || []).length} aktivitas</small></div>
+                <div className={styles.timelineList}>
+                  {(selected.events || []).map((event, index) => (
+                    <div className={styles.timelineItem} key={`${event.created_at}-${index}`}>
+                      <i />
+                      <span>
+                        <strong>{statusLabel(event.next_status)}</strong>
+                        <small>{dateTime(event.created_at)}</small>
+                        <em>{event.actor_name || event.actor_role || "Sistem"}</em>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
           </section>
         </div>
       )}

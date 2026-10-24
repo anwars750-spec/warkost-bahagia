@@ -30,7 +30,13 @@ function makeOwnerLauncher(open) {
   button.type = "button";
   button.dataset.deliveryHistoryLauncher = "true";
   button.innerHTML = `
-    <span class="${styles.ownerIcon}" aria-hidden="true">✓</span>
+    <span class="${styles.ownerIcon}" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <path d="M12 7v5l3 2" />
+        <path d="M4.9 4.9A10 10 0 1 1 3 12" />
+        <path d="M3 5v5h5" />
+      </svg>
+    </span>
     <div><strong>Riwayat Delivery</strong><small>Bukti pengantaran dan timeline order selesai.</small></div>
     <span class="${styles.ownerArrow}" aria-hidden="true">→</span>
   `;
