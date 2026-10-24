@@ -708,6 +708,32 @@ function Products({
       (status === "all" || (status === "active") === Boolean(row.active))
     );
   });
+  const groupedRows = inventory.categories
+    .map((categoryRow) => ({
+      id: Number(categoryRow.id),
+      name: categoryRow.name,
+      rows: rows.filter(
+        (row) => Number(row.category_id) === Number(categoryRow.id),
+      ),
+    }))
+    .filter((group) => group.rows.length > 0);
+
+  const uncategorizedRows = rows.filter(
+    (row) =>
+      !inventory.categories.some(
+        (categoryRow) =>
+          Number(categoryRow.id) === Number(row.category_id),
+      ),
+  );
+
+  if (uncategorizedRows.length) {
+    groupedRows.push({
+      id: 0,
+      name: "Tanpa Kategori",
+      rows: uncategorizedRows,
+    });
+  }
+
   const low = inventory.products.filter(
     (row) =>
       Number(row.unlimited_stock) !== 1 &&
@@ -798,67 +824,92 @@ function Products({
               <p>{rows.length} produk sesuai filter.</p>
             </div>
           </header>
-          <div className="manager-table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Produk</th>
-                  <th>Kategori</th>
-                  <th>Subkategori</th>
-                  <th>Harga</th>
-                  <th>Stok</th>
-                  <th>Status</th>
-                  <th>Routing</th>
-                  <th>Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => {
-                  const currentStock = stockById.get(Number(row.id));
-                  return (
-                    <tr key={row.id}>
-                      <td>
-                        <img
-                          className="manager-product-thumb"
-                          src={row.image_url || "/demo/promo-warkost.webp"}
-                          alt=""
-                        />
-                        <span>
-                          <strong>{row.name}</strong>
-                          <small>#{String(row.id).padStart(4, "0")}</small>
-                        </span>
-                      </td>
-                      <td>{row.category_name}</td>
-                      <td>{row.subcategory_name || "Umum"}</td>
-                      <td>{productPriceLabel(row, money)}</td>
-                      <td>
-                        {Number(row.unlimited_stock) === 1
-                          ? "Unlimited"
-                          : formatStockQuantity(
-                              currentStock?.available_quantity ??
-                                row.stock_quantity,
-                              row.stock_unit,
-                            )}
-                      </td>
-                      <td>
-                        <span
-                          className={`manager-status ${row.active ? "active" : "inactive"}`}
-                        >
-                          {row.active ? "Aktif" : "Nonaktif"}
-                        </span>
-                      </td>
-                      <td>
-                        Customer +{" "}
-                        {row.category_name === "Makanan" ? "Kitchen" : "Admin"}
-                      </td>
-                      <td>
-                        <button onClick={() => setEditing(row)}>Edit</button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="manager-product-groups">
+            {groupedRows.map((group) => (
+              <section className="manager-product-group" key={group.id}>
+                <div className="manager-product-group-header">
+                  <div>
+                    <span>KATEGORI</span>
+                    <h3>{group.name}</h3>
+                  </div>
+                  <div className="manager-product-group-meta">
+                    <strong>{group.rows.length}</strong>
+                    <small>
+                      produk ? {group.rows.filter((row) => row.active).length} aktif
+                    </small>
+                  </div>
+                </div>
+
+                <div className="manager-table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Produk</th>
+                        <th>Kategori</th>
+                        <th>Subkategori</th>
+                        <th>Harga</th>
+                        <th>Stok</th>
+                        <th>Status</th>
+                        <th>Routing</th>
+                        <th>Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.rows.map((row) => {
+                        const currentStock = stockById.get(Number(row.id));
+                        return (
+                          <tr key={row.id}>
+                            <td>
+                              <img
+                                className="manager-product-thumb"
+                                src={row.image_url || "/demo/promo-warkost.webp"}
+                                alt=""
+                              />
+                              <span>
+                                <strong>{row.name}</strong>
+                                <small>
+                                  #{String(row.id).padStart(4, "0")}
+                                </small>
+                              </span>
+                            </td>
+                            <td>{row.category_name}</td>
+                            <td>{row.subcategory_name || "Umum"}</td>
+                            <td>{productPriceLabel(row, money)}</td>
+                            <td>
+                              {Number(row.unlimited_stock) === 1
+                                ? "Unlimited"
+                                : formatStockQuantity(
+                                    currentStock?.available_quantity ??
+                                      row.stock_quantity,
+                                    row.stock_unit,
+                                  )}
+                            </td>
+                            <td>
+                              <span
+                                className={`manager-status ${row.active ? "active" : "inactive"}`}
+                              >
+                                {row.active ? "Aktif" : "Nonaktif"}
+                              </span>
+                            </td>
+                            <td>
+                              Customer +{" "}
+                              {row.category_name === "Makanan"
+                                ? "Kitchen"
+                                : "Admin"}
+                            </td>
+                            <td>
+                              <button onClick={() => setEditing(row)}>
+                                Edit
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            ))}
           </div>
           {!rows.length && (
             <div className="manager-empty">Tidak ada produk yang cocok.</div>

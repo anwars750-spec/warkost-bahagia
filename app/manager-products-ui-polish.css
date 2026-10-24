@@ -784,3 +784,104 @@
     padding: 10px;
   }
 }
+
+
+/* Grouped Category V1 */
+.manager-dashboard-polished .manager-product-groups {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+}
+
+.manager-dashboard-polished .manager-product-group {
+  overflow: hidden;
+  border: 1px solid #eaded5;
+  border-radius: 17px;
+  background: #fffdfa;
+}
+
+.manager-dashboard-polished .manager-product-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #eee2d9;
+  background: linear-gradient(135deg, #fff8f2, #fffdfa);
+}
+
+.manager-dashboard-polished .manager-product-group-header > div:first-child {
+  min-width: 0;
+}
+
+.manager-dashboard-polished .manager-product-group-header span {
+  display: block;
+  margin-bottom: 2px;
+  color: #aa6a4e;
+  font-size: 0.6rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.manager-dashboard-polished .manager-product-group-header h3 {
+  margin: 0;
+  color: #2d1912;
+  font-size: 1rem;
+  font-weight: 850;
+}
+
+.manager-dashboard-polished .manager-product-group-meta {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  color: #8c766a;
+}
+
+.manager-dashboard-polished .manager-product-group-meta strong {
+  color: #a64025;
+  font-size: 1rem;
+}
+
+.manager-dashboard-polished .manager-product-group-meta small {
+  font-size: 0.72rem;
+}
+
+.manager-dashboard-polished
+  .manager-product-group
+  .manager-table-wrap {
+  border: 0;
+}
+
+@media (max-width: 760px) {
+  .manager-dashboard-polished .manager-product-groups {
+    gap: 12px;
+    padding: 10px;
+  }
+
+  .manager-dashboard-polished .manager-product-group {
+    border-radius: 16px;
+  }
+
+  .manager-dashboard-polished .manager-product-group-header {
+    padding: 12px 13px;
+  }
+
+  .manager-dashboard-polished .manager-product-group-header h3 {
+    font-size: 0.9rem;
+  }
+
+  .manager-dashboard-polished .manager-product-group-meta {
+    display: block;
+    text-align: right;
+  }
+
+  .manager-dashboard-polished .manager-product-group-meta strong {
+    display: block;
+    line-height: 1;
+  }
+
+  .manager-dashboard-polished .manager-product-group-meta small {
+    font-size: 0.62rem;
+  }
+}
