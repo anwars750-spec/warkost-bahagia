@@ -1,6 +1,6 @@
 # Warkost Bahagia — checkpoint MVP
 
-Next.js 16, React, API/service terpisah. Database development SQLite (`node:sqlite`, Node 24+); adapter MySQL memakai `mysql2/promise` dan transaksi. MySQL 8 recovery dan production-mode staging UAT berjalan otomatis di GitHub Actions. Deployment Hostinger tetap harus melewati staging publik sebelum production.
+Next.js 16, React, API/service terpisah. Database development SQLite (`node:sqlite`, Node 24+); adapter MySQL memakai `mysql2/promise` dan transaksi. MySQL 8 recovery dan production-mode staging UAT berjalan otomatis di GitHub Actions. Deployment staging/production menggunakan runbook provider-neutral; target VPS saat ini adalah IDCloudHost.
 
 ## Development SQLite
 
@@ -13,7 +13,7 @@ Next.js 16, React, API/service terpisah. Database development SQLite (`node:sqli
 
 Sebelum server production dijalankan, set `NODE_ENV=production`, `SESSION_SECRET` minimal 32 byte, database, `UPLOAD_DIRECTORY`, dan `BACKUP_DIRECTORY` memakai path absolut. Jalankan `npm run preflight`; proses gagal jika konfigurasi, koneksi database, skema inti, storage, atau lokasi backup tidak siap. `GET /api/health/live` hanya memeriksa proses hidup. `GET /api/health/ready` memeriksa konfigurasi, database, storage, dan backup tanpa menampilkan secret atau detail error internal.
 
-Untuk Hostinger staging, ikuti [runbook Hostinger](docs/HOSTINGER_STAGING.md). Startup `npm run start:hostinger` menjalankan migrasi, bootstrap staging, verifikasi schema, dan preflight sebelum membuka server.
+Untuk staging VPS, ikuti [runbook staging deployment](docs/STAGING_DEPLOYMENT.md). Startup `npm run start:staging` menjalankan migrasi, bootstrap staging, verifikasi schema, dan preflight sebelum membuka server.
 
 ## Development MySQL (database khusus development)
 
@@ -51,4 +51,4 @@ Admin dapat unggah JPEG, PNG, WebP, atau AVIF maksimal 8 MB. Server memvalidasi 
 
 ## Batas saat ini
 
-MySQL adapter, migrasi ber-checksum, backup/restore, schema verifier, recovery drill MySQL 8, health check, HTTP smoke, browser UAT desktop/mobile, promo terjadwal, ongkir radius, bantuan WhatsApp, observabilitas pembayaran manual, dan print queue simulasi tersedia. ORM belum dipakai. Printer LAN fisik belum dipasangkan dan upload gambar serta backup path belum diverifikasi pada filesystem Hostinger nyata. Kupon atau diskon checkout otomatis, payment gateway, maps/routing berbayar, profil driver lanjutan, reset password, rate limit berbasis IP/tepi jaringan, CSRF token tambahan, review keamanan/performa menyeluruh, Hostinger PoC publik, UAT pengguna, dan handover masih tertunda. Jangan gunakan data pelanggan nyata sampai gate tersebut selesai.
+Release Candidate lokal sudah melewati final cross-role Product Owner UAT, full regression, dan production build. MySQL adapter, migrasi ber-checksum, backup/restore, schema verifier, recovery drill MySQL 8, health check, HTTP smoke, browser UAT desktop/mobile, promo terjadwal, ongkir radius, bantuan WhatsApp, observabilitas pembayaran, dan print queue simulasi tersedia. ORM belum dipakai. Printer LAN fisik belum dipasangkan dan upload gambar serta backup path belum diverifikasi pada filesystem VPS nyata. Integrasi payment provider produksi, maps/routing berbayar, reset-password recovery, rate limit berbasis IP/tepi jaringan, review keamanan/performa menyeluruh, staging VPS publik, backup/restore drill pada VPS, dan operational handover masih menjadi gate deployment/production. Jangan gunakan data pelanggan nyata sampai gate deployment tersebut selesai.
