@@ -8,3 +8,11 @@ CREATE TABLE banners(
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_banners_active_order(active,sort_order,id)
 ) ENGINE=InnoDB;
+
+INSERT INTO banners(internal_name,image_url,active,sort_order)
+SELECT 'Banner Utama Warkost','/demo/promo-warkost.webp',TRUE,0
+WHERE NOT EXISTS (SELECT 1 FROM banners);
+
+INSERT INTO settings(`key`,value)
+VALUES('standalone_banner_initialized_v1','1')
+ON DUPLICATE KEY UPDATE value=value;
