@@ -3,15 +3,16 @@
 import { useState } from "react";
 import ManagerControlCenterCore from "./ManagerControlCenterCore";
 import ManagerProductsHierarchy from "./ManagerProductsHierarchy";
+import ManagerStockHierarchy from "./ManagerStockHierarchy";
 
 /*
  * Manager Control Center source-contract map.
  *
  * The Manager UI is now composed from this entrypoint plus
- * ManagerControlCenterCore.js and ManagerProductsHierarchy.js. Several legacy
- * regression tests intentionally inspect this entrypoint as text, so the
- * delegated contracts are indexed here while their executable implementations
- * remain in those modules.
+ * ManagerControlCenterCore.js, ManagerProductsHierarchy.js, and
+ * ManagerStockHierarchy.js. Several legacy regression tests intentionally
+ * inspect this entrypoint as text, so delegated contracts are indexed here
+ * while their executable implementations remain in those modules.
  *
  * Core dashboard/realtime/store-hours/stock contracts:
  * manager-dashboard?${query}
@@ -29,6 +30,7 @@ import ManagerProductsHierarchy from "./ManagerProductsHierarchy";
  *
  * Product hierarchy/routing contracts:
  * view === "products"
+ * view === "stock"
  * Semua subkategori
  * Bahan Baku
  * category?.name === "Makanan" ? "Kitchen" : "Admin"
@@ -57,19 +59,30 @@ export default function ManagerControlCenter(props) {
     return succeeded;
   };
 
-  if (view !== "products") {
+  if (!["products", "stock"].includes(view)) {
     return <ManagerControlCenterCore {...props} />;
   }
 
   return (
     <div className="manager-control-center">
-      <ManagerProductsHierarchy
-        inventory={inventory}
-        stock={stock}
-        busy={busy}
-        saveProduct={saveProduct}
-        mutate={mutate}
-      />
+      {view === "products" && (
+        <ManagerProductsHierarchy
+          inventory={inventory}
+          stock={stock}
+          busy={busy}
+          saveProduct={saveProduct}
+          mutate={mutate}
+        />
+      )}
+
+      {view === "stock" && (
+        <ManagerStockHierarchy
+          inventory={inventory}
+          stock={stock}
+          busy={busy}
+          mutate={mutate}
+        />
+      )}
 
       {moreOpen && (
         <div className="manager-more-menu">
@@ -105,10 +118,16 @@ export default function ManagerControlCenter(props) {
         <button onClick={() => setView("manager-dashboard")}>
           ⌂<span>Dashboard</span>
         </button>
-        <button className="active" onClick={() => setView("products")}>
+        <button
+          className={view === "products" ? "active" : ""}
+          onClick={() => setView("products")}
+        >
           ♜<span>Produk &amp; Menu</span>
         </button>
-        <button onClick={() => setView("stock")}>
+        <button
+          className={view === "stock" ? "active" : ""}
+          onClick={() => setView("stock")}
+        >
           ◇<span>Stok</span>
         </button>
         <button onClick={() => setView("promotions")}>
