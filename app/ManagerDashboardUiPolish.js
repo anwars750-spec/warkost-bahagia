@@ -51,6 +51,17 @@ const navKeys = [
   ["Keluar", "logout"],
 ];
 
+const navIconMasks = new Map([
+  [
+    "banners",
+    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='16' rx='2.5'/%3E%3Ccircle cx='8.5' cy='9' r='1.5'/%3E%3Cpath d='m5.5 17 4.2-4.3 3.1 3.1 2.1-2.2 3.6 3.4'/%3E%3C/svg%3E\")",
+  ],
+  [
+    "store-hours",
+    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3.2 2'/%3E%3C/svg%3E\")",
+  ],
+]);
+
 function activeNavFromHeading(heading) {
   if (/kelola banner|banner customer/i.test(heading)) return "banners";
   if (/jam operasional/i.test(heading)) return "store-hours";
@@ -84,12 +95,9 @@ export default function ManagerDashboardUiPolish() {
       header?.classList.add("manager-role-header");
 
       const heading = clean(
-        [
-          ...(root?.querySelectorAll("h1, h2") || []),
-        ]
+        [...(root?.querySelectorAll("h1, h2") || [])]
           .map((node) => node.textContent)
-          .join(" ") ||
-          document.querySelector("main h1, main h2")?.textContent,
+          .join(" ") || document.querySelector("main h1, main h2")?.textContent,
       );
       const activeNav = activeNavFromHeading(heading);
 
@@ -100,6 +108,9 @@ export default function ManagerDashboardUiPolish() {
         const [, key] = match;
         button.classList.add("manager-role-nav-item");
         button.dataset.managerNav = key;
+        const iconMask = navIconMasks.get(key);
+        if (iconMask) button.style.setProperty("--manager-nav-mask", iconMask);
+        else button.style.removeProperty("--manager-nav-mask");
         button.classList.toggle("manager-role-nav-active", key === activeNav);
         if (key === activeNav) button.setAttribute("aria-current", "page");
         else button.removeAttribute("aria-current");
@@ -108,7 +119,9 @@ export default function ManagerDashboardUiPolish() {
       if (!root) return;
 
       root.querySelectorAll(".manager-period-tabs button").forEach((button) => {
-        const label = clean(button.querySelector("span")?.textContent || button.textContent);
+        const label = clean(
+          button.querySelector("span")?.textContent || button.textContent,
+        );
         const key = periodKeys.get(label);
         if (key) button.dataset.managerPeriod = key;
       });
@@ -152,7 +165,9 @@ export default function ManagerDashboardUiPolish() {
       cancelAnimationFrame(frame);
       observer.disconnect();
       document.body.classList.remove("manager-dashboard-polished");
-      document.querySelector("header.top")?.classList.remove("manager-role-header");
+      document
+        .querySelector("header.top")
+        ?.classList.remove("manager-role-header");
     };
   }, []);
 
