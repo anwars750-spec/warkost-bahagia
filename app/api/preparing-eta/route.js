@@ -22,7 +22,7 @@ function errorResponse(error) {
 export async function GET(request) {
   try {
     const user = await currentUser(request);
-    required(user, ["CUSTOMER", "KITCHEN"]);
+    required(user, ["CUSTOMER", "KITCHEN", "ADMIN"]);
     const rawOrderId = request.nextUrl.searchParams.get("orderId");
     const orderId = rawOrderId === null ? null : Number(rawOrderId);
     if (
