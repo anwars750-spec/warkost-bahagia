@@ -5,17 +5,17 @@
 .summaryGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin: 0 0 14px;
+  gap: 10px;
+  margin: 0 0 12px;
 }
 
 .summaryCard {
   display: grid;
   gap: 5px;
-  min-height: 86px;
-  padding: 15px 17px;
-  border: 1px solid #eadfd6;
-  border-radius: 17px;
+  min-height: 78px;
+  padding: 13px 15px;
+  border: 1px solid #e8ddd4;
+  border-radius: 15px;
   background: #fffdfa;
   box-shadow: 0 8px 22px rgba(64, 34, 20, 0.04);
 }
@@ -58,16 +58,21 @@
 
 .toolbar {
   display: grid;
-  grid-template-columns: minmax(260px, 1.5fr) repeat(4, minmax(145px, 0.7fr));
+  grid-template-columns: minmax(280px, 1fr) repeat(2, minmax(170px, 220px));
   gap: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
+  padding: 10px;
+  border: 1px solid #eadfd6;
+  border-radius: 15px;
+  background: rgba(255, 253, 250, 0.88);
+  box-shadow: 0 8px 22px rgba(64, 34, 20, 0.035);
 }
 
 .toolbar input,
 .toolbar select {
   width: 100%;
   min-width: 0;
-  min-height: 45px;
+  min-height: 43px;
   padding: 0 12px;
   border: 1px solid #e6d9cf;
   border-radius: 12px;
@@ -75,6 +80,8 @@
   color: #3f2a21;
   font: inherit;
   outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease,
+    background 150ms ease;
 }
 
 .toolbar input:focus,
@@ -88,8 +95,12 @@
 }
 
 .listHeading {
-  padding: 17px 20px;
+  display: flex;
+  align-items: center;
+  min-height: 68px;
+  padding: 14px 18px;
   border-bottom: 1px solid #eee3dc;
+  background: #fffdfa;
 }
 
 .listHeading h2 {
@@ -104,14 +115,14 @@
 
 .categories {
   display: grid;
-  gap: 16px;
-  padding: 14px;
+  gap: 12px;
+  padding: 12px;
 }
 
 .category {
   overflow: hidden;
   border: 1px solid #eadfd6;
-  border-radius: 18px;
+  border-radius: 16px;
   background: #fffdfa;
 }
 
@@ -120,7 +131,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 15px 17px;
+  padding: 13px 15px;
   border-bottom: 1px solid #eadfd6;
   background: linear-gradient(180deg, #fffaf5 0%, #fff7f0 100%);
 }
@@ -150,14 +161,14 @@
 
 .subgroups {
   display: grid;
-  gap: 10px;
-  padding: 12px;
+  gap: 8px;
+  padding: 10px;
 }
 
 .subgroup {
   overflow: hidden;
   border: 1px solid #eadfd7;
-  border-radius: 15px;
+  border-radius: 13px;
   background: #fff;
   transition: border-color 160ms ease, opacity 160ms ease, background 160ms ease;
 }
@@ -166,6 +177,10 @@
   border-color: #ded7d2;
   background: #faf9f7;
   opacity: 0.82;
+}
+
+.subgroupCollapsed .subgroupHeader {
+  border-bottom-color: transparent;
 }
 
 .subgroupHeader {
@@ -183,8 +198,8 @@
   gap: 14px;
   width: 100%;
   min-width: 0;
-  min-height: 62px;
-  padding: 10px 13px;
+  min-height: 56px;
+  padding: 9px 11px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -196,6 +211,10 @@
 .subgroupToggle:focus-visible {
   background: #fff8f3;
   outline: none;
+}
+
+.subgroupToggle:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(181, 69, 37, 0.14);
 }
 
 .subgroupToggle h4 {
@@ -226,8 +245,8 @@
 .chevron {
   position: relative;
   display: inline-block;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   margin-left: 5px;
   border: 1px solid #e7d5c8;
   border-radius: 9px;
@@ -237,8 +256,8 @@
 .chevron::before {
   content: "";
   position: absolute;
-  left: 10px;
-  top: 8px;
+  left: 11px;
+  top: 9px;
   width: 7px;
   height: 7px;
   border-right: 2px solid #915039;
@@ -248,18 +267,18 @@
 }
 
 .chevronCollapsed::before {
-  top: 10px;
+  top: 11px;
   transform: rotate(-45deg);
 }
 
 .visibilityHide,
 .visibilityShow {
   position: relative;
-  width: 38px;
-  min-width: 38px;
-  height: 38px;
-  min-height: 38px;
-  margin-right: 11px;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+  margin-right: 9px;
   padding: 0;
   overflow: hidden;
   border-radius: 10px;
@@ -321,6 +340,12 @@
   background: #fff3eb;
 }
 
+.visibilityHide:focus-visible,
+.visibilityShow:focus-visible {
+  outline: 3px solid rgba(181, 69, 37, 0.14);
+  outline-offset: 2px;
+}
+
 .visibilityHide:disabled,
 .visibilityShow:disabled {
   opacity: 0.5;
@@ -334,7 +359,7 @@
 
 .tableWrap table {
   width: 100%;
-  min-width: 920px;
+  min-width: 840px;
   table-layout: fixed;
   border-collapse: collapse;
 }
@@ -478,7 +503,11 @@
   cursor: not-allowed;
 }
 
-@media (max-width: 1150px) {
+@media (max-width: 1050px) {
+  .summaryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .toolbar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -488,19 +517,7 @@
   }
 }
 
-@media (max-width: 760px) {
-  .summaryGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .toolbar {
-    grid-template-columns: 1fr;
-  }
-
-  .toolbar input {
-    grid-column: auto;
-  }
-
+@media (max-width: 900px) {
   .categories {
     gap: 13px;
     padding: 10px;
@@ -529,7 +546,7 @@
   }
 
   .subgroupToggle {
-    min-height: 58px;
+    min-height: 56px;
     padding: 10px 11px;
   }
 
@@ -539,10 +556,10 @@
 
   .visibilityHide,
   .visibilityShow {
-    width: 36px;
-    min-width: 36px;
-    height: 36px;
-    min-height: 36px;
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    min-height: 38px;
     margin-right: 9px;
   }
 
@@ -650,11 +667,38 @@
   }
 }
 
-@media (max-width: 390px) {
+@media (max-width: 760px) {
   .summaryGrid {
-    grid-template-columns: 1fr;
+    gap: 8px;
   }
 
+  .summaryCard {
+    min-height: 72px;
+    padding: 11px 13px;
+  }
+
+  .toolbar {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 9px;
+  }
+
+  .toolbar input {
+    grid-column: auto;
+  }
+
+  .toolbar input,
+  .toolbar select {
+    min-height: 46px;
+  }
+
+  .listHeading {
+    min-height: 62px;
+    padding: 12px 14px;
+  }
+}
+
+@media (max-width: 390px) {
   .categoryHeading {
     display: block;
   }

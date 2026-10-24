@@ -11,6 +11,10 @@ const managerEntry = fs.readFileSync(
   path.resolve("app/ManagerControlCenter.js"),
   "utf8",
 );
+const stockHierarchyStyles = fs.readFileSync(
+  path.resolve("app/ManagerStockHierarchy.module.css"),
+  "utf8",
+);
 
 test("Manager Stock memakai hierarchy kategori dan subkategori yang sama dengan Produk & Menu", () => {
   assert.match(stockHierarchy, /collapsedSubcategories/);
@@ -44,4 +48,23 @@ test("Manager Stock tetap menjaga adjustment drawer dan unlimited-stock guard", 
   assert.match(stockHierarchy, /event\.target === event\.currentTarget/);
   assert.match(stockHierarchy, /name="quantity"/);
   assert.match(stockHierarchy, />\s*Batal\s*</);
+});
+
+test("Manager Stock V2 hanya menyisakan search, status produk, dan kondisi stok", () => {
+  assert.match(stockHierarchy, /aria-label="Cari stok produk"/);
+  assert.match(stockHierarchy, /aria-label="Filter status produk stok"/);
+  assert.match(stockHierarchy, /aria-label="Filter kondisi stok"/);
+  assert.doesNotMatch(stockHierarchy, /categoryFilter|subcategoryFilter/);
+  assert.doesNotMatch(stockHierarchy, /aria-label="Filter kategori stok"/);
+  assert.doesNotMatch(stockHierarchy, /aria-label="Filter subkategori stok"/);
+});
+
+test("Manager Stock V2 menjaga toolbar dan hierarchy responsif", () => {
+  assert.match(stockHierarchy, /aria-expanded=\{!collapsed\}/);
+  assert.match(stockHierarchy, /aria-controls=/);
+  assert.match(stockHierarchy, /styles\.subgroupCollapsed/);
+  assert.match(stockHierarchyStyles, /grid-template-columns:\s*minmax\(280px, 1fr\)[\s\S]*repeat\(2,/);
+  assert.match(stockHierarchyStyles, /@media \(max-width: 1050px\)/);
+  assert.match(stockHierarchyStyles, /@media \(max-width: 900px\)/);
+  assert.match(stockHierarchyStyles, /@media \(max-width: 760px\)/);
 });

@@ -39,8 +39,6 @@ export default function ManagerStockHierarchy({
   mutate,
 }) {
   const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [subcategoryFilter, setSubcategoryFilter] = useState("all");
   const [productStatus, setProductStatus] = useState("all");
   const [healthFilter, setHealthFilter] = useState("all");
   const [selectedProductId, setSelectedProductId] = useState(null);
@@ -68,14 +66,12 @@ export default function ManagerStockHierarchy({
       const active = isActive(row);
       return (
         (!needle || text.includes(needle)) &&
-        (categoryFilter === "all" || String(row.category_id ?? row.category_name) === categoryFilter) &&
-        (subcategoryFilter === "all" || String(row.subcategory_id ?? row.subcategory_name) === subcategoryFilter) &&
         (productStatus === "all" ||
           (productStatus === "active" ? active : !active)) &&
         (healthFilter === "all" || row.stock_status === healthFilter)
       );
     });
-  }, [stock.products, search, categoryFilter, subcategoryFilter, productStatus, healthFilter]);
+  }, [stock.products, search, productStatus, healthFilter]);
 
   const groupedRows = useMemo(() => {
     const categories = (inventory.categories || [])
@@ -247,30 +243,6 @@ export default function ManagerStockHierarchy({
           onChange={(event) => setSearch(event.target.value)}
         />
         <select
-          aria-label="Filter kategori stok"
-          value={categoryFilter}
-          onChange={(event) => setCategoryFilter(event.target.value)}
-        >
-          <option value="all">Semua kategori</option>
-          {(inventory.categories || []).map((row) => (
-            <option key={row.id} value={String(row.id)}>
-              {row.name}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Filter subkategori stok"
-          value={subcategoryFilter}
-          onChange={(event) => setSubcategoryFilter(event.target.value)}
-        >
-          <option value="all">Semua subkategori</option>
-          {(inventory.subcategories || []).map((row) => (
-            <option key={row.id} value={String(row.id)}>
-              {row.name}
-            </option>
-          ))}
-        </select>
-        <select
           aria-label="Filter status produk stok"
           value={productStatus}
           onChange={(event) => setProductStatus(event.target.value)}
@@ -318,7 +290,7 @@ export default function ManagerStockHierarchy({
                     <section
                       className={`${styles.subgroup} ${
                         subgroup.active ? "" : styles.subgroupHidden
-                      }`}
+                      } ${collapsed ? styles.subgroupCollapsed : ""}`}
                       key={subgroup.key}
                     >
                       <div className={styles.subgroupHeader}>
@@ -326,6 +298,8 @@ export default function ManagerStockHierarchy({
                           type="button"
                           className={styles.subgroupToggle}
                           aria-expanded={!collapsed}
+                          aria-controls={`manager-stock-subgroup-${subgroup.key}`}
+                          aria-label={`${collapsed ? "Buka" : "Tutup"} detail stok subkategori ${subgroup.name}`}
                           onClick={() => toggleSubcategory(subgroup.key)}
                         >
                           <h4>{subgroup.name}</h4>
@@ -366,7 +340,10 @@ export default function ManagerStockHierarchy({
                       </div>
 
                       {!collapsed && (
-                        <div className={styles.tableWrap}>
+                        <div
+                          className={styles.tableWrap}
+                          id={`manager-stock-subgroup-${subgroup.key}`}
+                        >
                           <table>
                             <thead>
                               <tr>
