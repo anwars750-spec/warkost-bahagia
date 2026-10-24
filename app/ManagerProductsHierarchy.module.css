@@ -525,3 +525,120 @@
     height: 28px;
   }
 }
+
+/* Clean hierarchy presentation: names are self-explanatory, so remove helper labels. */
+.categoryHeading span,
+.subgroupTitle span {
+  display: none;
+}
+
+.categoryHeading h3,
+.subgroupTitle h4 {
+  margin-top: 0;
+}
+
+/* Keep the product count, but remove verbose Tampil/Disembunyikan copy. */
+.subgroupMeta small {
+  display: none;
+}
+
+.subgroupMeta strong::after {
+  content: " produk";
+  color: #88746a;
+  font-size: 0.66rem;
+  font-weight: 600;
+}
+
+/* Visibility remains fully functional but is presented as a compact icon control. */
+.visibilityHide,
+.visibilityShow {
+  position: relative;
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+  min-height: 38px;
+  margin: 0 11px 0 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 10px;
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+}
+
+.visibilityHide::before,
+.visibilityShow::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 11px;
+  width: 15px;
+  height: 11px;
+  border: 1.8px solid currentColor;
+  border-radius: 70% 18%;
+  transform: rotate(45deg);
+}
+
+.visibilityHide::after {
+  content: "";
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.visibilityShow::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 18px;
+  width: 21px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  transform: rotate(-45deg);
+}
+
+.visibilityHide {
+  color: #8b5a46;
+  border-color: #e6d4c8;
+  background: #fffaf6;
+}
+
+.visibilityShow {
+  color: #7a8178;
+  border-color: #d9ddd7;
+  background: #f7f8f6;
+}
+
+.visibilityHide:hover:not(:disabled),
+.visibilityShow:hover:not(:disabled) {
+  color: #9a4025;
+  border-color: #d9aa94;
+  background: #fff3eb;
+}
+
+.visibilityHide:focus-visible,
+.visibilityShow:focus-visible {
+  outline: 3px solid rgba(181, 69, 37, 0.14);
+  outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  .subgroupHeader {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .visibilityHide,
+  .visibilityShow {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    min-height: 36px;
+    margin: 0 9px 0 0;
+  }
+}
