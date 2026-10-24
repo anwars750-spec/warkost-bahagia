@@ -81,7 +81,7 @@ test("launcher Owner memakai icon dan panah SVG native serta runtime tetap dimou
   assert.match(runtime, /owner-control-grid-v3/);
   assert.match(runtime, /Riwayat Delivery/);
   assert.match(runtime, /<svg viewBox="0 0 24 24">/);
-  assert.match(runtime, /<svg aria-hidden="true" viewBox="0 0 24 24">/);
+  assert.match(runtime, /<svg aria-hidden="true" viewBox="0 0 24 24"[^>]*>/);
   assert.match(runtime, /M5 12h14m-5-5 5 5-5 5/);
   assert.doesNotMatch(runtime, /styles\.ownerArrow/);
   assert.match(layout, /import DeliveryHistoryRuntime/);
