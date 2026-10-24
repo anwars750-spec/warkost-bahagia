@@ -90,8 +90,8 @@ Status: **COMPLETED / PRODUCT OWNER PASS**
 - Promotion Engine V1 implementation: `757f5a79e6afa721df80a6b836c3caf06af90393`
 - Remote baseline before Store Operating Hours V1: `3f193e3b8c50c35b0606ced8fd2ae8c7275b968d`
 - Auto Confirm QRIS Paid V1 status: **PRODUCT OWNER UAT PASS** (single item and mixed order)
-- Current milestone: STANDALONE BANNER MANAGEMENT V1
-- Current status: **AUTOMATED VERIFIED / PRODUCT OWNER UAT REQUIRED**
+- Current milestone: MILESTONE E - FINAL PRODUCT ACCEPTANCE & RELEASE CANDIDATE
+- Current status: **ACTIVE - FINAL CLOSURE & RELEASE READINESS**
 - Verification date: 2026-10-24
 - Authoritative Banner parent baseline: `b81649d`
 
@@ -99,7 +99,7 @@ Status: **COMPLETED / PRODUCT OWNER PASS**
 
 Date: 2026-10-24
 
-Status: **AUTOMATED VERIFIED / PRODUCT OWNER UAT REQUIRED**
+Status: **PRODUCT OWNER UAT PASS / ACCEPTED**
 
 ### Standalone data and authorization
 
@@ -1391,7 +1391,7 @@ Status: **VERIFIED**
 
 Date: 2026-10-22
 
-Status: **IMPLEMENTED / AUTOMATED VERIFIED / PRODUCT OWNER UAT REQUIRED**
+Status: **PRODUCT OWNER UAT PASS / ACCEPTED**
 
 ### Source-control baseline
 
