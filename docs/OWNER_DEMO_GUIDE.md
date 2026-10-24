@@ -10,7 +10,7 @@ keputusan pembelian hosting atau penggunaan data nyata.
 
 Launcher selalu membuat database SQLite baru di temporary directory, hanya
 bind ke `127.0.0.1`, menghasilkan session secret baru, dan menolak
-`DATABASE_URL`. Demo tidak terhubung ke Vercel, Hostinger, atau database lain.
+`DATABASE_URL`. Demo tidak terhubung ke deployment publik, VPS, atau database lain.
 
 ## Persiapan
 
