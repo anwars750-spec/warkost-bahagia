@@ -8,7 +8,7 @@ Tanggal verifikasi: 28 September 2026 (Asia/Jakarta)
 skenario wajib lulus pada desktop dan mobile, tidak ada defect aplikasi Sev-1
 atau Sev-2 yang terbuka, dan health/readiness tetap sehat setelah UAT.
 
-Persetujuan ini tidak mengaktifkan deployment. Migrasi ke Hostinger tetap
+Persetujuan ini tidak mengaktifkan deployment. Deployment ke hosting publik tetap
 ditahan sampai demo dan penerimaan pemilik selesai serta hosting telah dibeli.
 
 ## Baseline dan batas scope
@@ -19,7 +19,7 @@ ditahan sampai demo dan penerimaan pemilik selesai serta hosting telah dibeli.
 - Data: akun dan transaksi demo; tidak ada data pelanggan nyata.
 - Peran: Customer, Admin, dan Driver.
 - Di luar scope: hosting publik, domain, payment gateway, maps/routing,
-  perluasan fitur bisnis, dan konfigurasi infrastruktur Hostinger.
+  perluasan fitur bisnis, dan konfigurasi infrastruktur hosting publik.
 
 ## Matriks UAT
 
