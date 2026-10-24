@@ -543,13 +543,21 @@ export default function ManagerProductsHierarchy({
                                   ? styles.visibilityHide
                                   : styles.visibilityShow
                               }
+                              aria-label={
+                                subgroup.active
+                                  ? `Sembunyikan subkategori ${subgroup.name}`
+                                  : `Tampilkan subkategori ${subgroup.name}`
+                              }
+                              title={
+                                subgroup.active
+                                  ? `Sembunyikan ${subgroup.name}`
+                                  : `Tampilkan ${subgroup.name}`
+                              }
                               disabled={busy}
                               onClick={() =>
                                 toggleSubcategoryVisibility(subgroup)
                               }
-                            >
-                              {subgroup.active ? "Sembunyikan" : "Tampilkan"}
-                            </button>
+                            />
                           )}
                         </div>
 
