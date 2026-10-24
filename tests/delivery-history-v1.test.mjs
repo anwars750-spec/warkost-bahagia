@@ -59,7 +59,7 @@ test("history memakai list operasional sederhana dan detail shared untuk Manager
 });
 
 test("close detail dipusatkan secara presisi", () => {
-  assert.match(center, /aria-label="Tutup detail"/);
+  assert.match(center, /aria-label="Tutup detail delivery"/);
   assert.match(centerStyles, /detailHeader button\{display:grid;place-items:center;flex:0 0 36px;/);
   assert.match(centerStyles, /detailHeader button>span\{display:block;font-size:20px;line-height:1;/);
 });
