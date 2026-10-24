@@ -1,0 +1,92 @@
+.capturePanel {
+  cursor: default;
+}
+
+.hiddenInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sourceActions {
+  width: 100%;
+  max-width: 430px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.sourceActions button {
+  min-height: 86px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 14px;
+  border-radius: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sourceActions button > span:first-child {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  font-size: 1.35rem;
+}
+
+.sourceActions button > span:last-child {
+  display: grid;
+  gap: 3px;
+}
+
+.sourceActions button strong {
+  font-size: 0.88rem;
+}
+
+.sourceActions button small {
+  color: inherit;
+  opacity: 0.75;
+  font-size: 0.72rem;
+}
+
+.cameraButton {
+  border: 1px solid #ad4f28;
+  background: #b75a32;
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(183, 90, 50, 0.18);
+}
+
+.cameraButton > span:first-child {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.attachmentButton {
+  border: 1px solid #d9c5b5;
+  background: #fff;
+  color: #604535;
+}
+
+.attachmentButton > span:first-child {
+  background: #f3e8de;
+}
+
+.sourceActions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+@media (max-width: 520px) {
+  .sourceActions {
+    grid-template-columns: 1fr;
+  }
+
+  .sourceActions button {
+    min-height: 72px;
+  }
+}
