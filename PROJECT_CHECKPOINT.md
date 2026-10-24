@@ -1,5 +1,61 @@
 ﻿# Warkost Bahagia â€” Project Checkpoint
 
+## MILESTONE D — DELIVERY PROOF & HISTORY V1
+
+Date closed: 2026-10-24
+
+Status: **COMPLETED / PRODUCT OWNER PASS**
+
+### D1 — Driver Delivery Proof Capture
+
+- Driver assigned wajib memiliki bukti foto sebelum order ON_DELIVERY dapat menjadi DELIVERED.
+- Action Pesanan Diterima langsung membuka proof capture flow.
+- Mobile menyediakan Ambil Foto menggunakan kamera dan Lampirkan Foto dari gallery/file.
+- Desktop mendukung attachment melalui file chooser.
+- Foto dapat dipreview dan diganti sebelum disimpan.
+- Jika proof belum tersedia atau upload gagal, order tetap ON_DELIVERY.
+- Completion tetap memakai existing changeStatus flow setelah proof berhasil tersimpan.
+- Server-side proof requirement tetap authoritative.
+- Pickup tidak memakai delivery proof.
+- COD settlement, loyalty, notification, realtime, chat, self-claim, dan max 5 delivery tidak diubah.
+
+### D2 — Manager & Owner Delivery History
+
+- Read-only history hanya tersedia untuk Manager dan Owner.
+- Hanya order DELIVERED yang ditampilkan.
+- History menampilkan order number, customer, Driver, waktu selesai, payment/status, alamat, proof photo, dan existing order_events timeline.
+- Historical delivery lama tanpa proof tetap dapat ditampilkan.
+- Manager dan Owner menggunakan shared Delivery History UI.
+- Manager mendapatkan akses Riwayat Delivery pada navigation aktif.
+- Owner mendapatkan Riwayat Delivery pada Kontrol Usaha dengan visual yang konsisten dengan menu Owner lain.
+- Tidak ada status mutation atau timeline engine baru.
+
+### Product Owner UAT
+
+- Driver proof capture flow: **PASS**
+- Manager Delivery History visual UAT: **PASS**
+- Owner Delivery History visual UAT: **PASS**
+- Final Owner launcher/icon/arrow polish: **PASS**
+
+### Verification
+
+- Delivery History targeted suite: **10/10 PASS**
+- Full regression: **521/521 PASS**
+- Full regression dijalankan dengan deterministic test time melalui WARKOST_TEST_STORE_NOW_MS agar Store Operating Hours V1 tidak bergantung pada jam nyata.
+- Production build — Next.js 16.3.6: **PASS**
+- Production route generation: **PASS**
+- Working tree after verification: **CLEAN**
+
+### Closure boundary
+
+- Milestone D resmi ditutup setelah Product Owner UAT.
+- Jangan sentuh ulang D1/D2 kecuali ditemukan regression nyata.
+- Tidak ada merge.
+- Tidak ada deployment.
+- Tidak membuka milestone baru dalam closure ini.
+
+---
+
 ## Active baseline
 
 - Branch: `work/customer-qris-demo-uat-v1`
@@ -1404,4 +1460,3 @@ Status: **PRODUCT OWNER UAT PASS**
 - The worker is process-local and assumes the documented persistent Node hosting target; database transaction guards keep repeated or overlapping process sweeps idempotent.
 - Product Owner UAT passed for single-item and mixed orders before Store Operating Hours V1 began.
 \n\n## Final Regression Closure â€” 2026-10-23\n\n- SYSTEM-WIDE REALTIME OPERATIONS V1: **PRODUCT OWNER UAT PASS / COMPLETED**.\n- Customer payment contract: **QRIS ONLY**, server-authoritative. CASH/COD and BANK_TRANSFER are rejected for new Customer checkout; legacy COD data/settlement support remains preserved.\n- QRIS-only contract tests: **4/4 PASS**.\n- Store Operating Hours V1 dedicated tests: **8/8 PASS**.\n- Pickup completion + Driver isolation verification: **5/5 PASS**.\n- Final full regression: **478/478 PASS, 0 FAIL**.\n- Regression stabilization commit: 3e2a1d2.\n- No merge and no deployment performed.\n
-
