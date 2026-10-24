@@ -34,9 +34,10 @@
 - Promotion Engine V1 implementation: `757f5a79e6afa721df80a6b836c3caf06af90393`
 - Remote baseline before Store Operating Hours V1: `3f193e3b8c50c35b0606ced8fd2ae8c7275b968d`
 - Auto Confirm QRIS Paid V1 status: **PRODUCT OWNER UAT PASS** (single item and mixed order)
-- Current milestone: SYSTEM-WIDE REALTIME OPERATIONS V1 — COMPLETED
-- Current status: **PRODUCT OWNER UAT PASS / FULL REGRESSION PASS / CHECKPOINT CLOSURE**
-- Verification date: 2026-10-23
+- Current milestone: MILESTONE C ? MENU & DISPLAY MANAGEMENT V2 ? COMPLETED
+- Current status: **MILESTONE C CLOSED / AUTOMATED VERIFICATION PASS / REMOTE CHECKPOINT PUSHED**
+- Verification date: 2026-10-24
+- Current remote checkpoint baseline: `c710a57`
 
 
 ## Milestone B ? Store Operations V2
@@ -117,7 +118,8 @@ Verification:
 - Production build: PASS
 - Full regression: **491/491 PASS**
 - Working tree was clean before push
-- Latest remote baseline: `ca49364`
+- Feature implementation baseline: `ca49364`
+- Milestone C remote checkpoint closure: `c710a57`
 
 Guardrails:
 - No merge.
