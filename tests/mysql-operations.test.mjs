@@ -60,7 +60,7 @@ test("file kredensial MySQL berizin terbatas dan dapat dibersihkan", () => {
 
 test("backup MySQL membuat checksum dan menolak output dump yang tidak valid", () => {
   const directory = fs.mkdtempSync(
-    path.join(os.tmpdir(), "warkost-mysql-backup-test-")),
+    path.join(os.tmpdir(), "warkost-mysql-backup-test-"),
   );
   try {
     const backupScript = path.join(projectRoot, "scripts", "backup-mysql.mjs");
