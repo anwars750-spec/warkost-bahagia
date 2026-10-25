@@ -356,13 +356,15 @@ const accountBaseline = (await call("account", undefined, customer)).value;
 const reportBaseline = (await call("report", undefined, owner)).value;
 const checkoutBody = {
   addressId: 1,
-  method: "CASH",
+  method: "QRIS",
   items: [{ productId: 1, quantity: 2 }],
   idempotencyKey: crypto.randomUUID(),
 };
 const created = await call("checkout", checkoutBody, customer);
 assert.equal(created.status, 201, JSON.stringify(created.value));
 const id = created.value.id;
+assert.equal(created.value.payment.method, "QRIS");
+assert.equal(created.value.payment.status, "PENDING");
 const retried = await call("checkout", checkoutBody, customer);
 assert.equal(retried.status, 201);
 assert.equal(retried.value.id, id);
@@ -419,6 +421,30 @@ assert.equal(
   ).status,
   200,
 );
+
+const webhookSecret = String(process.env.PAYMENT_WEBHOOK_SECRET || "");
+assert.ok(webhookSecret.length >= 32, "PAYMENT_WEBHOOK_SECRET smoke wajib tersedia");
+const paymentWebhookPayload = JSON.stringify({
+  event_id: `smoke-paid-${created.value.payment.id}-${crypto.randomUUID()}`,
+  transaction_reference: created.value.payment.transaction_reference,
+  provider_reference: created.value.payment.provider_reference,
+  status: "PAID",
+});
+const paymentWebhookSignature = crypto
+  .createHmac("sha256", webhookSecret)
+  .update(paymentWebhookPayload)
+  .digest("hex");
+const paymentWebhook = await fetch(origin + "/api/payment/webhook", {
+  method: "POST",
+  headers: {
+    "content-type": "application/json",
+    "x-payment-signature": paymentWebhookSignature,
+  },
+  body: paymentWebhookPayload,
+});
+const paymentWebhookValue = await paymentWebhook.json();
+assert.equal(paymentWebhook.status, 200, JSON.stringify(paymentWebhookValue));
+assert.equal(paymentWebhookValue.payment.status, "PAID");
 
 assert.equal(
   (await call("order-items?id=" + id, undefined, driver)).status,
@@ -484,7 +510,7 @@ assert.ok(
 );
 assert.equal(
   (await call("payment", { orderId: id, status: "PAID" }, admin)).status,
-  200,
+  403,
 );
 const paidAccount = await call("account", undefined, customer);
 assert.equal(
@@ -527,7 +553,7 @@ assert.equal(
 );
 assert.equal(
   (await call("payment", { orderId: id, status: "PAID" }, admin)).status,
-  400,
+  403,
 );
 assert.equal(
   (
@@ -573,7 +599,7 @@ assert.equal(
       "checkout",
       {
         addressId: replaced.value.id,
-        method: "CASH",
+        method: "QRIS",
         items: [{ productId: 1, quantity: 1 }],
       },
       customer,
@@ -613,7 +639,7 @@ const customerAgain = (
 for (let n = 0; n < 26; n++) {
   const result = await call(
     "checkout",
-    { addressId: 1, method: "CASH", items: [{ productId: 1, quantity: 1 }] },
+    { addressId: 1, method: "QRIS", items: [{ productId: 1, quantity: 1 }] },
     customerAgain,
   );
   assert.equal(result.status, 201, JSON.stringify(result.value));
@@ -658,6 +684,6 @@ assert.equal(
   403,
 );
 console.log(
-  "HTTP PASS: login enam role, RBAC, stok, kitchen, owner audit, driver, delivered, loyalty once; order #" +
+  "HTTP PASS: login enam role, RBAC, QRIS webhook, stok, kitchen, owner audit, driver, delivery proof, loyalty once; order #" +
     id,
 );

@@ -17,6 +17,8 @@ const temporary = fs.mkdtempSync(
   path.join(os.tmpdir(), "warkost-mysql-integration-"),
 );
 const password = "mysql-integration-password-2026";
+const paymentWebhookSecret =
+  "mysql-integration-payment-webhook-secret-more-than-32-bytes";
 let database;
 let web;
 let sourceUrl;
@@ -200,6 +202,8 @@ try {
         ...common,
         NODE_ENV: "development",
         EMAIL_TRANSPORT: "development",
+        PAYMENT_PROVIDER_MODE: "simulation",
+        PAYMENT_WEBHOOK_SECRET: paymentWebhookSecret,
       },
       stdio: ["ignore", "pipe", "pipe"],
     },
@@ -250,7 +254,11 @@ try {
   assert.doesNotThrow(() => JSON.parse(probePromotionText));
 
   try {
-    run("scripts/http-smoke.mjs", { ...common, SMOKE_ORIGIN: origin });
+    run("scripts/http-smoke.mjs", {
+      ...common,
+      SMOKE_ORIGIN: origin,
+      PAYMENT_WEBHOOK_SECRET: paymentWebhookSecret,
+    });
   } catch (error) {
     throw Error(`${error.message}\nNEXT SERVER OUTPUT:\n${serverOutput}`);
   }
