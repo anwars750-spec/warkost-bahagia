@@ -91,7 +91,15 @@ assert.equal(
   (await authenticated("/api/inventory", customer)).response.status,
   403,
 );
-assert.equal((await authenticated("/api/stock", kitchen)).response.status, 403);
+const kitchenStock = await authenticated("/api/stock", kitchen);
+assert.equal(kitchenStock.response.status, 200);
+assert.ok(Array.isArray(kitchenStock.value.products));
+assert.ok(
+  kitchenStock.value.products.every(
+    (product) => product.category_name === "Makanan",
+  ),
+);
+assert.deepEqual(kitchenStock.value.movements, []);
 assert.equal(
   (await authenticated("/api/drivers", customer)).response.status,
   403,
