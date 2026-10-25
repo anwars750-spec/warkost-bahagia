@@ -38,6 +38,14 @@ jobs:
       DATABASE_URL: mysql://root:mysql-ci-password@127.0.0.1:3306/warkost_staging
       DEPLOYMENT_ENV: staging
       SESSION_SECRET: staging-ci-session-secret-2026-minimum-32-characters
+      OTP_SECRET: staging-ci-otp-secret-2026-minimum-32-characters
+      EMAIL_TRANSPORT: smtp
+      SMTP_HOST: smtp.example.com
+      SMTP_PORT: "587"
+      SMTP_SECURE: "false"
+      SMTP_USER: staging-ci-user
+      SMTP_PASS: staging-ci-smtp-password
+      SMTP_FROM: Warkost Bahagia <no-reply@example.com>
       SEED_DEMO_PASSWORD: staging-uat-password-2026
       STAGING_UAT_PASSWORD: staging-uat-password-2026
       UPLOAD_DIRECTORY: ${{ github.workspace }}/.uat/uploads
@@ -101,8 +109,8 @@ jobs:
       - name: Cross-role browser UAT desktop and mobile
         run: npm run test:uat
 
-      - name: Cross-role HTTP UAT
-        run: node scripts/http-smoke.mjs
+      - name: Production-compatible HTTP staging smoke
+        run: node scripts/staging-ci-smoke.mjs
 
       - name: Upload browser evidence
         if: always()
