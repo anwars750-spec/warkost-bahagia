@@ -139,10 +139,21 @@ assert.equal(verified.status, 200, JSON.stringify(verified.value));
 assert.equal(verified.value.user.role, "CUSTOMER");
 assert.ok(verified.cookie);
 
-// Manager stock write remains operational; Owner write remains forbidden.
+// Select an active in-stock product using its configured sales unit.
 const inventory = await call("inventory", undefined, manager);
 assert.ok(inventory.value.products.length > 0);
-const productId = inventory.value.products[0].id;
+const menu = await call("menu");
+const smokeProduct = menu.value.products.find(
+  (product) =>
+    Number(product.in_stock) === 1 &&
+    Number.isSafeInteger(Number(product.minimum_order_quantity)) &&
+    Number(product.minimum_order_quantity) > 0,
+);
+assert.ok(smokeProduct, "Customer menu harus memiliki produk aktif dan in-stock");
+const productId = smokeProduct.id;
+const orderQuantity = Number(smokeProduct.minimum_order_quantity);
+
+// Manager stock write remains operational; Owner write remains forbidden.
 assert.equal(
   (
     await call(
@@ -212,7 +223,7 @@ const reportBaseline = (await call("report", undefined, owner)).value;
 const checkoutBody = {
   addressId: 1,
   method: "QRIS",
-  items: [{ productId: 1, quantity: 2 }],
+  items: [{ productId, quantity: orderQuantity }],
   idempotencyKey: crypto.randomUUID(),
 };
 const created = await call("checkout", checkoutBody, customer);
