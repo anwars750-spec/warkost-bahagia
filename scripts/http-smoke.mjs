@@ -323,7 +323,7 @@ const newDriver = await call(
     name: "Driver Smoke",
     email: "driver-smoke@test.local",
     password: "a-long-unique-password-123",
-    phone: "081546407856",
+    phone: "081234567891",
   },
   owner,
 );
@@ -454,11 +454,28 @@ assert.equal(
   (await call("claim-delivery", { orderId: id }, driver)).status,
   200,
 );
-for (const status of ["PICKED_UP", "ON_DELIVERY", "DELIVERED"])
+for (const status of ["PICKED_UP", "ON_DELIVERY"])
   assert.equal(
     (await call("status", { orderId: id, status }, driver)).status,
     200,
   );
+assert.equal(
+  (await call("status", { orderId: id, status: "DELIVERED" }, driver)).status,
+  409,
+);
+const deliveryProofForm = new FormData();
+deliveryProofForm.append("orderId", String(id));
+deliveryProofForm.append(
+  "image",
+  new Blob([png], { type: "image/png" }),
+  "delivery-proof.png",
+);
+const deliveryProof = await fetch(origin + "/api/delivery-proof", {
+  method: "POST",
+  headers: { cookie: driver },
+  body: deliveryProofForm,
+});
+assert.equal(deliveryProof.status, 201);
 assert.ok((await call("notifications", undefined, driver)).value.unread >= 1);
 assert.ok(
   (await call("notifications", undefined, customer)).value.notifications.some(
@@ -568,6 +585,9 @@ const profile = await call(
   "profile",
   {
     name: "Customer Smoke",
+    email: "customer@warkost.local",
+    phone: "081234567892",
+    birthDate: "1996-09-18",
     currentPassword: pw,
     newPassword: "new-password-long-2026",
   },
