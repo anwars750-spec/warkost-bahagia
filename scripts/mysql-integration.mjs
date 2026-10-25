@@ -206,6 +206,40 @@ try {
   console.log("MYSQL INTEGRATION: menunggu HTTP readiness");
   await waitForReady(origin, () => serverOutput);
   console.log("MYSQL INTEGRATION: HTTP readiness PASS");
+
+  console.log("MYSQL INTEGRATION: probe customer promotion denial");
+  const probeLogin = await fetch(origin + "/api/login", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      email: "customer@warkost.local",
+      password,
+    }),
+  });
+  const probeCookie = probeLogin.headers.get("set-cookie")?.split(";")[0] || "";
+  assert.equal(probeLogin.status, 200, await probeLogin.text());
+  const probePromotion = await fetch(origin + "/api/promotion", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      cookie: probeCookie,
+    },
+    body: "{}",
+  });
+  const probePromotionText = await probePromotion.text();
+  console.log(
+    "MYSQL INTEGRATION: promotion denial probe",
+    JSON.stringify({
+      status: probePromotion.status,
+      contentType: probePromotion.headers.get("content-type"),
+      contentLength: probePromotionText.length,
+      body: probePromotionText.slice(0, 200),
+    }),
+  );
+  assert.equal(probePromotion.status, 403);
+  assert.ok(probePromotionText.length > 0, "Promotion denial response must have a JSON body");
+  assert.doesNotThrow(() => JSON.parse(probePromotionText));
+
   try {
     run("scripts/http-smoke.mjs", { ...common, SMOKE_ORIGIN: origin });
   } catch (error) {
