@@ -72,6 +72,7 @@ async function main() {
     PAYMENT_WEBHOOK_SECRET: crypto.randomBytes(48).toString("hex"),
     SEED_DEMO_PASSWORD: process.env.OWNER_DEMO_PASSWORD,
     SESSION_SECRET: crypto.randomBytes(48).toString("hex"),
+    OTP_SECRET: crypto.randomBytes(48).toString("hex"),
     UPLOAD_DIRECTORY: path.join(directory, "uploads"),
     BACKUP_DIRECTORY: path.join(directory, "backups"),
   };
