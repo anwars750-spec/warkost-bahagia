@@ -69,7 +69,7 @@ for (let attempt = 0; attempt < 13; attempt++) {
   assert.equal(result.status, attempt < 12 ? 401 : 429);
 }
 assert.equal((await call("inventory", undefined, customer)).status, 403);
-assert.equal((await call("stock", undefined, 200
+assert.equal((await call("stock", undefined, kitchen)).status, 403);
 assert.equal((await call("audit", undefined, admin)).status, 403);
 assert.equal((await call("audit", undefined, owner)).status, 200);
 assert.equal((await call("promotions", undefined, customer)).status, 403);
