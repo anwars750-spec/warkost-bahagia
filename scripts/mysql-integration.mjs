@@ -153,6 +153,7 @@ try {
     SEED_DEMO_PASSWORD: password,
     SESSION_SECRET: "mysql-integration-session-secret-32-bytes",
     OTP_SECRET: "mysql-integration-otp-secret-more-than-32-bytes",
+    OTP_OUTBOX_PATH: path.join(temporary, ".uat", "otp-outbox.json"),
     EMAIL_TRANSPORT: "smtp",
     SMTP_HOST: "smtp.example.com",
     SMTP_PORT: "587",
@@ -194,7 +195,12 @@ try {
     [nextBinary, "dev", "--hostname", "127.0.0.1", "--port", String(port)],
     {
       cwd: root,
-      env: { ...process.env, ...common, NODE_ENV: "development" },
+      env: {
+        ...process.env,
+        ...common,
+        NODE_ENV: "development",
+        EMAIL_TRANSPORT: "development",
+      },
       stdio: ["ignore", "pipe", "pipe"],
     },
   );
@@ -237,7 +243,10 @@ try {
     }),
   );
   assert.equal(probePromotion.status, 403, serverOutput);
-  assert.ok(probePromotionText.length > 0, `Promotion denial response must have a JSON body\n${serverOutput}`);
+  assert.ok(
+    probePromotionText.length > 0,
+    `Promotion denial response must have a JSON body\n${serverOutput}`,
+  );
   assert.doesNotThrow(() => JSON.parse(probePromotionText));
 
   try {

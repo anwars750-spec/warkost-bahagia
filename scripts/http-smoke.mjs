@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
+import fs from "node:fs";
 import sharp from "sharp";
 const origin = process.env.SMOKE_ORIGIN || "http://127.0.0.1:3000";
 let cookie = "";
@@ -23,6 +24,10 @@ async function call(action, body, session = "") {
   };
 }
 const pw = process.env.SEED_DEMO_PASSWORD;
+const latestOtpCode = () => {
+  const rows = JSON.parse(fs.readFileSync(process.env.OTP_OUTBOX_PATH, "utf8"));
+  return rows.at(-1).text.match(/\b\d{6}\b/)[0];
+};
 assert.equal(
   (
     await fetch(origin + "/api/login", {
@@ -145,13 +150,27 @@ assert.equal(
   Object.hasOwn(customersBefore.value.customers[0], "password_hash"),
   false,
 );
+const registrationPassword = "strong-new-customer-2026";
 const newCustomer = await call("register", {
   name: "Customer Admin Test",
   email: "customer-admin-smoke@test.local",
-  password: "strong-new-customer-2026",
+  phone: "081234567890",
+  birthDate: "1996-09-18",
+  password: registrationPassword,
+  passwordConfirmation: registrationPassword,
+  consent: true,
 });
-assert.equal(newCustomer.status, 200, JSON.stringify(newCustomer.value));
-const newCustomerId = newCustomer.value.user.id;
+assert.equal(newCustomer.status, 201, JSON.stringify(newCustomer.value));
+assert.equal(newCustomer.value.pending, true);
+const verifiedCustomer = await call("otp-verify", {
+  challengeId: newCustomer.value.challengeId,
+  code: latestOtpCode(),
+  purpose: "REGISTRATION",
+});
+assert.equal(verifiedCustomer.status, 200, JSON.stringify(verifiedCustomer.value));
+const newCustomerId = verifiedCustomer.value.user.id;
+const newCustomerSession = verifiedCustomer.cookie;
+assert.ok(newCustomerSession);
 assert.equal(
   (
     await call(
@@ -173,14 +192,14 @@ assert.equal(
   200,
 );
 assert.equal(
-  (await call("me", undefined, newCustomer.cookie)).value.user,
+  (await call("me", undefined, newCustomerSession)).value.user,
   null,
 );
 assert.equal(
   (
     await call("login", {
       email: "customer-admin-smoke@test.local",
-      password: "strong-new-customer-2026",
+      password: registrationPassword,
     })
   ).status,
   401,
