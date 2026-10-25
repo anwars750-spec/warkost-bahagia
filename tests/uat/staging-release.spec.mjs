@@ -39,16 +39,12 @@ async function signIn(page, email, expectedRole) {
   await form.locator('input[type="password"]').fill(password);
   await form.getByRole("button", { name: "Masuk", exact: true }).click();
 
-  const me = await page.context().request.get("/api/me", {
-    headers: {
-      cookie: (await page.context().cookies())
-        .filter((cookie) => cookie.name === "wb_session")
-        .map((cookie) => `wb_session=${cookie.value}`)
-        .join("; "),
-    },
+  const me = await page.evaluate(async () => {
+    const response = await fetch("/api/me", { cache: "no-store" });
+    return { status: response.status, value: await response.json() };
   });
-  expect(me.status()).toBe(200);
-  expect((await me.json()).user.role).toBe(expectedRole);
+  expect(me.status).toBe(200);
+  expect(me.value.user?.role).toBe(expectedRole);
   await expect(page.getByRole("img", { name: "Warkost Bahagia" })).toBeVisible();
   await expectResponsiveShell(page);
 }
@@ -62,7 +58,7 @@ test("guest storefront release shell responsif dan auth dapat dibuka", async ({
   await expect(
     page.getByRole("heading", { name: "Mau makan apa hari ini?" }),
   ).toBeVisible();
-  await expect(page.locator("article.customer-product")).toHaveCount(3);
+  await expect(page.locator("article.product")).toHaveCount(3);
   await expect(
     page.getByRole("searchbox", { name: "Cari makanan atau minuman" }),
   ).toBeVisible();
@@ -90,7 +86,7 @@ test("customer release shell responsif", async ({ page }) => {
   await expect(
     page.getByRole("navigation", { name: "Navigasi pelanggan utama" }),
   ).toBeVisible();
-  await expect(page.locator("article.customer-product")).toHaveCount(3);
+  await expect(page.locator("article.product")).toHaveCount(3);
   expect(pageErrors).toEqual([]);
 });
 
