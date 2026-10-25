@@ -259,7 +259,7 @@ assert.equal(denied.status, 403);
 const oversized = await fetch(origin + "/api/upload", {
   method: "POST",
   headers: {
-    cookie: admin,
+    cookie: manager,
     "content-type": "multipart/form-data; boundary=oversized",
   },
   body: Buffer.alloc(9 * 1024 * 1024 + 1, 65),
