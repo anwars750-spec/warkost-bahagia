@@ -315,7 +315,8 @@ assert.equal((await call("dashboard", undefined, customer)).status, 403);
 assert.equal((await call("dashboard", undefined, admin)).status, 200);
 assert.equal((await call("settings", undefined, customer)).status, 403);
 assert.equal((await call("settings", undefined, admin)).status, 403);
-assert.equal((await call("settings", undefined, manager)).status, 200);
+assert.equal((await call("settings", undefined, manager)).status, 403);
+assert.equal((await call("settings", undefined, owner)).status, 200);
 const newDriver = await call(
   "driver",
   {
@@ -516,7 +517,7 @@ assert.equal(
     await call(
       "settings",
       { brandName: "Kafe Smoke", rupiahPerPoint: 10000 },
-      manager,
+      owner,
     )
   ).status,
   200,
