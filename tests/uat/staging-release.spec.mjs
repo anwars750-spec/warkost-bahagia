@@ -37,7 +37,39 @@ async function signIn(page, email) {
   const form = page.locator(".auth-login-card form");
   await form.getByLabel("Email atau Nomor HP").fill(email);
   await form.locator('input[type="password"]').fill(password);
-  await form.getByRole("button", { name: "Masuk", exact: true }).click();
+  const [loginResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response.url().endsWith("/api/login") &&
+        response.request().method() === "POST",
+    ),
+    form.getByRole("button", { name: "Masuk", exact: true }).click(),
+  ]);
+  expect(loginResponse.status()).toBe(200);
+
+  // Production staging correctly emits a Secure session cookie. GitHub Actions
+  // reaches the production-mode server through HTTP loopback, so Chromium will
+  // not send that cookie back. Reuse the genuine signed session value with only
+  // the transport flag lowered inside this browser test; application security
+  // and production cookie policy remain unchanged.
+  const setCookie = await loginResponse.headerValue("set-cookie");
+  const match = setCookie?.match(/(?:^|,\s*)wb_session=([^;]+)/);
+  expect(match?.[1]).toBeTruthy();
+  const current = new URL(page.url());
+  if (current.protocol === "http:" && ["127.0.0.1", "localhost"].includes(current.hostname)) {
+    await page.context().clearCookies();
+    await page.context().addCookies([
+      {
+        name: "wb_session",
+        value: match[1],
+        url: current.origin,
+        httpOnly: true,
+        secure: false,
+        sameSite: "Lax",
+      },
+    ]);
+    await page.reload();
+  }
 
   await expect(page.getByRole("img", { name: "Warkost Bahagia" })).toBeVisible();
   await expectResponsiveShell(page);
