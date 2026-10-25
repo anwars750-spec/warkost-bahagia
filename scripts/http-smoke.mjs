@@ -6,6 +6,7 @@ let cookie = "";
 async function call(action, body, session = "") {
   if (action === "checkout" && body && !body.idempotencyKey)
     body = { ...body, idempotencyKey: crypto.randomUUID() };
+  console.log("SMOKE CALL", action);
   const r = await fetch(origin + "/api/" + action, {
     method: body ? "POST" : "GET",
     headers: {
@@ -258,11 +259,13 @@ assert.equal(
   ).status,
   400,
 );
+console.log("SMOKE DIRECT upload manager");
 const uploaded = await fetch(origin + "/api/upload", {
   method: "POST",
   headers: { cookie: manager },
   body: mediaForm,
 });
+console.log("SMOKE DIRECT upload manager status", uploaded.status);
 assert.equal(uploaded.status, 201);
 const image = await uploaded.json();
 const served = await fetch(origin + image.url);
