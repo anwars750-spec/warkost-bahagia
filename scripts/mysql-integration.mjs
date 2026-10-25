@@ -236,8 +236,8 @@ try {
       body: probePromotionText.slice(0, 200),
     }),
   );
-  assert.equal(probePromotion.status, 403);
-  assert.ok(probePromotionText.length > 0, "Promotion denial response must have a JSON body");
+  assert.equal(probePromotion.status, 403, serverOutput);
+  assert.ok(probePromotionText.length > 0, `Promotion denial response must have a JSON body\n${serverOutput}`);
   assert.doesNotThrow(() => JSON.parse(probePromotionText));
 
   try {
