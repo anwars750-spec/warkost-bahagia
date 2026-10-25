@@ -206,7 +206,11 @@ try {
   console.log("MYSQL INTEGRATION: menunggu HTTP readiness");
   await waitForReady(origin, () => serverOutput);
   console.log("MYSQL INTEGRATION: HTTP readiness PASS");
-  run("scripts/http-smoke.mjs", { ...common, SMOKE_ORIGIN: origin });
+  try {
+    run("scripts/http-smoke.mjs", { ...common, SMOKE_ORIGIN: origin });
+  } catch (error) {
+    throw Error(`${error.message}\nNEXT SERVER OUTPUT:\n${serverOutput}`);
+  }
 
   const binaryDirectory = database
     ? path.join(
