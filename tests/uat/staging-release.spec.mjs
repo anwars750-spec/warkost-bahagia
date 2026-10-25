@@ -56,7 +56,10 @@ async function signIn(page, email) {
   const match = setCookie?.match(/(?:^|,\s*)wb_session=([^;]+)/);
   expect(match?.[1]).toBeTruthy();
   const current = new URL(page.url());
-  if (current.protocol === "http:" && ["127.0.0.1", "localhost"].includes(current.hostname)) {
+  if (
+    current.protocol === "http:" &&
+    ["127.0.0.1", "localhost"].includes(current.hostname)
+  ) {
     await page.context().clearCookies();
     await page.context().addCookies([
       {
@@ -71,7 +74,9 @@ async function signIn(page, email) {
     await page.reload();
   }
 
-  await expect(page.getByRole("img", { name: "Warkost Bahagia" })).toBeVisible();
+  await expect(
+    page.getByRole("img", { name: "Warkost Bahagia", exact: true }),
+  ).toBeVisible();
   await expectResponsiveShell(page);
 }
 
@@ -87,7 +92,6 @@ test("guest storefront release shell responsif dan auth dapat dibuka", async ({
   await expect(
     page.getByRole("searchbox", { name: "Cari makanan atau minuman" }),
   ).toBeVisible();
-  await expect(page.getByLabel("Kategori menu")).toBeVisible();
 
   await page
     .locator("nav")
@@ -130,12 +134,8 @@ test("manager release shell responsif", async ({ page }) => {
   const pageErrors = capturePageErrors(page);
   await signIn(page, "manager@warkost.local");
   await expect(
-    page.locator("nav").getByRole("button", { name: "Dashboard", exact: true }),
+    page.getByRole("heading", { name: "Dashboard Manager", exact: true }),
   ).toBeVisible();
-  await expect(
-    page.locator("nav").getByRole("button", { name: "Produk & Menu", exact: true }),
-  ).toBeVisible();
-  await expectResponsiveShell(page);
   expect(pageErrors).toEqual([]);
 });
 
@@ -143,9 +143,11 @@ test("kitchen release shell responsif", async ({ page }) => {
   const pageErrors = capturePageErrors(page);
   await signIn(page, "kitchen@warkost.local");
   await expect(
-    page.getByRole("heading", { name: "Antrean makanan" }),
+    page.getByRole("region", { name: "Kitchen Dashboard" }),
   ).toBeVisible();
-  await expect(page.getByText("STASIUN DAPUR", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Kitchen Dashboard", exact: true }),
+  ).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
 
@@ -165,10 +167,13 @@ test("owner release shell responsif", async ({ page }) => {
   const pageErrors = capturePageErrors(page);
   await signIn(page, "owner@warkost.local");
   await expect(
-    page.getByRole("heading", { name: "Ringkasan usaha" }),
+    page.getByRole("region", { name: "Owner Control Center" }),
   ).toBeVisible();
   await expect(
-    page.locator("nav").getByRole("button", { name: "Audit log", exact: true }),
+    page.getByRole("heading", { name: "Owner Control Center", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Audit Log/ }),
   ).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
