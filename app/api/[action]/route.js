@@ -48,6 +48,7 @@ import {
   getPaymentStatus,
   verifyPayment,
 } from "../../../lib/payments.mjs";
+import { paymentProviderConfiguration } from "../../../lib/payment-provider.mjs";
 import {
   submitCodSettlement,
   verifyCodSettlement,
@@ -208,7 +209,13 @@ export async function GET(request, { params }) {
       );
     }
     if (action === "settings") return out(await getSettings(user));
-    if (action === "store-hours") return out(await getStoreOperatingStatus());
+    if (action === "store-hours") {
+      const status = await getStoreOperatingStatus();
+      return out({
+        ...status,
+        qrisAvailable: paymentProviderConfiguration().available === true,
+      });
+    }
     if (action === "promotions")
       return out({ promotions: await listPromotions(user) });
     if (action === "banners") return out({ banners: await listBanners(user) });

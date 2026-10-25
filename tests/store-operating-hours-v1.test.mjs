@@ -286,6 +286,8 @@ test("route, Customer UI, Owner/Manager UI, dan migration terhubung", () => {
     "utf8",
   );
   assert.match(route, /action === "store-hours"[\s\S]*getStoreOperatingStatus/);
+  assert.match(route, /qrisAvailable:[\s\S]*paymentProviderConfiguration/);
+  assert.match(page, /method\.value !== "QRIS" \|\| storeStatus\?\.qrisAvailable === true/);
   assert.match(route, /action === "store-hours"[\s\S]*saveStoreOperatingHours/);
   assert.match(page, /customer-store-status/);
   assert.match(page, /storeStatus\?\.isOpen !== true/);

@@ -3310,7 +3310,7 @@ export default function App() {
                           description:
                             "Bayar non-tunai melalui QRIS dan nikmati benefit member yang eligible.",
                         },
-                      ].map((method) => (
+                      ].filter((method) => method.value !== "QRIS" || storeStatus?.qrisAvailable === true).map((method) => (
                         <label
                           className={`payment-method-option ${selectedPaymentMethod === method.value ? "selected" : ""}`}
                           key={method.value}
