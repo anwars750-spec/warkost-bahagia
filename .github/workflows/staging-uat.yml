@@ -106,8 +106,8 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Cross-role browser UAT desktop and mobile
-        run: npm run test:uat
+      - name: Cross-role browser release gate desktop and mobile
+        run: npx playwright test tests/uat/staging-release.spec.mjs
 
       - name: Production-compatible HTTP staging smoke
         run: node scripts/staging-ci-smoke.mjs
