@@ -132,16 +132,20 @@ export const runtime = "nodejs";
 const out = (data, status = 200) =>
   NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
 async function mutation(action, user, body, operation, status = 200) {
-  const result = await operation();
   try {
-    await publishActionRealtime(action, user, body, result);
-  } catch (realtimeError) {
-    console.error("Realtime publication failed", {
-      action,
-      error: realtimeError,
-    });
+    const result = await operation();
+    try {
+      await publishActionRealtime(action, user, body, result);
+    } catch (realtimeError) {
+      console.error("Realtime publication failed", {
+        action,
+        error: realtimeError,
+      });
+    }
+    return out(result, status);
+  } catch (e) {
+    return error(e);
   }
-  return out(result, status);
 }
 const integer = (value) =>
   Number.isSafeInteger(Number(value)) && Number(value) > 0
