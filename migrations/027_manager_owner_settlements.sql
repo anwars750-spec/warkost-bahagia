@@ -1,14 +1,14 @@
 CREATE TABLE IF NOT EXISTS admin_shift_settlements (
-  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   slip_number VARCHAR(40) UNIQUE NULL,
-  shift_id BIGINT NOT NULL UNIQUE,
-  admin_user_id BIGINT NOT NULL,
-  operator_id BIGINT NOT NULL,
+  shift_id BIGINT UNSIGNED NOT NULL UNIQUE,
+  admin_user_id BIGINT UNSIGNED NOT NULL,
+  operator_id BIGINT UNSIGNED NOT NULL,
   expected_amount BIGINT NOT NULL,
   submitted_amount BIGINT NOT NULL,
   admin_overage_amount BIGINT NOT NULL DEFAULT 0,
   status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
-  manager_id BIGINT NULL,
+  manager_id BIGINT UNSIGNED NULL,
   manager_received_amount BIGINT NULL,
   manager_overage_amount BIGINT NOT NULL DEFAULT 0,
   manager_custody_status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
@@ -24,16 +24,16 @@ CREATE TABLE IF NOT EXISTS admin_shift_settlements (
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS manager_owner_settlements (
-  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   settlement_number VARCHAR(40) UNIQUE NULL,
-  manager_id BIGINT NOT NULL,
+  manager_id BIGINT UNSIGNED NOT NULL,
   destination VARCHAR(10) NOT NULL,
   expected_amount BIGINT NOT NULL,
   submitted_amount BIGINT NOT NULL,
   manager_overage_amount BIGINT NOT NULL DEFAULT 0,
   bank_reference VARCHAR(120) NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
-  owner_id BIGINT NULL,
+  owner_id BIGINT UNSIGNED NULL,
   owner_received_amount BIGINT NULL,
   owner_overage_amount BIGINT NOT NULL DEFAULT 0,
   reject_reason VARCHAR(255) NULL,
@@ -48,9 +48,9 @@ CREATE TABLE IF NOT EXISTS manager_owner_settlements (
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS manager_owner_settlement_items (
-  id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  settlement_id BIGINT NOT NULL,
-  admin_settlement_id BIGINT NOT NULL,
+  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  settlement_id BIGINT UNSIGNED NOT NULL,
+  admin_settlement_id BIGINT UNSIGNED NOT NULL,
   amount BIGINT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_manager_owner_item(settlement_id, admin_settlement_id),
