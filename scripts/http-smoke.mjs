@@ -139,17 +139,31 @@ assert.equal(verified.status, 200, JSON.stringify(verified.value));
 assert.equal(verified.value.user.role, "CUSTOMER");
 assert.ok(verified.cookie);
 
-// Select an active in-stock product using its configured sales unit.
+// Select an active, in-stock KITCHEN product with a valid loyalty-bearing order unit.
 const inventory = await call("inventory", undefined, manager);
 assert.ok(inventory.value.products.length > 0);
 const menu = await call("menu");
-const smokeProduct = menu.value.products.find(
-  (product) =>
-    Number(product.in_stock) === 1 &&
-    Number.isSafeInteger(Number(product.minimum_order_quantity)) &&
-    Number(product.minimum_order_quantity) > 0,
+const foodCategory = menu.value.categories.find(
+  (category) => category.name === "Makanan",
 );
-assert.ok(smokeProduct, "Customer menu harus memiliki produk aktif dan in-stock");
+assert.ok(foodCategory, "Customer menu harus memiliki kategori Makanan aktif");
+const smokeProduct = menu.value.products.find((product) => {
+  const minimum = Number(product.minimum_order_quantity);
+  const priceUnit = Number(product.price_unit_quantity || 1);
+  const lineSubtotal = (Number(product.price) * minimum) / priceUnit;
+  return (
+    Number(product.category_id) === Number(foodCategory.id) &&
+    Number(product.in_stock) === 1 &&
+    Number.isSafeInteger(minimum) &&
+    minimum > 0 &&
+    Number.isSafeInteger(lineSubtotal) &&
+    lineSubtotal >= 10000
+  );
+});
+assert.ok(
+  smokeProduct,
+  "Customer menu harus memiliki produk Makanan aktif, in-stock, dan eligible loyalty",
+);
 const productId = smokeProduct.id;
 const orderQuantity = Number(smokeProduct.minimum_order_quantity);
 
