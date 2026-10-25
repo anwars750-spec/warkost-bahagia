@@ -1,5 +1,24 @@
 ﻿# Warkost Bahagia â€” Project Checkpoint
 
+## Final Release Verification - 2026-10-25
+
+Status: **SUPPORTED RELEASE VERIFICATION PASS; QRIS PRODUCTION LAUNCH BLOCKED**
+
+- Branch: `work/customer-qris-demo-uat-v1`.
+- Starting local HEAD: `4efc072e47682fa7ee1beb8ffa4720befec910aa` (clean, behind remote). Fetched and advanced the same branch without a merge to the expected remote/verified code HEAD: `32ee3bea4897fc90ca0c130a7e8a1113e275eb91`.
+- Cleanup review: only the temporary customer promotion denial probe was removed. Migration/idempotency, schema, HTTP E2E, backup, restore, checksum, and record-parity coverage remain intact. No additional temporary troubleshooting code required removal; useful failure diagnostics were retained.
+- Local Node.js 24.21.0: `npm ci` PASS; `npm test` **521/521 PASS**, zero failed/skipped; `npm run build` PASS on Next.js 16.4.3 with **33/33** static pages; `npm audit --omit=dev` **0 vulnerabilities**.
+- Local `npm run test:mysql`: blocked by the known Windows UNIX socket limitation (`EACCES`). No bypass or test weakening was introduced.
+- [MySQL Recovery run 40182665677](https://github.com/anwars750-spec/warkost-bahagia/actions/runs/40182665677): **PASS**, logs confirm real MySQL 8.0.46 migration, HTTP E2E, mysqldump backup, fresh-database restore, and record parity.
+- [Staging UAT run 40182665654](https://github.com/anwars750-spec/warkost-bahagia/actions/runs/40182665654): **PASS**, including recovery, 521/521 regression, build, production preflight (`config/database/storage/backup` all true), `/api/health/live`, `/api/health/ready`, **14** desktop/mobile cross-role browser tests, and production-compatible HTTP smoke.
+- CI evidence above is associated with code HEAD `32ee3be`; checkout logs show GitHub's synthetic PR merge ref `e1e6685fb5b4bb7398fefc53088ab304a8d9e457` (combining that HEAD with base `9ec4df6f46d71a3b8aca55a97b5001f79434dadf`). Local unit/build verification directly tested branch HEAD `32ee3be`. No repository merge was performed.
+- Code/tests confirm Customer checkout stays QRIS-only, production/staging startup rejects QRIS simulation, the demo completion endpoint is demo-only, and OTP/SMTP production/staging validation remains required. Manager stock write, Owner-only global settings, Kitchen food-stock read access, delivery-proof completion guard, checksum verification, and fail-closed readiness remain intact.
+- Reviewed `mysql-recovery.yml`, `staging-uat.yml`, and `staging-verify.yml`: provider-neutral verification workflows with read-only repository permissions; no deployment or merge steps. Public-host `Staging Verify` was reviewed, not executed in this verification.
+- QRIS production provider remains intentionally **NOT configured**. This checkpoint does **not** mean QRIS-production-ready; preflight success does not establish payment-provider readiness or live SMTP deliverability.
+- Scope: documentation checkpoint only; no runtime behavior/security/RBAC change, no new Product Owner UAT PASS claim, no merge, no deploy, and no push to main. Existing Product Owner acceptance records are historical.
+
+---
+
 ## MILESTONE D — DELIVERY PROOF & HISTORY V1
 
 Date closed: 2026-10-24
