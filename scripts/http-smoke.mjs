@@ -241,7 +241,7 @@ assert.equal(
       owner,
     )
   ).status,
-  200,
+  403,
 );
 const png = await sharp({
   create: { width: 120, height: 90, channels: 3, background: "#b66330" },
