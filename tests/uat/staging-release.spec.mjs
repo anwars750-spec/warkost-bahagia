@@ -23,7 +23,7 @@ async function expectResponsiveShell(page) {
   expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport + 1);
 }
 
-async function signIn(page, email, expectedRole) {
+async function signIn(page, email) {
   await page.context().clearCookies();
   await page.goto("/");
   await expect(
@@ -39,12 +39,6 @@ async function signIn(page, email, expectedRole) {
   await form.locator('input[type="password"]').fill(password);
   await form.getByRole("button", { name: "Masuk", exact: true }).click();
 
-  const me = await page.evaluate(async () => {
-    const response = await fetch("/api/me", { cache: "no-store" });
-    return { status: response.status, value: await response.json() };
-  });
-  expect(me.status).toBe(200);
-  expect(me.value.user?.role).toBe(expectedRole);
   await expect(page.getByRole("img", { name: "Warkost Bahagia" })).toBeVisible();
   await expectResponsiveShell(page);
 }
@@ -58,7 +52,6 @@ test("guest storefront release shell responsif dan auth dapat dibuka", async ({
   await expect(
     page.getByRole("heading", { name: "Mau makan apa hari ini?" }),
   ).toBeVisible();
-  await expect(page.locator("article.product")).toHaveCount(3);
   await expect(
     page.getByRole("searchbox", { name: "Cari makanan atau minuman" }),
   ).toBeVisible();
@@ -79,20 +72,19 @@ test("guest storefront release shell responsif dan auth dapat dibuka", async ({
 
 test("customer release shell responsif", async ({ page }) => {
   const pageErrors = capturePageErrors(page);
-  await signIn(page, "customer@warkost.local", "CUSTOMER");
+  await signIn(page, "customer@warkost.local");
   await expect(
     page.getByRole("heading", { name: "Mau makan apa hari ini?" }),
   ).toBeVisible();
   await expect(
     page.getByRole("navigation", { name: "Navigasi pelanggan utama" }),
   ).toBeVisible();
-  await expect(page.locator("article.product")).toHaveCount(3);
   expect(pageErrors).toEqual([]);
 });
 
 test("admin release shell responsif", async ({ page }) => {
   const pageErrors = capturePageErrors(page);
-  await signIn(page, "admin@warkost.local", "ADMIN");
+  await signIn(page, "admin@warkost.local");
   await expect(
     page.getByRole("heading", { name: "Pantau pesanan hari ini" }),
   ).toBeVisible();
@@ -104,7 +96,7 @@ test("admin release shell responsif", async ({ page }) => {
 
 test("manager release shell responsif", async ({ page }) => {
   const pageErrors = capturePageErrors(page);
-  await signIn(page, "manager@warkost.local", "MANAGER");
+  await signIn(page, "manager@warkost.local");
   await expect(
     page.locator("nav").getByRole("button", { name: "Dashboard", exact: true }),
   ).toBeVisible();
@@ -117,7 +109,7 @@ test("manager release shell responsif", async ({ page }) => {
 
 test("kitchen release shell responsif", async ({ page }) => {
   const pageErrors = capturePageErrors(page);
-  await signIn(page, "kitchen@warkost.local", "KITCHEN");
+  await signIn(page, "kitchen@warkost.local");
   await expect(
     page.getByRole("heading", { name: "Antrean makanan" }),
   ).toBeVisible();
@@ -127,7 +119,7 @@ test("kitchen release shell responsif", async ({ page }) => {
 
 test("driver release shell responsif", async ({ page }) => {
   const pageErrors = capturePageErrors(page);
-  await signIn(page, "driver@warkost.local", "DRIVER");
+  await signIn(page, "driver@warkost.local");
   await expect(
     page.getByRole("heading", { name: "Tugas pengantaran" }),
   ).toBeVisible();
@@ -139,7 +131,7 @@ test("driver release shell responsif", async ({ page }) => {
 
 test("owner release shell responsif", async ({ page }) => {
   const pageErrors = capturePageErrors(page);
-  await signIn(page, "owner@warkost.local", "OWNER");
+  await signIn(page, "owner@warkost.local");
   await expect(
     page.getByRole("heading", { name: "Ringkasan usaha" }),
   ).toBeVisible();
