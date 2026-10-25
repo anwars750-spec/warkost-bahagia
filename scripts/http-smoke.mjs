@@ -139,53 +139,79 @@ assert.equal(verified.status, 200, JSON.stringify(verified.value));
 assert.equal(verified.value.user.role, "CUSTOMER");
 assert.ok(verified.cookie);
 
-// Select an active KITCHEN product and derive a valid loyalty-bearing sales quantity.
-const inventory = await call("inventory", undefined, manager);
-assert.ok(inventory.value.products.length > 0);
-const smokeSelection = inventory.value.products
-  .filter(
-    (product) =>
-      Number(product.active) === 1 && product.prep_station === "KITCHEN",
-  )
-  .map((product) => {
-    const minimum = Number(product.minimum_order_quantity);
-    const step = Number(product.order_step_quantity);
-    const price = Number(product.price);
-    const priceUnit = Number(product.price_unit_quantity || 1);
-    if (
-      !Number.isSafeInteger(minimum) ||
-      minimum < 1 ||
-      !Number.isSafeInteger(step) ||
-      step < 1 ||
-      !Number.isSafeInteger(price) ||
-      price < 1 ||
-      !Number.isSafeInteger(priceUnit) ||
-      priceUnit < 1
-    )
-      return null;
-    const targetQuantity = Math.ceil((10000 * priceUnit) / price);
-    const quantity =
-      minimum + Math.max(0, Math.ceil((targetQuantity - minimum) / step)) * step;
-    const maximum =
-      product.maximum_order_quantity == null
-        ? null
-        : Number(product.maximum_order_quantity);
-    const withinMaximum = maximum == null || quantity <= maximum;
-    const enoughStock =
-      Number(product.unlimited_stock) === 1 ||
-      Number(product.stock_quantity) >= quantity;
-    const lineSubtotal = (price * quantity) / priceUnit;
-    return withinMaximum && enoughStock && Number.isSafeInteger(lineSubtotal)
-      ? { product, quantity, lineSubtotal }
-      : null;
-  })
-  .find((selection) => selection?.lineSubtotal >= 10000);
-assert.ok(
-  smokeSelection,
-  "Inventory harus memiliki produk KITCHEN aktif dengan quantity valid untuk loyalty",
+// Build a deterministic KITCHEN fixture through the same Manager APIs used in production.
+let inventory = await call("inventory", undefined, manager);
+assert.equal(inventory.status, 200, JSON.stringify(inventory.value));
+let foodCategory = inventory.value.categories.find(
+  (category) => category.name === "Makanan",
 );
-const productId = smokeSelection.product.id;
-const orderQuantity = smokeSelection.quantity;
+if (!foodCategory) {
+  const createdCategory = await call(
+    "category",
+    { name: "Makanan" },
+    manager,
+  );
+  assert.equal(createdCategory.status, 200, JSON.stringify(createdCategory.value));
+  inventory = await call("inventory", undefined, manager);
+  foodCategory = inventory.value.categories.find(
+    (category) => category.name === "Makanan",
+  );
+} else if (Number(foodCategory.active) !== 1) {
+  const activatedCategory = await call(
+    "category",
+    { id: foodCategory.id, name: "Makanan", active: true },
+    manager,
+  );
+  assert.equal(
+    activatedCategory.status,
+    200,
+    JSON.stringify(activatedCategory.value),
+  );
+  inventory = await call("inventory", undefined, manager);
+  foodCategory = inventory.value.categories.find(
+    (category) => category.name === "Makanan",
+  );
+}
+assert.ok(foodCategory, "Kategori Makanan wajib tersedia untuk smoke KITCHEN");
+assert.equal(Number(foodCategory.active), 1);
+
+const smokeProductName = `CI Kitchen Recovery ${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+const createdProduct = await call(
+  "product",
+  {
+    name: smokeProductName,
+    description: "Deterministic MySQL recovery smoke fixture",
+    price: 10000,
+    categoryId: foodCategory.id,
+    subcategoryId: null,
+    imageUrl: "",
+    active: true,
+    stockUnit: "PCS",
+    priceUnitQuantity: 1,
+    minimumOrderQuantity: 1,
+    orderStepQuantity: 1,
+    lowStockThreshold: 0,
+    unlimitedStock: false,
+  },
+  manager,
+);
+assert.equal(createdProduct.status, 200, JSON.stringify(createdProduct.value));
+
+inventory = await call("inventory", undefined, manager);
+const smokeProduct = inventory.value.products.find(
+  (product) => product.name === smokeProductName,
+);
+assert.ok(smokeProduct, "Produk smoke KITCHEN harus muncul di inventory");
+assert.equal(smokeProduct.prep_station, "KITCHEN");
+const productId = smokeProduct.id;
+const orderQuantity = 1;
+
+const seededStock = await call(
+  "stock",
+  { productId, quantity: 5, reason: "Seed recovery smoke" },
+  manager,
+);
+assert.equal(seededStock.status, 200, JSON.stringify(seededStock.value));
 
 // Manager stock write remains operational; Owner write remains forbidden.
 assert.equal(
