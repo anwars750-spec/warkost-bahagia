@@ -436,6 +436,23 @@ export default function CustomerLocationPickerUx() {
 
     const baseAddress = manualMode ? manualAddress : selected?.address;
     const finalDetail = joinAddress(baseAddress, detail);
+    const latitude = selected?.latitude;
+    const longitude = selected?.longitude;
+    if (
+      latitude === null ||
+      latitude === undefined ||
+      latitude === "" ||
+      longitude === null ||
+      longitude === undefined ||
+      longitude === "" ||
+      !Number.isFinite(Number(latitude)) ||
+      !Number.isFinite(Number(longitude))
+    ) {
+      setQuoteError(
+        "Pilih titik lokasi terlebih dahulu. Gunakan pencarian alamat atau lokasi perangkat agar titik pengantaran dapat dihitung.",
+      );
+      return;
+    }
     if (!effectiveLabel || effectiveLabel.length < 2 || finalDetail.length < 10) {
       setQuoteError("Lengkapi label dan detail alamat sebelum melanjutkan.");
       return;
@@ -443,8 +460,8 @@ export default function CustomerLocationPickerUx() {
 
     if (labelField) labelField.value = effectiveLabel;
     if (detailField) detailField.value = finalDetail;
-    if (latField) latField.value = selected?.latitude ?? "";
-    if (lngField) lngField.value = selected?.longitude ?? "";
+    if (latField) latField.value = latitude;
+    if (lngField) lngField.value = longitude;
 
     saveButton?.click();
     window.setTimeout(() => setOpen(false), 50);
