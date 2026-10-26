@@ -668,7 +668,7 @@ export default function App() {
       const data = await api("guest", { name: form.get("name") });
       setUser(data.user);
       setView(count ? "cart" : "menu");
-    });
+    }, false);
   }
   function submitForgotPassword(e) {
     e.preventDefault();
