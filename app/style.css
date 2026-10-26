@@ -3848,9 +3848,25 @@ button.pickup-complete-button {
   .customer-hero-copy {
     padding: 0 3px 20px;
   }
-  .customer-hero-copy .eyebrow,
-  .hero-benefits {
+  .customer-hero-copy .eyebrow {
     display: none;
+  }
+  .hero-benefits {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 14px;
+  }
+  .hero-benefits > span {
+    gap: 6px;
+    font-size: 10px;
+    line-height: 1.25;
+  }
+  .hero-benefits .ui-icon {
+    width: 32px;
+    height: 32px;
+    padding: 7px;
+    border-radius: 10px;
   }
   .customer-hero-copy h1 {
     margin: 0 0 2px;
