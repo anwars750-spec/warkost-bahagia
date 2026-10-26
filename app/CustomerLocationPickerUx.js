@@ -421,23 +421,11 @@ export default function CustomerLocationPickerUx() {
   }
 
   function applyToExistingCheckout() {
-    const quickForm =
-      sourceRef.current === "account"
-        ? document.querySelector(".wloc-account-bridge-form")
-        : document.querySelector(
-            ".checkout-quick-address:not(.wloc-account-bridge-form)",
-          );
-    if (!quickForm) return;
-    const labelField = quickForm.querySelector('[name="quickAddressLabel"]');
-    const detailField = quickForm.querySelector('[name="quickAddressDetail"]');
-    const latField = quickForm.querySelector('[name="quickAddressLatitude"]');
-    const lngField = quickForm.querySelector('[name="quickAddressLongitude"]');
-    const saveButton = quickForm.querySelector(".quick-address-buttons .primary");
-
     const baseAddress = manualMode ? manualAddress : selected?.address;
     const finalDetail = joinAddress(baseAddress, detail);
     const latitude = selected?.latitude;
     const longitude = selected?.longitude;
+
     if (
       latitude === null ||
       latitude === undefined ||
@@ -457,6 +445,25 @@ export default function CustomerLocationPickerUx() {
       setQuoteError("Lengkapi label dan detail alamat sebelum melanjutkan.");
       return;
     }
+
+    const quickForm =
+      sourceRef.current === "account"
+        ? document.querySelector(".wloc-account-bridge-form")
+        : document.querySelector(
+            ".checkout-quick-address:not(.wloc-account-bridge-form)",
+          );
+    if (!quickForm) {
+      setQuoteError(
+        "Form alamat checkout belum siap. Tutup pemilih lokasi lalu coba lagi.",
+      );
+      return;
+    }
+
+    const labelField = quickForm.querySelector('[name="quickAddressLabel"]');
+    const detailField = quickForm.querySelector('[name="quickAddressDetail"]');
+    const latField = quickForm.querySelector('[name="quickAddressLatitude"]');
+    const lngField = quickForm.querySelector('[name="quickAddressLongitude"]');
+    const saveButton = quickForm.querySelector(".quick-address-buttons .primary");
 
     if (labelField) labelField.value = effectiveLabel;
     if (detailField) detailField.value = finalDetail;
