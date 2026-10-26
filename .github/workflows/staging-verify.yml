@@ -44,7 +44,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Cross-role browser UAT desktop and mobile
-        run: npm run test:uat
+        run: npx playwright test tests/uat/staging-release.spec.mjs
 
       - name: Upload public staging evidence
         if: always()
