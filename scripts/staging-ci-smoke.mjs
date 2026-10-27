@@ -121,8 +121,8 @@ const storeHours = await json("/api/store-hours");
 assert.equal(storeHours.response.status, 200);
 assert.equal(
   storeHours.value.qrisAvailable,
-  false,
-  "Production staging tanpa provider QRIS nyata harus melaporkan qrisAvailable=false",
+  true,
+  "Production-compatible staging harus menyediakan QRIS simulation untuk UAT",
 );
 
 const menu = await json("/api/menu");
@@ -143,5 +143,5 @@ for (const [cookie] of sessions) {
 }
 
 console.log(
-  "STAGING CI PASS: production readiness, six-role login/RBAC, catalog, QRIS unavailable guard",
+  "STAGING CI PASS: production readiness, six-role login/RBAC, catalog, QRIS simulation guard",
 );
