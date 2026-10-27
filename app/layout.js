@@ -1,4 +1,4 @@
-﻿import "./style.css";
+import "./style.css";
 import "./admin-ui.css";
 import "./admin-icons.css";
 import "./admin-detail.css";
@@ -133,7 +133,7 @@ import ManagerCashSettlementCenter from "./ManagerCashSettlementCenter";
 import ManagerOwnerSettlementCenter from "./ManagerOwnerSettlementCenter";
 import ManagerCashSyncBridge from "./ManagerCashSyncBridge";
 import PrintBrandingRuntime from "./PrintBrandingRuntime";
-import KitchenDashboardFast from "./KitchenDashboardFast";
+import KitchenDashboardMount from "./KitchenDashboardMount";
 import KitchenFlashGuard from "./KitchenFlashGuard";
 import PrinterCenterRuntime from "./PrinterCenterRuntime";
 import KitchenHeaderActions from "./KitchenHeaderActions";
@@ -179,7 +179,7 @@ export default function RootLayout({ children }) {
         <DriverRuntimeBootstrap />
         <DriverLogoFix />
         <KitchenFlashGuard />
-        <KitchenDashboardFast />
+        <KitchenDashboardMount />
         <AdminCodBatchEventBridge />
         <AdminCashControlCenter />
         <AdminShiftGateRuntime />
@@ -224,4 +224,3 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
-
