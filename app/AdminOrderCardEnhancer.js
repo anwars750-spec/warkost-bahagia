@@ -1,33 +1,102 @@
 "use client";
-import { useEffect, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import {
   productLineTotal,
   formatStockQuantity,
 } from "../lib/product-units.mjs";
 
-// The name is retained for import compatibility; this is a React presentation
-// component, not a DOM enhancer. Order metadata is the parent's realtime state.
-export default function AdminOrderCardEnhancer({ order }) {
-  const [result, setResult] = useState({ id: null, items: null, error: "" });
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch(`/api/order-items?id=${encodeURIComponent(order.id)}`, {
-      cache: "no-store",
-      signal: controller.signal,
+const ITEM_CACHE_TTL_MS = 120000;
+const itemCache = new Map();
+const itemRequests = new Map();
+
+const cachedItems = (orderId) => {
+  const cached = itemCache.get(Number(orderId));
+  if (!cached) return null;
+  if (Date.now() - cached.at > ITEM_CACHE_TTL_MS) {
+    itemCache.delete(Number(orderId));
+    return null;
+  }
+  return cached.items;
+};
+
+const loadOrderItems = (orderId) => {
+  const id = Number(orderId);
+  const cached = cachedItems(id);
+  if (cached) return Promise.resolve(cached);
+  if (itemRequests.has(id)) return itemRequests.get(id);
+
+  const request = fetch(`/api/order-items?id=${encodeURIComponent(id)}`, {
+    cache: "no-store",
+  })
+    .then(async (response) => {
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data.error || "Gagal memuat item pesanan");
+      const items = data.items || [];
+      itemCache.set(id, { at: Date.now(), items });
+      return items;
     })
-      .then(async (response) => {
-        const data = await response.json();
-        if (!response.ok)
-          throw new Error(data.error || "Gagal memuat item pesanan");
-        if (!controller.signal.aborted)
-          setResult({ id: order.id, items: data.items || [], error: "" });
+    .finally(() => itemRequests.delete(id));
+
+  itemRequests.set(id, request);
+  return request;
+};
+
+function AdminOrderCardEnhancer({ order }) {
+  const previewRef = useRef(null);
+  const initialItems = cachedItems(order.id);
+  const [shouldLoad, setShouldLoad] = useState(Boolean(initialItems));
+  const [result, setResult] = useState({
+    id: initialItems ? order.id : null,
+    items: initialItems,
+    error: "",
+  });
+
+  useEffect(() => {
+    const cached = cachedItems(order.id);
+    if (cached) {
+      setResult({ id: order.id, items: cached, error: "" });
+      setShouldLoad(true);
+      return;
+    }
+
+    setResult({ id: null, items: null, error: "" });
+    setShouldLoad(false);
+
+    const node = previewRef.current;
+    if (!node || typeof IntersectionObserver !== "function") {
+      setShouldLoad(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        setShouldLoad(true);
+        observer.disconnect();
+      },
+      { rootMargin: "240px 0px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [order.id]);
+
+  useEffect(() => {
+    if (!shouldLoad) return;
+    let active = true;
+    loadOrderItems(order.id)
+      .then((items) => {
+        if (active) setResult({ id: order.id, items, error: "" });
       })
       .catch((error) => {
-        if (!controller.signal.aborted)
+        if (active)
           setResult({ id: order.id, items: null, error: error.message });
       });
-    return () => controller.abort();
-  }, [order.id]);
+    return () => {
+      active = false;
+    };
+  }, [order.id, shouldLoad]);
+
   const items = result.id === order.id ? result.items : null;
   const money = (value) => "Rp" + Number(value || 0).toLocaleString("id-ID");
   const method = ["CASH", "COD"].includes(order.method)
@@ -43,8 +112,9 @@ export default function AdminOrderCardEnhancer({ order }) {
         : method === "Transfer"
           ? "Transfer bank"
           : "Media pembayaran";
+
   return (
-    <section className="admin-card-preview-v2">
+    <section ref={previewRef} className="admin-card-preview-v2">
       <div className="admin-order-number-v3">
         <span>NO. PESANAN</span>
         <strong>WB{String(order.id).padStart(6, "0")}</strong>
@@ -107,3 +177,12 @@ export default function AdminOrderCardEnhancer({ order }) {
     </section>
   );
 }
+
+export default memo(
+  AdminOrderCardEnhancer,
+  (previous, next) =>
+    previous.order.id === next.order.id &&
+    previous.order.total === next.order.total &&
+    previous.order.method === next.order.method &&
+    previous.order.payment_status === next.order.payment_status,
+);
