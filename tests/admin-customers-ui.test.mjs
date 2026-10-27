@@ -57,7 +57,8 @@ test("Admin customer search and filter semantics remain unchanged", () => {
   assert.match(enhancer, /activeFilter === "points"/);
   assert.match(
     enhancer,
-    /fetchJson\(`\/api\/customers\?q=\$\{encodeURIComponent\(query\)\}`\)/,
+    /fetchJson\(`\/api\/customers\?q=\$\{encodeURIComponent\(query\.trim\(\)\)\}`\)/,
   );
-  assert.match(enhancer, /loadCustomers\(searchValue\.trim\(\)\)/);
+  assert.match(enhancer, /value=\{query\}/);
+  assert.match(enhancer, /setActiveFilter\(key\)/);
 });

@@ -1,15 +1,6 @@
 "use client";
-
-import { useEffect } from "react";
-
-const esc = (value) =>
-  String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-
+import { useEffect, useState } from "react";
+import { AdminIcon } from "./AdminPresentation";
 const money = (value) => `Rp${Number(value || 0).toLocaleString("id-ID")}`;
 const stockQuantity = (value, unit) =>
   String(unit || "PCS").toUpperCase() === "GRAM"
@@ -17,15 +8,6 @@ const stockQuantity = (value, unit) =>
       ? `${(Number(value || 0) / 1000).toLocaleString("id-ID", { maximumFractionDigits: 1 })} kg`
       : `${Number(value || 0).toLocaleString("id-ID")} g`
     : `${Number(value || 0).toLocaleString("id-ID")} pcs`;
-
-const ICONS = {
-  search: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>`,
-  cup: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h11l-1 12H7L6 7Z"/><path d="M17 9h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 3c0 1 1 1.5 1 2.5M12 3c0 1 1 1.5 1 2.5"/></svg>`,
-  check: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg>`,
-  alert: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.8 20h18.4L12 3Z"/><path d="M12 9v5M12 17h.01"/></svg>`,
-  empty: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></svg>`,
-  lock: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>`,
-};
 
 const drinkCategory = (name) =>
   /minum|drink|beverage|kopi|coffee|teh|tea|jus|juice/i.test(
@@ -66,322 +48,339 @@ const productStockTone = (product) => {
   return stockTone(Number(product?.available_quantity));
 };
 
+const fallbackImage = (name) =>
+  String(name || "")
+    .toLowerCase()
+    .includes("biji kopi")
+    ? "/demo/bahan-baku-kopi.svg"
+    : String(name || "")
+          .toLowerCase()
+          .includes("kopi susu")
+      ? "/demo/kopi-susu-rumah.webp"
+      : "/demo/promo-warkost.webp";
 export default function AdminBeverageStockEnhancerV2() {
+  const [data, setData] = useState({
+    menuProducts: [],
+    categories: [],
+    stockProducts: [],
+    stockAvailable: false,
+  });
+  const { menuProducts, categories, stockProducts, stockAvailable } = data;
+  const [loading, setLoading] = useState(true);
+  const [dataError, setDataError] = useState("");
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   useEffect(() => {
-    let portal = null;
-    let root = null;
-    let loading = false;
-    let menuProducts = [];
-    let categories = [];
-    let stockProducts = [];
-    let stockAvailable = false;
-    let dataError = "";
-    let query = "";
-    let filter = "all";
-    let categoryFilter = "all";
-
-    const ensurePortal = () => {
-      portal = document.getElementById("admin-ui-portal-root");
-      return portal;
-    };
-
-    const categoryName = (product) =>
-      categories.find((item) => String(item.id) === String(product.category_id))
-        ?.name || "Minuman";
-
-    const stockMap = () =>
-      new Map(stockProducts.map((item) => [String(item.id), item]));
-
-    const beverages = () => {
-      const byStock = stockMap();
-      const byMenu = new Map(
-        menuProducts.map((item) => [String(item.id), item]),
-      );
-      if (stockProducts.length)
-        return stockProducts.map((stockItem) => ({
-          ...byMenu.get(String(stockItem.id)),
-          ...stockItem,
-          promo_price: itemPromoPrice(byMenu.get(String(stockItem.id))),
-        }));
-      return menuProducts
-        .filter((product) => {
-          const stockItem = byStock.get(String(product.id));
-          if (stockItem) return stockItem.prep_station === "CASHIER";
-          return drinkCategory(categoryName(product));
-        })
-        .map((product) => {
-          const stockItem = byStock.get(String(product.id));
-          const availableQuantity = stockItem
-            ? Number(stockItem.available_quantity)
-            : Number.NaN;
-          return {
-            ...product,
-            category_name: stockItem?.category_name || categoryName(product),
-            ...stockItem,
-            stock_quantity: stockItem
-              ? Number(stockItem.stock_quantity)
-              : Number.NaN,
-            available_quantity: availableQuantity,
-            promo_price: itemPromoPrice(product),
-          };
-        });
-    };
-
-    const filteredProducts = () => {
-      const needle = query.trim().toLowerCase();
-      return beverages().filter((product) => {
-        const tone = productStockTone(product);
-        const searchMatch =
-          !needle ||
-          `${product.name} ${product.category_name}`
-            .toLowerCase()
-            .includes(needle);
-        const filterMatch =
-          filter === "all" ||
-          (filter === "promo" && Boolean(product.promo_price)) ||
-          (filter === "safe" && tone === "safe") ||
-          (filter === "low" && tone === "low") ||
-          (filter === "empty" && tone === "empty");
-        const categoryMatch =
-          categoryFilter === "all" || product.category_name === categoryFilter;
-        return searchMatch && filterMatch && categoryMatch;
-      });
-    };
-
-    const stats = () => {
-      const products = beverages();
-      return {
-        total: products.length,
-        safe: products.filter((item) => productStockTone(item) === "safe")
-          .length,
-        low: products.filter((item) => productStockTone(item) === "low").length,
-        empty: products.filter((item) => productStockTone(item) === "empty")
-          .length,
-      };
-    };
-
-    const cardMarkup = (product) => {
-      const quantity = product.available_quantity;
-      const tone = productStockTone(product);
-      const promo = product.promo_price;
-      return `
-        <article class="admin-beverage-stock-card">
-          <div class="admin-beverage-stock-card-head">
-            <span class="admin-beverage-stock-cup">${ICONS.cup}</span>
-            <div>
-              <small>${esc(product.category_name || "Minuman")}</small>
-              <h3>${esc(product.name)}</h3>
-            </div>
-            <span class="admin-beverage-stock-status ${tone}">${esc(
-              stockLabel(quantity),
-            )}</span>
-          </div>
-          <div class="admin-beverage-stock-quantity ${tone}">
-            <span>Stok tersedia</span>
-            <strong>${Number.isFinite(quantity) ? esc(stockQuantity(quantity, product.stock_unit)) : "—"}</strong>
-            <small>${
-              Number.isFinite(quantity)
-                ? `Total ${esc(stockQuantity(product.stock_quantity, product.stock_unit))} · reservasi ${esc(stockQuantity(product.reserved_quantity, product.stock_unit))}`
-                : "menunggu data stok"
-            }</small>
-          </div>
-          <div class="admin-beverage-stock-meta">
-            <div>
-              <small>Harga</small>
-              <strong class="${promo ? "has-promo" : ""}">${esc(
-                money(product.price),
-              )}</strong>
-            </div>
-            <div>
-              <small>Promo item</small>
-              ${
-                promo
-                  ? `<strong class="promo-price">${esc(money(promo))}</strong>`
-                  : `<strong class="no-promo">Tidak ada</strong>`
-              }
-            </div>
-          </div>
-        </article>`;
-    };
-
-    const render = () => {
-      if (!root) return;
-      const summary = stats();
-      const products = filteredProducts();
-      root.innerHTML = `
-        <section class="admin-beverage-stock-shell">
-          <header class="admin-beverage-stock-hero">
-            <div>
-              <small>PUSAT STOK ADMIN</small>
-              <h1>Stok Minuman &amp; Bahan Baku</h1>
-              <p>Pantau stok minuman dan bahan baku yang ditangani Admin tanpa mengubah data.</p>
-            </div>
-            <span class="admin-beverage-readonly">${ICONS.lock}<span>Read only</span></span>
-          </header>
-          <section class="admin-beverage-stock-stats">
-            <article><span class="total">${ICONS.cup}</span><small>Total item</small><strong>${summary.total}</strong></article>
-            <article><span class="safe">${ICONS.check}</span><small>Stok aman</small><strong>${
-              stockAvailable ? summary.safe : "—"
-            }</strong></article>
-            <article><span class="low">${ICONS.alert}</span><small>Menipis</small><strong>${
-              stockAvailable ? summary.low : "—"
-            }</strong></article>
-            <article><span class="empty">${ICONS.empty}</span><small>Habis</small><strong>${
-              stockAvailable ? summary.empty : "—"
-            }</strong></article>
-          </section>
-          ${
-            !stockAvailable
-              ? `<aside class="admin-beverage-stock-notice">
-                  <span>${ICONS.lock}</span>
-                  <div><strong>Jumlah stok belum tersambung</strong><p>Daftar minuman dan harga tetap bisa dilihat. Kuantitas stok akan tampil setelah akses baca khusus Admin diaktifkan.</p></div>
-                </aside>`
-              : ""
-          }
-          ${
-            dataError
-              ? `<div class="admin-beverage-stock-error">${esc(dataError)}</div>`
-              : ""
-          }
-          <section class="admin-beverage-stock-toolbar">
-            <label><span>${ICONS.search}</span><input type="search" value="${esc(
-              query,
-            )}" placeholder="Cari minuman atau bahan baku..." aria-label="Cari stok Admin" /></label>
-            <div class="admin-beverage-stock-filters" role="group" aria-label="Filter stok minuman">
-              ${[
-                ["all", "Semua kategori"],
-                ["Minuman", "Minuman"],
-                ["Bahan Baku", "Bahan Baku"],
-              ]
-                .map(
-                  ([key, label]) =>
-                    `<button type="button" data-category-filter="${esc(key)}" class="${
-                      categoryFilter === key ? "active" : ""
-                    }">${label}</button>`,
-                )
-                .join("")}
-              ${[
-                ["all", "Semua"],
-                ["safe", "Aman"],
-                ["low", "Menipis"],
-                ["empty", "Habis"],
-                ["promo", "Promo"],
-              ]
-                .map(
-                  ([key, label]) =>
-                    `<button type="button" data-stock-filter="${key}" class="${
-                      filter === key ? "active" : ""
-                    }">${label}</button>`,
-                )
-                .join("")}
-            </div>
-          </section>
-          <div class="admin-beverage-stock-list">
-            ${
-              loading
-                ? `<div class="admin-beverage-stock-state"><span class="spinner"></span><strong>Memuat stok minuman...</strong></div>`
-                : products.length
-                  ? products.map(cardMarkup).join("")
-                  : `<div class="admin-beverage-stock-state"><span>${ICONS.cup}</span><strong>Minuman tidak ditemukan</strong><p>Coba ubah pencarian atau filter.</p></div>`
-            }
-          </div>
-        </section>`;
-
-      const input = root.querySelector("input[type='search']");
-      input?.addEventListener("input", (event) => {
-        query = event.target.value;
-        render();
-        requestAnimationFrame(() => {
-          const next = root?.querySelector("input[type='search']");
-          next?.focus();
-          next?.setSelectionRange(query.length, query.length);
-        });
-      });
-      root.querySelectorAll("[data-stock-filter]").forEach((item) =>
-        item.addEventListener("click", () => {
-          filter = item.dataset.stockFilter;
-          render();
-        }),
-      );
-      root.querySelectorAll("[data-category-filter]").forEach((item) =>
-        item.addEventListener("click", () => {
-          categoryFilter = item.dataset.categoryFilter;
-          render();
-        }),
-      );
-    };
-
+    const controller = new AbortController();
     const load = async () => {
-      if (loading) return;
-      loading = true;
-      dataError = "";
-      render();
       try {
-        const menuResponse = await fetch("/api/menu", { cache: "no-store" });
+        const menuResponse = await fetch("/api/menu", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
         const menuData = await menuResponse.json();
         if (!menuResponse.ok)
           throw new Error(menuData.error || "Gagal memuat daftar stok");
-        menuProducts = Array.isArray(menuData.products)
-          ? menuData.products
-          : [];
-        categories = Array.isArray(menuData.categories)
-          ? menuData.categories
-          : [];
-
-        try {
-          const stockResponse = await fetch("/api/admin-beverage-stock", {
-            cache: "no-store",
-          });
-          const stockData = await stockResponse.json().catch(() => ({}));
-          if (stockResponse.ok) {
-            stockProducts = Array.isArray(stockData.products)
-              ? stockData.products
-              : [];
-            stockAvailable = true;
-          } else {
-            stockProducts = [];
-            stockAvailable = false;
-          }
-        } catch {
-          stockProducts = [];
+        let stockData = {},
           stockAvailable = false;
+        try {
+          const response = await fetch("/api/admin-beverage-stock", {
+            cache: "no-store",
+            signal: controller.signal,
+          });
+          stockData = await response.json().catch(() => ({}));
+          stockAvailable = response.ok;
+        } catch (error) {
+          if (controller.signal.aborted) return;
+        }
+        if (!controller.signal.aborted) {
+          setData({
+            menuProducts: menuData.products || [],
+            categories: menuData.categories || [],
+            stockProducts: stockAvailable ? stockData.products || [] : [],
+            stockAvailable,
+          });
+          setDataError("");
         }
       } catch (error) {
-        dataError = error.message || "Data stok belum dapat dimuat";
+        if (!controller.signal.aborted) setDataError(error.message);
       } finally {
-        loading = false;
-        render();
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
-
-    const ensureRoot = () => {
-      const host = ensurePortal();
-      if (!host) return null;
-      document
-        .querySelectorAll("main #admin-beverage-stock-v1")
-        .forEach((legacy) => legacy.remove());
-      if (!root || !root.isConnected) {
-        root = document.createElement("div");
-        root.id = "admin-beverage-stock-v1";
-        host.appendChild(root);
-      }
-      return root;
-    };
-
-    const mount = () => {
-      document.body.classList.add("admin-beverage-stock-view");
-      ensureRoot();
-      render();
-      load();
-    };
-
-    mount();
-
+    void load();
+    window.addEventListener("warkost:realtime-recovered", load);
     return () => {
-      document.body.classList.remove("admin-beverage-stock-view");
-      root?.remove();
+      controller.abort();
+      window.removeEventListener("warkost:realtime-recovered", load);
     };
   }, []);
+  const categoryName = (product) =>
+    categories.find((item) => String(item.id) === String(product.category_id))
+      ?.name || "Minuman";
 
-  return null;
+  const stockMap = () =>
+    new Map(stockProducts.map((item) => [String(item.id), item]));
+
+  const beverages = () => {
+    const byStock = stockMap();
+    const byMenu = new Map(menuProducts.map((item) => [String(item.id), item]));
+    if (stockProducts.length)
+      return stockProducts.map((stockItem) => ({
+        ...byMenu.get(String(stockItem.id)),
+        ...stockItem,
+        promo_price: itemPromoPrice(byMenu.get(String(stockItem.id))),
+      }));
+    return menuProducts
+      .filter((product) => {
+        const stockItem = byStock.get(String(product.id));
+        if (stockItem) return stockItem.prep_station === "CASHIER";
+        return drinkCategory(categoryName(product));
+      })
+      .map((product) => {
+        const stockItem = byStock.get(String(product.id));
+        const availableQuantity = stockItem
+          ? Number(stockItem.available_quantity)
+          : Number.NaN;
+        return {
+          ...product,
+          category_name: stockItem?.category_name || categoryName(product),
+          ...stockItem,
+          stock_quantity: stockItem
+            ? Number(stockItem.stock_quantity)
+            : Number.NaN,
+          available_quantity: availableQuantity,
+          promo_price: itemPromoPrice(product),
+        };
+      });
+  };
+
+  const filteredProducts = () => {
+    const needle = query.trim().toLowerCase();
+    return beverages().filter((product) => {
+      const tone = productStockTone(product);
+      const searchMatch =
+        !needle ||
+        `${product.name} ${product.category_name}`
+          .toLowerCase()
+          .includes(needle);
+      const filterMatch =
+        filter === "all" ||
+        (filter === "promo" && Boolean(product.promo_price)) ||
+        (filter === "safe" && tone === "safe") ||
+        (filter === "low" && tone === "low") ||
+        (filter === "empty" && tone === "empty");
+      const categoryMatch =
+        categoryFilter === "all" || product.category_name === categoryFilter;
+      return searchMatch && filterMatch && categoryMatch;
+    });
+  };
+
+  const stats = () => {
+    const products = beverages();
+    return {
+      total: products.length,
+      safe: products.filter((item) => productStockTone(item) === "safe").length,
+      low: products.filter((item) => productStockTone(item) === "low").length,
+      empty: products.filter((item) => productStockTone(item) === "empty")
+        .length,
+    };
+  };
+
+  const summary = stats();
+  const products = filteredProducts();
+  return (
+    <div id="admin-beverage-stock-v1" data-admin-ui-owner="react">
+      <section className="admin-beverage-stock-shell">
+        <header className="admin-beverage-stock-hero admin-beverage-stock-hero-polished">
+          <div>
+            <small>PUSAT STOK ADMIN</small>
+            <h1>Stok Minuman &amp; Bahan Baku</h1>
+            <p>
+              Pantau stok minuman dan bahan baku yang ditangani Admin tanpa
+              mengubah data.
+            </p>
+          </div>
+          <span
+            className="admin-beverage-readonly"
+            title="Admin hanya dapat melihat stok minuman"
+          >
+            <span className="admin-beverage-readonly-dot" aria-hidden="true" />
+            <span>Read only</span>
+          </span>
+        </header>
+        <section className="admin-beverage-stock-stats">
+          {[
+            ["total", "Total item", summary.total, "cup"],
+            ["safe", "Stok aman", stockAvailable ? summary.safe : "—", "check"],
+            ["low", "Menipis", stockAvailable ? summary.low : "—", "alert"],
+            ["empty", "Habis", stockAvailable ? summary.empty : "—", "empty"],
+          ].map(([tone, label, value, icon]) => (
+            <article key={tone}>
+              <span className={tone}>
+                <AdminIcon name={icon} />
+              </span>
+              <small>{label}</small>
+              <strong>{value}</strong>
+            </article>
+          ))}
+        </section>
+        {!loading && !stockAvailable && (
+          <aside className="admin-beverage-stock-notice">
+            <AdminIcon name="lock" />
+            <div>
+              <strong>Jumlah stok belum tersambung</strong>
+              <p>
+                Daftar minuman dan harga tetap bisa dilihat. Kuantitas stok akan
+                tampil setelah akses baca khusus Admin diaktifkan.
+              </p>
+            </div>
+          </aside>
+        )}
+        {dataError && (
+          <div className="admin-beverage-stock-error" role="alert">
+            {dataError}
+          </div>
+        )}
+        <section className="admin-beverage-stock-toolbar">
+          <label>
+            <AdminIcon name="search" />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Cari minuman atau bahan baku..."
+              aria-label="Cari stok Admin"
+            />
+          </label>
+          <div
+            className="admin-beverage-stock-filters"
+            role="group"
+            aria-label="Filter stok minuman"
+          >
+            {[
+              ["all", "Semua kategori"],
+              ["Minuman", "Minuman"],
+              ["Bahan Baku", "Bahan Baku"],
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                data-category-filter={key}
+                className={categoryFilter === key ? "active" : ""}
+                onClick={() => setCategoryFilter(key)}
+              >
+                {label}
+              </button>
+            ))}
+            {[
+              ["all", "Semua"],
+              ["safe", "Aman"],
+              ["low", "Menipis"],
+              ["empty", "Habis"],
+              ["promo", "Promo"],
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                data-stock-filter={key}
+                className={filter === key ? "active" : ""}
+                onClick={() => setFilter(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </section>
+        <div className="admin-beverage-stock-list">
+          {loading ? (
+            <div className="admin-beverage-stock-state">
+              <span className="spinner" />
+              <strong>Memuat stok minuman...</strong>
+            </div>
+          ) : products.length ? (
+            products.map((product) => {
+              const tone = productStockTone(product),
+                quantity = product.available_quantity,
+                promo = product.promo_price;
+              return (
+                <article
+                  key={product.id}
+                  className="admin-beverage-stock-card"
+                  data-product-id={product.id}
+                  data-synced-image="true"
+                >
+                  <div className="admin-beverage-stock-card-head">
+                    <div className="admin-beverage-stock-product-media">
+                      <img
+                        src={
+                          product.image_url ||
+                          product.imageUrl ||
+                          fallbackImage(product.name)
+                        }
+                        alt={product.name || "Foto minuman"}
+                        loading="lazy"
+                        decoding="async"
+                        onError={(event) => {
+                          const fallback = fallbackImage(product.name);
+                          if (!event.currentTarget.src.endsWith(fallback))
+                            event.currentTarget.src = fallback;
+                        }}
+                      />
+                    </div>
+                    <span className="admin-beverage-stock-cup">
+                      <AdminIcon name="cup" />
+                    </span>
+                    <div>
+                      <small>{product.category_name || "Minuman"}</small>
+                      <h3>{product.name}</h3>
+                    </div>
+                    <span className={`admin-beverage-stock-status ${tone}`}>
+                      {stockLabel(quantity)}
+                    </span>
+                  </div>
+                  <div className={`admin-beverage-stock-quantity ${tone}`}>
+                    <span>Stok tersedia</span>
+                    <strong>
+                      {Number.isFinite(quantity)
+                        ? stockQuantity(quantity, product.stock_unit)
+                        : "—"}
+                    </strong>
+                    <small>
+                      {Number.isFinite(quantity)
+                        ? `Total ${stockQuantity(product.stock_quantity, product.stock_unit)} · reservasi ${stockQuantity(product.reserved_quantity, product.stock_unit)}`
+                        : "menunggu data stok"}
+                    </small>
+                  </div>
+                  <div className="admin-beverage-stock-meta">
+                    <div>
+                      <small>Harga</small>
+                      <strong className={promo ? "has-promo" : ""}>
+                        {money(product.price)}
+                      </strong>
+                    </div>
+                    <div>
+                      <small>Promo item</small>
+                      {promo ? (
+                        <strong className="promo-price">{money(promo)}</strong>
+                      ) : (
+                        <strong className="no-promo">Tidak ada</strong>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              );
+            })
+          ) : (
+            <div className="admin-beverage-stock-state">
+              <AdminIcon name="cup" />
+              <strong>Minuman tidak ditemukan</strong>
+              <p>Coba ubah pencarian atau filter.</p>
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  );
 }

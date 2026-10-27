@@ -400,7 +400,8 @@ test("main UI fail-closed dan duplicate refresh bridges terpasang", () => {
   assert.match(page, /warkost:session-rotation-cancelled/);
   assert.match(page, /setUser\(null\)[\s\S]*setView\("auth"\)/);
   assert.match(page, /warkost:orders-refreshed/);
-  assert.match(adminEnhancer, /warkost:orders-refreshed/);
+  assert.match(adminEnhancer, /order\.payment_status/);
+  assert.match(page, /<AdminOrderCardEnhancer order=\{o\} \/>/);
   assert.doesNotMatch(adminEnhancer, /addEventListener\("warkost:realtime"/);
   assert.doesNotMatch(ownerBridge, /<OwnerOperationalHealth/);
 });

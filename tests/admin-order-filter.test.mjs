@@ -108,7 +108,7 @@ test("refresh data langsung memindahkan order ke filter status terbaru", () => {
 
 test("React adalah satu-satunya owner filter dan legacy DOM guard dihapus", () => {
   const page = read("app/page.js");
-  const enhancer = read("app/AdminUiEnhancer.js");
+  const enhancer = read("app/AdminPresentation.js");
   const layout = read("app/layout.js");
   const shortcut = read("app/AdminCodSettlementShortcut.js");
   const adminCss = read("app/admin-ui.css");
@@ -137,7 +137,8 @@ test("React adalah satu-satunya owner filter dan legacy DOM guard dihapus", () =
     /getElementById\("admin-order-tools"\)/,
   ])
     assert.doesNotMatch(enhancer, legacy);
-  assert.match(enhancer, /decorateOrders/);
+  assert.match(page, /<AdminOrderCardEnhancer order=\{o\} \/>/);
+  assert.doesNotMatch(enhancer, /MutationObserver|decorateOrders/);
 
   assert.equal(
     fs.existsSync(path.join(projectRoot, "app/AdminOrderFilterGuard.js")),

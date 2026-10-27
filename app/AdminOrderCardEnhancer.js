@@ -1,278 +1,109 @@
 "use client";
+import { useEffect, useState } from "react";
+import {
+  productLineTotal,
+  formatStockQuantity,
+} from "../lib/product-units.mjs";
 
-import { useEffect } from "react";
-
-const escapeHtml = (value) =>
-  String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-
-const methodLabel = (method) => {
-  if (method === "COD") return ["COD", "Tunai saat diterima"];
-  if (method === "QRIS") return ["QRIS", "Pembayaran QRIS"];
-  if (method === "BANK_TRANSFER") return ["Transfer", "Transfer bank"];
-  return [method || "—", method ? "Media pembayaran" : "Memuat media bayar…"];
-};
-
-const stationLabel = (station) =>
-  station === "KITCHEN"
-    ? "Dapur"
-    : station === "CASHIER"
-      ? "Admin · minuman"
-      : station || "";
-
-const orderIdFromCard = (card) => {
-  const text = card.querySelector(".order-head small")?.textContent || "";
-  const match = text.match(/#(\d+)/);
-  return match ? Number(match[1]) : null;
-};
-
-export default function AdminOrderCardEnhancer() {
+// The name is retained for import compatibility; this is a React presentation
+// component, not a DOM enhancer. Order metadata is the parent's realtime state.
+export default function AdminOrderCardEnhancer({ order }) {
+  const [result, setResult] = useState({ id: null, items: null, error: "" });
   useEffect(() => {
-    const ordersById = new Map();
-    const itemCache = new Map();
-    const itemPending = new Set();
-    let orderRequest = null;
-    let timer = null;
-    let disposed = false;
-
-    const schedule = (delay = 40) => {
-      if (disposed) return;
-      if (timer) window.clearTimeout(timer);
-      timer = window.setTimeout(decorate, delay);
-    };
-
-    const scheduleAfterReactRender = () => {
-      if (disposed) return;
-      if (typeof window.requestAnimationFrame !== "function") {
-        schedule(50);
-        return;
-      }
-      window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(() => schedule(0));
-      });
-    };
-
-    const loadOrders = async () => {
-      if (orderRequest) return orderRequest;
-      orderRequest = fetch("/api/orders", { cache: "no-store" })
-        .then(async (response) => {
-          if (!response.ok) throw new Error("Gagal memuat ringkasan pesanan");
-          const data = await response.json();
-          ordersById.clear();
-          (data.orders || []).forEach((order) => ordersById.set(Number(order.id), order));
-        })
-        .catch(() => {})
-        .finally(() => {
-          orderRequest = null;
-          schedule(0);
-        });
-      return orderRequest;
-    };
-
-    const loadItems = async (id) => {
-      if (!id || itemCache.has(id) || itemPending.has(id)) return;
-      itemPending.add(id);
-      try {
-        const response = await fetch(`/api/order-items?id=${encodeURIComponent(id)}`, {
-          cache: "no-store",
-        });
-        if (!response.ok) throw new Error("Gagal memuat item");
+    const controller = new AbortController();
+    fetch(`/api/order-items?id=${encodeURIComponent(order.id)}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
         const data = await response.json();
-        itemCache.set(id, data.items || []);
-      } catch {
-        itemCache.set(id, []);
-      } finally {
-        itemPending.delete(id);
-        schedule(0);
-      }
-    };
-
-    const enhanceDetailMessage = (card) => {
-      const customerCard = card.querySelector(
-        ":scope > .admin-order-detail-v1 .admin-detail-info-card:first-child",
-      );
-      if (!customerCard) return;
-      const button = customerCard.querySelector("button");
-      if (!button) return;
-      button.classList.add("admin-customer-message-button");
-      if (button.textContent.trim() !== "Kirim pesan ke customer") {
-        button.textContent = "Kirim pesan ke customer";
-      }
-      button.title = "Akan aktif setelah backend chat customer tersedia";
-
-      if (!customerCard.querySelector(".admin-chat-backend-note")) {
-        const note = document.createElement("small");
-        note.className = "admin-chat-backend-note";
-        note.textContent = "Chat internal akan diaktifkan saat backend komunikasi selesai.";
-        button.insertAdjacentElement("afterend", note);
-      }
-    };
-
-    const renderPreview = (card, id) => {
-      const order = ordersById.get(id);
-      const items = itemCache.get(id);
-      const total = card.querySelector(":scope > .line strong")?.textContent?.trim() || "Rp0";
-      const paymentStatus =
-        card.querySelector(":scope > .line span")?.textContent?.trim() ||
-        order?.payment_status ||
-        "—";
-      const [methodShort, methodLong] = methodLabel(order?.method);
-      const statusTone = String(paymentStatus).toUpperCase();
-
-      card.dataset.paymentMethod = order?.method || "";
-      card.dataset.paymentStatusV2 = statusTone;
-
-      let preview = card.querySelector(":scope > .admin-card-preview-v2");
-      if (!preview) {
-        preview = document.createElement("section");
-        preview.className = "admin-card-preview-v2";
-        const anchor =
-          card.querySelector(":scope > .station-statuses") ||
-          [...card.querySelectorAll(":scope > button")].find((button) =>
-            /detail|riwayat/i.test(button.textContent),
-          ) ||
-          card.querySelector(":scope > .actions");
-        if (anchor) anchor.before(preview);
-        else card.appendChild(preview);
-      }
-
-      const visibleItems = (items || []).slice(0, 2);
-      const remaining = Math.max(0, (items || []).length - visibleItems.length);
-      const itemMarkup =
-        items === undefined
-          ? '<div class="admin-card-loading">Memuat item pesanan…</div>'
-          : visibleItems.length
-            ? visibleItems
-                .map(
-                  (item) => `
-                    <div class="admin-card-item-row">
-                      <div>
-                        <strong>${escapeHtml(item.name)}</strong>
-                        <small>${escapeHtml(item.quantity)}×${item.prep_station ? ` · ${escapeHtml(stationLabel(item.prep_station))}` : ""}</small>
-                      </div>
-                      <span>${escapeHtml(
-                        "Rp" + Number(item.price * item.quantity || 0).toLocaleString("id-ID"),
-                      )}</span>
-                    </div>
-                  `,
-                )
-                .join("") +
-              (remaining
-                ? `<div class="admin-card-more">+${remaining} item lainnya</div>`
-                : "")
-            : '<div class="admin-card-loading">Belum ada item.</div>';
-
-      const signature = JSON.stringify({
-        total,
-        paymentStatus,
-        methodShort,
-        methodLong,
-        items: items || null,
+        if (!response.ok)
+          throw new Error(data.error || "Gagal memuat item pesanan");
+        if (!controller.signal.aborted)
+          setResult({ id: order.id, items: data.items || [], error: "" });
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted)
+          setResult({ id: order.id, items: null, error: error.message });
       });
-      if (preview.dataset.signature === signature) return;
-      preview.dataset.signature = signature;
-
-      preview.innerHTML = `
-        <div class="admin-card-commerce">
-          <div class="admin-card-total">
-            <small>Total</small>
-            <strong>${escapeHtml(total)}</strong>
-          </div>
-          <div class="admin-card-payment">
-            <small>Media bayar</small>
-            <div>
-              <span class="admin-card-method">${escapeHtml(methodShort)}</span>
-              <span class="admin-card-payment-status">${escapeHtml(paymentStatus)}</span>
-            </div>
-            <em>${escapeHtml(methodLong)}</em>
-          </div>
+    return () => controller.abort();
+  }, [order.id]);
+  const items = result.id === order.id ? result.items : null;
+  const money = (value) => "Rp" + Number(value || 0).toLocaleString("id-ID");
+  const method = ["CASH", "COD"].includes(order.method)
+    ? "COD"
+    : order.method === "BANK_TRANSFER"
+      ? "Transfer"
+      : order.method || "—";
+  const methodDescription =
+    method === "COD"
+      ? "Tunai saat diterima"
+      : method === "QRIS"
+        ? "Pembayaran QRIS"
+        : method === "Transfer"
+          ? "Transfer bank"
+          : "Media pembayaran";
+  return (
+    <section className="admin-card-preview-v2">
+      <div className="admin-order-number-v3">
+        <span>NO. PESANAN</span>
+        <strong>WB{String(order.id).padStart(6, "0")}</strong>
+      </div>
+      <div className="admin-card-commerce">
+        <div className="admin-card-total">
+          <small>Total</small>
+          <strong>{money(order.total)}</strong>
         </div>
-        <div class="admin-card-items-block">
-          <div class="admin-card-items-title">
-            <strong>Pesanan${items ? ` (${items.length})` : ""}</strong>
+        <div className="admin-card-payment">
+          <small>Media bayar</small>
+          <div>
+            <span className="admin-card-method">{method}</span>
+            <span className="admin-card-payment-status">
+              {order.payment_status || "—"}
+            </span>
           </div>
-          ${itemMarkup}
+          <em>{methodDescription}</em>
         </div>
-      `;
-    };
-
-    const decorateCard = (card) => {
-      const id = orderIdFromCard(card);
-      if (!id) return;
-
-      card.classList.add("admin-order-card", "admin-order-card-v2");
-      card.classList.toggle(
-        "admin-order-card-v2-expanded",
-        Boolean(card.querySelector(":scope > .admin-order-detail-v1")),
-      );
-
-      if (!ordersById.has(id)) loadOrders();
-      if (!itemCache.has(id)) loadItems(id);
-      renderPreview(card, id);
-      enhanceDetailMessage(card);
-
-      const detailButton = [...card.querySelectorAll(":scope > button")].find((button) =>
-        /detail|riwayat/i.test(button.textContent),
-      );
-      if (detailButton) {
-        detailButton.classList.add("admin-card-detail-button");
-        const nextLabel = card.querySelector(":scope > .admin-order-detail-v1")
-          ? "Tutup detail"
-          : "Lihat detail";
-        if (detailButton.textContent.trim() !== nextLabel) {
-          detailButton.textContent = nextLabel;
-        }
-      }
-    };
-
-    function decorate() {
-      const list = document.querySelector("main .order-list");
-      if (!list) return;
-
-      list.classList.add("admin-order-list", "admin-order-list-v2");
-      [...list.querySelectorAll(":scope > .order")].forEach(decorateCard);
-    }
-
-    loadOrders();
-    schedule(0);
-    const onOrdersRendered = () => scheduleAfterReactRender();
-    const onOrdersRefreshed = (event) => {
-      ordersById.clear();
-      (event.detail?.orders || []).forEach((order) =>
-        ordersById.set(Number(order.id), order),
-      );
-      scheduleAfterReactRender();
-    };
-    window.addEventListener("warkost:admin-orders-rendered", onOrdersRendered);
-    window.addEventListener("warkost:orders-refreshed", onOrdersRefreshed);
-
-    const dataHeartbeat = window.setInterval(() => {
-      loadOrders();
-      schedule(0);
-    }, 120000);
-
-    return () => {
-      disposed = true;
-      window.removeEventListener(
-        "warkost:admin-orders-rendered",
-        onOrdersRendered,
-      );
-      window.removeEventListener("warkost:orders-refreshed", onOrdersRefreshed);
-      window.clearInterval(dataHeartbeat);
-      if (timer) window.clearTimeout(timer);
-      document
-        .querySelector("main .order-list.admin-order-list-v2")
-        ?.classList.remove("admin-order-list-v2");
-      document.querySelectorAll(".admin-order-card-v2").forEach((card) => {
-        card.classList.remove("admin-order-card-v2", "admin-order-card-v2-expanded");
-        card.querySelector(":scope > .admin-card-preview-v2")?.remove();
-      });
-    };
-  }, []);
-
-  return null;
+      </div>
+      <div className="admin-card-items-block">
+        <div className="admin-card-items-title">
+          <strong>Pesanan{items ? ` (${items.length})` : ""}</strong>
+        </div>
+        {items === null ? (
+          <div
+            className="admin-card-loading"
+            role={result.error ? "alert" : undefined}
+          >
+            {result.error || "Memuat item pesanan…"}
+          </div>
+        ) : items.length ? (
+          <>
+            {items.slice(0, 2).map((item, index) => (
+              <div className="admin-card-item-row" key={index}>
+                <div>
+                  <strong>{item.name}</strong>
+                  <small>
+                    {item.stock_unit === "GRAM"
+                      ? formatStockQuantity(item.quantity, item.stock_unit)
+                      : `${item.quantity}×`}
+                    {item.prep_station
+                      ? ` · ${item.prep_station === "KITCHEN" ? "Dapur" : "Admin · minuman"}`
+                      : ""}
+                  </small>
+                </div>
+                <span>{money(productLineTotal(item, item.quantity))}</span>
+              </div>
+            ))}
+            {items.length > 2 && (
+              <div className="admin-card-more">
+                +{items.length - 2} item lainnya
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="admin-card-loading">Belum ada item.</div>
+        )}
+      </div>
+    </section>
+  );
 }

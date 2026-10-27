@@ -5,9 +5,8 @@
   z-index: auto;
 }
 
-/* Stock and Printer intentionally replace the native panel with a portal workspace. */
-body.admin-beverage-stock-view main,
-body.admin-printer-stable-view main {
+/* Kitchen/Owner keep their shared printer portal until a separate migration. */
+body.admin-printer-stable-view main:not([data-admin-view]) {
   display: none !important;
 }
 
@@ -34,3 +33,7 @@ body.admin-beverage-stock-view #admin-ui-portal-root > #admin-beverage-stock-v1 
     margin: 14px auto 50px;
   }
 }
+
+/* Admin workspaces are React children, not post-paint portal replacements. */
+main[data-admin-view] > #admin-printer-center-v1,
+main[data-admin-view] > #admin-beverage-stock-v1 { display: block; width: 100%; margin: 0; }

@@ -1,41 +1,9 @@
 "use client";
-
-import { useEffect } from "react";
-
-const esc = (value) =>
-  String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { AdminIcon } from "./AdminPresentation";
 
 const money = (value) => `Rp${Number(value || 0).toLocaleString("id-ID")}`;
-
-const dateLabel = (value) => {
-  if (!value) return "—";
-  const date = new Date(String(value).replace(" ", "T") + "Z");
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-};
-
-const dateTimeLabel = (value) => {
-  if (!value) return "—";
-  const date = new Date(String(value).replace(" ", "T") + "Z");
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
-
 const initials = (name) =>
   String(name || "P")
     .trim()
@@ -44,441 +12,378 @@ const initials = (name) =>
     .map((part) => part[0] || "")
     .join("")
     .toUpperCase();
-
-const statusLabel = (status) => String(status || "—").replaceAll("_", " ");
-
-const searchIcon = `
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <circle cx="11" cy="11" r="7"></circle>
-    <path d="m20 20-4-4"></path>
-  </svg>
-`;
-
-const customerIcon = `
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <circle cx="12" cy="8" r="4"></circle>
-    <path d="M4 21a8 8 0 0 1 16 0"></path>
-  </svg>
-`;
-
-const chatIcon = `
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M21 15a4 4 0 0 1-4 4H8l-5 3 1.5-4.5A7 7 0 0 1 3 13V8a5 5 0 0 1 5-5h9a4 4 0 0 1 4 4v8Z"></path>
-  </svg>
-`;
-
+const dateLabel = (value, time = false) => {
+  if (!value) return "—";
+  const date = new Date(String(value).replace(" ", "T") + "Z");
+  return Number.isNaN(date.getTime())
+    ? String(value)
+    : date.toLocaleString("id-ID", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        ...(time ? { hour: "2-digit", minute: "2-digit" } : {}),
+      });
+};
 export default function AdminCustomersEnhancer() {
+  const [customers, setCustomers] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [dashboard, setDashboard] = useState(null);
+  const [query, setQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selected, setSelected] = useState(null);
   useEffect(() => {
-    let root = null;
-    let nativePanel = null;
-    let modal = null;
-    let mounted = false;
-    let disposed = false;
-    let activeTab = "data";
-    let activeFilter = "all";
-    let searchValue = "";
-    let searchTimer = null;
-    let customers = [];
-    let orders = [];
-    let dashboard = null;
-    let loading = false;
-    let error = "";
-    let selectedCustomerId = null;
-
+    const controller = new AbortController();
     const fetchJson = async (url) => {
-      const response = await fetch(url, { cache: "no-store" });
+      const response = await fetch(url, {
+        cache: "no-store",
+        signal: controller.signal,
+      });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Gagal memuat data");
       return data;
     };
-
-    const findNativePanel = () =>
-      [...document.querySelectorAll("main .panel")].find((panel) =>
-        panel.textContent.includes("Daftar pelanggan"),
-      );
-
-    const filteredCustomers = () =>
-      customers.filter((customer) => {
-        if (activeFilter === "active") return Number(customer.active) === 1;
-        if (activeFilter === "orders") return Number(customer.order_count) > 0;
-        if (activeFilter === "points") return Number(customer.points) > 0;
-        return true;
-      });
-
-    const customerOrders = (customerId) =>
-      orders
-        .filter((order) => Number(order.customer_id) === Number(customerId))
-        .sort((a, b) => Number(b.id) - Number(a.id));
-
-    const selectedCustomer = () =>
-      customers.find((customer) => Number(customer.id) === Number(selectedCustomerId));
-
-    const openCustomerService = (customerId = null) => {
-      const customer = customers.find(
-        (item) => Number(item.id) === Number(customerId),
-      );
-      window.dispatchEvent(
-        new CustomEvent("warkost:open-admin-customer-service", {
-          detail: {
-            customerId: customer ? Number(customer.id) : null,
-            customerName: customer?.name || "",
-          },
-        }),
-      );
-    };
-
-    const renderSummary = () => {
-      const visible = customers;
-      const active = visible.filter((item) => Number(item.active) === 1).length;
-      const withOrders = visible.filter((item) => Number(item.order_count) > 0).length;
-      const points = visible.reduce((sum, item) => sum + Number(item.points || 0), 0);
-      return `
-        <div class="admin-customer-summary-grid">
-          <article><span>Total pelanggan</span><strong>${esc(dashboard?.customers ?? visible.length)}</strong><small>Terdaftar</small></article>
-          <article><span>Aktif terlihat</span><strong>${active}</strong><small>Dari data dimuat</small></article>
-          <article><span>Punya pesanan</span><strong>${withOrders}</strong><small>Pernah bertransaksi</small></article>
-          <article><span>Total poin terlihat</span><strong>${points.toLocaleString("id-ID")}</strong><small>Saldo loyalty</small></article>
-        </div>
-      `;
-    };
-
-    const renderCustomerCards = () => {
-      if (loading)
-        return '<div class="admin-customer-empty"><span class="admin-customer-spinner"></span><strong>Memuat pelanggan...</strong></div>';
-      if (error)
-        return `<div class="admin-customer-empty error"><strong>Data pelanggan belum dapat dimuat.</strong><span>${esc(error)}</span></div>`;
-      const list = filteredCustomers();
-      if (!list.length)
-        return '<div class="admin-customer-empty"><strong>Pelanggan tidak ditemukan.</strong><span>Coba ubah kata pencarian atau filter.</span></div>';
-      return list
-        .map((customer) => {
-          const isActive = Number(customer.active) === 1;
-          return `
-            <article class="admin-customer-card" data-customer-id="${customer.id}">
-              <div class="admin-customer-card-head">
-                <div class="admin-customer-avatar">${esc(initials(customer.name))}</div>
-                <div class="admin-customer-identity">
-                  <strong>${esc(customer.name || "Pelanggan")}</strong>
-                  <span>${esc(customer.email || "Email belum tersedia")}</span>
-                </div>
-                <span class="admin-customer-status ${isActive ? "active" : "inactive"}">${isActive ? "AKTIF" : "NONAKTIF"}</span>
-              </div>
-              <div class="admin-customer-mini-stats">
-                <div><span>Pesanan</span><strong>${Number(customer.order_count || 0)}</strong></div>
-                <div><span>Poin</span><strong>${Number(customer.points || 0).toLocaleString("id-ID")}</strong></div>
-                <div><span>Terdaftar</span><strong>${esc(dateLabel(customer.created_at))}</strong></div>
-              </div>
-              <div class="admin-customer-card-actions">
-                <button type="button" data-customer-action="detail" data-id="${customer.id}">Lihat detail</button>
-                <button type="button" data-customer-action="support" data-id="${customer.id}">Customer Service</button>
-              </div>
-            </article>
-          `;
-        })
-        .join("");
-    };
-
-    const renderDataTab = () => `
-      ${renderSummary()}
-      <section class="admin-customer-toolbar">
-        <label class="admin-customer-search">
-          <span>${searchIcon}</span>
-          <input type="search" value="${esc(searchValue)}" placeholder="Cari nama atau email pelanggan..." aria-label="Cari pelanggan" />
-        </label>
-        <div class="admin-customer-filters" aria-label="Filter pelanggan">
-          ${[
-            ["all", "Semua"],
-            ["active", "Aktif"],
-            ["orders", "Punya Pesanan"],
-            ["points", "Ada Poin"],
-          ]
-            .map(
-              ([key, label]) =>
-                `<button type="button" data-customer-filter="${key}" class="${activeFilter === key ? "active" : ""}">${label}</button>`,
-            )
-            .join("")}
-        </div>
-      </section>
-      <div class="admin-customer-grid">${renderCustomerCards()}</div>
-    `;
-
-    const renderSupportTab = () => {
-      const customer = selectedCustomer();
-      return `
-        <section class="admin-service-shell">
-          <aside class="admin-service-inbox">
-            <div class="admin-service-panel-head">
-              <div><small>INBOX</small><strong>Customer Service</strong></div>
-              <span>0 baru</span>
-            </div>
-            <label class="admin-service-search">
-              <span>${searchIcon}</span>
-              <input type="search" placeholder="Cari percakapan..." disabled />
-            </label>
-            <div class="admin-service-filters">
-              <button class="active" type="button">Semua</button>
-              <button type="button">Belum dibaca</button>
-              <button type="button">Aktif</button>
-              <button type="button">Selesai</button>
-            </div>
-            <div class="admin-service-empty-inbox">
-              <span class="admin-service-icon">${chatIcon}</span>
-              <strong>Belum ada percakapan</strong>
-              <p>Chat Customer ↔ Admin akan muncul di sini setelah backend komunikasi diaktifkan.</p>
-            </div>
-          </aside>
-
-          <section class="admin-service-conversation">
-            <header>
-              <div class="admin-service-avatar">${customer ? esc(initials(customer.name)) : "CS"}</div>
-              <div>
-                <strong>${customer ? esc(customer.name) : "Pilih percakapan"}</strong>
-                <span>${customer ? esc(customer.email) : "Customer Service Warkost"}</span>
-              </div>
-              <span class="admin-service-backend-badge">UI SIAP</span>
-            </header>
-            <div class="admin-service-conversation-empty">
-              <span class="admin-service-icon large">${chatIcon}</span>
-              <strong>${customer ? `Ruang bantuan ${esc(customer.name)}` : "Pusat percakapan customer"}</strong>
-              <p>Semua chat customer dengan Admin akan ditangani dari halaman ini. Riwayat chat asli akan ditampilkan setelah backend selesai.</p>
-            </div>
-            <footer>
-              <button type="button" disabled>＋</button>
-              <textarea rows="1" disabled placeholder="Ketik balasan untuk customer..."></textarea>
-              <button type="button" class="send" disabled>Kirim</button>
-            </footer>
-          </section>
-
-          <aside class="admin-service-context">
-            <div class="admin-service-panel-head">
-              <div><small>KONTEKS</small><strong>Info pelanggan</strong></div>
-            </div>
-            ${
-              customer
-                ? `
-                  <div class="admin-service-profile">
-                    <div class="admin-customer-avatar big">${esc(initials(customer.name))}</div>
-                    <strong>${esc(customer.name)}</strong>
-                    <span>${esc(customer.email)}</span>
-                    <div class="admin-service-profile-stats">
-                      <div><span>Pesanan</span><strong>${Number(customer.order_count || 0)}</strong></div>
-                      <div><span>Poin</span><strong>${Number(customer.points || 0).toLocaleString("id-ID")}</strong></div>
-                    </div>
-                    <button type="button" data-customer-action="detail" data-id="${customer.id}">Lihat profil pelanggan</button>
-                  </div>
-                `
-                : `
-                  <div class="admin-service-context-empty">
-                    <span>${customerIcon}</span>
-                    <strong>Belum ada customer dipilih</strong>
-                    <p>Pilih customer dari Data Pelanggan atau pilih percakapan saat backend chat aktif.</p>
-                  </div>
-                `
-            }
-            <div class="admin-service-workflow-note">
-              <small>ALUR CUSTOMER SERVICE</small>
-              <strong>Baru → Ditangani → Selesai</strong>
-              <p>Kita sengaja menjaga alur v1 tetap sederhana supaya Admin cepat merespons customer.</p>
-            </div>
-          </aside>
-        </section>
-      `;
-    };
-
-    const render = () => {
-      if (!root) return;
-      root.innerHTML = `
-        <nav class="admin-customers-tabs" aria-label="Menu pelanggan">
-          <button type="button" data-customer-tab="data" class="${activeTab === "data" ? "active" : ""}">
-            <span>${customerIcon}</span><div><strong>Data Pelanggan</strong><small>Cari & lihat profil</small></div>
-          </button>
-          <button type="button" data-customer-tab="service" class="${activeTab === "service" ? "active" : ""}">
-            <span>${chatIcon}</span><div><strong>Customer Service</strong><small>Pusat chat customer</small></div>
-          </button>
-        </nav>
-        <div class="admin-customers-content">
-          ${activeTab === "data" ? renderDataTab() : renderSupportTab()}
-        </div>
-      `;
-      bindEvents();
-      window.dispatchEvent(new CustomEvent("warkost:admin-customers-rendered"));
-    };
-
-    const loadCustomers = async (query = "") => {
-      loading = true;
-      error = "";
-      render();
-      try {
-        const data = await fetchJson(`/api/customers?q=${encodeURIComponent(query)}`);
-        customers = data.customers || [];
-      } catch (err) {
-        error = err.message;
-      } finally {
-        loading = false;
-        render();
-      }
-    };
-
-    const openCustomerModal = (id) => {
-      const customer = customers.find((item) => Number(item.id) === Number(id));
-      if (!customer) return;
-      selectedCustomerId = Number(id);
-      const recentOrders = customerOrders(id).slice(0, 5);
-      closeModal();
-      modal = document.createElement("div");
-      modal.className = "admin-customer-modal-overlay";
-      modal.innerHTML = `
-        <section class="admin-customer-modal" role="dialog" aria-modal="true" aria-labelledby="admin-customer-modal-title">
-          <header>
-            <div class="admin-customer-modal-avatar">${esc(initials(customer.name))}</div>
-            <div><small>PROFIL PELANGGAN</small><h3 id="admin-customer-modal-title">${esc(customer.name)}</h3><p>${esc(customer.email)}</p></div>
-            <button type="button" data-customer-modal-close aria-label="Tutup">×</button>
-          </header>
-          <div class="admin-customer-modal-body">
-            <section class="admin-customer-profile-summary">
-              <article><span>Status akun</span><strong class="${Number(customer.active) === 1 ? "good" : "bad"}">${Number(customer.active) === 1 ? "AKTIF" : "NONAKTIF"}</strong></article>
-              <article><span>Total pesanan</span><strong>${Number(customer.order_count || 0)}</strong></article>
-              <article><span>Loyalty point</span><strong>${Number(customer.points || 0).toLocaleString("id-ID")}</strong></article>
-              <article><span>Terdaftar</span><strong>${esc(dateLabel(customer.created_at))}</strong></article>
-            </section>
-            <section class="admin-customer-modal-panel">
-              <div class="admin-customer-modal-panel-head"><div><small>AKTIVITAS</small><h4>Pesanan terbaru</h4></div><span>${recentOrders.length} ditampilkan</span></div>
-              <div class="admin-customer-recent-orders">
-                ${
-                  recentOrders.length
-                    ? recentOrders
-                        .map(
-                          (order) => `
-                            <div class="admin-customer-order-row">
-                              <div><strong>#WB${String(order.id).padStart(6, "0")}</strong><span>${esc(dateTimeLabel(order.created_at))}</span></div>
-                              <span class="admin-customer-order-status">${esc(statusLabel(order.status))}</span>
-                              <div class="admin-customer-order-total"><strong>${esc(money(order.total))}</strong><span>${esc(order.method || "—")} · ${esc(order.payment_status || "—")}</span></div>
-                            </div>
-                          `,
-                        )
-                        .join("")
-                    : '<div class="admin-customer-modal-empty">Belum ada pesanan yang tersedia pada daftar order saat ini.</div>'
-                }
-              </div>
-            </section>
-            <section class="admin-customer-modal-footer-note">
-              <span>${chatIcon}</span><div><strong>Butuh menghubungi customer?</strong><p>Gunakan tab Customer Service. Backend chat akan disambungkan oleh Work tanpa mengubah desain ini.</p></div>
-              <button type="button" data-customer-modal-support="${customer.id}">Buka Customer Service</button>
-            </section>
-          </div>
-        </section>
-      `;
-      modal.addEventListener("click", (event) => {
-        if (event.target === modal || event.target.closest("[data-customer-modal-close]")) closeModal();
-        const support = event.target.closest("[data-customer-modal-support]");
-        if (support) {
-          selectedCustomerId = Number(support.dataset.customerModalSupport);
-          closeModal();
-          openCustomerService(selectedCustomerId);
-        }
-      });
-      document.body.appendChild(modal);
-      document.body.classList.add("admin-customer-modal-open");
-    };
-
-    const closeModal = () => {
-      modal?.remove();
-      modal = null;
-      document.body.classList.remove("admin-customer-modal-open");
-    };
-
-    function bindEvents() {
-      root?.querySelectorAll("[data-customer-tab]").forEach((button) => {
-        button.addEventListener("click", () => {
-          if (button.dataset.customerTab === "service") {
-            openCustomerService(selectedCustomerId);
-            return;
-          }
-          activeTab = button.dataset.customerTab;
-          render();
-        });
-      });
-      root?.querySelectorAll("[data-customer-filter]").forEach((button) => {
-        button.addEventListener("click", () => {
-          activeFilter = button.dataset.customerFilter;
-          render();
-        });
-      });
-      const search = root?.querySelector(".admin-customer-search input");
-      if (search) {
-        search.addEventListener("input", (event) => {
-          searchValue = event.currentTarget.value;
-          if (searchTimer) window.clearTimeout(searchTimer);
-          searchTimer = window.setTimeout(() => loadCustomers(searchValue.trim()), 280);
-        });
-      }
-      root?.querySelectorAll("[data-customer-action]").forEach((button) => {
-        button.addEventListener("click", () => {
-          const id = Number(button.dataset.id);
-          if (button.dataset.customerAction === "detail") openCustomerModal(id);
-          if (button.dataset.customerAction === "support") {
-            selectedCustomerId = id;
-            openCustomerService(id);
-          }
-        });
-      });
-    }
-
-    const mount = async () => {
-      if (mounted || disposed) return;
-      const me = await fetchJson("/api/me").catch(() => ({ user: null }));
-      if (disposed || me.user?.role !== "ADMIN") return;
-      nativePanel = findNativePanel();
-      if (disposed || !nativePanel) return;
-      mounted = true;
-      nativePanel.classList.add("admin-customers-native-hidden");
-      root = document.createElement("div");
-      root.id = "admin-customers-v1";
-      nativePanel.before(root);
-      render();
+    const load = async () => {
+      setLoading(true);
       try {
         const [customerData, orderData, dashboardData] = await Promise.all([
-          fetchJson("/api/customers?q="),
+          fetchJson(`/api/customers?q=${encodeURIComponent(query.trim())}`),
           fetchJson("/api/orders"),
           fetchJson("/api/dashboard"),
         ]);
-        customers = customerData.customers || [];
-        orders = orderData.orders || [];
-        dashboard = dashboardData;
-      } catch (err) {
-        error = err.message;
+        if (controller.signal.aborted) return;
+        setCustomers(customerData.customers || []);
+        setOrders(orderData.orders || []);
+        setDashboard(dashboardData);
+        setError("");
+      } catch (error) {
+        if (!controller.signal.aborted) setError(error.message);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
       }
-      render();
     };
-
-    const unmount = () => {
-      if (!mounted) return;
-      closeModal();
-      root?.remove();
-      root = null;
-      nativePanel?.classList.remove("admin-customers-native-hidden");
-      nativePanel = null;
-      mounted = false;
-      activeTab = "data";
-      activeFilter = "all";
-      searchValue = "";
-      selectedCustomerId = null;
-    };
-
-    const onKeyDown = (event) => {
-      if (event.key === "Escape" && modal) closeModal();
-    };
-
-    mount();
-    window.addEventListener("keydown", onKeyDown);
-
+    // Debounce data requests only; the final workspace is already rendered.
+    const timer = window.setTimeout(load, query ? 280 : 0);
+    window.addEventListener("warkost:realtime-recovered", load);
     return () => {
-      disposed = true;
-      window.removeEventListener("keydown", onKeyDown);
-      if (searchTimer) window.clearTimeout(searchTimer);
-      unmount();
+      window.clearTimeout(timer);
+      controller.abort();
+      window.removeEventListener("warkost:realtime-recovered", load);
     };
+  }, [query]);
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("warkost:admin-customers-rendered"));
   }, []);
-
-  return null;
+  useEffect(() => {
+    if (!selected) return;
+    document.body.classList.add("admin-customer-modal-open");
+    const onKey = (event) => {
+      if (event.key === "Escape") setSelected(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.classList.remove("admin-customer-modal-open");
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [selected]);
+  const openCustomerService = (customer = null) =>
+    window.dispatchEvent(
+      new CustomEvent("warkost:open-admin-customer-service", {
+        detail: {
+          customerId: customer ? Number(customer.id) : null,
+          customerName: customer?.name || "",
+        },
+      }),
+    );
+  const filtered = customers.filter((customer) =>
+    activeFilter === "active"
+      ? Number(customer.active) === 1
+      : activeFilter === "orders"
+        ? Number(customer.order_count) > 0
+        : activeFilter === "points"
+          ? Number(customer.points) > 0
+          : true,
+  );
+  const recent = selected
+    ? orders
+        .filter((order) => Number(order.customer_id) === Number(selected.id))
+        .sort((a, b) => Number(b.id) - Number(a.id))
+        .slice(0, 5)
+    : [];
+  return (
+    <div id="admin-customers-v1" data-admin-ui-owner="react">
+      <nav className="admin-customers-tabs" aria-label="Menu pelanggan">
+        <button type="button" data-customer-tab="data" className="active">
+          <AdminIcon name="customer" />
+          <div>
+            <strong>Data Pelanggan</strong>
+            <small>Cari &amp; lihat profil</small>
+          </div>
+        </button>
+        <button
+          type="button"
+          data-customer-tab="service"
+          onClick={() => openCustomerService(selected)}
+        >
+          <AdminIcon name="chat" />
+          <div>
+            <strong>Customer Service</strong>
+            <small>Pusat chat customer</small>
+          </div>
+        </button>
+      </nav>
+      <div className="admin-customers-content">
+        <div className="admin-customer-summary-grid">
+          {[
+            [
+              "Total pelanggan",
+              dashboard?.customers ?? customers.length,
+              "Terdaftar",
+            ],
+            [
+              "Aktif terlihat",
+              customers.filter((item) => Number(item.active) === 1).length,
+              "Dari data dimuat",
+            ],
+            [
+              "Punya pesanan",
+              customers.filter((item) => Number(item.order_count) > 0).length,
+              "Pernah bertransaksi",
+            ],
+            [
+              "Total poin terlihat",
+              customers
+                .reduce((sum, item) => sum + Number(item.points || 0), 0)
+                .toLocaleString("id-ID"),
+              "Saldo loyalty",
+            ],
+          ].map(([label, value, hint]) => (
+            <article key={label}>
+              <span>{label}</span>
+              <strong>{value}</strong>
+              <small>{hint}</small>
+            </article>
+          ))}
+        </div>
+        <section className="admin-customer-toolbar">
+          <label className="admin-customer-search">
+            <AdminIcon name="search" />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Cari nama atau email pelanggan..."
+              aria-label="Cari pelanggan"
+            />
+          </label>
+          <div className="admin-customer-filters" aria-label="Filter pelanggan">
+            {[
+              ["all", "Semua"],
+              ["active", "Aktif"],
+              ["orders", "Punya Pesanan"],
+              ["points", "Ada Poin"],
+            ].map(([key, label]) => (
+              <button
+                type="button"
+                key={key}
+                data-customer-filter={key}
+                className={activeFilter === key ? "active" : ""}
+                onClick={() => setActiveFilter(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </section>
+        <div className="admin-customer-grid">
+          {loading ? (
+            <div className="admin-customer-empty">
+              <span className="admin-customer-spinner" />
+              <strong>Memuat pelanggan...</strong>
+            </div>
+          ) : error ? (
+            <div className="admin-customer-empty error" role="alert">
+              <strong>Data pelanggan belum dapat dimuat.</strong>
+              <span>{error}</span>
+            </div>
+          ) : filtered.length ? (
+            filtered.map((customer) => (
+              <article
+                className="admin-customer-card"
+                data-customer-id={customer.id}
+                key={customer.id}
+              >
+                <div className="admin-customer-card-head">
+                  <div className="admin-customer-avatar">
+                    {initials(customer.name)}
+                  </div>
+                  <div className="admin-customer-identity">
+                    <strong>{customer.name || "Pelanggan"}</strong>
+                    <span>{customer.email || "Email belum tersedia"}</span>
+                  </div>
+                  <span
+                    className={`admin-customer-status ${Number(customer.active) === 1 ? "active" : "inactive"}`}
+                  >
+                    {Number(customer.active) === 1 ? "AKTIF" : "NONAKTIF"}
+                  </span>
+                </div>
+                <div className="admin-customer-mini-stats">
+                  <div>
+                    <span>Pesanan</span>
+                    <strong>{Number(customer.order_count || 0)}</strong>
+                  </div>
+                  <div>
+                    <span>Poin</span>
+                    <strong>
+                      {Number(customer.points || 0).toLocaleString("id-ID")}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Terdaftar</span>
+                    <strong>{dateLabel(customer.created_at)}</strong>
+                  </div>
+                </div>
+                <div className="admin-customer-card-actions">
+                  <button
+                    type="button"
+                    data-customer-action="detail"
+                    onClick={() => setSelected(customer)}
+                  >
+                    Lihat detail
+                  </button>
+                  <button
+                    type="button"
+                    data-customer-action="support"
+                    onClick={() => openCustomerService(customer)}
+                  >
+                    Customer Service
+                  </button>
+                </div>
+              </article>
+            ))
+          ) : (
+            <div className="admin-customer-empty">
+              <strong>Pelanggan tidak ditemukan.</strong>
+              <span>Coba ubah kata pencarian atau filter.</span>
+            </div>
+          )}
+        </div>
+      </div>
+      {selected &&
+        createPortal(
+          <div
+            className="admin-customer-modal-overlay"
+            onClick={(event) => {
+              if (event.target === event.currentTarget) setSelected(null);
+            }}
+          >
+            <section
+              className="admin-customer-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="admin-customer-modal-title"
+            >
+              <header>
+                <div className="admin-customer-modal-avatar">
+                  {initials(selected.name)}
+                </div>
+                <div>
+                  <small>PROFIL PELANGGAN</small>
+                  <h3 id="admin-customer-modal-title">{selected.name}</h3>
+                  <p>{selected.email}</p>
+                </div>
+                <button
+                  type="button"
+                  data-customer-modal-close
+                  aria-label="Tutup"
+                  onClick={() => setSelected(null)}
+                >
+                  ×
+                </button>
+              </header>
+              <div className="admin-customer-modal-body">
+                <section className="admin-customer-profile-summary">
+                  {[
+                    [
+                      "Status akun",
+                      Number(selected.active) === 1 ? "AKTIF" : "NONAKTIF",
+                    ],
+                    ["Total pesanan", Number(selected.order_count || 0)],
+                    [
+                      "Loyalty point",
+                      Number(selected.points || 0).toLocaleString("id-ID"),
+                    ],
+                    ["Terdaftar", dateLabel(selected.created_at)],
+                  ].map(([label, value]) => (
+                    <article key={label}>
+                      <span>{label}</span>
+                      <strong>{value}</strong>
+                    </article>
+                  ))}
+                </section>
+                <section className="admin-customer-modal-panel">
+                  <div className="admin-customer-modal-panel-head">
+                    <div>
+                      <small>AKTIVITAS</small>
+                      <h4>Pesanan terbaru</h4>
+                    </div>
+                    <span>{recent.length} ditampilkan</span>
+                  </div>
+                  <div className="admin-customer-recent-orders">
+                    {recent.length ? (
+                      recent.map((order) => (
+                        <div
+                          className="admin-customer-order-row"
+                          key={order.id}
+                        >
+                          <div>
+                            <strong>
+                              #WB{String(order.id).padStart(6, "0")}
+                            </strong>
+                            <span>{dateLabel(order.created_at, true)}</span>
+                          </div>
+                          <span className="admin-customer-order-status">
+                            {String(order.status || "—").replaceAll("_", " ")}
+                          </span>
+                          <div className="admin-customer-order-total">
+                            <strong>{money(order.total)}</strong>
+                            <span>
+                              {order.method || "—"} ·{" "}
+                              {order.payment_status || "—"}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="admin-customer-modal-empty">
+                        Belum ada pesanan yang tersedia pada daftar order saat
+                        ini.
+                      </div>
+                    )}
+                  </div>
+                </section>
+                <section className="admin-customer-modal-footer-note">
+                  <AdminIcon name="chat" />
+                  <div>
+                    <strong>Butuh menghubungi customer?</strong>
+                    <p>Gunakan tab Customer Service.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelected(null);
+                      openCustomerService(selected);
+                    }}
+                  >
+                    Buka Customer Service
+                  </button>
+                </section>
+              </div>
+            </section>
+          </div>,
+          document.body,
+        )}
+    </div>
+  );
 }

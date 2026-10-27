@@ -111,12 +111,10 @@ import "./admin-action-colors-final.css";
 import DriverRuntimeBootstrap from "./DriverRuntimeBootstrap";
 import DriverLogoFix from "./DriverLogoFix";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
-import AdminCodLauncherButton from "./AdminCodLauncherButton";
 import AdminCashControlCenter from "./AdminCashControlCenter";
 import AdminShiftGateRuntime from "./AdminShiftGateRuntime";
 import AdminShiftSettlementRuntime from "./AdminShiftSettlementRuntime";
 import AdminSettlementStabilityBridge from "./AdminSettlementStabilityBridge";
-import AdminOrderNumberEnhancer from "./AdminOrderNumberEnhancer";
 import OwnerAdminOperatorCenter from "./OwnerAdminOperatorCenter";
 import OwnerControlDirectBridge from "./OwnerControlDirectBridge";
 import OwnerDashboardRuntime from "./OwnerDashboardRuntime";
@@ -183,12 +181,10 @@ export default function RootLayout({ children }) {
         <KitchenFlashGuard />
         <KitchenDashboardFast />
         <AdminCodBatchEventBridge />
-        <AdminCodLauncherButton />
         <AdminCashControlCenter />
         <AdminShiftGateRuntime />
         <AdminShiftSettlementRuntime />
         <AdminSettlementStabilityBridge />
-        <AdminOrderNumberEnhancer />
         <OwnerAdminOperatorCenter />
         <OwnerControlDirectBridge />
         <OwnerDashboardRuntime />

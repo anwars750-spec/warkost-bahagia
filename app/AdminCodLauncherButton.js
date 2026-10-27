@@ -1,72 +1,34 @@
 "use client";
+import { useEffect, useState } from "react";
 
-import { useCallback, useEffect, useState } from "react";
-import { createPortal } from "react-dom";
-
-async function request(route) {
-  const response = await fetch(`/api/${route}`, {
-    cache: "no-store",
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || `Gagal memuat data (${response.status})`);
-  return data;
-}
-
+// Mounted only in the React-owned Admin Operations heading.
 export default function AdminCodLauncherButton() {
-  const [target, setTarget] = useState(null);
   const [pending, setPending] = useState(0);
-
-  const refresh = useCallback(async () => {
-    const adminMain = document.querySelector("main[data-admin-view]");
-
-    if (adminMain?.dataset.adminView === "customers") {
-      setTarget(null);
-      setPending(0);
-      return;
-    }
-    const heading = document.querySelector(
-      "body.admin-operations-view main .heading.admin-ui-heading",
-    );
-    if (!heading) {
-      setTarget(null);
-      setPending(0);
-      return;
-    }
-
-    try {
-      const me = await request("me");
-      if (me.user?.role !== "ADMIN") {
-        setTarget(null);
-        setPending(0);
-        return;
-      }
-
-      setTarget(heading);
-      const batches = await request("cod-batches?filter=pending");
-      setPending((batches.batches || []).length);
-    } catch {
-      setTarget(null);
-      setPending(0);
-    }
-  }, []);
-
   useEffect(() => {
-    refresh();
-    const onRendered = () => refresh();
-    const onUpdated = () => refresh();
-    window.addEventListener("warkost:admin-orders-rendered", onRendered);
-    window.addEventListener("warkost:admin-customers-rendered", onRendered);
-    window.addEventListener("warkost:cod-batch-updated", onUpdated);
-    return () => {
-      window.removeEventListener("warkost:admin-orders-rendered", onRendered);
-      window.removeEventListener("warkost:admin-customers-rendered", onRendered);
-      window.removeEventListener("warkost:cod-batch-updated", onUpdated);
+    const controller = new AbortController();
+    const refresh = async () => {
+      try {
+        const response = await fetch("/api/cod-batches?filter=pending", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const data = await response.json();
+        if (response.ok && !controller.signal.aborted)
+          setPending((data.batches || []).length);
+      } catch {
+        /* Keep the launcher available if its optional count cannot load. */
+      }
     };
-  }, [refresh]);
-
-  if (!target) return null;
-
-  return createPortal(
+    void refresh();
+    window.addEventListener("warkost:cod-batch-updated", refresh);
+    window.addEventListener("warkost:admin-orders-rendered", refresh);
+    return () => {
+      controller.abort();
+      window.removeEventListener("warkost:cod-batch-updated", refresh);
+      window.removeEventListener("warkost:admin-orders-rendered", refresh);
+    };
+  }, []);
+  return (
     <button
       type="button"
       className="admin-cod-launcher-button"
@@ -86,10 +48,11 @@ export default function AdminCodLauncherButton() {
             : "Kelola setoran tunai Driver"}
         </small>
       </span>
-      <span className={`admin-cod-launcher-badge${pending > 0 ? " has-pending" : ""}`}>
+      <span
+        className={`admin-cod-launcher-badge${pending > 0 ? " has-pending" : ""}`}
+      >
         {pending > 0 ? `${pending} menunggu` : "Buka"}
       </span>
-    </button>,
-    target,
+    </button>
   );
 }

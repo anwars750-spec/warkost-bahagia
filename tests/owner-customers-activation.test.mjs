@@ -7,7 +7,10 @@ const layout = fs.readFileSync("app/layout.js", "utf8");
 const page = fs.readFileSync("app/page.js", "utf8");
 
 test("Owner Customer Center dirender native oleh page.js untuk view customers", () => {
-  assert.match(page, /import OwnerCustomersCenter from "\.\/OwnerCustomersCenter"/);
+  assert.match(
+    page,
+    /import OwnerCustomersCenter from "\.\/OwnerCustomersCenter"/,
+  );
   assert.match(
     page,
     /role === "OWNER" && view === "customers" && \(\s*<OwnerCustomersCenter \/>/,
@@ -15,8 +18,10 @@ test("Owner Customer Center dirender native oleh page.js untuk view customers", 
   assert.match(layout, /import "\.\/owner-customers-center\.css"/);
 });
 
-test("panel pelanggan lama hanya untuk Admin", () => {
+test("Admin memakai workspace React terpisah dari Owner", () => {
   assert.match(page, /role === "ADMIN" && view === "customers" && \(/);
+  assert.match(page, /<AdminCustomersEnhancer \/>/);
+  assert.doesNotMatch(page, /Daftar pelanggan/);
   assert.doesNotMatch(
     page,
     /\["ADMIN", "OWNER"\]\.includes\(role\) && view === "customers"/,
@@ -32,7 +37,10 @@ test("halaman utama Owner Customer tidak memakai runtime takeover", () => {
     /owner-customers-center-active|setLegacyVisibility|ownerCustomerViewPresent/,
   );
   assert.doesNotMatch(source, /document\.querySelector\("body main"\)/);
-  assert.match(source, /<section className="occ" aria-label="Owner Customer Center">/);
+  assert.match(
+    source,
+    /<section className="occ" aria-label="Owner Customer Center">/,
+  );
 });
 
 test("Owner Customer Center keeps customer controls and richer metrics", () => {

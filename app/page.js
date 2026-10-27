@@ -2,14 +2,21 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import AdminBeverageStockEnhancerV2 from "./AdminBeverageStockEnhancerV2";
-import AdminBeverageStockPolish from "./AdminBeverageStockPolish";
 import AdminCustomersEnhancer from "./AdminCustomersEnhancer";
 import AdminCustomerService from "./AdminCustomerService";
 import AdminNotificationPopover from "./AdminNotificationPopover";
 import AdminOrderCardEnhancer from "./AdminOrderCardEnhancer";
 import AdminOrderModalEnhancer from "./AdminOrderModalEnhancer";
-import AdminPrinterController from "./AdminPrinterController";
-import AdminUiEnhancer from "./AdminUiEnhancer";
+import AdminPrinterView from "./AdminPrinterView";
+import {
+  AdminDailySummary,
+  AdminIcon,
+  AdminWorkspaceLifecycle,
+  ADMIN_KPI_ICONS,
+  ADMIN_KPI_MOBILE_LABELS,
+  adminStatusGroup,
+} from "./AdminPresentation";
+import AdminCodLauncherButton from "./AdminCodLauncherButton";
 import ConversationChat from "./ConversationChat";
 import ManagerControlCenter from "./ManagerControlCenter";
 import OwnerCustomersCenter from "./OwnerCustomersCenter";
@@ -201,6 +208,7 @@ async function api(route, body, signal) {
   return data;
 }
 export default function App() {
+  const [sessionResolved, setSessionResolved] = useState(false);
   const checkoutAttempt = useRef(null);
   const quickAddressAttempt = useRef(false);
   const pollController = useRef(null);
@@ -348,6 +356,7 @@ export default function App() {
       setStoreStatus(currentStoreStatus);
       setSelectedCategory((current) => current || m.categories[0]?.id || 0);
       setUser(me.user);
+      setSessionResolved(true);
       if (me.user && me.user.role !== "CUSTOMER")
         setView((prev) =>
           prev === "menu"
@@ -413,7 +422,10 @@ export default function App() {
     }
   }
   useEffect(() => {
-    refresh().catch((e) => setError(e.message));
+    refresh().catch((e) => {
+      setError(e.message);
+      setSessionResolved(true);
+    });
   }, []);
   useEffect(() => {
     if (user?.id)
@@ -1317,10 +1329,23 @@ export default function App() {
   function openCustomerHelp() {
     openCustomerSupport(null);
   }
+  if (!sessionResolved)
+    return (
+      <header className="top" aria-busy="true" aria-label="Memuat sesi Warkost">
+        <Image
+          className="brand-logo"
+          src="/warkost-bahagia-logo-clean.png"
+          alt="Warkost Bahagia"
+          width={1672}
+          height={941}
+          priority
+        />
+      </header>
+    );
   return (
     <>
       <header
-        className={`top ${
+        className={`top ${role === "ADMIN" ? "admin-ui-header" : ""} ${
           role === "CUSTOMER" ? "customer-home-header customer-app-header" : ""
         } ${!role ? "guest-customer-header" : ""} ${
           !role && view === "auth" ? "auth-header" : ""
@@ -1355,7 +1380,13 @@ export default function App() {
           </span>
         </button>
         <nav
-          className={role === "CUSTOMER" ? "customer-desktop-nav" : ""}
+          className={
+            role === "CUSTOMER"
+              ? "customer-desktop-nav"
+              : role === "ADMIN"
+                ? "admin-nav"
+                : ""
+          }
           aria-label={
             role === "CUSTOMER" ? "Navigasi pelanggan utama" : undefined
           }
@@ -1593,7 +1624,9 @@ export default function App() {
       </header>
       <main
         data-admin-view={role === "ADMIN" ? view : undefined}
+        data-admin-ui-owner={role === "ADMIN" ? "react" : undefined}
         className={[
+          role === "ADMIN" ? "admin-ui-main" : "",
           role === "CUSTOMER" ? "customer-app-main" : "",
           (!role || role === "CUSTOMER") && view === "menu"
             ? "customer-home-main"
@@ -1613,8 +1646,13 @@ export default function App() {
               "store-hours",
             ].includes(view)
           ) &&
+          !(role === "ADMIN" && ["admin-stock", "printing"].includes(view)) &&
           !customerBatchView && (
-            <div className="heading">
+            <div
+              className={
+                role === "ADMIN" ? "heading admin-ui-heading" : "heading"
+              }
+            >
               <div>
                 <span className="eyebrow">
                   {role === "ADMIN"
@@ -1678,6 +1716,9 @@ export default function App() {
                                                     : "Selamat datang"}
                 </h1>
               </div>
+              {role === "ADMIN" && view === "orders" && (
+                <AdminCodLauncherButton inline />
+              )}
               {role === "CUSTOMER" && view === "menu" && (
                 <button
                   className="primary heading-cart-button"
@@ -4091,74 +4132,7 @@ export default function App() {
           <OwnerCustomersCenter />
         )}
         {role === "ADMIN" && view === "customers" && (
-          <section className="panel">
-            <h2>Daftar pelanggan</h2>
-            <p>
-              Admin dapat mencari pelanggan dan menangani dukungan akun.
-              Aktivasi akun dikelola Owner.
-            </p>
-            <form
-              onSubmit={async (event) => {
-                event.preventDefault();
-                const query = new FormData(event.currentTarget)
-                  .get("search")
-                  .toString()
-                  .trim();
-                setBusy(true);
-                setError("");
-                try {
-                  await loadCustomers(query);
-                  setCustomerSearch(query);
-                } catch (e) {
-                  setError(e.message);
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              <label>
-                Cari nama atau email
-                <input
-                  name="search"
-                  defaultValue={customerSearch}
-                  maxLength="80"
-                />
-              </label>
-              <button className="primary" disabled={busy}>
-                Cari pelanggan
-              </button>
-            </form>
-            {customers.map((customer) => (
-              <div className="line" key={customer.id}>
-                <span>
-                  <strong>{customer.name}</strong> · {customer.email}
-                  <br />
-                  {customer.active ? "Aktif" : "Nonaktif"} ·{" "}
-                  {customer.order_count} pesanan · {customer.points} poin
-                </span>
-              </div>
-            ))}
-            {!customers.length && <p>Belum ada pelanggan yang cocok.</p>}
-            {customerCursor && (
-              <button
-                className="refresh"
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true);
-                  setError("");
-                  try {
-                    await loadCustomers(customerSearch, customerCursor);
-                  } catch (e) {
-                    setError(e.message);
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-              >
-                Muat pelanggan lain
-              </button>
-            )}
-          </section>
+          <AdminCustomersEnhancer />
         )}
         {role === "MANAGER" && (
           <ManagerControlCenter
@@ -4422,45 +4396,40 @@ export default function App() {
           </section>
         )}
         {role === "ADMIN" && view === "admin-stock" && (
-          <section className="panel admin-stock-native-placeholder">
-            <h2>Stok Minuman &amp; Bahan Baku</h2>
+          <AdminBeverageStockEnhancerV2 />
+        )}
+        {role === "ADMIN" && view === "printing" && <AdminPrinterView />}
+        {["KITCHEN", "OWNER"].includes(role) && view === "printing" && (
+          <section className="panel">
+            <h2>Antrean cetak struk 80mm</h2>
             <p>
-              Memuat inventori Minuman dan Bahan Baku read-only untuk Admin…
+              Admin menerima item Minuman/Bahan Baku; Kitchen hanya menerima
+              Makanan. Owner memiliki akses pantau saja.
             </p>
+            {printJobs.map((job) => (
+              <div className="line" key={job.id}>
+                <span>
+                  <strong>Pesanan #{job.order_id}</strong> · {job.station}
+                  <br />
+                  {job.status} · percobaan {job.attempts} · cetak ulang{" "}
+                  {job.reprint_count}
+                </span>
+                {role !== "OWNER" &&
+                  ["FAILED", "PRINTED", "REPRINTED"].includes(job.status) && (
+                    <button
+                      disabled={busy}
+                      onClick={() =>
+                        run(() => api("print-retry", { id: job.id }))
+                      }
+                    >
+                      Cetak ulang
+                    </button>
+                  )}
+              </div>
+            ))}
+            {!printJobs.length && <p>Belum ada print job.</p>}
           </section>
         )}
-        {["ADMIN", "KITCHEN", "OWNER"].includes(role) &&
-          view === "printing" && (
-            <section className="panel">
-              <h2>Antrean cetak struk 80mm</h2>
-              <p>
-                Admin menerima item Minuman/Bahan Baku; Kitchen hanya menerima
-                Makanan. Owner memiliki akses pantau saja.
-              </p>
-              {printJobs.map((job) => (
-                <div className="line" key={job.id}>
-                  <span>
-                    <strong>Pesanan #{job.order_id}</strong> · {job.station}
-                    <br />
-                    {job.status} · percobaan {job.attempts} · cetak ulang{" "}
-                    {job.reprint_count}
-                  </span>
-                  {role !== "OWNER" &&
-                    ["FAILED", "PRINTED", "REPRINTED"].includes(job.status) && (
-                      <button
-                        disabled={busy}
-                        onClick={() =>
-                          run(() => api("print-retry", { id: job.id }))
-                        }
-                      >
-                        Cetak ulang
-                      </button>
-                    )}
-                </div>
-              ))}
-              {!printJobs.length && <p>Belum ada print job.</p>}
-            </section>
-          )}
         {role && role !== "CUSTOMER" && view === "notifications" && (
           <section className="panel narrow">
             <h2>Kabar terbaru</h2>
@@ -4527,15 +4496,26 @@ export default function App() {
             )}
             {role !== "CUSTOMER" && (
               <button
-                className="refresh"
+                className={
+                  role === "ADMIN" ? "refresh admin-refresh" : "refresh"
+                }
                 onClick={() => run(async () => {})}
                 disabled={busy}
               >
+                {role === "ADMIN" && (
+                  <AdminIcon
+                    name="refresh"
+                    className="admin-svg-icon admin-refresh-icon"
+                  />
+                )}
                 Perbarui status
               </button>
             )}
+            {role === "ADMIN" && <AdminDailySummary dashboard={dashboard} />}
             {["ADMIN", "OWNER"].includes(role) && dashboard && (
-              <div className="stats">
+              <div
+                className={role === "ADMIN" ? "stats admin-kpi-grid" : "stats"}
+              >
                 {[
                   ["Order hari ini", dashboard.today.orders],
                   [
@@ -4575,16 +4555,36 @@ export default function App() {
                   ["Pelanggan", dashboard.customers],
                   ["Driver terdaftar", dashboard.drivers],
                   ["Aktivitas poin", dashboard.loyalty],
-                ].map(([label, value]) => (
+                ].map(([label, value], index) => (
                   <div className="stat" key={label}>
-                    <small>{label}</small>
+                    {role === "ADMIN" && (
+                      <AdminIcon
+                        name={ADMIN_KPI_ICONS[index]}
+                        className={`admin-svg-icon admin-kpi-icon admin-kpi-icon-${index + 1}`}
+                      />
+                    )}
+                    <small
+                      data-mobile-label={
+                        role === "ADMIN"
+                          ? ADMIN_KPI_MOBILE_LABELS[index]
+                          : undefined
+                      }
+                    >
+                      {label}
+                    </small>
                     <strong>{value}</strong>
                   </div>
                 ))}
               </div>
             )}
             {["ADMIN", "OWNER"].includes(role) && dashboard && (
-              <div className="stats payment-stats">
+              <div
+                className={
+                  role === "ADMIN"
+                    ? "stats payment-stats admin-payment-grid"
+                    : "stats payment-stats"
+                }
+              >
                 {["PENDING", "PAID", "FAILED", "EXPIRED"].map((status) => (
                   <div className="stat" key={status}>
                     <small>Pembayaran {status}</small>
@@ -4652,7 +4652,9 @@ export default function App() {
               className={
                 role === "CUSTOMER"
                   ? "order-list customer-order-list"
-                  : "order-list"
+                  : role === "ADMIN"
+                    ? "order-list admin-order-list admin-order-list-v2"
+                    : "order-list"
               }
             >
               {role === "DRIVER" &&
@@ -5622,7 +5624,7 @@ export default function App() {
           <button onClick={logout}>Keluar</button>
         </nav>
       )}
-      {role === "ADMIN" && <AdminUiRuntime view={view} />}
+      {role === "ADMIN" && <AdminUiRuntime view={view} orders={orders} />}
       <footer>
         Warkost Bahagia · Dibuat untuk operasional yang lebih rapi
       </footer>
@@ -5630,30 +5632,13 @@ export default function App() {
   );
 }
 
-function AdminUiRuntime({ view }) {
+function AdminUiRuntime({ view, orders }) {
   return (
     <>
-      <AdminUiEnhancer view={view} />
+      <AdminWorkspaceLifecycle view={view} orders={orders} />
       <AdminNotificationPopover key={`admin-notifications-${view}`} />
-      {view === "orders" && (
-        <>
-          <AdminOrderCardEnhancer />
-          <AdminOrderModalEnhancer />
-        </>
-      )}
-      {view === "customers" && (
-        <>
-          <AdminCustomersEnhancer />
-          <AdminCustomerService />
-        </>
-      )}
-      {view === "admin-stock" && (
-        <>
-          <AdminBeverageStockEnhancerV2 />
-          <AdminBeverageStockPolish />
-        </>
-      )}
-      {view === "printing" && <AdminPrinterController />}
+      {view === "orders" && <AdminOrderModalEnhancer />}
+      {view === "customers" && <AdminCustomerService />}
     </>
   );
 }
@@ -6371,7 +6356,20 @@ function Order({
     );
   }
   return (
-    <article className="panel order">
+    <article
+      className={
+        role === "ADMIN"
+          ? "panel order admin-order-card admin-order-card-v2"
+          : "panel order"
+      }
+      data-order-status={role === "ADMIN" ? o.status : undefined}
+      data-order-group={
+        role === "ADMIN" ? adminStatusGroup(o.status) : undefined
+      }
+      data-payment-status={role === "ADMIN" ? o.payment_status : undefined}
+      data-payment-method={role === "ADMIN" ? o.method : undefined}
+      data-payment-status-v2={role === "ADMIN" ? o.payment_status : undefined}
+    >
       <div className="order-head">
         <div>
           <small>
@@ -6405,6 +6403,7 @@ function Order({
           </span>
         </div>
       )}
+      {role === "ADMIN" && <AdminOrderCardEnhancer order={o} />}
       {(o.kitchen_status || o.cashier_status) && (
         <div className="station-statuses">
           {o.kitchen_status && (
@@ -6417,7 +6416,12 @@ function Order({
       )}
       {!(role === "DRIVER" && o.available_to_claim) && (
         <button
+          className={role === "ADMIN" ? "admin-card-detail-button" : undefined} data-admin-order-detail={role === "ADMIN" ? "react" : undefined}
           onClick={() => {
+            if (role === "ADMIN") {
+              window.dispatchEvent(new CustomEvent("warkost:open-admin-order", { detail: { orderId: o.id } }));
+              return;
+            }
             if (details) {
               setDetails(null);
               return;
@@ -6427,7 +6431,11 @@ function Order({
               .catch((e) => setDetailError(e.message));
           }}
         >
-          {details ? "Tutup detail" : "Lihat item & riwayat"}
+          {details
+            ? "Tutup detail"
+            : role === "ADMIN"
+              ? "Lihat detail"
+              : "Lihat item & riwayat"}
         </button>
       )}
       {detailError && <p role="alert">{detailError}</p>}

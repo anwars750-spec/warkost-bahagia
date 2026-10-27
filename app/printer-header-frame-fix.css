@@ -1,5 +1,5 @@
 /* Printer header frame alignment — keep global navigation in the same visual frame as Kitchen */
-body.admin-printer-stable-view .top {
+body:is(.admin-printer-stable-view, .admin-printer-react-view) .top {
   width: 100%;
   max-width: none;
   padding-inline: clamp(24px, 3vw, 56px);
@@ -7,12 +7,12 @@ body.admin-printer-stable-view .top {
   background: rgba(255, 252, 247, 0.96);
 }
 
-body.admin-printer-stable-view .top .brand {
+body:is(.admin-printer-stable-view, .admin-printer-react-view) .top .brand {
   flex: 0 1 auto;
   min-width: 0;
 }
 
-body.admin-printer-stable-view .top nav {
+body:is(.admin-printer-stable-view, .admin-printer-react-view) .top nav {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -23,26 +23,26 @@ body.admin-printer-stable-view .top nav {
   min-width: 0;
 }
 
-body.admin-printer-stable-view .top nav button {
+body:is(.admin-printer-stable-view, .admin-printer-react-view) .top nav button {
   flex: 0 0 auto;
   white-space: nowrap;
 }
 
 /* Dapur, Stok Makanan, Printer, Notifikasi, Keluar — Printer is item 3. */
-body.admin-printer-stable-view .top nav > button:nth-child(3) {
+body:is(.admin-printer-stable-view, .admin-printer-react-view) .top nav > button:nth-child(3) {
   border-radius: 14px;
   background: #f4e2d2;
   color: #6f321e;
 }
 
 /* Keep the injected Printer Center aligned to the same outer frame. */
-body.admin-printer-stable-view #admin-ui-portal-root {
+body:is(.admin-printer-stable-view, .admin-printer-react-view) #admin-ui-portal-root {
   width: 100%;
   max-width: none;
   padding-inline: clamp(22px, 3vw, 48px);
 }
 
-body.admin-printer-stable-view #admin-printer-center-v1 {
+body:is(.admin-printer-stable-view, .admin-printer-react-view) #admin-printer-center-v1 {
   width: 100%;
   max-width: none;
 }
@@ -54,34 +54,34 @@ body.printer-center-transition {
 }
 
 @media (max-width: 900px) {
-  body.admin-printer-stable-view .top {
+  body:is(.admin-printer-stable-view, .admin-printer-react-view) .top {
     padding-inline: 18px;
   }
 
-  body.admin-printer-stable-view .brand-logo {
+  body:is(.admin-printer-stable-view, .admin-printer-react-view) .brand-logo {
     width: 92px;
   }
 
-  body.admin-printer-stable-view .brand strong {
+  body:is(.admin-printer-stable-view, .admin-printer-react-view) .brand strong {
     font-size: 16px;
   }
 
-  body.admin-printer-stable-view .brand small {
+  body:is(.admin-printer-stable-view, .admin-printer-react-view) .brand small {
     font-size: 11px;
   }
 
-  body.admin-printer-stable-view .top nav {
+  body:is(.admin-printer-stable-view, .admin-printer-react-view) .top nav {
     gap: 4px;
   }
 
-  body.admin-printer-stable-view .top nav button {
+  body:is(.admin-printer-stable-view, .admin-printer-react-view) .top nav button {
     padding-inline: 8px;
     font-size: 12px;
   }
 }
 
 @media (max-width: 680px) {
-  body.admin-printer-stable-view .top {
+  body:is(.admin-printer-stable-view, .admin-printer-react-view) .top {
     display: grid;
     grid-template-columns: 1fr;
     align-items: center;
@@ -90,26 +90,26 @@ body.printer-center-transition {
     padding: 10px 12px;
   }
 
-  body.admin-printer-stable-view .brand {
+  body:is(.admin-printer-stable-view, .admin-printer-react-view) .brand {
     width: 100%;
     gap: 9px;
   }
 
-  body.admin-printer-stable-view .brand-logo {
+  body:is(.admin-printer-stable-view, .admin-printer-react-view) .brand-logo {
     width: 72px;
     border-radius: 10px;
   }
 
-  body.admin-printer-stable-view .brand-copy strong {
+  body:is(.admin-printer-stable-view, .admin-printer-react-view) .brand-copy strong {
     font-size: 15px;
     line-height: 1.1;
   }
 
-  body.admin-printer-stable-view .brand-copy small {
+  body:is(.admin-printer-stable-view, .admin-printer-react-view) .brand-copy small {
     display: none;
   }
 
-  body.admin-printer-stable-view .top nav {
+  body:is(.admin-printer-stable-view, .admin-printer-react-view) .top nav {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     width: 100%;
@@ -117,7 +117,7 @@ body.printer-center-transition {
     gap: 4px;
   }
 
-  body.admin-printer-stable-view .top nav button {
+  body:is(.admin-printer-stable-view, .admin-printer-react-view) .top nav button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -132,20 +132,20 @@ body.printer-center-transition {
     text-overflow: ellipsis;
   }
 
-  body.admin-printer-stable-view .top nav .ui-icon {
+  body:is(.admin-printer-stable-view, .admin-printer-react-view) .top nav .ui-icon {
     width: 17px;
     height: 17px;
     flex: 0 0 17px;
   }
 
-  body.admin-printer-stable-view .top nav .notification-count {
+  body:is(.admin-printer-stable-view, .admin-printer-react-view) .top nav .notification-count {
     min-width: 17px;
     height: 17px;
     padding: 0 4px;
     font-size: 9px;
   }
 
-  body.admin-printer-stable-view #admin-ui-portal-root {
+  body:is(.admin-printer-stable-view, .admin-printer-react-view) #admin-ui-portal-root {
     padding: 14px 12px 34px;
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 
 const escapeHtml = (value) =>
   String(value ?? "")
@@ -124,7 +124,7 @@ const discrepancyCopy = (value) => {
 };
 
 export default function AdminOrderModalEnhancer() {
-  useEffect(() => {
+  useLayoutEffect(() => {
     let modal = null;
     let previousOverflow = "";
     let requestToken = 0;
@@ -486,7 +486,7 @@ export default function AdminOrderModalEnhancer() {
     };
 
     const openModal = async (card) => {
-      const id = orderIdFromCard(card);
+      const id = typeof card === "number" ? card : orderIdFromCard(card);
       if (!id) return;
 
       renderLoadingModal(id);
@@ -518,7 +518,7 @@ export default function AdminOrderModalEnhancer() {
 
     const onClickCapture = (event) => {
       const button = event.target.closest("button");
-      if (!button) return;
+      if (!button || button.dataset.adminOrderDetail === "react") return;
       const card = button.closest("main .order-list .order");
       if (!card) return;
       const text = button.textContent.trim();
@@ -537,10 +537,16 @@ export default function AdminOrderModalEnhancer() {
       if (event.key === "Escape" && modal) closeModal();
     };
 
+    const onOpenOrder = (event) => {
+      const id = Number(event.detail?.orderId);
+      if (Number.isSafeInteger(id) && id > 0) void openModal(id);
+    };
+    window.addEventListener("warkost:open-admin-order", onOpenOrder);
     document.addEventListener("click", onClickCapture, true);
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
+      window.removeEventListener("warkost:open-admin-order", onOpenOrder);
       document.removeEventListener("click", onClickCapture, true);
       window.removeEventListener("keydown", onKeyDown);
       closeModal();

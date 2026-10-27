@@ -24,12 +24,15 @@ test("Admin view enhancers are owned by the active React view, not the root layo
     assert.doesNotMatch(layout, new RegExp(legacyViewRuntime));
   }
 
-  assert.match(page, /<AdminUiRuntime view=\{view\} \/>/);
+  assert.match(page, /<AdminUiRuntime view=\{view\} orders=\{orders\} \/>/);
   assert.match(page, /view === "orders" &&/);
   assert.match(page, /view === "customers" &&/);
   assert.match(page, /view === "admin-stock" &&/);
-  assert.match(page, /view === "printing" && <AdminPrinterController \/>/);
-  assert.match(page, /data-admin-view=\{role === "ADMIN" \? view : undefined\}/);
+  assert.match(page, /view === "printing" && <AdminPrinterView \/>/);
+  assert.match(
+    page,
+    /data-admin-view=\{role === "ADMIN" \? view : undefined\}/,
+  );
 });
 
 test("Admin navigation is React-owned and exposes every stabilized workspace", () => {
@@ -64,16 +67,27 @@ test("view controllers no longer infer routes or observe the global body", () =>
     assert.doesNotMatch(source, /admin-beverage-stock-nav-v2/);
   }
 
-  const pageEnhancer = read("app/AdminUiEnhancer.js");
-  const orderEnhancer = read("app/AdminOrderCardEnhancer.js");
-  assert.match(pageEnhancer, /observer\.observe\(main,/);
-  assert.doesNotMatch(pageEnhancer, /button\.dataset\.adminNav/);
-  assert.doesNotMatch(pageEnhancer, /button\.querySelector\("\.admin-nav-icon"\)/);
-  assert.doesNotMatch(orderEnhancer, /new MutationObserver/);
-  assert.match(orderEnhancer, /warkost:admin-orders-rendered/);
-  assert.match(orderEnhancer, /requestAnimationFrame/);
-  assert.doesNotMatch(pageEnhancer, /headingText ===/);
-  assert.doesNotMatch(orderEnhancer, /heading === "Pantau pesanan hari ini"/);
+  for (const file of [
+    "app/AdminPresentation.js",
+    "app/AdminOrderCardEnhancer.js",
+    "app/AdminCustomersEnhancer.js",
+    "app/AdminBeverageStockEnhancerV2.js",
+    "app/AdminPrinterView.js",
+  ]) {
+    const source = read(file);
+    assert.doesNotMatch(
+      source,
+      /MutationObserver|innerHTML|insertAdjacentHTML|document\.querySelector|requestAnimationFrame/,
+    );
+  }
+  assert.match(
+    read("app/AdminPresentation.js"),
+    /warkost:admin-orders-rendered/,
+  );
+  assert.equal(
+    fs.existsSync(path.join(projectRoot, "app/AdminUiEnhancer.js")),
+    false,
+  );
 });
 
 test("Admin order actions use distinct semantic visual cues", () => {
@@ -145,6 +159,9 @@ test("obsolete competing controllers and route-fence CSS are removed", () => {
   assert.doesNotMatch(stability, /data-admin-route/);
   assert.doesNotMatch(stability, /admin-stock-gap-anchor/);
   assert.doesNotMatch(stability, /admin-beverage-stock-floating-nav/);
-  assert.match(stability, /body\.admin-printer-stable-view main/);
-  assert.match(stability, /body\.admin-beverage-stock-view main/);
+  assert.match(
+    stability,
+    /body\.admin-printer-stable-view main:not\(\[data-admin-view\]\)/,
+  );
+  assert.match(stability, /main\[data-admin-view\] > #admin-beverage-stock-v1/);
 });

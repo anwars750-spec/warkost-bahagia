@@ -1,5 +1,22 @@
 ﻿# Warkost Bahagia â€” Project Checkpoint
 
+## UI Legacy / Flash Cleanup V1 - 2026-10-27
+
+Status: **READY FOR CONTROL CENTER REVIEW** (Product Owner UAT remains required).
+
+- Branch: `work/customer-qris-demo-uat-v1`; verified implementation base: `dc1dd538a6bb6d02dcdc5802fa4dbd3e10556909`. Local checkout was clean and advanced from `8af0e50f4e1aac3b2ff255a40824d428d40877f4` to this fetched base without a merge.
+- Admin frame, navigation, KPIs, order preview/number, Customer workspace, read-only Stock, Printer Center and settlement launcher now render directly in React. Removed delayed Admin workspace decoration and the unused native Admin customer/stock/printer panels.
+- Shared actual-session boundary prevents the guest workspace from rendering while an authenticated role is unresolved; no timed screen or workspace visibility mask was added.
+- Removed only the superseded `AdminUiEnhancer`, `AdminOrderNumberEnhancer`, and `AdminBeverageStockPolish`. Existing order modal, notification, shift/cash/settlement and other-role integrations remain; detail uses an explicit order-id event.
+- Full `npm test`: **528/528 PASS**, zero failures/skips. Affected targeted contracts: **49/49 PASS** before the final explicit-event test; final event/realtime checks: **21/21 PASS**.
+- `npm run build`: **PASS**, Next.js 16.4.3, **33/33** static pages.
+- Safe production-build browser fixture tests: **8/8 Admin PASS** on desktop/mobile (first-load DOM/frame monitoring, refresh, three navigation cycles, controls, late/error requests and realtime metadata); **4/4 guest/Customer shared-session checks PASS**. All browser API mutations were intercepted in test fixtures; no destructive legacy UAT script or live backend mutation was run.
+- Customer audit: Catalog/QRIS/Account still have post-render decorator paths. Their full migration is outside this Admin phase; Customer is not claimed universally flash-free.
+- No API contract, database/schema, business-rule, QRIS-only policy, delivery-rule, dependency, secrets or staging `.env` changes. No push, merge or deployment. No Product Owner UAT PASS claim.
+- Detailed lifecycle trace, retained legacy dependencies, modified/removed files, verification limits and review risks: [UI_LEGACY_FLASH_CLEANUP_V1.md](UI_LEGACY_FLASH_CLEANUP_V1.md).
+
+---
+
 ## Final Release Verification - 2026-10-25
 
 Status: **SUPPORTED RELEASE VERIFICATION PASS; QRIS PRODUCTION LAUNCH BLOCKED**
