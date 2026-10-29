@@ -2,15 +2,15 @@
 
 ## Kitchen modern workspace V1 - 2026-10-29
 
-Status: **IMPLEMENTED AND VERIFIED LOCALLY; PRODUCT OWNER UAT REQUIRED**.
+Status: **PRODUCT OWNER UAT PASS / ACCEPTED**.
 
 - Branch: `work/customer-qris-demo-uat-v1`; clean starting base: `85f33c57d476b5bdbcbdbdcb9778beef7dc56456`.
 - Kitchen modern Dashboard, Stock and Printer render directly from authenticated role and React view. The same view selects exactly one active navigation item. Per-user allowlisted sessionStorage restores Stock on cache-bypass refresh.
 - Removed Kitchen native stock/order/printer/notification rendering and obsolete global mount, flash guard, image sync and guard CSS. Scoped notification popover remains; Owner/Manager stock and default Admin printer paths remain.
 - Full safe unit/regression: **532/532 PASS**. Production build: **PASS**, Next.js 16.4.3, **33/33** static pages. `git diff --check`: **PASS**.
 - Desktop/mobile browser coverage: Kitchen **10/10 PASS**, Admin **12/12 PASS**, existing Staging UAT **14/14 PASS**, real-session Kitchen/Manager/Owner safety **6/6 PASS**. Total **42 unique cases PASS** across final suite runs. New test harness locators were corrected to match existing controls; no unrelated role UI fixes were needed.
-- Browser verification used the production bundle and a new isolated local SQLite fixture. Hosted MySQL Recovery/Staging UAT were not triggered; no hosted CI pass is claimed for this work.
-- No API/schema/migration, stock permission, order workflow, QRIS/payment, delivery, dependency or secrets changes. No push, merge or deployment. Physical printer and Product Owner manual desktop/mobile UAT remain required.
+- Browser verification used the production bundle and a new isolated local SQLite fixture. Hosted **MySQL Recovery #89 PASS** and **Staging UAT #73 PASS** on commit `57ec345217a33104fd384d3edeb54bbba4849e3c`.
+- No API/schema/migration, stock permission, order workflow, QRIS/payment, delivery, dependency or secrets changes. Commit `57ec345217a33104fd384d3edeb54bbba4849e3c` was pushed and deployed to **staging only** for Product Owner UAT. Manual Kitchen navigation, Stock hard-refresh, Printer UI, and Notification UAT: **PASS**. No merge and no production deployment. Physical thermal printer delivery remains separate hardware verification.
 - Detailed evidence and boundaries: [KITCHEN_MODERN_WORKSPACE_V1.md](KITCHEN_MODERN_WORKSPACE_V1.md).
 
 ---
@@ -1547,3 +1547,4 @@ Status: **PRODUCT OWNER UAT PASS**
 - The worker is process-local and assumes the documented persistent Node hosting target; database transaction guards keep repeated or overlapping process sweeps idempotent.
 - Product Owner UAT passed for single-item and mixed orders before Store Operating Hours V1 began.
 \n\n## Final Regression Closure â€” 2026-10-23\n\n- SYSTEM-WIDE REALTIME OPERATIONS V1: **PRODUCT OWNER UAT PASS / COMPLETED**.\n- Customer payment contract: **QRIS ONLY**, server-authoritative. CASH/COD and BANK_TRANSFER are rejected for new Customer checkout; legacy COD data/settlement support remains preserved.\n- QRIS-only contract tests: **4/4 PASS**.\n- Store Operating Hours V1 dedicated tests: **8/8 PASS**.\n- Pickup completion + Driver isolation verification: **5/5 PASS**.\n- Final full regression: **478/478 PASS, 0 FAIL**.\n- Regression stabilization commit: 3e2a1d2.\n- No merge and no deployment performed.\n
+
