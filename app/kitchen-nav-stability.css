@@ -1,7 +1,5 @@
 /* Kitchen navigation stability
-   Global button styles translate buttons on hover/active. Combined with the
-   Kitchen nav hover transform this creates a visible 2px bounce when changing
-   sections. Navigation tabs should change color only, never move. */
+   Navigation tabs change visual state without moving. */
 body.kitchen-shell-active .top nav button[data-kitchen-nav],
 body.kitchen-shell-active .top nav button[data-kitchen-nav]:hover,
 body.kitchen-shell-active .top nav button[data-kitchen-nav]:active,
@@ -9,21 +7,6 @@ body.kitchen-shell-active .top nav button[data-kitchen-nav]:focus-visible {
   transform: none !important;
 }
 
-body.kitchen-shell-active .top nav button[data-kitchen-nav] {
-  transition:
-    background 120ms ease,
-    border-color 120ms ease,
-    color 120ms ease,
-    box-shadow 120ms ease !important;
-}
-
-/* Stock view should appear in-place. The previous fade could make a fast
-   section switch feel like the content pulses even when dimensions are stable. */
-body.kitchen-stock-modern-active .kitchen-stock-center {
-  animation: none !important;
-}
-
-/* Keep header geometry identical while Dapur/Stock state changes. */
 body.kitchen-shell-active .top nav {
   align-items: center;
 }
@@ -31,22 +14,44 @@ body.kitchen-shell-active .top nav {
 body.kitchen-shell-active .top nav button[data-kitchen-nav] {
   box-sizing: border-box;
   margin: 0;
-}
-
-/* KITCHEN UI/UX POLISH V1
-   Keep every Kitchen navigation state deterministic. Several legacy/runtime
-   layers can temporarily disagree while a view is swapping; only one visual
-   selection should ever be presented to the operator. */
-body.kitchen-shell-active .top nav button[data-kitchen-nav] {
   border-color: transparent !important;
   background: transparent !important;
   color: #4f362b !important;
   box-shadow: none !important;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    box-shadow 120ms ease !important;
 }
 
-body.kitchen-shell-active .top nav button[data-kitchen-nav].kitchen-nav-active,
-body.kitchen-shell-active .top nav button[data-kitchen-nav="notification"].kitchen-notification-open,
-body.kitchen-stock-transition .top nav button[data-kitchen-nav="stock"] {
+/* Hover is only a light preview. It must never look like the selected view. */
+body.kitchen-shell-active .top nav button[data-kitchen-nav]:hover {
+  border-color: #ead8ca !important;
+  background: #fff8f3 !important;
+  color: #8f4329 !important;
+  box-shadow: none !important;
+}
+
+/* The navigation intent set by KitchenFlashGuard is the visual source of truth.
+   This prevents the active highlight from lagging one click behind while the
+   underlying React view/runtime is still finishing its render. */
+body.kitchen-shell-active[data-kitchen-nav-target="kitchen"]
+  .top
+  nav
+  button[data-kitchen-nav="kitchen"],
+body.kitchen-shell-active[data-kitchen-nav-target="stock"]
+  .top
+  nav
+  button[data-kitchen-nav="stock"],
+body.kitchen-shell-active[data-kitchen-nav-target="printer"]
+  .top
+  nav
+  button[data-kitchen-nav="printer"],
+body.kitchen-shell-active
+  .top
+  nav
+  button[data-kitchen-nav="notification"].kitchen-notification-open {
   border-color: #efc7af !important;
   background: #fff0e5 !important;
   color: #a64020 !important;
@@ -60,45 +65,17 @@ body.kitchen-shell-active .top nav button[data-kitchen-nav="logout"].kitchen-log
   box-shadow: 0 7px 18px rgba(154, 70, 35, 0.07) !important;
 }
 
-body.kitchen-stock-transition .top nav button[data-kitchen-nav="kitchen"],
-body.kitchen-stock-transition .top nav button[data-kitchen-nav="kitchen"].kitchen-nav-active {
-  border-color: transparent !important;
-  background: transparent !important;
-  color: #4f362b !important;
-  box-shadow: none !important;
+/* No artificial full-page Stock placeholder. The previous loading card made a
+   normal view hand-off look like a broken screen. */
+body.kitchen-stock-transition {
+  /* compatibility only; KitchenFlashGuard removes this class immediately */
 }
 
-/* Never expose an empty canvas while the legacy Stock frame hands control to
-   KitchenStockCenter. The guard still prevents the legacy flash, but operators
-   now get an immediate, stable transition state instead of a blank page. */
-body.kitchen-stock-transition:not(.kitchen-stock-modern-active) main::after {
-  content: "Menyiapkan stok makanan…";
-  position: absolute;
-  top: clamp(120px, 27vh, 230px);
-  left: 50%;
-  z-index: 2;
-  display: grid;
-  width: min(360px, calc(100% - 32px));
-  min-height: 104px;
-  place-items: center;
-  padding: 22px 24px;
-  border: 1px solid #eadbcf;
-  border-radius: 20px;
-  background:
-    radial-gradient(circle at 18% 12%, rgba(184, 104, 67, 0.08), transparent 9rem),
-    #fffdfa;
-  box-shadow: 0 16px 42px rgba(65, 39, 28, 0.07);
-  color: #6f4938;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  text-align: center;
-  transform: translateX(-50%);
-  visibility: visible !important;
+body.kitchen-stock-modern-active .kitchen-stock-center {
+  animation: none !important;
 }
 
-/* Kitchen notification is intentionally denser than the shared Admin popover.
-   Empty notification state should not occupy most of the viewport. */
+/* Kitchen notification is intentionally denser than the shared Admin popover. */
 .kitchen-notification-popover {
   max-width: min(390px, calc(100vw - 32px));
 }
@@ -170,14 +147,6 @@ body.kitchen-shell-active.admin-printer-react-view .admin-printer-workspace {
 }
 
 @media (max-width: 760px) {
-  body.kitchen-stock-transition:not(.kitchen-stock-modern-active) main::after {
-    top: 92px;
-    min-height: 88px;
-    padding: 18px;
-    border-radius: 16px;
-    font-size: 12px;
-  }
-
   .kitchen-notification-popover {
     max-width: calc(100vw - 24px);
   }
