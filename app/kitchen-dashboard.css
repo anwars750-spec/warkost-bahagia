@@ -21,10 +21,6 @@ body.kitchen-dashboard-active main {
   min-height: calc(100vh - 88px);
 }
 
-body.kitchen-dashboard-active main > *:not(.kitchen-dashboard-shell) {
-  display: none !important;
-}
-
 body.kitchen-dashboard-active footer {
   display: none;
 }

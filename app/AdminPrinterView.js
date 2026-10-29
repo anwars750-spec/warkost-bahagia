@@ -80,7 +80,7 @@ async function request(route, body, signal) {
   if (!response.ok) throw new Error(data.error || "Gagal memuat data printer");
   return data;
 }
-export default function AdminPrinterView() {
+export default function AdminPrinterView({ role = "ADMIN" }) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -110,6 +110,10 @@ export default function AdminPrinterView() {
         if (!controller.signal.aborted) setLoading(false);
       }
     };
+    const onRealtime = (event) => {
+      if (event.detail?.type === "PRINTER_STATUS_CHANGED") void load();
+    };
+    window.addEventListener("warkost:realtime", onRealtime);
     void load();
     const poll = window.setInterval(() => {
       if (document.visibilityState === "visible") void load();
@@ -117,6 +121,7 @@ export default function AdminPrinterView() {
     window.addEventListener("warkost:realtime-recovered", load);
     return () => {
       controller.abort();
+      window.removeEventListener("warkost:realtime", onRealtime);
       window.clearInterval(poll);
       window.removeEventListener("warkost:realtime-recovered", load);
     };
@@ -157,14 +162,15 @@ export default function AdminPrinterView() {
         {String(retryingId) === String(job.id) ? "Mengirim..." : "Cetak ulang"}
       </button>
     );
-  const states = jobs.map(statusOf);
+  const scopedJobs = role === "KITCHEN" ? jobs.filter(isKitchen) : jobs;
+  const states = scopedJobs.map(statusOf);
   const summary = {
     queue: states.filter((state) => ACTIVE_STATES.has(state)).length,
     success: states.filter((state) => SUCCESS_STATES.has(state)).length,
     failed: states.filter((state) => FAILED_STATES.has(state)).length,
     timeout: states.filter((state) => state === "TIMEOUT").length,
   };
-  const filtered = jobs
+  const filtered = scopedJobs
     .filter(
       (job) =>
         (target === "all" ||
@@ -182,20 +188,26 @@ export default function AdminPrinterView() {
         ? numericOrder(a) - numericOrder(b)
         : timeValue(b) - timeValue(a),
     );
-  const selected = jobs.find((job) => String(job.id) === String(selectedId));
+  const selected = scopedJobs.find(
+    (job) => String(job.id) === String(selectedId),
+  );
   return (
     <div
       id="admin-printer-center-v1"
-      className="printer-center-role-admin"
+      className={`printer-center-role-${role.toLowerCase()}`}
+      data-kitchen-printer={role === "KITCHEN" ? "true" : undefined}
       data-admin-ui-owner="react"
     >
       <section className="admin-printer-hero">
         <div className="admin-printer-hero-copy">
-          <small>PUSAT PRINTER</small>
-          <h2>Printer Center</h2>
+          <small>
+            {role === "KITCHEN" ? "STASIUN DAPUR" : "PUSAT PRINTER"}
+          </small>
+          <h2>{role === "KITCHEN" ? "Printer Kitchen" : "Printer Center"}</h2>
           <p>
-            Pantau antrean cetak otomatis, riwayat, dan kendala printer Admin
-            serta Kitchen.
+            {role === "KITCHEN"
+              ? "Pantau cetak otomatis tiket makanan, riwayat, dan kendala printer 80mm tanpa perlu refresh manual."
+              : "Pantau antrean cetak otomatis, riwayat, dan kendala printer Admin serta Kitchen."}
           </p>
         </div>
         <div className="admin-printer-live-card">
@@ -270,53 +282,63 @@ export default function AdminPrinterView() {
                 placeholder="Cari invoice atau status..."
               />
             </label>
-            <div className="admin-printer-targets">
-              {[
-                ["all", "Semua"],
-                ["admin", "Admin"],
-                ["kitchen", "Kitchen"],
-              ].map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  data-printer-target={key}
-                  className={target === key ? "active" : ""}
-                  onClick={() => setTarget(key)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            {role === "KITCHEN" ? (
+              <span className="admin-printer-scope-chip">
+                Kitchen · makanan saja
+              </span>
+            ) : (
+              <div className="admin-printer-targets">
+                {[
+                  ["all", "Semua"],
+                  ["admin", "Admin"],
+                  ["kitchen", "Kitchen"],
+                ].map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    data-printer-target={key}
+                    className={target === key ? "active" : ""}
+                    onClick={() => setTarget(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
         <div className="admin-printer-content">
           {tab === "status" ? (
             <>
               <div className="admin-printer-device-grid">
-                {["admin", "kitchen"].map((type) => (
-                  <article className="admin-printer-device-card" key={type}>
-                    <AdminIcon
-                      name="printer"
-                      className={`admin-printer-device-icon ${type}`}
-                    />
-                    <div className="admin-printer-device-copy">
-                      <small>PRINTER {type.toUpperCase()}</small>
-                      <strong>80mm Thermal</strong>
-                      <p>
-                        {type === "kitchen"
-                          ? "Cetak otomatis makanan saja. Minuman tetap ditangani Admin."
-                          : "Cetak seluruh item order dan ringkasan transaksi pembayaran."}
-                      </p>
-                    </div>
-                    <span className="admin-printer-device-state neutral">
-                      DIPANTAU
-                    </span>
-                  </article>
-                ))}
+                {(role === "KITCHEN" ? ["kitchen"] : ["admin", "kitchen"]).map(
+                  (type) => (
+                    <article className="admin-printer-device-card" key={type}>
+                      <AdminIcon
+                        name="printer"
+                        className={`admin-printer-device-icon ${type}`}
+                      />
+                      <div className="admin-printer-device-copy">
+                        <small>PRINTER {type.toUpperCase()}</small>
+                        <strong>80mm Thermal</strong>
+                        <p>
+                          {type === "kitchen"
+                            ? "Cetak otomatis makanan saja. Minuman tetap ditangani Admin."
+                            : "Cetak seluruh item order dan ringkasan transaksi pembayaran."}
+                        </p>
+                      </div>
+                      <span className="admin-printer-device-state neutral">
+                        DIPANTAU
+                      </span>
+                    </article>
+                  ),
+                )}
               </div>
               <div className="admin-printer-routing-note">
                 <strong>Routing cetak</strong>
-                <span>Admin = semua item + transaksi</span>
+                {role !== "KITCHEN" && (
+                  <span>Admin = semua item + transaksi</span>
+                )}
                 <span>Kitchen = makanan saja</span>
                 <span>Ukuran = thermal 80mm</span>
               </div>

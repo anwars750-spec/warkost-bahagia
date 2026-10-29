@@ -36,7 +36,6 @@ import "./admin-shift-settlement.css";
 import "./owner-admin-operators.css";
 import "./kitchen-dashboard.css";
 import "./kitchen-dashboard-queue-polish.css";
-import "./kitchen-flash-guard.css";
 import "./kitchen-dashboard-mobile-v2.css";
 import "./printer-header-frame-fix.css";
 import "./kitchen-header-actions.css";
@@ -133,12 +132,7 @@ import ManagerCashSettlementCenter from "./ManagerCashSettlementCenter";
 import ManagerOwnerSettlementCenter from "./ManagerOwnerSettlementCenter";
 import ManagerCashSyncBridge from "./ManagerCashSyncBridge";
 import PrintBrandingRuntime from "./PrintBrandingRuntime";
-import KitchenDashboardMount from "./KitchenDashboardMount";
-import KitchenFlashGuard from "./KitchenFlashGuard";
 import PrinterCenterRuntime from "./PrinterCenterRuntime";
-import KitchenHeaderActions from "./KitchenHeaderActions";
-import KitchenStockCenter from "./KitchenStockCenter";
-import KitchenStockImageSync from "./KitchenStockImageSync";
 import RoleLogoutConfirmation from "./RoleLogoutConfirmation";
 import CustomerCatalogPolish from "./CustomerCatalogPolish";
 import CustomerQuantityUnitPolish from "./CustomerQuantityUnitPolish";
@@ -178,8 +172,6 @@ export default function RootLayout({ children }) {
         <MobileForegroundAlertBoost />
         <DriverRuntimeBootstrap />
         <DriverLogoFix />
-        <KitchenFlashGuard />
-        <KitchenDashboardMount />
         <AdminCodBatchEventBridge />
         <AdminCashControlCenter />
         <AdminShiftGateRuntime />
@@ -204,9 +196,6 @@ export default function RootLayout({ children }) {
         <ManagerCashSyncBridge />
         <PrintBrandingRuntime />
         <PrinterCenterRuntime />
-        <KitchenHeaderActions />
-        <KitchenStockCenter />
-        <KitchenStockImageSync />
         <RoleLogoutConfirmation />
         <CustomerCatalogPolish />
         <CustomerQuantityUnitPolish />

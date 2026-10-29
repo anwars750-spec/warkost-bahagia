@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import AdminPrinterController from "./AdminPrinterController";
 
 const LEGACY_PRINTER_TITLE = "Antrean cetak struk 80mm";
-const ALLOWED_ROLES = new Set(["KITCHEN", "OWNER"]);
+const ALLOWED_ROLES = new Set(["OWNER"]);
 let cachedRole = "";
 
 function printerViewVisible() {
+  if (document.querySelector("main[data-kitchen-view]")) return false;
   const headings = document.querySelectorAll("main h2");
   return Array.from(headings).some(
     (heading) => heading.textContent?.trim() === LEGACY_PRINTER_TITLE,

@@ -1,20 +1,14 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useState,
-} from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-async function request(route, body) {
+async function request(route, body, signal) {
   const response = await fetch(`/api/${route}`, {
     method: body ? "POST" : "GET",
     headers: body ? { "Content-Type": "application/json" } : {},
     body: body ? JSON.stringify(body) : undefined,
     cache: "no-store",
+    signal,
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -122,11 +116,7 @@ function KitchenIcon({ name }) {
 
 function itemNote(item) {
   return (
-    item.note ||
-    item.notes ||
-    item.item_note ||
-    item.special_instructions ||
-    ""
+    item.note || item.notes || item.item_note || item.special_instructions || ""
   );
 }
 
@@ -140,7 +130,8 @@ function kitchenItems(details) {
 
 function KitchenOrderCard({ order, details, now, busy, onAction }) {
   const minutes = elapsedMinutes(order.created_at, now);
-  const overdue = order.kitchen_status !== "READY" && minutes >= OVERDUE_MINUTES;
+  const overdue =
+    order.kitchen_status !== "READY" && minutes >= OVERDUE_MINUTES;
   const items = kitchenItems(details);
   const isReady = order.kitchen_status === "READY";
   const nextStatus =
@@ -197,7 +188,9 @@ function KitchenOrderCard({ order, details, now, busy, onAction }) {
             );
           })
         ) : (
-          <div className="kitchen-detail-loading">Detail menu sedang dimuat...</div>
+          <div className="kitchen-detail-loading">
+            Detail menu sedang dimuat...
+          </div>
         )}
       </div>
 
@@ -228,7 +221,17 @@ function KitchenOrderCard({ order, details, now, busy, onAction }) {
   );
 }
 
-function KitchenColumn({ title, subtitle, icon, tone, orders, details, now, busyId, onAction }) {
+function KitchenColumn({
+  title,
+  subtitle,
+  icon,
+  tone,
+  orders,
+  details,
+  now,
+  busyId,
+  onAction,
+}) {
   return (
     <section className={`kitchen-column tone-${tone}`}>
       <header className="kitchen-column-header">
@@ -266,19 +269,8 @@ function KitchenColumn({ title, subtitle, icon, tone, orders, details, now, busy
   );
 }
 
-function detectKitchenView() {
-  const main = document.querySelector("main");
-  const heading = main
-    ?.querySelector(".heading h1")
-    ?.textContent?.trim()
-    .toLowerCase();
-  const visible = Boolean(main?.querySelector(".order-list")) && heading === "antrean makanan";
-  return { main, visible };
-}
-
 export default function KitchenDashboardFast() {
-  const [portalTarget, setPortalTarget] = useState(null);
-  const [showDashboard, setShowDashboard] = useState(false);
+  const pendingRequest = useRef(null);
   const [orders, setOrders] = useState([]);
   const [details, setDetails] = useState({});
   const [busyId, setBusyId] = useState(null);
@@ -287,18 +279,15 @@ export default function KitchenDashboardFast() {
   const [now, setNow] = useState(Date.now());
   const [loading, setLoading] = useState(false);
 
-  const syncView = useCallback(() => {
-    const { main, visible } = detectKitchenView();
-    setPortalTarget((current) => (current === (main || null) ? current : main || null));
-    setShowDashboard((current) => (current === visible ? current : visible));
-    document.body.classList.toggle("kitchen-dashboard-active", visible);
-  }, []);
-
   const loadKitchen = useCallback(async () => {
-    if (!detectKitchenView().visible) return;
+    pendingRequest.current?.abort();
+    const controller = new AbortController();
+    pendingRequest.current = controller;
+    const signal = controller.signal;
     setLoading(true);
     try {
-      const result = await request("orders");
+      const result = await request("orders", undefined, signal);
+      if (signal.aborted) return;
       const active = (result.orders || [])
         .filter((order) => KITCHEN_PHASES.has(order.kitchen_status))
         .sort(byInvoiceAscending);
@@ -310,52 +299,24 @@ export default function KitchenDashboardFast() {
       const pairs = await Promise.all(
         active.map(async (order) => {
           try {
-            return [order.id, await request(`order-items?id=${order.id}`)];
+            return [
+              order.id,
+              await request(`order-items?id=${order.id}`, undefined, signal),
+            ];
           } catch {
             return [order.id, null];
           }
         }),
       );
-      setDetails(Object.fromEntries(pairs));
+      if (!signal.aborted) setDetails(Object.fromEntries(pairs));
     } catch (loadError) {
+      if (signal.aborted) return;
       setLoading(false);
       setError(loadError.message);
     }
   }, []);
 
-  useLayoutEffect(() => {
-    syncView();
-    const main = document.querySelector("main");
-    if (!main) return;
-
-    let frame = 0;
-    const scheduleSync = () => {
-      if (frame) cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(syncView);
-    };
-
-    // Observe only direct view replacements. The previous subtree observer also
-    // watched this dashboard's own portal mutations and could create a very
-    // expensive feedback loop during Kitchen login/rendering.
-    const observer = new MutationObserver(scheduleSync);
-    observer.observe(main, { childList: true });
-
-    const onNavClick = (event) => {
-      if (!event.target.closest?.("header.top nav button")) return;
-      scheduleSync();
-    };
-    document.addEventListener("click", onNavClick, true);
-
-    return () => {
-      observer.disconnect();
-      if (frame) cancelAnimationFrame(frame);
-      document.removeEventListener("click", onNavClick, true);
-      document.body.classList.remove("kitchen-dashboard-active");
-    };
-  }, [syncView]);
-
   useEffect(() => {
-    if (!showDashboard) return;
     loadKitchen();
     const poll = setInterval(loadKitchen, 120000);
     const clock = setInterval(() => setNow(Date.now()), 30000);
@@ -369,6 +330,7 @@ export default function KitchenDashboardFast() {
           "ORDER_CREATED",
           "KITCHEN_ORDER_CREATED",
           "ORDER_STATUS_CHANGED",
+          "STATION_STATUS_CHANGED",
           "ORDER_CANCELLED",
           "STOCK_CHANGED",
         ].includes(event.detail?.type)
@@ -380,6 +342,7 @@ export default function KitchenDashboardFast() {
     window.addEventListener("warkost:realtime", onRealtime);
     window.addEventListener("warkost:realtime-recovered", loadKitchen);
     return () => {
+      pendingRequest.current?.abort();
       clearInterval(poll);
       clearInterval(clock);
       window.removeEventListener("focus", onFocus);
@@ -387,7 +350,7 @@ export default function KitchenDashboardFast() {
       window.removeEventListener("warkost:realtime", onRealtime);
       window.removeEventListener("warkost:realtime-recovered", loadKitchen);
     };
-  }, [showDashboard, loadKitchen]);
+  }, [loadKitchen]);
 
   const onAction = useCallback(
     async (orderId, status) => {
@@ -443,17 +406,19 @@ export default function KitchenDashboardFast() {
   const ready = filteredOrders
     .filter((order) => order.kitchen_status === "READY")
     .sort(byInvoiceAscending);
-  const nextQueue = [...stats.waiting, ...stats.cooking].sort(byInvoiceAscending)[0];
+  const nextQueue = [...stats.waiting, ...stats.cooking].sort(
+    byInvoiceAscending,
+  )[0];
 
-  if (!portalTarget || !showDashboard) return null;
-
-  return createPortal(
+  return (
     <section className="kitchen-dashboard-shell" aria-label="Kitchen Dashboard">
       <div className="kitchen-dashboard-head">
         <div className="kitchen-title-block">
           <span className="kitchen-eyebrow">DAPUR</span>
           <h1>Kitchen Dashboard</h1>
-          <p>Pantau pesanan makanan yang harus diproses sesuai urutan invoice.</p>
+          <p>
+            Pantau pesanan makanan yang harus diproses sesuai urutan invoice.
+          </p>
         </div>
         <div className="kitchen-head-actions">
           <div className="kitchen-filter-tabs" aria-label="Filter kitchen">
@@ -490,20 +455,44 @@ export default function KitchenDashboardFast() {
 
       <div className="kitchen-kpis">
         <div className="kitchen-kpi waiting">
-          <span><KitchenIcon name="waiting" /></span>
-          <div><small>Menunggu</small><strong>{stats.waiting.length}</strong><em>pesanan</em></div>
+          <span>
+            <KitchenIcon name="waiting" />
+          </span>
+          <div>
+            <small>Menunggu</small>
+            <strong>{stats.waiting.length}</strong>
+            <em>pesanan</em>
+          </div>
         </div>
         <div className="kitchen-kpi cooking">
-          <span><KitchenIcon name="cooking" /></span>
-          <div><small>Sedang dimasak</small><strong>{stats.cooking.length}</strong><em>pesanan</em></div>
+          <span>
+            <KitchenIcon name="cooking" />
+          </span>
+          <div>
+            <small>Sedang dimasak</small>
+            <strong>{stats.cooking.length}</strong>
+            <em>pesanan</em>
+          </div>
         </div>
         <div className="kitchen-kpi ready">
-          <span><KitchenIcon name="ready" /></span>
-          <div><small>Siap diambil</small><strong>{stats.ready.length}</strong><em>pesanan</em></div>
+          <span>
+            <KitchenIcon name="ready" />
+          </span>
+          <div>
+            <small>Siap diambil</small>
+            <strong>{stats.ready.length}</strong>
+            <em>pesanan</em>
+          </div>
         </div>
         <div className="kitchen-kpi time">
-          <span><KitchenIcon name="clock" /></span>
-          <div><small>Rata-rata antre</small><strong>{stats.avg} menit</strong><em>order aktif</em></div>
+          <span>
+            <KitchenIcon name="clock" />
+          </span>
+          <div>
+            <small>Rata-rata antre</small>
+            <strong>{stats.avg} menit</strong>
+            <em>order aktif</em>
+          </div>
         </div>
       </div>
 
@@ -548,7 +537,10 @@ export default function KitchenDashboardFast() {
           <section className="kitchen-side-card">
             <div className="kitchen-side-title">
               <KitchenIcon name="queue" />
-              <div><small>ANTRIAN BERIKUTNYA</small><h2>Urutan invoice</h2></div>
+              <div>
+                <small>ANTRIAN BERIKUTNYA</small>
+                <h2>Urutan invoice</h2>
+              </div>
             </div>
             {nextQueue ? (
               <div className="kitchen-focus-order">
@@ -558,7 +550,9 @@ export default function KitchenDashboardFast() {
                     ? "Belum mulai dimasak"
                     : "Sedang dimasak"}
                 </span>
-                <small>{elapsedMinutes(nextQueue.created_at, now)} menit sejak masuk</small>
+                <small>
+                  {elapsedMinutes(nextQueue.created_at, now)} menit sejak masuk
+                </small>
               </div>
             ) : (
               <p className="kitchen-side-empty">Tidak ada antrean aktif.</p>
@@ -568,17 +562,39 @@ export default function KitchenDashboardFast() {
           <section className="kitchen-side-card">
             <div className="kitchen-side-title">
               <KitchenIcon name="food" />
-              <div><small>ATURAN STASIUN</small><h2>Alur Kitchen</h2></div>
+              <div>
+                <small>ATURAN STASIUN</small>
+                <h2>Alur Kitchen</h2>
+              </div>
             </div>
             <div className="kitchen-rule-list">
-              <div><b>1</b><span><strong>Makanan saja</strong><small>Kitchen tidak menangani minuman.</small></span></div>
-              <div><b>2</b><span><strong>Sesuai invoice</strong><small>Kerjakan pesanan berdasarkan urutan invoice.</small></span></div>
-              <div><b>3</b><span><strong>Tandai Ready</strong><small>Setelah selesai dimasak, lanjutkan ke proses berikutnya.</small></span></div>
+              <div>
+                <b>1</b>
+                <span>
+                  <strong>Makanan saja</strong>
+                  <small>Kitchen tidak menangani minuman.</small>
+                </span>
+              </div>
+              <div>
+                <b>2</b>
+                <span>
+                  <strong>Sesuai invoice</strong>
+                  <small>Kerjakan pesanan berdasarkan urutan invoice.</small>
+                </span>
+              </div>
+              <div>
+                <b>3</b>
+                <span>
+                  <strong>Tandai Ready</strong>
+                  <small>
+                    Setelah selesai dimasak, lanjutkan ke proses berikutnya.
+                  </small>
+                </span>
+              </div>
             </div>
           </section>
         </aside>
       </div>
-    </section>,
-    portalTarget,
+    </section>
   );
 }

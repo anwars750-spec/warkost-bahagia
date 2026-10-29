@@ -1,5 +1,10 @@
 "use client";
 import Image from "next/image";
+import KitchenWorkspace, { KitchenNavIcon } from "./KitchenWorkspace";
+import KitchenDashboardFast from "./KitchenDashboardFast";
+import KitchenStockCenter from "./KitchenStockCenter";
+import KitchenHeaderActions from "./KitchenHeaderActions";
+import { restoreKitchenView } from "./kitchen-workspace-state.mjs";
 import { useEffect, useRef, useState } from "react";
 import AdminBeverageStockEnhancerV2 from "./AdminBeverageStockEnhancerV2";
 import AdminCustomersEnhancer from "./AdminCustomersEnhancer";
@@ -360,7 +365,9 @@ export default function App() {
       if (me.user && me.user.role !== "CUSTOMER")
         setView((prev) =>
           prev === "menu"
-            ? me.user.role === "MANAGER"
+            ? me.user.role === "KITCHEN"
+              ? restoreKitchenView(me.user.id)
+              : me.user.role === "MANAGER"
               ? "manager-dashboard"
               : "orders"
             : prev,
@@ -1442,15 +1449,18 @@ export default function App() {
             <>
               <button
                 data-admin-nav={role === "ADMIN" ? "Operasional" : undefined}
+                data-kitchen-nav={role === "KITCHEN" ? "kitchen" : undefined}
+                aria-current={role === "KITCHEN" && view === "orders" ? "page" : undefined}
                 className={
                   role === "ADMIN" && view === "orders"
                     ? "admin-nav-active"
-                    : undefined
+                    : role === "KITCHEN" && view === "orders" ? "kitchen-nav-active" : undefined
                 }
                 onClick={() =>
                   setView(role === "MANAGER" ? "manager-dashboard" : "orders")
                 }
               >
+                {role === "KITCHEN" && <KitchenNavIcon name="kitchen" />}
                 {role === "ADMIN" && <AdminNavIcon name="home" />}
                 {role === "ADMIN"
                   ? "Operasional"
@@ -1545,8 +1555,8 @@ export default function App() {
               )}
               {role === "KITCHEN" && (
                 <>
-                  <button onClick={() => setView("stock")}>Stok Makanan</button>
-                  <button onClick={() => setView("printing")}>Printer</button>
+                  <button data-kitchen-nav="stock" className={view === "stock" ? "kitchen-nav-active" : undefined} aria-current={view === "stock" ? "page" : undefined} onClick={() => setView("stock")}><KitchenNavIcon name="stock" />Stok Makanan</button>
+                  <button data-kitchen-nav="printer" className={view === "printing" ? "kitchen-nav-active" : undefined} aria-current={view === "printing" ? "page" : undefined} onClick={() => setView("printing")}><KitchenNavIcon name="printer" />Printer</button>
                 </>
               )}
               {role === "DRIVER" && (
@@ -1557,14 +1567,15 @@ export default function App() {
           {role && role !== "CUSTOMER" && (
             <button
               data-admin-nav={role === "ADMIN" ? "Notifikasi" : undefined}
-              className="icon-nav-button"
+              data-kitchen-nav={role === "KITCHEN" ? "notification" : undefined}
+              className={role === "KITCHEN" ? "icon-nav-button kitchen-header-notification" : "icon-nav-button"}
               aria-label="Buka notifikasi"
               onClick={() => {
                 if (role === "CUSTOMER") setOverlay("notifications");
-                else if (role !== "ADMIN") setView("notifications");
+                else if (!["ADMIN", "KITCHEN"].includes(role)) setView("notifications");
               }}
             >
-              <BellIcon />
+              {role === "KITCHEN" ? <KitchenNavIcon name="notification" /> : <BellIcon />}
               <span>Notifikasi</span>
               {alerts.unread > 0 && (
                 <span className="notification-count">{alerts.unread}</span>
@@ -1574,8 +1585,11 @@ export default function App() {
           {role && role !== "CUSTOMER" ? (
             <button
               data-admin-nav={role === "ADMIN" ? "Keluar" : undefined}
+              data-kitchen-nav={role === "KITCHEN" ? "logout" : undefined}
+              className={role === "KITCHEN" ? "kitchen-header-logout" : undefined}
               onClick={logout}
             >
+              {role === "KITCHEN" && <KitchenNavIcon name="logout" />}
               {role === "ADMIN" && <AdminNavIcon name="logout" />}
               Keluar
             </button>
@@ -1624,6 +1638,7 @@ export default function App() {
       </header>
       <main
         data-admin-view={role === "ADMIN" ? view : undefined}
+        data-kitchen-view={role === "KITCHEN" ? view : undefined}
         data-admin-ui-owner={role === "ADMIN" ? "react" : undefined}
         className={[
           role === "ADMIN" ? "admin-ui-main" : "",
@@ -1646,6 +1661,7 @@ export default function App() {
               "store-hours",
             ].includes(view)
           ) &&
+          role !== "KITCHEN" &&
           !(role === "ADMIN" && ["admin-stock", "printing"].includes(view)) &&
           !customerBatchView && (
             <div
@@ -4218,7 +4234,7 @@ export default function App() {
             />
           </section>
         )}
-        {["OWNER", "KITCHEN"].includes(role) && view === "stock" && (
+        {role === "OWNER" && view === "stock" && (
           <section className="panel">
             <h2>{role === "KITCHEN" ? "Stok Makanan" : "Stok produk"}</h2>
             <p>
@@ -4399,7 +4415,7 @@ export default function App() {
           <AdminBeverageStockEnhancerV2 />
         )}
         {role === "ADMIN" && view === "printing" && <AdminPrinterView />}
-        {["KITCHEN", "OWNER"].includes(role) && view === "printing" && (
+        {role === "OWNER" && view === "printing" && (
           <section className="panel">
             <h2>Antrean cetak struk 80mm</h2>
             <p>
@@ -4430,7 +4446,7 @@ export default function App() {
             {!printJobs.length && <p>Belum ada print job.</p>}
           </section>
         )}
-        {role && role !== "CUSTOMER" && view === "notifications" && (
+        {role && !["CUSTOMER", "KITCHEN"].includes(role) && view === "notifications" && (
           <section className="panel narrow">
             <h2>Kabar terbaru</h2>
             {alerts.notifications.length ? (
@@ -4457,7 +4473,10 @@ export default function App() {
             )}
           </section>
         )}
-        {role && view === "orders" && (
+        {role === "KITCHEN" && view === "orders" && <KitchenDashboardFast />}
+        {role === "KITCHEN" && view === "stock" && <KitchenStockCenter menuProducts={menu.products} />}
+        {role === "KITCHEN" && view === "printing" && <AdminPrinterView role="KITCHEN" />}
+        {role && role !== "KITCHEN" && view === "orders" && (
           <>
             {role === "CUSTOMER" && (
               <section className="customer-orders-heading">
@@ -5624,6 +5643,10 @@ export default function App() {
           <button onClick={logout}>Keluar</button>
         </nav>
       )}
+      {role === "KITCHEN" && <>
+        <KitchenWorkspace view={view} userId={user.id} />
+        <KitchenHeaderActions key={`kitchen-header-${view}`} userId={user.id} updateAlerts={setAlerts} />
+      </>}
       {role === "ADMIN" && <AdminUiRuntime view={view} orders={orders} />}
       <footer>
         Warkost Bahagia · Dibuat untuk operasional yang lebih rapi

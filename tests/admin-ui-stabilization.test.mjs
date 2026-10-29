@@ -48,7 +48,7 @@ test("Admin navigation is React-owned and exposes every stabilized workspace", (
   assert.match(page, /view === "customers" \? "admin-nav-active"/);
   assert.match(page, /view === "admin-stock" \? "admin-nav-active"/);
   assert.match(page, /view === "printing" \? "admin-nav-active"/);
-  assert.match(page, /else if \(role !== "ADMIN"\) setView\("notifications"\)/);
+  assert.match(page, /else if \(!\["ADMIN", "KITCHEN"\]\.includes\(role\)\) setView\("notifications"\)/);
   assert.match(page, /data-admin-nav="Stok"/);
   assert.match(page, /<AdminNavIcon name="box" \/>/);
 });

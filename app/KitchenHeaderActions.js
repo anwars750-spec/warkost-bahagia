@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
+import { forgetKitchenView } from "./kitchen-workspace-state.mjs";
 
 const ICONS = {
   order: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 8h6M9 12h6"/></svg>`,
@@ -18,16 +19,11 @@ const esc = (value) =>
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 
-const normalize = (value) =>
-  String(value || "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toUpperCase();
-
 const categoryOf = (message) => {
   const value = String(message || "").toLowerCase();
   if (/printer|cetak|print|thermal|timeout/.test(value)) return "printer";
-  if (/pesanan|order|dapur|kitchen|makanan|siap|ready|masak/.test(value)) return "order";
+  if (/pesanan|order|dapur|kitchen|makanan|siap|ready|masak/.test(value))
+    return "order";
   return "system";
 };
 
@@ -41,7 +37,9 @@ const titleOf = (message) => {
 const relativeTime = (value) => {
   if (!value) return "Baru saja";
   const normalized = String(value).replace(" ", "T");
-  const date = new Date(normalized.endsWith("Z") ? normalized : normalized + "Z");
+  const date = new Date(
+    normalized.endsWith("Z") ? normalized : normalized + "Z",
+  );
   if (Number.isNaN(date.getTime())) return String(value);
   const diff = Math.max(0, Date.now() - date.getTime());
   const minute = Math.floor(diff / 60000);
@@ -54,27 +52,13 @@ const relativeTime = (value) => {
   return date.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
 };
 
-function isKitchenHeader() {
-  const nav = document.querySelector("header.top nav");
-  if (!nav) return false;
-  const labels = Array.from(nav.querySelectorAll("button")).map((button) =>
-    normalize(button.textContent),
-  );
-  return (
-    labels.some((label) => label.startsWith("DAPUR")) &&
-    labels.some((label) => label.startsWith("PRINTER")) &&
-    labels.some((label) => label.startsWith("NOTIFIKASI")) &&
-    labels.some((label) => label.startsWith("KELUAR")) &&
-    !labels.some((label) => label.startsWith("OPERASIONAL"))
-  );
-}
-
-export default function KitchenHeaderActions() {
-  useEffect(() => {
+export default function KitchenHeaderActions({ userId, updateAlerts }) {
+  useLayoutEffect(() => {
     let panel = null;
     let anchor = null;
     let notifications = [];
     let unread = 0;
+    let loaded = false;
     let loading = false;
     let error = "";
     let filter = "all";
@@ -82,29 +66,11 @@ export default function KitchenHeaderActions() {
     let refreshTimer = null;
     let logoutLayer = null;
 
-    const findNotificationButton = () =>
-      Array.from(document.querySelectorAll("header.top nav button")).find((button) =>
-        normalize(button.textContent).startsWith("NOTIFIKASI"),
-      );
-
-    const findLogoutButton = () =>
-      Array.from(document.querySelectorAll("header.top nav button")).find((button) =>
-        normalize(button.textContent).startsWith("KELUAR"),
-      );
-
     const syncHeaderState = () => {
-      if (!isKitchenHeader()) return;
-      const notificationButton = findNotificationButton();
-      const logoutButton = findLogoutButton();
-      notificationButton?.classList.add("kitchen-header-notification");
-      logoutButton?.classList.add("kitchen-header-logout");
-      const badge = notificationButton?.querySelector(".notification-count");
-      if (badge) {
-        const nextText = unread > 99 ? "99+" : String(unread);
-        const nextDisplay = unread > 0 ? "inline-flex" : "none";
-        if (badge.textContent !== nextText) badge.textContent = nextText;
-        if (badge.style.display !== nextDisplay) badge.style.display = nextDisplay;
-      }
+      if (loaded)
+        updateAlerts((current) =>
+          current.unread === unread ? current : { ...current, unread },
+        );
     };
     const onRecovered = () => {
       if (panel) void load({ quiet: true });
@@ -155,24 +121,32 @@ export default function KitchenHeaderActions() {
             <button type="button" data-kitchen-notif-filter="unread" class="${filter === "unread" ? "active" : ""}">Belum dibaca <span>${unread}</span></button>
           </div>
           <div class="admin-notification-list">
-            ${loading ? `
+            ${
+              loading
+                ? `
               <div class="admin-notification-state">
                 <span class="admin-notification-spinner"></span>
                 <strong>Memuat notifikasi dapur...</strong>
-              </div>` : error ? `
+              </div>`
+                : error
+                  ? `
               <div class="admin-notification-state error">
                 <span class="admin-notification-state-icon">${ICONS.system}</span>
                 <strong>Notifikasi belum dapat dimuat</strong>
                 <p>${esc(error)}</p>
                 <button type="button" data-kitchen-notif-retry>Coba lagi</button>
-              </div>` : !list.length ? `
+              </div>`
+                  : !list.length
+                    ? `
               <div class="admin-notification-state">
                 <span class="admin-notification-state-icon">${ICONS.system}</span>
                 <strong>${filter === "unread" ? "Semua sudah dibaca" : "Belum ada notifikasi"}</strong>
                 <p>${filter === "unread" ? "Tidak ada notifikasi baru yang perlu ditangani." : "Pesanan baru dan kendala printer akan muncul di sini."}</p>
-              </div>` : list.map((item) => {
-                const category = categoryOf(item.message);
-                return `
+              </div>`
+                    : list
+                        .map((item) => {
+                          const category = categoryOf(item.message);
+                          return `
                   <article class="admin-notification-item ${item.read_at ? "read" : "unread"}" data-kitchen-notif-id="${esc(item.id)}">
                     <span class="admin-notification-item-icon ${category}">${ICONS[category] || ICONS.system}</span>
                     <div class="admin-notification-item-body">
@@ -185,7 +159,9 @@ export default function KitchenHeaderActions() {
                     </div>
                     ${!item.read_at ? `<span class="admin-notification-unread-dot" aria-label="Belum dibaca"></span>` : ""}
                   </article>`;
-              }).join("")}
+                        })
+                        .join("")
+            }
           </div>
           <footer class="kitchen-notification-footer"><span class="kitchen-live-dot"></span>Sinkron otomatis saat panel terbuka</footer>
         </section>
@@ -215,8 +191,12 @@ export default function KitchenHeaderActions() {
           signal: controller.signal,
         });
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || "Gagal memuat notifikasi");
-        notifications = Array.isArray(data.notifications) ? data.notifications : [];
+        if (!response.ok)
+          throw new Error(data.error || "Gagal memuat notifikasi");
+        loaded = true;
+        notifications = Array.isArray(data.notifications)
+          ? data.notifications
+          : [];
         unread = Number.isFinite(Number(data.unread))
           ? Number(data.unread)
           : notifications.filter((item) => !item.read_at).length;
@@ -231,7 +211,9 @@ export default function KitchenHeaderActions() {
     };
 
     const markRead = async (id) => {
-      const target = notifications.find((item) => String(item.id) === String(id));
+      const target = notifications.find(
+        (item) => String(item.id) === String(id),
+      );
       if (!target || target.read_at) return;
       try {
         const response = await fetch("/api/notification-read", {
@@ -240,7 +222,8 @@ export default function KitchenHeaderActions() {
           body: JSON.stringify({ id: target.id }),
         });
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || "Gagal menandai notifikasi");
+        if (!response.ok)
+          throw new Error(data.error || "Gagal menandai notifikasi");
         target.read_at = new Date().toISOString();
         unread = Math.max(0, unread - 1);
         render();
@@ -263,7 +246,8 @@ export default function KitchenHeaderActions() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ id: item.id }),
           });
-          if (!response.ok) throw new Error("Sebagian notifikasi belum berhasil ditandai");
+          if (!response.ok)
+            throw new Error("Sebagian notifikasi belum berhasil ditandai");
           item.read_at = new Date().toISOString();
         }
         unread = 0;
@@ -282,20 +266,24 @@ export default function KitchenHeaderActions() {
       anchor = button;
       anchor.classList.add("kitchen-notification-open");
       panel = document.createElement("div");
-      panel.className = "admin-notification-popover kitchen-notification-popover";
+      panel.className =
+        "admin-notification-popover kitchen-notification-popover";
       document.body.appendChild(panel);
       positionPanel();
       render();
       void load();
       refreshTimer = setInterval(() => {
-        if (panel && document.visibilityState === "visible") void load({ quiet: true });
+        if (panel && document.visibilityState === "visible")
+          void load({ quiet: true });
       }, 120000);
     };
 
     const closeLogout = () => {
       logoutLayer?.remove();
       logoutLayer = null;
-      findLogoutButton()?.classList.remove("kitchen-logout-open");
+      document
+        .querySelector('header.top nav [data-kitchen-nav="logout"]')
+        ?.classList.remove("kitchen-logout-open");
     };
 
     const openLogout = (button) => {
@@ -326,7 +314,9 @@ export default function KitchenHeaderActions() {
 
     const confirmLogout = async () => {
       if (!logoutLayer) return;
-      const confirm = logoutLayer.querySelector("[data-kitchen-logout-confirm]");
+      const confirm = logoutLayer.querySelector(
+        "[data-kitchen-logout-confirm]",
+      );
       const cancel = logoutLayer.querySelector("[data-kitchen-logout-cancel]");
       const errorBox = logoutLayer.querySelector("[data-kitchen-logout-error]");
       confirm.disabled = true;
@@ -340,13 +330,19 @@ export default function KitchenHeaderActions() {
           body: JSON.stringify({}),
         });
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || "Gagal keluar dari akun");
+        if (!response.ok)
+          throw new Error(data.error || "Gagal keluar dari akun");
         document.body.classList.remove(
           "admin-printer-stable-view",
           "kitchen-dashboard-active",
           "kitchen-dashboard-transition",
           "printer-center-transition",
         );
+        try {
+          forgetKitchenView(window.sessionStorage, userId);
+        } catch {
+          /* Storage can be disabled. */
+        }
         window.location.replace("/");
       } catch (logoutError) {
         confirm.disabled = false;
@@ -354,18 +350,18 @@ export default function KitchenHeaderActions() {
         confirm.textContent = "Keluar";
         if (errorBox) {
           errorBox.hidden = false;
-          errorBox.textContent = logoutError.message || "Gagal keluar. Coba lagi.";
+          errorBox.textContent =
+            logoutError.message || "Gagal keluar. Coba lagi.";
         }
       }
     };
 
     const onCapture = (event) => {
-      if (!isKitchenHeader()) return;
       const button = event.target.closest?.("header.top nav button");
       if (!button) return;
-      const label = normalize(button.textContent);
+      const key = button.dataset.kitchenNav;
 
-      if (label.startsWith("NOTIFIKASI")) {
+      if (key === "notification") {
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation?.();
@@ -374,7 +370,7 @@ export default function KitchenHeaderActions() {
         return;
       }
 
-      if (label.startsWith("KELUAR")) {
+      if (key === "logout") {
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation?.();
@@ -384,7 +380,9 @@ export default function KitchenHeaderActions() {
 
     const onClick = (event) => {
       if (panel) {
-        const filterButton = event.target.closest?.("[data-kitchen-notif-filter]");
+        const filterButton = event.target.closest?.(
+          "[data-kitchen-notif-filter]",
+        );
         if (filterButton && panel.contains(filterButton)) {
           filter = filterButton.dataset.kitchenNotifFilter;
           render();
@@ -395,7 +393,9 @@ export default function KitchenHeaderActions() {
           void markRead(readButton.dataset.kitchenNotifRead);
           return;
         }
-        const markAllButton = event.target.closest?.("[data-kitchen-notif-mark-all]");
+        const markAllButton = event.target.closest?.(
+          "[data-kitchen-notif-mark-all]",
+        );
         if (markAllButton && panel.contains(markAllButton)) {
           void markAll();
           return;
@@ -405,7 +405,8 @@ export default function KitchenHeaderActions() {
           void load();
           return;
         }
-        if (!panel.contains(event.target) && !anchor?.contains(event.target)) closePanel();
+        if (!panel.contains(event.target) && !anchor?.contains(event.target))
+          closePanel();
       }
 
       if (logoutLayer) {
@@ -433,9 +434,6 @@ export default function KitchenHeaderActions() {
         void load({ quiet: true });
       syncHeaderState();
     };
-    const observer = new MutationObserver(syncHeaderState);
-    observer.observe(document.body, { childList: true, subtree: true });
-    syncHeaderState();
 
     document.addEventListener("click", onCapture, true);
     document.addEventListener("click", onClick, false);
@@ -446,7 +444,6 @@ export default function KitchenHeaderActions() {
     window.addEventListener("warkost:realtime-recovered", onRecovered);
 
     return () => {
-      observer.disconnect();
       closePanel();
       closeLogout();
       document.removeEventListener("click", onCapture, true);
@@ -457,7 +454,7 @@ export default function KitchenHeaderActions() {
       window.removeEventListener("warkost:realtime", onRealtime);
       window.removeEventListener("warkost:realtime-recovered", onRecovered);
     };
-  }, []);
+  }, [userId, updateAlerts]);
 
   return null;
 }

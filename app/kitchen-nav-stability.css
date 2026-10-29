@@ -33,21 +33,8 @@ body.kitchen-shell-active .top nav button[data-kitchen-nav]:hover {
   box-shadow: none !important;
 }
 
-/* The navigation intent set by KitchenFlashGuard is the visual source of truth.
-   This prevents the active highlight from lagging one click behind while the
-   underlying React view/runtime is still finishing its render. */
-body.kitchen-shell-active[data-kitchen-nav-target="kitchen"]
-  .top
-  nav
-  button[data-kitchen-nav="kitchen"],
-body.kitchen-shell-active[data-kitchen-nav-target="stock"]
-  .top
-  nav
-  button[data-kitchen-nav="stock"],
-body.kitchen-shell-active[data-kitchen-nav-target="printer"]
-  .top
-  nav
-  button[data-kitchen-nav="printer"],
+/* Active workspace is rendered by React in the same commit as its content. */
+body.kitchen-shell-active .top nav button[data-kitchen-nav].kitchen-nav-active,
 body.kitchen-shell-active
   .top
   nav
@@ -58,17 +45,14 @@ body.kitchen-shell-active
   box-shadow: 0 7px 18px rgba(154, 70, 35, 0.09) !important;
 }
 
-body.kitchen-shell-active .top nav button[data-kitchen-nav="logout"].kitchen-logout-open {
+body.kitchen-shell-active
+  .top
+  nav
+  button[data-kitchen-nav="logout"].kitchen-logout-open {
   border-color: #f0c6b9 !important;
   background: #fff0ea !important;
   color: #9b3c25 !important;
   box-shadow: 0 7px 18px rgba(154, 70, 35, 0.07) !important;
-}
-
-/* No artificial full-page Stock placeholder. The previous loading card made a
-   normal view hand-off look like a broken screen. */
-body.kitchen-stock-transition {
-  /* compatibility only; KitchenFlashGuard removes this class immediately */
 }
 
 body.kitchen-stock-modern-active .kitchen-stock-center {
@@ -123,26 +107,18 @@ body.kitchen-stock-modern-active .kitchen-stock-center {
 
 /* Printer is shared with Owner/Admin internals, so visual alignment is scoped
    to a confirmed Kitchen shell only. */
-body.kitchen-shell-active.admin-printer-stable-view #admin-ui-portal-root,
-body.kitchen-shell-active.admin-printer-react-view #admin-ui-portal-root {
-  padding-top: 24px;
-  padding-bottom: 64px;
-}
 
-body.kitchen-shell-active.admin-printer-stable-view .admin-printer-hero,
-body.kitchen-shell-active.admin-printer-react-view .admin-printer-hero {
+body.kitchen-shell-active.kitchen-printer-active .admin-printer-hero {
   gap: 20px;
   margin-bottom: 16px;
 }
 
-body.kitchen-shell-active.admin-printer-stable-view .admin-printer-kpis,
-body.kitchen-shell-active.admin-printer-react-view .admin-printer-kpis {
+body.kitchen-shell-active.kitchen-printer-active .admin-printer-kpis {
   gap: 14px;
   margin-bottom: 18px;
 }
 
-body.kitchen-shell-active.admin-printer-stable-view .admin-printer-workspace,
-body.kitchen-shell-active.admin-printer-react-view .admin-printer-workspace {
+body.kitchen-shell-active.kitchen-printer-active .admin-printer-workspace {
   border-radius: 20px;
 }
 
@@ -154,11 +130,5 @@ body.kitchen-shell-active.admin-printer-react-view .admin-printer-workspace {
   .kitchen-notification-card .admin-notification-state {
     min-height: 132px;
     padding: 18px 14px;
-  }
-
-  body.kitchen-shell-active.admin-printer-stable-view #admin-ui-portal-root,
-  body.kitchen-shell-active.admin-printer-react-view #admin-ui-portal-root {
-    padding-top: 14px;
-    padding-bottom: 36px;
   }
 }

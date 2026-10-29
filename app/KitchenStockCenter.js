@@ -1,104 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useState,
-} from "react";
-import { createPortal } from "react-dom";
-
-const NAV_ICONS = {
-  kitchen: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14h16a8 8 0 0 1-16 0Z"/><path d="M7 11c-1-1.3 1-2.2 0-3.5M12 11c-1-1.3 1-2.2 0-3.5M17 11c-1-1.3 1-2.2 0-3.5"/></svg>`,
-  stock: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 7 8-4 8 4-8 4-8-4Z"/><path d="m4 7 8 4 8-4v10l-8 4-8-4V7Z"/><path d="M12 11v10"/></svg>`,
-  printer: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="7" rx="1"/></svg>`,
-  notification: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>`,
-  logout: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></svg>`,
-};
-
-const normalize = (value) =>
-  String(value || "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toUpperCase();
-
-function kitchenNavKey(label) {
-  if (label.startsWith("STOK MAKANAN")) return "stock";
-  if (label.startsWith("PRINTER")) return "printer";
-  if (label.startsWith("NOTIFIKASI")) return "notification";
-  if (label.startsWith("KELUAR")) return "logout";
-  if (label.startsWith("DAPUR")) return "kitchen";
-  return null;
-}
-
-function isKitchenHeader() {
-  const nav = document.querySelector("header.top nav");
-  if (!nav) return false;
-  const labels = Array.from(nav.querySelectorAll("button")).map((button) =>
-    normalize(button.textContent),
-  );
-  return (
-    labels.some((label) => label.startsWith("DAPUR")) &&
-    labels.some((label) => label.startsWith("STOK MAKANAN")) &&
-    labels.some((label) => label.startsWith("PRINTER")) &&
-    labels.some((label) => label.startsWith("NOTIFIKASI")) &&
-    labels.some((label) => label.startsWith("KELUAR"))
-  );
-}
-
-function activeKitchenNavKey() {
-  const heading = normalize(
-    document.querySelector("main .heading h1")?.textContent || "",
-  );
-  if (
-    document.body.classList.contains("admin-printer-stable-view") ||
-    document.getElementById("admin-printer-center-v1")
-  )
-    return "printer";
-  if (heading === "STOK MAKANAN") return "stock";
-  if (heading === "NOTIFIKASI") return "notification";
-  if (
-    heading === "ANTREAN MAKANAN" ||
-    document.body.classList.contains("kitchen-dashboard-active")
-  )
-    return "kitchen";
-  return "kitchen";
-}
-
-function decorateKitchenNavigation() {
-  const nav = document.querySelector("header.top nav");
-  if (!nav || !isKitchenHeader()) {
-    document.body.classList.remove("kitchen-shell-active");
-    return;
-  }
-
-  document.body.classList.add("kitchen-shell-active");
-  const activeKey = activeKitchenNavKey();
-
-  nav.querySelectorAll("button").forEach((button) => {
-    const key = kitchenNavKey(normalize(button.textContent));
-    if (!key) return;
-    button.dataset.kitchenNav = key;
-    button.classList.toggle("kitchen-nav-active", key === activeKey);
-    if (!button.querySelector(":scope > .kitchen-nav-symbol")) {
-      const symbol = document.createElement("span");
-      symbol.className = "kitchen-nav-symbol";
-      symbol.setAttribute("aria-hidden", "true");
-      symbol.innerHTML = NAV_ICONS[key];
-      button.prepend(symbol);
-    }
-  });
-}
-
-function detectKitchenStockView() {
-  const main = document.querySelector("main");
-  const heading = normalize(main?.querySelector(".heading h1")?.textContent || "");
-  return {
-    main,
-    visible: Boolean(main && isKitchenHeader() && heading === "STOK MAKANAN"),
-  };
-}
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 async function loadStock(signal) {
   const response = await fetch("/api/stock", {
@@ -209,87 +111,58 @@ function KitchenStockIcon({ name }) {
   );
 }
 
-export default function KitchenStockCenter() {
-  const [portalTarget, setPortalTarget] = useState(null);
-  const [visible, setVisible] = useState(false);
+export default function KitchenStockCenter({ menuProducts = [] }) {
+  const pendingRequest = useRef(null);
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
 
-  const syncView = useCallback(() => {
-    decorateKitchenNavigation();
-    const state = detectKitchenStockView();
-    setPortalTarget((current) =>
-      current === (state.main || null) ? current : state.main || null,
-    );
-    setVisible((current) => (current === state.visible ? current : state.visible));
-    document.body.classList.toggle("kitchen-stock-modern-active", state.visible);
-  }, []);
-
-  useLayoutEffect(() => {
-    syncView();
-    const main = document.querySelector("main");
-    const nav = document.querySelector("header.top nav");
-    let frame = 0;
-    let delay = 0;
-    const schedule = () => {
-      if (frame) cancelAnimationFrame(frame);
-      if (delay) clearTimeout(delay);
-      frame = requestAnimationFrame(syncView);
-      delay = window.setTimeout(syncView, 90);
-    };
-
-    const mainObserver = main ? new MutationObserver(schedule) : null;
-    mainObserver?.observe(main, { childList: true });
-    const navObserver = nav ? new MutationObserver(schedule) : null;
-    navObserver?.observe(nav, { childList: true, subtree: true });
-    const bodyObserver = new MutationObserver(schedule);
-    bodyObserver.observe(document.body, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-    document.addEventListener("click", schedule, true);
-
-    return () => {
-      mainObserver?.disconnect();
-      navObserver?.disconnect();
-      bodyObserver.disconnect();
-      document.removeEventListener("click", schedule, true);
-      if (frame) cancelAnimationFrame(frame);
-      if (delay) clearTimeout(delay);
-      document.body.classList.remove(
-        "kitchen-shell-active",
-        "kitchen-stock-modern-active",
-      );
-    };
-  }, [syncView]);
-
   const refreshStock = useCallback(async () => {
-    if (!detectKitchenStockView().visible) return;
+    pendingRequest.current?.abort();
     const controller = new AbortController();
+    pendingRequest.current = controller;
     setLoading(true);
     setError("");
     try {
       const data = await loadStock(controller.signal);
-      setProducts(Array.isArray(data.products) ? data.products : []);
+      if (!controller.signal.aborted)
+        setProducts(Array.isArray(data.products) ? data.products : []);
     } catch (loadError) {
       if (loadError.name !== "AbortError")
         setError(loadError.message || "Gagal memuat stok makanan");
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-    return () => controller.abort();
   }, []);
 
   useEffect(() => {
-    if (!visible) return;
     refreshStock();
     const onFocus = () => refreshStock();
     window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, [visible, refreshStock]);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void refreshStock();
+    };
+    const onRealtime = (event) => {
+      if (
+        ["STOCK_CHANGED", "PRODUCT_LOW_STOCK", "PRODUCT_OUT_OF_STOCK"].includes(
+          event.detail?.type,
+        )
+      )
+        void refreshStock();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("warkost:realtime", onRealtime);
+    window.addEventListener("warkost:realtime-recovered", refreshStock);
+    return () => {
+      pendingRequest.current?.abort();
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("warkost:realtime", onRealtime);
+      window.removeEventListener("warkost:realtime-recovered", refreshStock);
+    };
+  }, [refreshStock]);
 
   const kitchenProducts = useMemo(() => {
     const food = products.filter(
@@ -297,7 +170,7 @@ export default function KitchenStockCenter() {
         String(product.category_name || "").toLowerCase() === "makanan" ||
         String(product.prep_station || "").toUpperCase() === "KITCHEN",
     );
-    return food.length ? food : products;
+    return food;
   }, [products]);
 
   const summary = useMemo(
@@ -328,9 +201,25 @@ export default function KitchenStockCenter() {
     });
   }, [kitchenProducts, query, filter]);
 
-  if (!portalTarget || !visible) return null;
-
-  return createPortal(
+  const imageFor = (product) => {
+    const menuProduct = menuProducts.find(
+      (item) =>
+        String(item.id) === String(product.id) ||
+        String(item.name).trim().toLowerCase() ===
+          String(product.name).trim().toLowerCase(),
+    );
+    const name = String(product.name || "").toLowerCase();
+    return (
+      product.image_url ||
+      menuProduct?.image_url ||
+      (name.includes("nasi goreng")
+        ? "/demo/nasi-goreng-warkost.webp"
+        : name.includes("mie ayam")
+          ? "/demo/mie-ayam-bahagia.webp"
+          : "")
+    );
+  };
+  return (
     <section className="kitchen-stock-center" aria-label="Stok Makanan Kitchen">
       <header className="kitchen-stock-hero">
         <div className="kitchen-stock-hero-copy">
@@ -412,7 +301,11 @@ export default function KitchenStockCenter() {
             aria-label="Cari stok makanan"
           />
         </label>
-        <div className="kitchen-stock-filters" role="group" aria-label="Filter stok">
+        <div
+          className="kitchen-stock-filters"
+          role="group"
+          aria-label="Filter stok"
+        >
           {[
             ["all", "Semua"],
             ["safe", "Aman"],
@@ -459,7 +352,20 @@ export default function KitchenStockCenter() {
             return (
               <article className="kitchen-stock-row" key={product.id}>
                 <div className="kitchen-stock-product">
-                  <span className="kitchen-stock-product-icon">
+                  <span
+                    className="kitchen-stock-product-icon"
+                    data-synced-image={imageFor(product) ? "true" : undefined}
+                    style={
+                      imageFor(product)
+                        ? {
+                            backgroundImage: `url(${JSON.stringify(imageFor(product))})`,
+                          }
+                        : undefined
+                    }
+                    aria-label={
+                      imageFor(product) ? `Gambar ${product.name}` : undefined
+                    }
+                  >
                     <KitchenStockIcon name="food" />
                   </span>
                   <div>
@@ -514,7 +420,6 @@ export default function KitchenStockCenter() {
           </div>
         )}
       </section>
-    </section>,
-    portalTarget,
+    </section>
   );
 }

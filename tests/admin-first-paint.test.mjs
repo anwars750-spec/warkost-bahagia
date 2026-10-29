@@ -37,7 +37,7 @@ test("Admin replaces legacy workspaces rather than hiding or decorating them", (
   );
   assert.match(
     page,
-    /\["KITCHEN", "OWNER"\]\.includes\(role\) && view === "printing"/,
+    /role === "OWNER" && view === "printing"/,
   );
   assert.doesNotMatch(
     layout,

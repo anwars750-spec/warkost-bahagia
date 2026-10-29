@@ -1,4 +1,19 @@
-﻿# Warkost Bahagia â€” Project Checkpoint
+# Warkost Bahagia â€” Project Checkpoint
+
+## Kitchen modern workspace V1 - 2026-10-29
+
+Status: **IMPLEMENTED AND VERIFIED LOCALLY; PRODUCT OWNER UAT REQUIRED**.
+
+- Branch: `work/customer-qris-demo-uat-v1`; clean starting base: `85f33c57d476b5bdbcbdbdcb9778beef7dc56456`.
+- Kitchen modern Dashboard, Stock and Printer render directly from authenticated role and React view. The same view selects exactly one active navigation item. Per-user allowlisted sessionStorage restores Stock on cache-bypass refresh.
+- Removed Kitchen native stock/order/printer/notification rendering and obsolete global mount, flash guard, image sync and guard CSS. Scoped notification popover remains; Owner/Manager stock and default Admin printer paths remain.
+- Full safe unit/regression: **532/532 PASS**. Production build: **PASS**, Next.js 16.4.3, **33/33** static pages. `git diff --check`: **PASS**.
+- Desktop/mobile browser coverage: Kitchen **10/10 PASS**, Admin **12/12 PASS**, existing Staging UAT **14/14 PASS**, real-session Kitchen/Manager/Owner safety **6/6 PASS**. Total **42 unique cases PASS** across final suite runs. New test harness locators were corrected to match existing controls; no unrelated role UI fixes were needed.
+- Browser verification used the production bundle and a new isolated local SQLite fixture. Hosted MySQL Recovery/Staging UAT were not triggered; no hosted CI pass is claimed for this work.
+- No API/schema/migration, stock permission, order workflow, QRIS/payment, delivery, dependency or secrets changes. No push, merge or deployment. Physical printer and Product Owner manual desktop/mobile UAT remain required.
+- Detailed evidence and boundaries: [KITCHEN_MODERN_WORKSPACE_V1.md](KITCHEN_MODERN_WORKSPACE_V1.md).
+
+---
 
 ## UI Legacy / Flash Cleanup V1 - 2026-10-27
 

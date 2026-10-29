@@ -76,13 +76,7 @@ body.kitchen-shell-active .top nav button[data-kitchen-nav="notification"] .noti
   right: 2px;
 }
 
-/* Native stock markup remains the data source fallback, but the Kitchen view
-   is replaced by the read-only Stock Center below. */
-body.kitchen-stock-modern-active main > .heading,
-body.kitchen-stock-modern-active main > .panel {
-  display: none !important;
-}
-
+/* Kitchen Stock is rendered directly; no native panel takeover is needed. */
 body.kitchen-stock-modern-active main {
   width: 100%;
   max-width: none;

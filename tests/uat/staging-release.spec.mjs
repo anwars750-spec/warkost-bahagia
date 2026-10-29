@@ -11,6 +11,9 @@ function capturePageErrors(page) {
 }
 
 async function expectResponsiveShell(page) {
+  // Wait for real session restoration and the rendered role workspace, rather
+  // than sampling the neutral brand header during the login/reload handoff.
+  await expect.poll(() => page.evaluate(() => document.body.innerText.trim().length)).toBeGreaterThan(100);
   await expect(
     page.locator("[data-nextjs-dialog], .nextjs-container-errors-header"),
   ).toHaveCount(0);
