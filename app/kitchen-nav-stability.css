@@ -32,3 +32,164 @@ body.kitchen-shell-active .top nav button[data-kitchen-nav] {
   box-sizing: border-box;
   margin: 0;
 }
+
+/* KITCHEN UI/UX POLISH V1
+   Keep every Kitchen navigation state deterministic. Several legacy/runtime
+   layers can temporarily disagree while a view is swapping; only one visual
+   selection should ever be presented to the operator. */
+body.kitchen-shell-active .top nav button[data-kitchen-nav] {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: #4f362b !important;
+  box-shadow: none !important;
+}
+
+body.kitchen-shell-active .top nav button[data-kitchen-nav].kitchen-nav-active,
+body.kitchen-shell-active .top nav button[data-kitchen-nav="notification"].kitchen-notification-open,
+body.kitchen-stock-transition .top nav button[data-kitchen-nav="stock"] {
+  border-color: #efc7af !important;
+  background: #fff0e5 !important;
+  color: #a64020 !important;
+  box-shadow: 0 7px 18px rgba(154, 70, 35, 0.09) !important;
+}
+
+body.kitchen-shell-active .top nav button[data-kitchen-nav="logout"].kitchen-logout-open {
+  border-color: #f0c6b9 !important;
+  background: #fff0ea !important;
+  color: #9b3c25 !important;
+  box-shadow: 0 7px 18px rgba(154, 70, 35, 0.07) !important;
+}
+
+body.kitchen-stock-transition .top nav button[data-kitchen-nav="kitchen"],
+body.kitchen-stock-transition .top nav button[data-kitchen-nav="kitchen"].kitchen-nav-active {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: #4f362b !important;
+  box-shadow: none !important;
+}
+
+/* Never expose an empty canvas while the legacy Stock frame hands control to
+   KitchenStockCenter. The guard still prevents the legacy flash, but operators
+   now get an immediate, stable transition state instead of a blank page. */
+body.kitchen-stock-transition:not(.kitchen-stock-modern-active) main::after {
+  content: "Menyiapkan stok makanan…";
+  position: absolute;
+  top: clamp(120px, 27vh, 230px);
+  left: 50%;
+  z-index: 2;
+  display: grid;
+  width: min(360px, calc(100% - 32px));
+  min-height: 104px;
+  place-items: center;
+  padding: 22px 24px;
+  border: 1px solid #eadbcf;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(184, 104, 67, 0.08), transparent 9rem),
+    #fffdfa;
+  box-shadow: 0 16px 42px rgba(65, 39, 28, 0.07);
+  color: #6f4938;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-align: center;
+  transform: translateX(-50%);
+  visibility: visible !important;
+}
+
+/* Kitchen notification is intentionally denser than the shared Admin popover.
+   Empty notification state should not occupy most of the viewport. */
+.kitchen-notification-popover {
+  max-width: min(390px, calc(100vw - 32px));
+}
+
+.kitchen-notification-card .admin-notification-head {
+  padding: 16px 16px 12px;
+}
+
+.kitchen-notification-card .admin-notification-title-row h2 {
+  font-size: 19px;
+}
+
+.kitchen-notification-card .kitchen-notification-subtitle {
+  max-width: 300px;
+  margin-top: 4px;
+}
+
+.kitchen-notification-card .admin-notification-filters {
+  padding: 7px;
+}
+
+.kitchen-notification-card .admin-notification-filters button {
+  min-height: 34px;
+}
+
+.kitchen-notification-card .admin-notification-list {
+  max-height: min(42vh, 320px);
+}
+
+.kitchen-notification-card .admin-notification-state {
+  min-height: 156px;
+  padding: 20px 18px;
+}
+
+.kitchen-notification-card .admin-notification-state-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+}
+
+.kitchen-notification-card .kitchen-notification-footer {
+  min-height: 34px;
+  padding-block: 7px;
+}
+
+/* Printer is shared with Owner/Admin internals, so visual alignment is scoped
+   to a confirmed Kitchen shell only. */
+body.kitchen-shell-active.admin-printer-stable-view #admin-ui-portal-root,
+body.kitchen-shell-active.admin-printer-react-view #admin-ui-portal-root {
+  padding-top: 24px;
+  padding-bottom: 64px;
+}
+
+body.kitchen-shell-active.admin-printer-stable-view .admin-printer-hero,
+body.kitchen-shell-active.admin-printer-react-view .admin-printer-hero {
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+body.kitchen-shell-active.admin-printer-stable-view .admin-printer-kpis,
+body.kitchen-shell-active.admin-printer-react-view .admin-printer-kpis {
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+body.kitchen-shell-active.admin-printer-stable-view .admin-printer-workspace,
+body.kitchen-shell-active.admin-printer-react-view .admin-printer-workspace {
+  border-radius: 20px;
+}
+
+@media (max-width: 760px) {
+  body.kitchen-stock-transition:not(.kitchen-stock-modern-active) main::after {
+    top: 92px;
+    min-height: 88px;
+    padding: 18px;
+    border-radius: 16px;
+    font-size: 12px;
+  }
+
+  .kitchen-notification-popover {
+    max-width: calc(100vw - 24px);
+  }
+
+  .kitchen-notification-card .admin-notification-state {
+    min-height: 132px;
+    padding: 18px 14px;
+  }
+
+  body.kitchen-shell-active.admin-printer-stable-view #admin-ui-portal-root,
+  body.kitchen-shell-active.admin-printer-react-view #admin-ui-portal-root {
+    padding-top: 14px;
+    padding-bottom: 36px;
+  }
+}
