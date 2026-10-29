@@ -235,10 +235,12 @@ test("customer payment labels dan UI contract memakai istilah final", () => {
   for (const method of ["TRANSFER", "BANK_TRANSFER", "TRANSFER_BANK"])
     assert.equal(paymentMethodLabel(method), "TRANSFER BANK");
 
-  const page = fs.readFileSync(
-    fileURLToPath(new URL("../app/page.js", import.meta.url)),
-    "utf8",
-  );
+  const page =
+    fs.readFileSync(
+      fileURLToPath(new URL("../app/page.js", import.meta.url)),
+      "utf8",
+    ) +
+    fs.readFileSync(new URL("../app/CustomerAuth.js", import.meta.url), "utf8");
   assert.match(page, /Masuk[\s\S]*Daftar[\s\S]*Guest/);
   assert.match(page, /Lanjut sebagai Guest/);
   assert.match(page, /payment-method-options/);

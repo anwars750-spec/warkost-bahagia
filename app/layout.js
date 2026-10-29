@@ -134,16 +134,6 @@ import ManagerCashSyncBridge from "./ManagerCashSyncBridge";
 import PrintBrandingRuntime from "./PrintBrandingRuntime";
 import PrinterCenterRuntime from "./PrinterCenterRuntime";
 import RoleLogoutConfirmation from "./RoleLogoutConfirmation";
-import CustomerCatalogPolish from "./CustomerCatalogPolish";
-import CustomerQuantityUnitPolish from "./CustomerQuantityUnitPolish";
-import CustomerHelpRoutingRuntime from "./CustomerHelpRoutingRuntime";
-import CustomerGeneralSupportRuntime from "./CustomerGeneralSupportRuntime";
-import CustomerLocationLauncher from "./CustomerLocationLauncher";
-import CustomerLocationPickerUx from "./CustomerLocationPickerUx";
-import CustomerAccountAddressLocationFirst from "./CustomerAccountAddressLocationFirst";
-import CustomerBannerCarouselRuntime from "./CustomerBannerCarouselRuntime";
-import CustomerQrisOnlyRuntime from "./CustomerQrisOnlyRuntime";
-import CustomerLoyaltyPickerRuntime from "./CustomerLoyaltyPickerRuntime";
 import ManagerDashboardUiPolish from "./ManagerDashboardUiPolish";
 import ManagerSubcategoryPolish from "./ManagerSubcategoryPolish";
 import ManagerNotificationPopover from "./ManagerNotificationPopover";
@@ -163,9 +153,6 @@ export default function RootLayout({ children }) {
     <html lang="id">
       <body>
         {children}
-        <CustomerBannerCarouselRuntime />
-        <CustomerQrisOnlyRuntime />
-        <CustomerLoyaltyPickerRuntime />
         <RealtimeOperationsRuntime />
         <PreparingEtaRuntime />
         <DeliveryHistoryRuntime />
@@ -197,13 +184,6 @@ export default function RootLayout({ children }) {
         <PrintBrandingRuntime />
         <PrinterCenterRuntime />
         <RoleLogoutConfirmation />
-        <CustomerCatalogPolish />
-        <CustomerQuantityUnitPolish />
-        <CustomerHelpRoutingRuntime />
-        <CustomerGeneralSupportRuntime />
-        <CustomerLocationLauncher />
-        <CustomerLocationPickerUx />
-        <CustomerAccountAddressLocationFirst />
         <ManagerDashboardUiPolish />
         <ManagerSubcategoryPolish />
         <ManagerNotificationPopover />

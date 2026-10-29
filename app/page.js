@@ -1,11 +1,23 @@
 "use client";
 import Image from "next/image";
+import CustomerHelpRoutingRuntime from "./CustomerHelpRoutingRuntime";
+import CustomerGeneralSupportRuntime from "./CustomerGeneralSupportRuntime";
+import CustomerLocationLauncher from "./CustomerLocationLauncher";
+import CustomerLocationPickerUx from "./CustomerLocationPickerUx";
+import CustomerAccountAddressLocationFirst from "./CustomerAccountAddressLocationFirst";
+import CustomerQrisOnlyRuntime from "./CustomerQrisOnlyRuntime";
+import CustomerLoyaltyPickerRuntime from "./CustomerLoyaltyPickerRuntime";
+import CustomerAuth from "./CustomerAuth";
+import CustomerBanner from "./CustomerBanner";
+import CustomerLogoutDialog from "./CustomerLogoutDialog";
+import { catalogPresentation, compactQuantity, compactStepQuantity } from "./customer-catalog.mjs";
+import { CatalogIcon } from "./CustomerCatalogIcons";
 import KitchenWorkspace, { KitchenNavIcon } from "./KitchenWorkspace";
 import KitchenDashboardFast from "./KitchenDashboardFast";
 import KitchenStockCenter from "./KitchenStockCenter";
 import KitchenHeaderActions from "./KitchenHeaderActions";
 import { restoreKitchenView } from "./kitchen-workspace-state.mjs";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import AdminBeverageStockEnhancerV2 from "./AdminBeverageStockEnhancerV2";
 import AdminCustomersEnhancer from "./AdminCustomersEnhancer";
 import AdminCustomerService from "./AdminCustomerService";
@@ -214,6 +226,11 @@ async function api(route, body, signal) {
 }
 export default function App() {
   const [sessionResolved, setSessionResolved] = useState(false);
+  const authAttempt = useRef(null);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [sessionFailure, setSessionFailure] = useState("");
+  const [customerLogoutOpen, setCustomerLogoutOpen] = useState(false);
   const checkoutAttempt = useRef(null);
   const quickAddressAttempt = useRef(false);
   const pollController = useRef(null);
@@ -288,7 +305,6 @@ export default function App() {
     [selectedSubcategory, setSelectedSubcategory] = useState(0),
     [stockCategoryFilter, setStockCategoryFilter] = useState("all"),
     [productSearch, setProductSearch] = useState(""),
-    [bannerIndex, setBannerIndex] = useState(0),
     [overlay, setOverlay] = useState(null),
     [supportTopic, setSupportTopic] = useState(null),
     [orderFilter, setOrderFilter] = useState("all"),
@@ -360,8 +376,11 @@ export default function App() {
       setMenu(m);
       setStoreStatus(currentStoreStatus);
       setSelectedCategory((current) => current || m.categories[0]?.id || 0);
+      if (signal.aborted) return;
       setUser(me.user);
+      setSessionFailure("");
       setSessionResolved(true);
+      if (me.user?.role === "CUSTOMER") setView((previous) => previous === "auth" ? "menu" : previous);
       if (me.user && me.user.role !== "CUSTOMER")
         setView((prev) =>
           prev === "menu"
@@ -416,13 +435,15 @@ export default function App() {
         if (["ADMIN", "KITCHEN", "OWNER"].includes(me.user.role))
           setPrintJobs((await api("print-jobs", undefined, signal)).jobs);
       } else {
+        clearCustomerData(false);
         setOrders([]);
         setNextOrderCursor(null);
         setCustomers([]);
         setCustomerSearch("");
       }
+      return me.user;
     } catch (error) {
-      if (error.name !== "AbortError") throw error;
+      if (error.name !== "AbortError") { setError(error.message); throw error; }
     } finally {
       if (refreshController.current === controller)
         refreshController.current = null;
@@ -430,8 +451,7 @@ export default function App() {
   }
   useEffect(() => {
     refresh().catch((e) => {
-      setError(e.message);
-      setSessionResolved(true);
+      setSessionFailure("Sesi belum dapat diperiksa. Silakan coba lagi.");
     });
   }, []);
   useEffect(() => {
@@ -522,8 +542,12 @@ export default function App() {
       realtimeRefreshGroups.current.clear();
       setOverlay(null);
       setChatTarget(null);
+      clearCustomerData();
       setUser(null);
       setView("auth");
+      setMode("login");
+      setOtpFlow(null);
+      setAuthError("Sesi Anda telah berakhir. Silakan masuk kembali.");
       setError("Sesi Anda telah berakhir. Silakan masuk kembali.");
     };
     window.addEventListener(
@@ -645,11 +669,56 @@ export default function App() {
       setBusy(false);
     }
   }
+  async function authApi(action, body) {
+    const controller = authAttempt.current;
+    if (!controller) throw new DOMException("Cancelled", "AbortError");
+    const result = await api(action, body, controller.signal);
+    if (controller.signal.aborted) throw new DOMException("Cancelled", "AbortError");
+    return result;
+  }
+  async function runAuth(fn) {
+    if (authAttempt.current) return;
+    const controller = new AbortController();
+    authAttempt.current = controller;
+    setAuthBusy(true);
+    setAuthError("");
+    try {
+      await fn();
+    } catch (failure) {
+      if (!controller.signal.aborted) setAuthError(
+        /JSON|Failed to fetch|NetworkError|fetch failed|Unexpected token/i.test(failure.message)
+          ? "Layanan akun belum dapat dihubungi. Silakan coba lagi."
+          : failure.message || "Proses akun gagal. Silakan coba lagi.");
+    } finally {
+      if (authAttempt.current === controller) {
+        authAttempt.current = null;
+        setAuthBusy(false);
+      }
+    }
+  }
+  useEffect(() => {
+    if (view === "auth") return;
+    authAttempt.current?.abort();
+    authAttempt.current = null;
+    setAuthBusy(false);
+    setAuthError("");
+    setOtpFlow(null);
+  }, [view]);
+  useEffect(() => () => { authAttempt.current?.abort(); refreshController.current?.abort(); }, []);
+  function clearCustomerData(clearCart = true) {
+    setAccount({ profile: null, addresses: [], loyalty: 0, transactions: [], vouchers: [], promotions: [], rewards: [] });
+    setAlerts({ notifications: [], unread: 0 });
+    setOrders([]);
+    setNextOrderCursor(null);
+    if (clearCart) { setCart({}); setItemNotes({}); }
+    setSelectedVoucherId(null);
+    setSelectedRewardId(null);
+  }
   function submitAuth(e, action = mode) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    run(async () => {
-      const data = await api(action, {
+    runAuth(async () => {
+      const data = await authApi(action, {
         name: form.get("name"),
         identifier: form.get("identifier"),
         email: form.get("email"),
@@ -667,9 +736,10 @@ export default function App() {
           resendAt: Date.now() + data.resendAfterSeconds * 1000,
         });
         setMode("registration-otp");
-        showTransientMessage(data.message);
+        setAuthError("");
         return;
       }
+      clearCustomerData(false);
       setUser(data.user);
       setView(
         data.user.role === "CUSTOMER"
@@ -678,22 +748,24 @@ export default function App() {
             ? "manager-dashboard"
             : "orders",
       );
-    }, action !== "register");
+      await refresh();
+    });
   }
   function submitGuest(e) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    run(async () => {
-      const data = await api("guest", { name: form.get("name") });
+    runAuth(async () => {
+      const data = await authApi("guest", { name: form.get("name") });
+      clearCustomerData(false);
       setUser(data.user);
       setView(count ? "cart" : "menu");
-    }, false);
+    });
   }
   function submitForgotPassword(e) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    run(async () => {
-      const data = await api("password-reset-request", {
+    runAuth(async () => {
+      const data = await authApi("password-reset-request", {
         identifier: form.get("identifier"),
       });
       setOtpFlow({
@@ -703,14 +775,14 @@ export default function App() {
         resendAt: Date.now() + data.resendAfterSeconds * 1000,
       });
       setMode("password-reset-otp");
-      showTransientMessage(data.message);
-    }, false);
+      setAuthError("");
+    });
   }
   function submitOtp(e) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    run(async () => {
-      const data = await api("otp-verify", {
+    runAuth(async () => {
+      const data = await authApi("otp-verify", {
         challengeId: otpFlow?.challengeId,
         purpose: otpFlow?.purpose,
         code: form.get("code"),
@@ -731,25 +803,25 @@ export default function App() {
         resetToken: data.resetToken,
       }));
       setMode("password-reset-new");
-    }, false);
+    });
   }
   function submitNewPassword(e) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    run(async () => {
-      const data = await api("password-reset", {
+    runAuth(async () => {
+      const data = await authApi("password-reset", {
         resetToken: otpFlow?.resetToken,
         password: form.get("password"),
         passwordConfirmation: form.get("passwordConfirmation"),
       });
       setOtpFlow(null);
       setMode("password-reset-success");
-      showTransientMessage(data.message);
-    }, false);
+      setAuthError("");
+    });
   }
   function resendCurrentOtp() {
-    run(async () => {
-      const data = await api("otp-resend", {
+    runAuth(async () => {
+      const data = await authApi("otp-resend", {
         challengeId: otpFlow?.challengeId,
         purpose: otpFlow?.purpose,
       });
@@ -759,22 +831,17 @@ export default function App() {
         destination: data.destination,
         resendAt: Date.now() + data.resendAfterSeconds * 1000,
       }));
-      showTransientMessage(data.message);
-    }, false);
+      setAuthError("");
+    });
   }
-  async function continueAfterRegistration() {
-    setBusy(true);
-    setError("");
-    try {
+  function continueAfterRegistration() {
+    return runAuth(async () => {
+      const restoredUser = await refresh();
+      if (!restoredUser) throw Error("Sesi akun belum tersedia. Silakan masuk kembali.");
       setView("menu");
-      await refresh();
       setOtpFlow(null);
       setMode("login");
-    } catch (continueError) {
-      setError(continueError.message);
-    } finally {
-      setBusy(false);
-    }
+    });
   }
   function togglePassword(field) {
     setPasswordVisibility((current) => ({
@@ -891,17 +958,6 @@ export default function App() {
       );
     };
   }, [role]);
-  const activeBanners = menu.banners || [];
-  const displayedBanners = activeBanners.length
-    ? activeBanners
-    : [
-        {
-          id: "fallback",
-          image_url: "/demo/promo-warkost.webp",
-        },
-      ];
-  const activeBannerIndex = bannerIndex % displayedBanners.length;
-  const activeBanner = displayedBanners[activeBannerIndex];
   const filteredMenuProducts = menu.products.filter((product) => {
     const categoryMatches =
       !selectedCategory || product.category_id === selectedCategory;
@@ -918,6 +974,7 @@ export default function App() {
         .includes(search);
     return categoryMatches && subcategoryMatches && searchMatches;
   });
+  const catalog = catalogPresentation(menu, filteredMenuProducts, selectedCategory, selectedSubcategory);
   const customerVisibleOrders =
     orderFilter === "all"
       ? orders
@@ -1215,16 +1272,27 @@ export default function App() {
     setView("menu");
     setMessage("Menu dari pesanan sebelumnya sudah ditambahkan ke keranjang.");
   }
-  function logout() {
+  function logout(destination) {
+    if (user?.role === "CUSTOMER" && !user.isGuest && destination !== "auth") {
+      setCustomerLogoutOpen(true);
+      return;
+    }
+    performLogout(destination);
+  }
+  function performLogout(destination) {
     setOverlay(null);
     run(async () => {
       pollController.current?.abort();
       refreshController.current?.abort();
       await api("logout", {});
       window.dispatchEvent(new CustomEvent("warkost:session-ended"));
+      clearCustomerData(destination !== "auth");
+      setCustomerLogoutOpen(false);
+      setOtpFlow(null);
+      setMode("login");
       setUser(null);
-      setView("menu");
-    });
+      setView(destination === "auth" ? "auth" : "menu");
+    }, false);
   }
   function useDeviceLocation(event) {
     const form = event.currentTarget.form;
@@ -1347,6 +1415,7 @@ export default function App() {
           height={941}
           priority
         />
+        {sessionFailure && <div role="alert">{sessionFailure}<button type="button" onClick={() => { setSessionFailure(""); refresh().catch(() => setSessionFailure("Sesi belum dapat diperiksa. Silakan coba lagi.")); }}>Coba lagi</button></div>}
       </header>
     );
   return (
@@ -1587,6 +1656,7 @@ export default function App() {
               data-admin-nav={role === "ADMIN" ? "Keluar" : undefined}
               data-kitchen-nav={role === "KITCHEN" ? "logout" : undefined}
               className={role === "KITCHEN" ? "kitchen-header-logout" : undefined}
+              data-customer-logout={role === "CUSTOMER" ? "true" : undefined}
               onClick={logout}
             >
               {role === "KITCHEN" && <KitchenNavIcon name="logout" />}
@@ -1745,7 +1815,7 @@ export default function App() {
               )}
             </div>
           )}
-        {error && (
+        {error && view !== "auth" && (
           <div role="alert" className="alert">
             {error}
           </div>
@@ -1756,557 +1826,13 @@ export default function App() {
           </div>
         )}
         {!role && view === "auth" ? (
-          <section
-            className="auth-onboarding"
-            aria-label="Onboarding pelanggan Warkost"
-          >
-            {["login", "register", "guest"].includes(mode) ? (
-              <div
-                className="auth-mobile-switch"
-                aria-label="Pilih formulir akun"
-              >
-                <button
-                  className={mode === "login" ? "active" : ""}
-                  type="button"
-                  onClick={() => setMode("login")}
-                >
-                  Masuk
-                </button>
-                <button
-                  className={mode === "register" ? "active" : ""}
-                  type="button"
-                  onClick={() => setMode("register")}
-                >
-                  Daftar
-                </button>
-                <button
-                  className={mode === "guest" ? "active" : ""}
-                  type="button"
-                  onClick={() => setMode("guest")}
-                >
-                  Guest
-                </button>
-              </div>
-            ) : (
-              <div className="auth-flow-back">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOtpFlow(null);
-                    setMode("login");
-                  }}
-                >
-                  ← Kembali ke Masuk
-                </button>
-              </div>
-            )}
-
-            <article className="auth-story-card">
-              <div className="auth-story-copy">
-                <span className="auth-story-badge">WARKOST BAHAGIA</span>
-                <h1>Makan Enak Lebih Mudah di Warkost Bahagia</h1>
-                <p>
-                  Pilih menu favorit, nikmati promo, dan tunggu pesanan hangat
-                  sampai di tujuan.
-                </p>
-                <ul className="auth-benefits">
-                  <li>
-                    <BowlIcon />
-                    <span>
-                      <strong>Pesan Makanan Favorit</strong>
-                      <small>Menu hangat dari dapur Warkost</small>
-                    </span>
-                  </li>
-                  <li>
-                    <TicketIcon />
-                    <span>
-                      <strong>Banyak Promo &amp; Loyalty</strong>
-                      <small>Lebih hemat di setiap pesanan</small>
-                    </span>
-                  </li>
-                  <li>
-                    <TruckIcon />
-                    <span>
-                      <strong>Diantar Sampai Tujuan</strong>
-                      <small>Pengantaran aman dan terpantau</small>
-                    </span>
-                  </li>
-                </ul>
-              </div>
-              <div className="auth-story-visual">
-                <Image
-                  src="/demo/promo-warkost.webp"
-                  alt="Menu makanan dan minuman Warkost Bahagia"
-                  fill
-                  sizes="(max-width: 760px) 100vw, 34vw"
-                  priority
-                />
-                <span>Hangat · Lezat · Bahagia</span>
-              </div>
-            </article>
-
-            <article
-              className={`auth-card auth-guest-card ${mode === "guest" ? "active" : ""}`}
-            >
-              <div className="auth-card-heading compact">
-                <Image
-                  className="auth-card-logo"
-                  src="/warkost-bahagia-logo-clean.png"
-                  alt="Warkost Bahagia"
-                  width={1672}
-                  height={941}
-                />
-                <span className="auth-card-kicker">CHECKOUT TANPA AKUN</span>
-                <h2>Lanjut sebagai Guest</h2>
-                <p>
-                  Pesan tanpa membuat akun. Voucher dan loyalty khusus member
-                  tidak tersedia.
-                </p>
-              </div>
-              <form onSubmit={submitGuest}>
-                <label>
-                  Nama Pemesan
-                  <input
-                    name="name"
-                    required
-                    minLength="2"
-                    maxLength="80"
-                    autoComplete="name"
-                    placeholder="Nama penerima pesanan"
-                  />
-                </label>
-                <div className="guest-benefit-note">
-                  <TruckIcon />
-                  <span>
-                    <strong>Benefit ongkir tetap berlaku</strong>
-                    <small>
-                      Gratis hingga 3 km dan berbayar sampai maksimal 10 km.
-                    </small>
-                  </span>
-                </div>
-                <button className="primary auth-submit" disabled={busy}>
-                  {busy ? "Menyiapkan…" : "Lanjut sebagai Guest"}
-                </button>
-                <button
-                  className="auth-secondary"
-                  type="button"
-                  onClick={() => setMode("login")}
-                >
-                  Sudah punya akun? Masuk
-                </button>
-              </form>
-            </article>
-
-            <article
-              className={`auth-card auth-login-card ${mode === "login" ? "active" : ""}`}
-            >
-              <div className="auth-card-heading">
-                <Image
-                  className="auth-card-logo"
-                  src="/warkost-bahagia-logo-clean.png"
-                  alt="Warkost Bahagia"
-                  width={1672}
-                  height={941}
-                />
-                <span className="auth-card-kicker">SELAMAT DATANG KEMBALI</span>
-                <h2>Masuk ke Akun</h2>
-                <p>Masuk untuk melanjutkan pesanan dan melihat loyalty.</p>
-              </div>
-              <form onSubmit={(event) => submitAuth(event, "login")}>
-                <label>
-                  Email atau Nomor HP
-                  <input
-                    name="identifier"
-                    required
-                    autoComplete="username"
-                    placeholder="customer@warkost.local"
-                  />
-                </label>
-                <label>
-                  Password
-                  <span className="password-field">
-                    <input
-                      name="password"
-                      type={passwordVisibility.login ? "text" : "password"}
-                      required
-                      autoComplete="current-password"
-                      placeholder="Masukkan password"
-                    />
-                    <button
-                      type="button"
-                      aria-label={
-                        passwordVisibility.login
-                          ? "Sembunyikan password"
-                          : "Tampilkan password"
-                      }
-                      onClick={() => togglePassword("login")}
-                    >
-                      {passwordVisibility.login ? "Sembunyikan" : "Lihat"}
-                    </button>
-                  </span>
-                </label>
-                <div className="auth-form-meta">
-                  <span>Sesi aman hingga 7 hari</span>
-                  <button
-                    type="button"
-                    onClick={() => setMode("password-reset-request")}
-                  >
-                    Lupa password?
-                  </button>
-                </div>
-                <button className="primary auth-submit" disabled={busy}>
-                  {busy ? "Memproses…" : "Masuk"}
-                </button>
-                <button
-                  className="auth-secondary"
-                  type="button"
-                  onClick={() => setMode("register")}
-                >
-                  Belum punya akun? Daftar Akun
-                </button>
-                <button
-                  className="auth-secondary auth-guest-link"
-                  type="button"
-                  onClick={() => setMode("guest")}
-                >
-                  Lanjut sebagai Guest
-                </button>
-              </form>
-            </article>
-
-            <article
-              className={`auth-card auth-register-card ${mode === "register" ? "active" : ""}`}
-            >
-              <div className="auth-card-heading compact">
-                <Image
-                  className="auth-card-logo"
-                  src="/warkost-bahagia-logo-clean.png"
-                  alt="Warkost Bahagia"
-                  width={1672}
-                  height={941}
-                />
-                <span className="auth-card-kicker">MULAI PESAN DI WARKOST</span>
-                <h2>Daftar Akun</h2>
-                <p>Lengkapi data berikut untuk membuat akun pelanggan.</p>
-              </div>
-              <form onSubmit={(event) => submitAuth(event, "register")}>
-                <div className="auth-field-grid">
-                  <label>
-                    Nama Lengkap
-                    <input
-                      name="name"
-                      required
-                      minLength="2"
-                      autoComplete="name"
-                    />
-                  </label>
-                  <label>
-                    Email
-                    <input
-                      name="email"
-                      type="email"
-                      required
-                      autoComplete="email"
-                    />
-                  </label>
-                  <label>
-                    Nomor HP
-                    <input
-                      name="phone"
-                      type="tel"
-                      required
-                      autoComplete="tel"
-                      placeholder="08xxxxxxxxxx"
-                    />
-                  </label>
-                  <label>
-                    Tanggal Lahir
-                    <input
-                      name="birthDate"
-                      type="date"
-                      required
-                      max="2099-12-31"
-                    />
-                  </label>
-                </div>
-                <label>
-                  Password
-                  <span className="password-field">
-                    <input
-                      name="password"
-                      type={passwordVisibility.register ? "text" : "password"}
-                      required
-                      minLength="10"
-                      autoComplete="new-password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => togglePassword("register")}
-                    >
-                      {passwordVisibility.register ? "Sembunyikan" : "Lihat"}
-                    </button>
-                  </span>
-                </label>
-                <label>
-                  Konfirmasi Password
-                  <span className="password-field">
-                    <input
-                      name="passwordConfirmation"
-                      type={
-                        passwordVisibility.confirmation ? "text" : "password"
-                      }
-                      required
-                      minLength="10"
-                      autoComplete="new-password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => togglePassword("confirmation")}
-                    >
-                      {passwordVisibility.confirmation
-                        ? "Sembunyikan"
-                        : "Lihat"}
-                    </button>
-                  </span>
-                </label>
-                <label className="consent-field auth-consent">
-                  <input name="consent" type="checkbox" required />
-                  <span>
-                    Saya menyetujui Syarat &amp; Ketentuan dan Kebijakan
-                    Privasi.
-                  </span>
-                </label>
-                <p className="auth-note">
-                  Setelah mendaftar, kode OTP akan dikirim ke email untuk
-                  mengaktifkan akun.
-                </p>
-                <button className="primary auth-submit" disabled={busy}>
-                  {busy ? "Memproses…" : "Daftar Akun"}
-                </button>
-                <button
-                  className="auth-secondary"
-                  type="button"
-                  onClick={() => setMode("login")}
-                >
-                  Sudah punya akun? Masuk
-                </button>
-                <button
-                  className="auth-secondary auth-guest-link"
-                  type="button"
-                  onClick={() => setMode("guest")}
-                >
-                  Checkout sebagai Guest
-                </button>
-              </form>
-            </article>
-
-            <article
-              className={`auth-card auth-recovery-card ${mode === "password-reset-request" ? "active" : ""}`}
-            >
-              <div className="auth-card-heading compact">
-                <Image
-                  className="auth-card-logo"
-                  src="/warkost-bahagia-logo-clean.png"
-                  alt="Warkost Bahagia"
-                  width={1672}
-                  height={941}
-                />
-                <span className="auth-card-kicker">PEMULIHAN AKUN</span>
-                <h2>Lupa Password</h2>
-                <p>Masukkan email atau nomor HP akun Warkost Anda.</p>
-              </div>
-              <form onSubmit={submitForgotPassword}>
-                <label>
-                  Email atau Nomor HP
-                  <input
-                    name="identifier"
-                    required
-                    autoComplete="username"
-                    placeholder="Email atau nomor HP"
-                  />
-                </label>
-                <p className="auth-note">
-                  Jika akun ditemukan, kode akan dikirim ke email yang
-                  terdaftar.
-                </p>
-                <button className="primary auth-submit" disabled={busy}>
-                  {busy ? "Mengirim…" : "Kirim Kode OTP"}
-                </button>
-                <button
-                  className="auth-secondary"
-                  type="button"
-                  onClick={() => setMode("login")}
-                >
-                  Kembali ke Masuk
-                </button>
-              </form>
-            </article>
-
-            <article
-              className={`auth-card auth-otp-card ${["registration-otp", "password-reset-otp"].includes(mode) ? "active" : ""}`}
-            >
-              <div className="auth-card-heading compact">
-                <Image
-                  className="auth-card-logo"
-                  src="/warkost-bahagia-logo-clean.png"
-                  alt="Warkost Bahagia"
-                  width={1672}
-                  height={941}
-                />
-                <span className="auth-card-kicker">VERIFIKASI EMAIL</span>
-                <h2>Masukkan Kode OTP</h2>
-                <p>
-                  Kode 6 digit telah dikirim ke{" "}
-                  {otpFlow?.destination || "email Anda"}.
-                </p>
-              </div>
-              <form onSubmit={submitOtp}>
-                <label>
-                  Kode OTP
-                  <input
-                    className="otp-code-input"
-                    name="code"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    pattern="[0-9]{6}"
-                    minLength="6"
-                    maxLength="6"
-                    required
-                    autoFocus
-                    placeholder="000000"
-                  />
-                </label>
-                <p className="auth-note">
-                  Kode berlaku 10 menit dan maksimal 5 percobaan.
-                </p>
-                <button className="primary auth-submit" disabled={busy}>
-                  {busy ? "Memverifikasi…" : "Verifikasi Kode"}
-                </button>
-                <button
-                  className="auth-secondary"
-                  type="button"
-                  disabled={busy || otpResendRemaining > 0}
-                  onClick={resendCurrentOtp}
-                >
-                  {otpResendRemaining > 0
-                    ? `Kirim ulang dalam ${otpResendRemaining} detik`
-                    : "Kirim Ulang Kode"}
-                </button>
-              </form>
-            </article>
-
-            <article
-              className={`auth-card auth-reset-card ${mode === "password-reset-new" ? "active" : ""}`}
-            >
-              <div className="auth-card-heading compact">
-                <Image
-                  className="auth-card-logo"
-                  src="/warkost-bahagia-logo-clean.png"
-                  alt="Warkost Bahagia"
-                  width={1672}
-                  height={941}
-                />
-                <span className="auth-card-kicker">PASSWORD BARU</span>
-                <h2>Atur Ulang Password</h2>
-                <p>Gunakan password baru yang aman, minimal 10 karakter.</p>
-              </div>
-              <form onSubmit={submitNewPassword}>
-                <label>
-                  Password Baru
-                  <span className="password-field">
-                    <input
-                      name="password"
-                      type={passwordVisibility.reset ? "text" : "password"}
-                      required
-                      minLength="10"
-                      autoComplete="new-password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => togglePassword("reset")}
-                    >
-                      {passwordVisibility.reset ? "Sembunyikan" : "Lihat"}
-                    </button>
-                  </span>
-                </label>
-                <label>
-                  Konfirmasi Password Baru
-                  <span className="password-field">
-                    <input
-                      name="passwordConfirmation"
-                      type={
-                        passwordVisibility.resetConfirmation
-                          ? "text"
-                          : "password"
-                      }
-                      required
-                      minLength="10"
-                      autoComplete="new-password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => togglePassword("resetConfirmation")}
-                    >
-                      {passwordVisibility.resetConfirmation
-                        ? "Sembunyikan"
-                        : "Lihat"}
-                    </button>
-                  </span>
-                </label>
-                <button className="primary auth-submit" disabled={busy}>
-                  {busy ? "Menyimpan…" : "Simpan Password Baru"}
-                </button>
-              </form>
-            </article>
-
-            <article
-              className={`auth-card auth-success-card ${["registration-success", "password-reset-success"].includes(mode) ? "active" : ""}`}
-            >
-              <div className="auth-card-heading">
-                <Image
-                  className="auth-card-logo"
-                  src="/warkost-bahagia-logo-clean.png"
-                  alt="Warkost Bahagia"
-                  width={1672}
-                  height={941}
-                />
-                <span className="auth-success-mark" aria-hidden="true">
-                  ✓
-                </span>
-                <span className="auth-card-kicker">BERHASIL</span>
-                <h2>
-                  {mode === "registration-success"
-                    ? "Akun Sudah Aktif"
-                    : "Password Diperbarui"}
-                </h2>
-                <p>
-                  {mode === "registration-success"
-                    ? "Email telah terverifikasi. Anda dapat mulai memesan."
-                    : "Silakan masuk kembali menggunakan password baru."}
-                </p>
-              </div>
-              <div className="auth-success-actions">
-                {mode === "registration-success" ? (
-                  <button
-                    className="primary auth-submit"
-                    type="button"
-                    disabled={busy}
-                    onClick={continueAfterRegistration}
-                  >
-                    {busy ? "Memuat…" : "Mulai Pesan"}
-                  </button>
-                ) : (
-                  <button
-                    className="primary auth-submit"
-                    type="button"
-                    onClick={() => setMode("login")}
-                  >
-                    Kembali ke Masuk
-                  </button>
-                )}
-              </div>
-            </article>
-          </section>
+          <CustomerAuth mode={mode} setMode={(next) => { if (!authAttempt.current) { setAuthError(""); setMode(next); } }}
+            otpFlow={otpFlow} setOtpFlow={setOtpFlow} passwordVisibility={passwordVisibility}
+            togglePassword={togglePassword} busy={authBusy} error={authError} setError={setAuthError}
+            otpResendRemaining={otpResendRemaining} submitAuth={submitAuth} submitGuest={submitGuest}
+            submitForgotPassword={submitForgotPassword} submitOtp={submitOtp} submitNewPassword={submitNewPassword}
+            resendCurrentOtp={resendCurrentOtp} continueAfterRegistration={continueAfterRegistration}
+            storyIcons={{food: <BowlIcon />, ticket: <TicketIcon />, truck: <TruckIcon />}} />
         ) : null}
         {(!role || role === "CUSTOMER") && view === "menu" && (
           <>
@@ -2356,41 +1882,9 @@ export default function App() {
                   </span>
                 </div>
               </div>
-              <section className="home-banner" aria-label="Banner Warkost">
-                <article className="banner-card" key={activeBanner.id}>
-                  <img
-                    className="banner-image"
-                    src={activeBanner.image_url}
-                    alt={
-                      activeBanner.id === "fallback"
-                        ? "Pilihan menu Warkost Bahagia"
-                        : `Banner Warkost ${activeBannerIndex + 1}`
-                    }
-                  />
-                  {activeBanners.length > 1 && (
-                    <div
-                      className="banner-controls"
-                      aria-label="Kontrol banner"
-                    >
-                      <span className="banner-dots">
-                        {activeBanners.map((banner, index) => (
-                          <button
-                            key={banner.id}
-                            type="button"
-                            aria-label={`Tampilkan banner ${index + 1}`}
-                            className={
-                              index === activeBannerIndex ? "active" : ""
-                            }
-                            onClick={() => setBannerIndex(index)}
-                          />
-                        ))}
-                      </span>
-                    </div>
-                  )}
-                </article>
-              </section>
+              <CustomerBanner banners={menu.banners} />
             </section>
-            <section className="customer-catalog" aria-labelledby="menu-title">
+            <section className="customer-catalog" aria-labelledby="menu-title" data-customer-ui-owner="react">
               <div className="catalog-tools">
                 <label className="menu-search">
                   <SearchIcon />
@@ -2403,6 +1897,7 @@ export default function App() {
                   />
                 </label>
                 <div className="filters" aria-label="Kategori produk">
+                  <button type="button" className={`catalog-all-filter ${!selectedCategory ? "active" : ""}`} aria-label="Tampilkan semua kategori" aria-pressed={!selectedCategory} onClick={() => { setSelectedCategory(0); setSelectedSubcategory(0); setProductSearch(""); }}><span className="catalog-filter-icon"><CatalogIcon name="all" /></span><span>Semua</span></button>
                   {menu.categories.map((category) => (
                     <button
                       key={category.id}
@@ -2417,7 +1912,7 @@ export default function App() {
                       {category.name.toLowerCase().includes("minum") ? (
                         <DrinkIcon />
                       ) : category.name.toLowerCase().includes("bahan") ? (
-                        <span aria-hidden="true">◆</span>
+                        <span className="material-category-icon"><CatalogIcon name="Bahan Baku" /></span>
                       ) : (
                         <BowlIcon />
                       )}
@@ -2436,7 +1931,7 @@ export default function App() {
                       className={!selectedSubcategory ? "active" : ""}
                       onClick={() => setSelectedSubcategory(0)}
                     >
-                      Semua subkategori
+                      Semua
                     </button>
                     {menu.subcategories
                       .filter((item) => item.category_id === selectedCategory)
@@ -2454,28 +1949,19 @@ export default function App() {
                   </div>
                 )}
               </div>
-              <div className="catalog-heading">
-                <div>
-                  <h2 id="menu-title">Menu Pilihan</h2>
-                  <p>Menu favorit yang paling banyak dipesan.</p>
-                </div>
-                <button
-                  onClick={() => {
-                    setSelectedCategory(0);
-                    setSelectedSubcategory(0);
-                    setProductSearch("");
-                  }}
-                >
-                  Lihat Semua
-                  <ArrowIcon />
-                </button>
-              </div>
-              <div className="grid customer-products" id="menu-grid">
-                {filteredMenuProducts.map((p, index) => {
+              <div className="catalog-heading"><div>
+                <span className="catalog-heading-kicker">{catalog.kicker}</span>
+                <h2 id="menu-title">{catalog.title}</h2><p>{catalog.description}</p>
+              </div></div>
+              <div className={`grid customer-products ${!selectedCategory ? "catalog-grouped-view" : ""}`} id="menu-grid">
+                {catalog.entries.map(({ product: p, index, categoryName, subcategoryName, categoryStart, subcategoryStart, categoryCount }) => {
                   const badge = demoProductBadges[index];
                   return (
+                    <Fragment key={p.id}>
+                    {categoryStart && <div className="catalog-group-category-heading customer-catalog-polish-node"><span className="catalog-group-category-icon"><CatalogIcon name={categoryName} /></span><div className="catalog-group-category-copy"><span className="catalog-group-kicker">KATEGORI</span><h3>{categoryName}</h3><p>{catalog.categoryCopy[categoryName] || "Pilihan produk Warkost Bahagia."}</p></div><span className="catalog-group-count">{categoryCount} menu</span></div>}
+                    {subcategoryStart && <div className="catalog-group-subcategory-heading customer-catalog-polish-node"><h4>{subcategoryName}</h4></div>}
                     <article
-                      className={`product customer-product ${cart[p.id] ? "has-quantity" : ""}`}
+                      className={`product customer-product ${cart[p.id] ? "has-quantity" : ""} ${p.stock_unit === "GRAM" ? "weighted-product" : ""}`}
                       key={p.id}
                       role="button"
                       tabIndex={0}
@@ -2517,7 +2003,7 @@ export default function App() {
                         <p>{p.description}</p>
                         <div className="product-foot">
                           <span className="product-price-stack">
-                            <strong>{productPriceLabel(p, money)}</strong>
+                            <strong>{money(p.price)}</strong>
                             <small>
                               Stok{" "}
                               {formatStockQuantity(
@@ -2528,16 +2014,13 @@ export default function App() {
                             {p.stock_unit === "GRAM" && (
                               <small>
                                 Minimal{" "}
-                                {formatStockQuantity(
-                                  p.minimum_order_quantity,
-                                  p.stock_unit,
-                                )}
+                                {compactQuantity(p.minimum_order_quantity, p.stock_unit)}
                               </small>
                             )}
                           </span>
                           {role === "CUSTOMER" ? (
                             <div
-                              className={`qty ${cart[p.id] ? "" : "is-empty"}`}
+                              className={`qty ${cart[p.id] ? "" : "is-empty"} ${p.stock_unit === "GRAM" ? "weighted-qty" : "piece-qty"}`}
                               aria-live="polite"
                             >
                               {cart[p.id] ? (
@@ -2551,20 +2034,15 @@ export default function App() {
                                   >
                                     −
                                   </button>
-                                  <span>
-                                    {formatStockQuantity(
-                                      cart[p.id],
-                                      p.stock_unit,
-                                    )}
-                                  </span>
+                                  <span aria-label={`Jumlah ${compactQuantity(cart[p.id], p.stock_unit)}`}>{compactQuantity(cart[p.id], p.stock_unit)}</span>
                                   <small>
                                     {p.stock_unit === "GRAM"
-                                      ? `+${formatStockQuantity(p.order_step_quantity, p.stock_unit)}`
-                                      : "Ketuk +1"}
+                                      ? `+${compactStepQuantity(p.order_step_quantity, p.stock_unit)}`
+                                      : "+1"}
                                   </small>
                                 </>
                               ) : (
-                                <small>Ketuk untuk tambah</small>
+                                <small>Pesan</small>
                               )}
                             </div>
                           ) : (
@@ -2582,6 +2060,7 @@ export default function App() {
                         </div>
                       </div>
                     </article>
+                    </Fragment>
                   );
                 })}
               </div>
@@ -5555,21 +5034,13 @@ export default function App() {
                       </span>
                     </div>
                     <button
-                      onClick={async () => {
-                        await api("logout", {});
-                        window.dispatchEvent(
-                          new CustomEvent("warkost:session-ended"),
-                        );
-                        setUser(null);
-                        setOverlay(null);
-                        setMode("login");
-                        setView("auth");
-                      }}
+                      onClick={() => logout("auth")}
                     >
                       <UserIcon />
                       <span>Masuk / Daftar Member</span>
                     </button>
-                    <button className="danger-text" onClick={logout}>
+                    <button className="danger-text" data-customer-logout={role === "CUSTOMER" ? "true" : undefined}
+              onClick={logout}>
                       <LogoutIcon />
                       <span>Akhiri sesi Guest</span>
                     </button>
@@ -5610,7 +5081,8 @@ export default function App() {
                       <HelpIcon />
                       <span>Bantuan</span>
                     </button>
-                    <button className="danger-text" onClick={logout}>
+                    <button className="danger-text" data-customer-logout={role === "CUSTOMER" ? "true" : undefined}
+              onClick={logout}>
                       <LogoutIcon />
                       <span>Keluar</span>
                     </button>
@@ -5640,14 +5112,18 @@ export default function App() {
           </button>
           <button onClick={() => setView("notifications")}>Notifikasi</button>
           <button onClick={() => setView("account")}>Akun</button>
-          <button onClick={logout}>Keluar</button>
+          <button data-customer-logout={role === "CUSTOMER" ? "true" : undefined}
+              onClick={logout}>Keluar</button>
         </nav>
       )}
       {role === "KITCHEN" && <>
         <KitchenWorkspace view={view} userId={user.id} />
         <KitchenHeaderActions key={`kitchen-header-${view}`} userId={user.id} updateAlerts={setAlerts} />
       </>}
+      {(!role || role === "CUSTOMER") && view !== "auth" && <><CustomerHelpRoutingRuntime /><CustomerGeneralSupportRuntime /></>}
+      {role === "CUSTOMER" && <><CustomerLocationLauncher /><CustomerLocationPickerUx /><CustomerAccountAddressLocationFirst /><CustomerQrisOnlyRuntime /><CustomerLoyaltyPickerRuntime /></>}
       {role === "ADMIN" && <AdminUiRuntime view={view} orders={orders} />}
+      {customerLogoutOpen && role === "CUSTOMER" && <CustomerLogoutDialog busy={busy} error={error} onCancel={() => setCustomerLogoutOpen(false)} onConfirm={() => performLogout("menu")} />}
       <footer>
         Warkost Bahagia · Dibuat untuk operasional yang lebih rapi
       </footer>

@@ -12,6 +12,8 @@ const layout = fs.readFileSync(
   "utf8",
 );
 
+const customerPage = fs.readFileSync(new URL("../app/page.js", import.meta.url), "utf8");
+
 test("customer checkout runtime hides COD and forces QRIS", () => {
   assert.match(runtime, /value=\"CASH\"/);
   assert.match(runtime, /value=\"QRIS\"/);
@@ -20,7 +22,7 @@ test("customer checkout runtime hides COD and forces QRIS", () => {
   assert.match(runtime, /qris\.click\(\)/);
 });
 
-test("QRIS-only runtime is mounted globally", () => {
-  assert.match(layout, /import CustomerQrisOnlyRuntime/);
-  assert.match(layout, /<CustomerQrisOnlyRuntime \/>/);
+test("QRIS-only runtime is scoped inside the Customer boundary", () => {
+  assert.match(customerPage, /import CustomerQrisOnlyRuntime/);
+  assert.match(customerPage, /<CustomerQrisOnlyRuntime \/>/);
 });

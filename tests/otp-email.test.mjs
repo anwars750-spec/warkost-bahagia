@@ -331,7 +331,7 @@ test("API dan UI mengikat OTP nyata tanpa mengekspos SMTP atau debug stage", () 
   const page = fs.readFileSync(
     new URL("../app/page.js", import.meta.url),
     "utf8",
-  );
+  ) + fs.readFileSync(new URL("../app/CustomerAuth.js", import.meta.url), "utf8");
   const envExample = fs.readFileSync(
     new URL("../.env.example", import.meta.url),
     "utf8",
@@ -347,4 +347,22 @@ test("API dan UI mengikat OTP nyata tanpa mengekspos SMTP atau debug stage", () 
   assert.match(envExample, /^#?\s*SMTP_HOST=/m);
   assert.match(envExample, /^#?\s*SMTP_PASS=/m);
   assert.doesNotMatch(envExample, /smtp-password|password-asli/i);
+});
+
+test("mailer failure keeps the pending account inactive and consumes its undelivered challenge", async () => {
+  const previous = { transport: process.env.EMAIL_TRANSPORT, host: process.env.SMTP_HOST };
+  const before = outbox().length;
+  process.env.EMAIL_TRANSPORT = "smtp";
+  delete process.env.SMTP_HOST;
+  try {
+    await assert.rejects(registerCustomer(registration(99)), /SMTP_HOST/);
+    const pending = database.prepare("SELECT id,active,email_verified_at FROM users WHERE email=?").get("otp-99@example.test");
+    assert.equal(pending.active, 0);
+    assert.equal(pending.email_verified_at, null);
+    assert.ok(database.prepare("SELECT consumed_at FROM otp_challenges WHERE user_id=? ORDER BY id DESC LIMIT 1").get(pending.id).consumed_at);
+    assert.equal(outbox().length, before);
+  } finally {
+    process.env.EMAIL_TRANSPORT = previous.transport;
+    if (previous.host === undefined) delete process.env.SMTP_HOST; else process.env.SMTP_HOST = previous.host;
+  }
 });

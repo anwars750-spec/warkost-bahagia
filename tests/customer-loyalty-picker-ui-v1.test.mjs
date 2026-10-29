@@ -5,6 +5,8 @@ import test from "node:test";
 const runtime = fs.readFileSync("app/CustomerLoyaltyPickerRuntime.js", "utf8");
 const layout = fs.readFileSync("app/layout.js", "utf8");
 
+const customerPage = fs.readFileSync(new URL("../app/page.js", import.meta.url), "utf8");
+
 test("loyalty summary keeps points visible and adds redeem action", () => {
   assert.match(runtime, /\.loyalty-checkout-card \.loyalty-summary/);
   assert.match(runtime, /Redeem Poin/);
@@ -23,7 +25,7 @@ test("loyalty picker supports backdrop and escape close", () => {
   assert.match(runtime, /closeLoyaltyPicker/);
 });
 
-test("loyalty picker runtime is mounted in root layout", () => {
-  assert.match(layout, /CustomerLoyaltyPickerRuntime/);
-  assert.match(layout, /<CustomerLoyaltyPickerRuntime \/>/);
+test("loyalty picker runtime is mounted inside the Customer boundary", () => {
+  assert.match(customerPage, /CustomerLoyaltyPickerRuntime/);
+  assert.match(customerPage, /<CustomerLoyaltyPickerRuntime \/>/);
 });

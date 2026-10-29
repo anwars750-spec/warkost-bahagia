@@ -99,8 +99,8 @@ test("UI card memakai click dan keyboard tanpa bubbling dari minus", () => {
     /onKeyDown=\{\(event\) => productCardKeyDown\(event, p\)\}/,
   );
   assert.match(page, /event\.stopPropagation\(\);[\s\S]*?step\(p, -1\)/);
-  assert.match(page, /Ketuk untuk tambah/);
-  assert.match(page, /Ketuk \+1/);
+  assert.match(page, /<small>Pesan<\/small>/);
+  assert.match(page, /"\+1"/);
   assert.match(page, /maxLength=\{MAX_ITEM_NOTE_LENGTH\}/);
   assert.match(page, /Ubah catatan/);
   assert.match(style, /\.customer-product\[role="button"\]:focus-visible/);

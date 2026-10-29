@@ -12,10 +12,12 @@ const css = await readFile(
   "utf8",
 );
 
-test("location picker is mounted globally without changing checkout source", () => {
-  assert.match(layout, /CustomerLocationPickerUx/);
+const customerPage = await readFile(new URL("../app/page.js", import.meta.url), "utf8");
+
+test("location picker is scoped inside the authenticated Customer boundary", () => {
+  assert.match(customerPage, /CustomerLocationPickerUx/);
   assert.match(layout, /customer-location-picker-ux\.css/);
-  assert.match(layout, /<CustomerLocationPickerUx \/>/);
+  assert.match(customerPage, /<CustomerLocationPickerUx \/>/);
 });
 
 test("location search uses minimum query and debounce contract", () => {

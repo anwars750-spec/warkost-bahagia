@@ -188,7 +188,7 @@ test("onboarding desktop/mobile mempertahankan auth contract dan OTP nyata", () 
   const page = fs.readFileSync(
     path.join(projectRoot, "app", "page.js"),
     "utf8",
-  );
+  ) + fs.readFileSync(path.join(projectRoot, "app", "CustomerAuth.js"), "utf8");
   const style = fs.readFileSync(
     path.join(projectRoot, "app", "style.css"),
     "utf8",
@@ -219,7 +219,7 @@ test("onboarding desktop/mobile mempertahankan auth contract dan OTP nyata", () 
     style,
     /\.auth-onboarding\s*{[\s\S]*?grid-template-columns:\s*minmax\(360px,[\s\S]*?minmax\(390px/,
   );
-  assert.match(style, /\.auth-card\s*{[\s\S]*?display:\s*none/);
+  assert.match(style, /\.auth-card\s*{[\s\S]*?display:\s*block/);
   assert.match(style, /\.auth-card\.active\s*{[\s\S]*?display:\s*block/);
   const mobileAuthCss = style.slice(style.indexOf("@media (max-width: 760px)"));
   assert.match(mobileAuthCss, /\.auth-mobile-switch\s*{[\s\S]*?order:\s*1/);
@@ -231,7 +231,7 @@ test("aksi produk guest mengarahkan bersih ke login", () => {
   const page = fs.readFileSync(
     path.join(projectRoot, "app", "page.js"),
     "utf8",
-  );
+  ) + fs.readFileSync(path.join(projectRoot, "app", "CustomerAuth.js"), "utf8");
   assert.match(
     page,
     /className="guest-product-cta"[\s\S]*?setMode\("login"\);[\s\S]*?setView\("auth"\);[\s\S]*?Pesan/,
@@ -243,7 +243,7 @@ test("logo transparan valid dipakai konsisten pada header dan auth", async () =>
   const page = fs.readFileSync(
     path.join(projectRoot, "app", "page.js"),
     "utf8",
-  );
+  ) + fs.readFileSync(path.join(projectRoot, "app", "CustomerAuth.js"), "utf8");
   const style = fs.readFileSync(
     path.join(projectRoot, "app", "style.css"),
     "utf8",
@@ -296,7 +296,7 @@ test("header auth hanya menampilkan Menu, Bantuan, dan Masuk", () => {
   const page = fs.readFileSync(
     path.join(projectRoot, "app", "page.js"),
     "utf8",
-  );
+  ) + fs.readFileSync(path.join(projectRoot, "app", "CustomerAuth.js"), "utf8");
   const authNavigation = page.slice(
     page.indexOf('{view === "auth" && ('),
     page.indexOf('className="guest-login-nav"'),
@@ -314,7 +314,7 @@ test("checkout quick address menyimpan, memilih, dan memicu ulang quote tanpa me
   const page = fs.readFileSync(
     path.join(projectRoot, "app", "page.js"),
     "utf8",
-  );
+  ) + fs.readFileSync(path.join(projectRoot, "app", "CustomerAuth.js"), "utf8");
   const style = fs.readFileSync(
     path.join(projectRoot, "app", "style.css"),
     "utf8",
@@ -367,7 +367,7 @@ test("CTA produk dan ringkasan cart mobile memakai hierarchy compact tanpa overl
   const page = fs.readFileSync(
     path.join(projectRoot, "app", "page.js"),
     "utf8",
-  );
+  ) + fs.readFileSync(path.join(projectRoot, "app", "CustomerAuth.js"), "utf8");
   const style = fs.readFileSync(
     path.join(projectRoot, "app", "style.css"),
     "utf8",
@@ -406,7 +406,7 @@ test("menu akun menjadi satu-satunya entry point delapan aksi akun", () => {
   const page = fs.readFileSync(
     path.join(projectRoot, "app", "page.js"),
     "utf8",
-  );
+  ) + fs.readFileSync(path.join(projectRoot, "app", "CustomerAuth.js"), "utf8");
   const overviewStart = page.indexOf('<section className="account-overview"');
   const columnsStart = page.indexOf(
     '<div className="columns account-columns">',
@@ -441,7 +441,7 @@ test("voucher success auto-dismiss dan quote hanya dipanggil untuk state valid",
   const page = fs.readFileSync(
     path.join(projectRoot, "app", "page.js"),
     "utf8",
-  );
+  ) + fs.readFileSync(path.join(projectRoot, "app", "CustomerAuth.js"), "utf8");
   assert.match(
     page,
     /function showTransientMessage\(text, duration = 2500\)[\s\S]*?setTimeout\([\s\S]*?setMessage\(\(current\) => \(current === text \? "" : current\)\)[\s\S]*?duration/,

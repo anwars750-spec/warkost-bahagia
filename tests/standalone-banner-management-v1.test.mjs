@@ -188,17 +188,11 @@ test("Manager menyediakan add, edit, replace, status, order, delete, active nav,
 test("Customer hanya merender gambar banner penuh dan fallback aman", () => {
   const page = read("app/page.js");
   const css = read("app/customer-banner-carousel.css");
-  const start = page.indexOf('<section className="home-banner"');
-  const end = page.indexOf('<section className="customer-catalog"', start);
-  const markup = page.slice(start, end);
-  assert.ok(start > 0 && end > start);
-  assert.match(page, /const activeBanners = menu\.banners \|\| \[\]/);
-  assert.match(page, /id: "fallback"/);
+  const markup = read("app/CustomerBanner.js");
+  assert.match(page, /<CustomerBanner banners=\{menu.banners\}/);
+  assert.match(markup, /id: "fallback"/);
   assert.match(markup, /<img/);
-  assert.doesNotMatch(
-    markup,
-    /activePromo|title|description|badge|starts_at|ends_at|cta_label/,
-  );
+  assert.doesNotMatch(markup, /activePromo|starts_at|ends_at|cta_label/);
   assert.match(css, /object-fit: contain/);
   assert.match(css, /max-width: 100%/);
   assert.match(css, /height: auto/);

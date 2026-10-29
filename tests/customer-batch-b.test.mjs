@@ -111,10 +111,9 @@ test("registrasi duplicate email/phone tidak membuat akun kedua", async () => {
 });
 
 test("kontrak UI tidak mengekspos social login atau input koordinat mentah dan memakai OTP nyata", () => {
-  const page = fs.readFileSync(
-    new URL("../app/page.js", import.meta.url),
-    "utf8",
-  );
+  const page =
+    fs.readFileSync(new URL("../app/page.js", import.meta.url), "utf8") +
+    fs.readFileSync(new URL("../app/CustomerAuth.js", import.meta.url), "utf8");
   assert.doesNotMatch(
     page,
     /Google Sign-In|Masuk dengan Google|Apple Sign-In|Masuk dengan Apple/,

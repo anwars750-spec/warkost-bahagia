@@ -18,8 +18,10 @@ const { syncAccountPointReadyState } = await import(
   "../app/CustomerAccountAddressLocationFirst.js"
 );
 
+const customerPage = fs.readFileSync(new URL("../app/page.js", import.meta.url), "utf8");
+
 test("native account address runtime is mounted", () => {
-  assert.match(layout, /CustomerAccountAddressLocationFirst/);
+  assert.match(customerPage, /CustomerAccountAddressLocationFirst/);
   assert.match(runtime, /wloc-native-location-first/);
 });
 

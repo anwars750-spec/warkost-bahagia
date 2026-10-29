@@ -2665,7 +2665,7 @@ button.pickup-complete-button {
   font-weight: 850;
 }
 .auth-card {
-  display: none;
+  display: block;
   align-self: center;
   padding: 25px 24px;
   background: rgba(255, 253, 249, 0.97);
@@ -2938,7 +2938,7 @@ button.pickup-complete-button {
   }
   .auth-card {
     order: 2;
-    display: none;
+    display: block;
     padding: 21px 18px;
     border-radius: 22px;
   }
@@ -4835,3 +4835,5 @@ button.pickup-complete-button {
   border-top: 1px solid #eadbce;
   color: #8f321e;
 }
+
+.auth-feedback { padding: 12px; border: 1px solid #e5b9a7; border-radius: 12px; background: #fff1e9; color: #852c1e; font-size: 13px; line-height: 1.5; }

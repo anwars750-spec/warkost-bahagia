@@ -9,7 +9,7 @@ test("Admin role resolution never renders a guest workspace before session I/O c
   assert.ok(
     page.indexOf("if (!sessionResolved)") < page.indexOf("data-admin-view="),
   );
-  assert.match(page, /setUser\(me.user\);\s*setSessionResolved\(true\)/);
+  assert.match(page, /setUser\(me.user\);\s*setSessionFailure\(""\);\s*setSessionResolved\(true\)/);
 });
 test("Admin final operations markup is React-owned before the first workspace paint", () => {
   const page = read("app/page.js"),

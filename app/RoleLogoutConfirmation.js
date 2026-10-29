@@ -4,7 +4,7 @@ import { useEffect } from "react";
 
 const LOGOUT_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></svg>`;
 
-const TARGET_ROLES = new Set(["ADMIN", "DRIVER", "CUSTOMER", "MANAGER", "OWNER"]);
+const TARGET_ROLES = new Set(["ADMIN", "DRIVER", "MANAGER", "OWNER"]);
 
 const COPY = {
   ADMIN: {
@@ -18,12 +18,6 @@ const COPY = {
     title: "Keluar dari akun Driver?",
     description:
       "Pastikan status pengantaran dan setoran COD sudah diperbarui sebelum mengakhiri sesi.",
-  },
-  CUSTOMER: {
-    kicker: "AKHIRI SESI CUSTOMER",
-    title: "Keluar dari akun Customer?",
-    description:
-      "Pesanan dan riwayat akun tetap tersimpan. Anda dapat masuk kembali kapan saja.",
   },
   MANAGER: {
     kicker: "AKHIRI SESI MANAGER",
@@ -97,7 +91,7 @@ export default function RoleLogoutConfirmation() {
 
     const open = (role, button) => {
       close();
-      const copy = COPY[role] || COPY.CUSTOMER;
+      const copy = COPY[role] || COPY.ADMIN;
       sourceButton = button;
       layer = document.createElement("div");
       layer.className = "kitchen-logout-layer role-logout-layer";
@@ -124,7 +118,7 @@ export default function RoleLogoutConfirmation() {
 
     const onClick = async (event) => {
       const button = event.target.closest("button");
-      if (!button) return;
+      if (!button || button.dataset.customerLogout === "true") return;
       if (button.closest(".role-logout-layer") || button.closest(".kitchen-logout-layer")) {
         return;
       }

@@ -15,9 +15,11 @@ const layoutSource = await readFile(
   "utf8",
 );
 
+const customerPage = await readFile(new URL("../app/page.js", import.meta.url), "utf8");
+
 test("customer help chat stays inside Customer Service and call action is hidden", () => {
-  assert.match(layoutSource, /<CustomerHelpRoutingRuntime \/>/);
-  assert.match(layoutSource, /<CustomerGeneralSupportRuntime \/>/);
+  assert.match(customerPage, /<CustomerHelpRoutingRuntime \/>/);
+  assert.match(customerPage, /<CustomerGeneralSupportRuntime \/>/);
   assert.match(runtimeSource, /\.customer-help \.help-actions a\[href\^="tel:"\]/);
   assert.match(runtimeSource, /display: none !important/);
   assert.match(runtimeSource, /support-communication-card\.primary-chat/);

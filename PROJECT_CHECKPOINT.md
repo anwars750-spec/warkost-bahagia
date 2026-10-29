@@ -1,5 +1,22 @@
 # Warkost Bahagia â€” Project Checkpoint
 
+## Customer auth/user/home cleanup V1 - 2026-10-29
+
+Status: **IMPLEMENTED AND VERIFIED LOCALLY; LIVE STAGING REGISTRATION BLOCKED; PRODUCT OWNER UAT REQUIRED**.
+
+- Branch: `work/customer-qris-demo-uat-v1`; clean starting HEAD: `f6427c10ec1751b63aa95eb307de3a6d137a3ade`.
+- Actual authorized staging registration returned **HTTP 500 / Terjadi kesalahan server**. The existing alert was outside the laptop viewport (top approximately -263px), explaining the apparent no-op. A successful API response transitions correctly; a short-password native-validation gap was also found, but is not claimed as the confirmed valid-input UAT cause.
+- CustomerAuth conditionally mounts one active React form with visible validation/API/session feedback, busy state, synchronous duplicate-submit lock and cancellation. App remains the session/auth-mode/challenge/account authority. Session lookup failures stay unresolved with retry; login/activation/logout retain existing secure API contracts.
+- Approved catalog grouping, filters, quantity presentation and banner autoplay/dots/swipe now render in React. Removed global CustomerCatalogPolish, CustomerQuantityUnitPolish and CustomerBannerCarouselRuntime. Customer logout confirmation is React-owned. Address/checkout/QRIS/loyalty/support integrations remain scoped to the relevant Customer/public boundary.
+- Full safe regression: **537/537 PASS**, using the existing deterministic store-time test hook. Production build: **PASS**, Next.js 16.4.3, **33/33** static pages. Whitespace check: **PASS**.
+- Combined browser gate: **54/54 PASS**. Final affected Customer checks: **14/14 PASS** across final runs, including the two banner swipe rechecks. Total unique desktop/mobile browser coverage: **56 PASS**. Includes existing Staging UAT **14/14**, Admin **12/12**, Kitchen **10/10**, real Kitchen/Manager/Owner **6/6** and Customer auth/home **14/14**.
+- Real local backend tests exercise pending registration, private development mail outbox, wrong/correct OTP, resend, activation, existing demo Customer login, session refresh and full password reset. Mailer failure leaves the user inactive and consumes the challenge. These tests do **not** prove real SMTP delivery.
+- Real SMTP status: **BLOCKED / NOT VERIFIED**. Staging returns a generic server exception; the user has no server log access. The exact internal failing dependency cannot be identified from public output. The authorized failed registration may have persisted an inactive fixture before email delivery; staging operators should inspect that fixture before reusing the mailbox.
+- No backend/API/schema/migration, QRIS/payment, delivery, stock/role permission, dependency or production-secret source changes. No push, merge, workflow dispatch or deployment. No hosted MySQL/CI or Product Owner UAT PASS claim for this commit.
+- Full audit, evidence and remaining acceptance: [CUSTOMER_AUTH_HOME_CLEANUP_V1.md](CUSTOMER_AUTH_HOME_CLEANUP_V1.md).
+
+---
+
 ## Kitchen modern workspace V1 - 2026-10-29
 
 Status: **PRODUCT OWNER UAT PASS / ACCEPTED**.

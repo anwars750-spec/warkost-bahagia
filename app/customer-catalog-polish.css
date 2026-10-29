@@ -138,10 +138,6 @@
   border-bottom: 1px solid rgba(105, 66, 48, 0.11);
 }
 
-.customer-catalog .catalog-heading > button {
-  display: none !important;
-}
-
 .customer-catalog .catalog-heading > div {
   display: grid;
   gap: 3px;
