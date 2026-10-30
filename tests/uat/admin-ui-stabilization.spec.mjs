@@ -12,7 +12,7 @@ async function loginAdmin(page) {
     .click();
   const form = page.locator(".auth-login-card form");
   await form.getByLabel("Email atau Nomor HP").fill("admin@warkost.local");
-  await form.getByLabel("Password").fill(password);
+  await form.locator('input[name="password"]').fill(password);
   await form.getByRole("button", { name: "Masuk", exact: true }).click();
   await expect(page.locator("main")).toHaveAttribute(
     "data-admin-view",

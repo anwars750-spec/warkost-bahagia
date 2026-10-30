@@ -100,3 +100,37 @@ test("diagnostic failures do not change auth results", async () => {
     else process.env.AUTH_TIMINGS = previous;
   }
 });
+
+test("login profiler allowlists all requested stages and omits operation data", async () => {
+  const reports = [];
+  const stages = [
+    "login.rate_limit",
+    "login.user_lookup",
+    "login.password_verify",
+    "login.session_issue",
+    "login.session_insert",
+    "session.lookup_join",
+  ];
+  await withAuthTimings(
+    "login",
+    async () => {
+      for (const stage of stages)
+        await authStage(stage, async () => ({
+          password: "private",
+          email: "private",
+          token: "private",
+        }));
+      authStage("unknown-login-secret", () => "private");
+    },
+    { enabled: true, report: (rows) => reports.push(rows) },
+  );
+  assert.deepEqual(
+    reports[0].map((row) => row.stage),
+    [...stages, "login.total"],
+  );
+  assert.equal(JSON.stringify(reports).includes("private"), false);
+  for (const row of reports[0]) {
+    assert.deepEqual(Object.keys(row), ["stage", "durationMs"]);
+    assert.equal(Number.isFinite(row.durationMs), true);
+  }
+});

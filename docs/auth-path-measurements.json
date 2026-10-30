@@ -1,0 +1,108 @@
+{
+  "date": "2026-10-30",
+  "baselineCommit": "00d6ca38c77a3df2d16ebe587bd699548f326ca6",
+  "scope": "Controlled local measurements only. No VPS/staging performance claim. 7 warm medians per series.",
+  "sqlite": {
+    "before": {
+      "scope": "Local production bundle + SQLite; 7 warm sequential samples, no VPS/MySQL claim. Phase labels do not restore source/build.",
+      "metricsMs": {
+        "rateLimit": 1.557,
+        "passwordVerify": 104.831,
+        "sessionCreation": 1.806,
+        "loginPipeline": 109.665,
+        "completeHttpRequest": 104.928
+      },
+      "serverStages": []
+    },
+    "after": {
+      "scope": "Local production bundle + SQLite; 7 warm sequential samples, no VPS/MySQL claim. Phase labels do not restore source/build.",
+      "metricsMs": {
+        "rateLimit": 1.559,
+        "passwordVerify": 108.737,
+        "sessionCreation": 3.249,
+        "loginPipeline": 116.082,
+        "completeHttpRequest": 122.606
+      },
+      "httpRateLimitBodyFieldIsolation": "PASS",
+      "serverStages": [
+        {
+          "stage": "request.parse",
+          "durationMs": 0.684
+        },
+        {
+          "stage": "login.rate_limit",
+          "durationMs": 1.41
+        },
+        {
+          "stage": "login.user_lookup",
+          "durationMs": 0.246
+        },
+        {
+          "stage": "login.password_verify",
+          "durationMs": 104.409
+        },
+        {
+          "stage": "login.session_insert",
+          "durationMs": 3.034
+        },
+        {
+          "stage": "login.session_issue",
+          "durationMs": 3.242
+        },
+        {
+          "stage": "login.total",
+          "durationMs": 111.366
+        }
+      ]
+    }
+  },
+  "nativeMysql": {
+    "benchmark": {
+      "scope": "Disposable local MySQL; 7 warm medians; modeled login pipeline, not HTTP or VPS; durability settings unchanged",
+      "metricsMs": {
+        "before": {
+          "rateLimit": 5.228,
+          "passwordVerify": 94.187,
+          "sessionCreation": 3.658,
+          "loginPipeline": 106.942
+        },
+        "after": {
+          "rateLimit": 2.773,
+          "passwordVerify": 86.923,
+          "sessionCreation": 2.95,
+          "loginPipeline": 95.332
+        }
+      }
+    },
+    "proof": {
+      "result": "PASS",
+      "mysqlVersion": "8.4.9",
+      "durability": {
+        "innodbFlushLogAtTrxCommit": 1,
+        "syncBinlog": 1,
+        "doublewrite": "ON"
+      },
+      "generalQueryLog": 0,
+      "sameKeyRequests": 100,
+      "allowed": 12,
+      "independentKeysAllowed": [
+        12,
+        12,
+        12
+      ],
+      "saturatedDenials": 10,
+      "windowBoundary": "PASS",
+      "boundedCleanup": "PASS",
+      "pooledDecisionIsolation": "PASS"
+    }
+  },
+  "durableWriteTransactions": {
+    "normalSuccessfulLoginBefore": 2,
+    "normalSuccessfulLoginAfter": 2
+  },
+  "verification": {
+    "unitSuite": "562/562 PASS",
+    "browser": "60 unique passing cases: 58 in combined run, 2/2 targeted Admin lifecycle rerun after fixture prerequisite correction",
+    "build": "PASS Next.js 16.4.3, 33/33 static pages"
+  }
+}

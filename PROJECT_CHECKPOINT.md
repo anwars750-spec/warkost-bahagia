@@ -1,5 +1,21 @@
 # Warkost Bahagia â€” Project Checkpoint
 
+## Auth Path Hardening V1 - 2026-10-30
+
+Status: **IMPLEMENTED / VERIFIED LOCALLY; STAGING TIMINGS AND PRODUCT OWNER UAT REQUIRED**.
+
+- Branch: `work/customer-qris-demo-uat-v1`; clean baseline: `00d6ca38c77a3df2d16ebe587bd699548f326ca6`.
+- Latest PO evidence identifies severe VPS storage/fsync latency (MySQL COMMIT 355.1–1173.1 ms). Provider investigation remains open. No staging/production environment or durability setting was changed.
+- Limiter is now one atomic MySQL upsert / SQLite RETURNING statement; exact fixed-window boundary, limits and durable cross-process protection remain. Decision uses the same statement result, not a racy follow-up SELECT or affectedRows heuristic. Saturates at max+1 and fails closed on invalid metadata/storage errors.
+- Action-specific identifiers prevent unrelated challengeId rotation; normalized phone spellings share a bucket. No trusted proxy/client-IP contract was found; arbitrary forwarded IPs are ignored. Broad identifier spraying remains a documented limitation.
+- Login scrypt verification is async with unchanged legacy hash format/parameters. Guarded session INSERT SELECT rechecks active, role and byte-identical password hash. Other issuers/OTP account guards remain. currentUser joins sessions/users while retaining signature/expiry/revocation/user/final-role checks.
+- Normal successful login: 6 → 3 data SQL statements, 1 → 0 explicit transactions, **2 → 2 durable write transactions**. Autocommit does not eliminate fsync. Awaited periodic limiter DELETE is removed; bounded explicit maintenance helper is never called from requests. Session retention remains a follow-up, with logical revocation/expiry enforcement unchanged.
+- AUTH_TIMINGS stays opt-in, now including login.rate_limit/user_lookup/password_verify/session_issue/session_insert/total and session.lookup_join. Only allowlisted stage names and numeric durations; no identifiers, credentials, OTPs, tokens or SQL arguments logged.
+- Final isolated local MySQL 8.4.9 medians: rate-limit 5.228 → 2.773 ms, modeled login 106.942 → 95.332 ms; native durability 1/1 and doublewrite ON. SQLite production HTTP 104.928 → 122.606 ms: no SQLite end-to-end speedup claimed. Neither series establishes VPS performance.
+- Full safe suite **562/562 PASS**; production build **PASS**, Next 16.4.3, 33/33 static pages. Browser **60 unique PASS**: combined 58 plus focused 2/2 Admin lifecycle rerun after fixing local fixture prerequisites; no single clean 60-run claim. No Admin business rule/UI was changed. Native MySQL 100 same-key requests admit 12; three independent keys each admit 12; worker SQLite concurrency, session mutation and HTTP bucket-bypass checks pass.
+- No application schema/migration/dependency, payment/QRIS, checkout/order, delivery, role business-rule, realtime, stock or loyalty implementation change. No push, merge, workflow dispatch or deployment.
+- Full audit, reproduction and evidence: [AUTH_PATH_HARDENING_V1.md](AUTH_PATH_HARDENING_V1.md); [safe measurements](docs/auth-path-measurements.json).
+
 ## Customer Auth Latency Polish V1 - 2026-10-30
 
 Status: **IMPLEMENTED / VERIFIED LOCALLY; VPS TIMINGS AND PRODUCT OWNER UAT REQUIRED**.

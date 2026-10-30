@@ -1,11 +1,15 @@
 import { authStage, withAuthTimings } from "../../../lib/auth-timing.mjs";
 import { NextResponse } from "next/server";
-import { recordAttempt } from "../../../lib/rate-limit.mjs";
+import {
+  recordAttempt,
+  authAttemptIdentifier,
+} from "../../../lib/rate-limit.mjs";
 import { assertSameOrigin, readJsonBody } from "../../../lib/request.mjs";
 import * as store from "../../../lib/store.mjs";
 import {
   currentUser,
   issueSession,
+  issueSessionForAuthenticatedAccount,
   revokeSession,
   sessionSecret,
 } from "../../../lib/auth.mjs";
@@ -510,7 +514,9 @@ export async function GET(request, { params }) {
 }
 export async function POST(request, context) {
   const { action } = await context.params;
-  return withAuthTimings(action, () => postAction(request, { params: Promise.resolve({ action }) }));
+  return withAuthTimings(action, () =>
+    postAction(request, { params: Promise.resolve({ action }) }),
+  );
 }
 async function postAction(request, { params }) {
   try {
@@ -529,28 +535,25 @@ async function postAction(request, { params }) {
       ].includes(action)
     ) {
       if (
-        !(await authStage("request.rate_limit", () => recordAttempt(
-          action,
-          String(
-            body.challengeId ||
-              body.identifier ||
-              body.email ||
-              body.phone ||
-              body.name ||
-              "",
-          )
-            .trim()
-            .toLowerCase()
-            .slice(0, 255),
-          action === "otp-verify" ? 10 : 12,
-        )))
+        !(await authStage(
+          action === "login" ? "login.rate_limit" : "request.rate_limit",
+          () =>
+            recordAttempt(
+              action,
+              authAttemptIdentifier(action, body),
+              action === "otp-verify" ? 10 : 12,
+            ),
+        ))
       )
         throw new DomainError(
           "Terlalu banyak percobaan. Coba lagi nanti.",
           429,
         );
     }
-    const user = await authStage("request.session_lookup", () => currentUser(request));
+    const user =
+      action === "login"
+        ? null
+        : await authStage("request.session_lookup", () => currentUser(request));
     if (action === "profile" && body.newPassword && user) {
       if (!(await recordAttempt("profile", user.id, 5)))
         throw new DomainError(
@@ -594,7 +597,9 @@ async function postAction(request, { params }) {
     }
     if (action === "otp-verify") {
       if (body.purpose === OTP_PURPOSES.REGISTRATION) {
-        const result = await verifyRegistrationOtp(body, Date.now(), { createSession: true });
+        const result = await verifyRegistrationOtp(body, Date.now(), {
+          createSession: true,
+        });
         if (result.alreadyVerified)
           return out({ verified: true, alreadyVerified: true });
         const response = out({
@@ -606,7 +611,13 @@ async function postAction(request, { params }) {
             role: result.user.role,
           },
         });
-        authStage("session.cookie", () => response.cookies.set("wb_session", result.sessionToken, cookieOptions(request)));
+        authStage("session.cookie", () =>
+          response.cookies.set(
+            "wb_session",
+            result.sessionToken,
+            cookieOptions(request),
+          ),
+        );
         return response;
       }
       if (body.purpose === OTP_PURPOSES.PASSWORD_RESET)
@@ -638,7 +649,9 @@ async function postAction(request, { params }) {
       });
       response.cookies.set(
         "wb_session",
-        await issueSession(account),
+        await authStage("login.session_issue", () =>
+          issueSessionForAuthenticatedAccount(account),
+        ),
         cookieOptions(request),
       );
       return response;
