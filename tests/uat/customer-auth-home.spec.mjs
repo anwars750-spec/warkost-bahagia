@@ -619,3 +619,45 @@ test("real isolated registration, mail invocation, OTP activation, legacy Custom
     database.close();
   }
 });
+
+test("OTP success renders directly from the authoritative response without waiting for account/menu refresh", async ({
+  page,
+}) => {
+  const state = await fixture(page);
+  let verification,
+    verifyRequests = 0;
+  await page.route("**/api/otp-verify", (route) => {
+    verifyRequests++;
+    verification = route;
+  });
+  await openRegister(page);
+  const form = await fillRegistration(page);
+  await registerButton(form).click();
+  await expect(page.locator(".auth-otp-card")).toBeVisible();
+  await page.locator('[name="code"]').fill("739251");
+  const menuReads = state.reads.menu;
+  await page
+    .getByRole("button", { name: "Verifikasi Kode", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Memverifikasi…", exact: true }),
+  ).toBeDisabled();
+  await page
+    .locator(".auth-otp-card form")
+    .evaluate((form) =>
+      form.dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      ),
+    );
+  await expect.poll(() => verifyRequests).toBe(1);
+  await expect(page.locator(".auth-success-card")).toHaveCount(0);
+  await verification.fulfill({
+    status: 200,
+    json: { verified: true, user: customer },
+  });
+  await expect(
+    page.getByRole("heading", { name: "Akun Sudah Aktif", exact: true }),
+  ).toBeVisible();
+  expect(state.reads.account || 0).toBe(0);
+  expect(state.reads.menu).toBe(menuReads);
+});

@@ -1,5 +1,24 @@
 # Warkost Bahagia â€” Project Checkpoint
 
+## Customer Auth Latency Polish V1 - 2026-10-30
+
+Status: **IMPLEMENTED / VERIFIED LOCALLY; VPS TIMINGS AND PRODUCT OWNER UAT REQUIRED**.
+
+- Branch: `work/customer-qris-demo-uat-v1`; clean starting HEAD: `56146b69f3a568b6bcbd239e3c3727e3b045e7a1`.
+- Per the latest Product Owner report, IDCloudHost resolved the earlier SMTP egress blocker; real Gmail registration/OTP activation/session restore are functionally PASS. The supplied VPS STARTTLS handshake is 0.840 s. These are user-reported staging facts; this task did not perform a live mailbox operation or staging release.
+- Opt-in `AUTH_TIMINGS=1` profiles only register/otp-verify with allowlisted stage names and durations. Includes parsing, rate limit, DB transactions/checkout, hashing, SMTP phases, activation and session/cookie work. No OTP/password/credentials/identifiers/tokens are logged. Default remains off; no environment file changed.
+- Final DATA 250 remains required for registration success. SMTP QUIT cleanup is now bounded and outside the HTTP critical path; pre-acceptance failures still fail closed. Verified TLS, SMTP AUTH and acceptance semantics remain.
+- Registration uses the same scrypt parameters/salt/key format asynchronously before the DB transaction, so it no longer blocks the event loop or holds a write lock while hashing.
+- OTP activation, loyalty creation, challenge consumption and session issuance now share the transaction/connection. The active-account check remains; session failure rolls all activation work back. The default session helper behavior remains for other callers.
+- Controlled local median (five warm samples, production bundle, isolated SQLite, trusted loopback STARTTLS fixture): register **587.688 -> 359.307 ms**; customer transaction **116.412 -> 3.206 ms**; QUIT **258.712 ms critical -> 253.205 ms background**. Fixture delays are explicit and are not Gmail/VPS measurements.
+- Local verification total **6.457 -> 7.717 ms**: **no end-to-end verification speedup claimed**. Session issuance **1.729 -> 0.370 ms**; the MySQL adapter test confirms one activation checkout with no extra standalone pool operations, retaining the same queries. The real VPS several-second delay was not reproduced or diagnosed by guesswork.
+- Frontend submitOtp already transitions directly after the authoritative response and remains unchanged. The new held-response browser test proves duplicate protection, no premature success and no required account/menu refresh before success.
+- Full safe regression **549/549 PASS** (existing deterministic open-hours test clock), production build **PASS / 33/33** static pages, combined browser **58/58 PASS** desktop/mobile (Customer 16, Admin 12, Kitchen 10, real Kitchen/Manager/Owner 6, existing Staging UAT 14). Final diagnostic/checkout recheck **4/4 PASS** and OTP/atomic recheck **10/10 PASS**.
+- OTP expiry/max attempts/resend cooldown, session security/cookies, schema, QRIS/payment, delivery and role business rules are preserved. No Customer redesign, frontend runtime change, dependency change, push, merge, workflow dispatch or deployment.
+- Full stage tables, reproducibility, protocol evidence and limits: [AUTH_LATENCY_POLISH_V1.md](AUTH_LATENCY_POLISH_V1.md); safe raw medians: [docs/auth-latency-measurements.json](docs/auth-latency-measurements.json).
+
+---
+
 ## Customer auth/user/home cleanup V1 - 2026-10-29
 
 Status: **IMPLEMENTED AND VERIFIED LOCALLY; LIVE STAGING REGISTRATION BLOCKED; PRODUCT OWNER UAT REQUIRED**.

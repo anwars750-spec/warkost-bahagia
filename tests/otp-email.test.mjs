@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -328,10 +329,9 @@ test("API dan UI mengikat OTP nyata tanpa mengekspos SMTP atau debug stage", () 
     new URL("../app/api/[action]/route.js", import.meta.url),
     "utf8",
   );
-  const page = fs.readFileSync(
-    new URL("../app/page.js", import.meta.url),
-    "utf8",
-  ) + fs.readFileSync(new URL("../app/CustomerAuth.js", import.meta.url), "utf8");
+  const page =
+    fs.readFileSync(new URL("../app/page.js", import.meta.url), "utf8") +
+    fs.readFileSync(new URL("../app/CustomerAuth.js", import.meta.url), "utf8");
   const envExample = fs.readFileSync(
     new URL("../.env.example", import.meta.url),
     "utf8",
@@ -350,19 +350,141 @@ test("API dan UI mengikat OTP nyata tanpa mengekspos SMTP atau debug stage", () 
 });
 
 test("mailer failure keeps the pending account inactive and consumes its undelivered challenge", async () => {
-  const previous = { transport: process.env.EMAIL_TRANSPORT, host: process.env.SMTP_HOST };
+  const previous = {
+    transport: process.env.EMAIL_TRANSPORT,
+    host: process.env.SMTP_HOST,
+  };
   const before = outbox().length;
   process.env.EMAIL_TRANSPORT = "smtp";
   delete process.env.SMTP_HOST;
   try {
     await assert.rejects(registerCustomer(registration(99)), /SMTP_HOST/);
-    const pending = database.prepare("SELECT id,active,email_verified_at FROM users WHERE email=?").get("otp-99@example.test");
+    const pending = database
+      .prepare("SELECT id,active,email_verified_at FROM users WHERE email=?")
+      .get("otp-99@example.test");
     assert.equal(pending.active, 0);
     assert.equal(pending.email_verified_at, null);
-    assert.ok(database.prepare("SELECT consumed_at FROM otp_challenges WHERE user_id=? ORDER BY id DESC LIMIT 1").get(pending.id).consumed_at);
+    assert.ok(
+      database
+        .prepare(
+          "SELECT consumed_at FROM otp_challenges WHERE user_id=? ORDER BY id DESC LIMIT 1",
+        )
+        .get(pending.id).consumed_at,
+    );
     assert.equal(outbox().length, before);
   } finally {
     process.env.EMAIL_TRANSPORT = previous.transport;
-    if (previous.host === undefined) delete process.env.SMTP_HOST; else process.env.SMTP_HOST = previous.host;
+    if (previous.host === undefined) delete process.env.SMTP_HOST;
+    else process.env.SMTP_HOST = previous.host;
   }
 });
+
+test("session issuance commits atomically with activation and OTP consumption", async () => {
+  const pending = await registerCustomer(registration(77));
+  const code = latestCode();
+  const row = database
+    .prepare("SELECT id FROM users WHERE email=?")
+    .get("otp-77@example.test");
+  database.exec(
+    "CREATE TRIGGER reject_latency_session BEFORE INSERT ON sessions BEGIN SELECT RAISE(ABORT, 'forced session failure'); END;",
+  );
+  try {
+    await assert.rejects(
+      verifyRegistrationOtp(
+        { challengeId: pending.challengeId, code },
+        Date.now(),
+        { createSession: true },
+      ),
+      /forced session failure/,
+    );
+    assert.equal(
+      database.prepare("SELECT active FROM users WHERE id=?").get(row.id)
+        .active,
+      0,
+    );
+    assert.equal(
+      database
+        .prepare("SELECT consumed_at FROM otp_challenges WHERE public_id=?")
+        .get(pending.challengeId).consumed_at,
+      null,
+    );
+    assert.equal(
+      database
+        .prepare("SELECT COUNT(*) count FROM loyalty_accounts WHERE user_id=?")
+        .get(row.id).count,
+      0,
+    );
+  } finally {
+    database.exec("DROP TRIGGER reject_latency_session");
+  }
+  const result = await verifyRegistrationOtp(
+    { challengeId: pending.challengeId, code },
+    Date.now(),
+    { createSession: true },
+  );
+  assert.equal(typeof result.sessionToken === "string", true);
+  assert.equal(
+    (
+      await currentUser({
+        cookies: { get: () => ({ value: result.sessionToken }) },
+      })
+    ).id,
+    row.id,
+  );
+  const repeated = await verifyRegistrationOtp(
+    { challengeId: pending.challengeId, code },
+    Date.now(),
+    { createSession: true },
+  );
+  assert.equal(repeated.alreadyVerified === true && !("sessionToken" in repeated), true);
+  assert.equal(
+    database
+      .prepare("SELECT COUNT(*) count FROM sessions WHERE user_id=?")
+      .get(row.id).count,
+    1,
+  );
+});
+
+test(
+  "pending async registration hashing does not hold the database write lock or block another OTP verification",
+  { timeout: 30000 },
+  async () => {
+    const pending = await registerCustomer(registration(78));
+    const code = latestCode();
+    const original = crypto.scrypt;
+    let release, entered;
+    const gate = new Promise((resolve) => {
+      release = resolve;
+    });
+    const started = new Promise((resolve) => {
+      entered = resolve;
+    });
+    crypto.scrypt = (...args) => {
+      entered();
+      void gate.then(() => original(...args));
+    };
+    const registrationWork = registerCustomer(registration(79));
+    try {
+      await started;
+      const verified = await verifyRegistrationOtp({
+        challengeId: pending.challengeId,
+        code,
+      });
+      assert.equal(verified.user.email === "otp-78@example.test", true);
+      assert.equal(
+        database
+          .prepare("SELECT COUNT(*) count FROM users WHERE email=?")
+          .get("otp-79@example.test").count,
+        0,
+      );
+    } finally {
+      crypto.scrypt = original;
+      release();
+      await registrationWork;
+    }
+    const created = database
+      .prepare("SELECT password_hash FROM users WHERE email=?")
+      .get("otp-79@example.test");
+    assert.equal(checkPassword(password, created.password_hash), true);
+  },
+);

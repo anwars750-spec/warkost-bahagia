@@ -1,3 +1,4 @@
+import { authStage, withAuthTimings } from "../../../lib/auth-timing.mjs";
 import { NextResponse } from "next/server";
 import { recordAttempt } from "../../../lib/rate-limit.mjs";
 import { assertSameOrigin, readJsonBody } from "../../../lib/request.mjs";
@@ -507,11 +508,15 @@ export async function GET(request, { params }) {
     return error(e);
   }
 }
-export async function POST(request, { params }) {
+export async function POST(request, context) {
+  const { action } = await context.params;
+  return withAuthTimings(action, () => postAction(request, { params: Promise.resolve({ action }) }));
+}
+async function postAction(request, { params }) {
   try {
     assertSameOrigin(request);
     const { action } = await params;
-    const body = await readJsonBody(request);
+    const body = await authStage("request.parse", () => readJsonBody(request));
     if (
       [
         "login",
@@ -524,7 +529,7 @@ export async function POST(request, { params }) {
       ].includes(action)
     ) {
       if (
-        !(await recordAttempt(
+        !(await authStage("request.rate_limit", () => recordAttempt(
           action,
           String(
             body.challengeId ||
@@ -538,14 +543,14 @@ export async function POST(request, { params }) {
             .toLowerCase()
             .slice(0, 255),
           action === "otp-verify" ? 10 : 12,
-        ))
+        )))
       )
         throw new DomainError(
           "Terlalu banyak percobaan. Coba lagi nanti.",
           429,
         );
     }
-    const user = await currentUser(request);
+    const user = await authStage("request.session_lookup", () => currentUser(request));
     if (action === "profile" && body.newPassword && user) {
       if (!(await recordAttempt("profile", user.id, 5)))
         throw new DomainError(
@@ -589,7 +594,7 @@ export async function POST(request, { params }) {
     }
     if (action === "otp-verify") {
       if (body.purpose === OTP_PURPOSES.REGISTRATION) {
-        const result = await verifyRegistrationOtp(body);
+        const result = await verifyRegistrationOtp(body, Date.now(), { createSession: true });
         if (result.alreadyVerified)
           return out({ verified: true, alreadyVerified: true });
         const response = out({
@@ -601,11 +606,7 @@ export async function POST(request, { params }) {
             role: result.user.role,
           },
         });
-        response.cookies.set(
-          "wb_session",
-          await issueSession(result.user),
-          cookieOptions(request),
-        );
+        authStage("session.cookie", () => response.cookies.set("wb_session", result.sessionToken, cookieOptions(request)));
         return response;
       }
       if (body.purpose === OTP_PURPOSES.PASSWORD_RESET)
