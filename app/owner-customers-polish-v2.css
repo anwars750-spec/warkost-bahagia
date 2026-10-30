@@ -1,0 +1,199 @@
+/* Owner Customer Center — precision polish v2 */
+
+body .occ-actions{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;justify-content:stretch;gap:8px;
+}
+body .occ-action-button{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;width:100%;
+  min-height:36px;padding:0 10px;border-radius:10px;font-size:9px;font-weight:850;white-space:nowrap;
+  transition:transform .15s ease,box-shadow .15s ease,background .15s ease,border-color .15s ease;
+}
+body .occ-action-button svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+body .occ-action-button:hover{transform:translateY(-1px)}
+body .occ-detail-button.occ-action-button{border:1px solid #d9c6b7;background:#fffaf5;color:#684630}
+body .occ-detail-button.occ-action-button:hover{border-color:#b98f73;background:#fff4e9;box-shadow:0 6px 14px rgba(105,65,42,.08)}
+body .occ-toggle.danger.occ-action-button{border:1px solid #efd1c8;background:#fff2ee;color:#9b4332}
+body .occ-toggle.danger.occ-action-button:hover{background:#fde7e1;box-shadow:0 6px 14px rgba(151,61,43,.08)}
+body .occ-toggle.success.occ-action-button{border:1px solid #cfe4d5;background:#eef8f1;color:#39724a}
+body .occ-toggle.success.occ-action-button:hover{background:#e3f3e8;box-shadow:0 6px 14px rgba(57,114,74,.08)}
+
+body .occ-modal{
+  width:min(680px,calc(100vw - 36px));max-height:min(90dvh,820px);overflow:auto;
+  border:1px solid #e4d3c5;border-radius:26px;background:#fffaf6;
+  box-shadow:0 34px 96px rgba(51,29,17,.32);
+}
+body .occ-modal-head{
+  position:sticky;top:0;z-index:3;display:grid;grid-template-columns:58px minmax(0,1fr) 44px;
+  gap:15px;align-items:center;padding:22px 24px 19px;border-bottom:1px solid #eaded4;
+  background:rgba(255,250,246,.96);backdrop-filter:blur(16px);
+}
+body .occ-modal-avatar{width:54px;height:54px;border-radius:17px;font-size:14px;box-shadow:0 8px 20px rgba(91,48,28,.17)}
+body .occ-modal-title small{font-size:9px;letter-spacing:.16em}
+body .occ-modal-title h3{margin:5px 0 0;font-size:23px;line-height:1.08}
+body .occ-modal-title p{margin:5px 0 0;font-size:10px}
+body .occ-close{
+  position:relative;display:grid;place-items:center;width:42px;height:42px;padding:0;
+  border:1px solid #dfcdbf;border-radius:13px;background:#fff;color:#674737;font-size:0;
+  box-shadow:0 4px 12px rgba(91,52,30,.05);transition:background .15s ease,border-color .15s ease,transform .15s ease;
+}
+body .occ-close:hover{border-color:#c9a98f;background:#fff3e8;transform:translateY(-1px)}
+body .occ-close>span{position:relative;width:15px;height:15px}
+body .occ-close>span::before,body .occ-close>span::after{position:absolute;left:7px;top:1px;width:1.8px;height:14px;border-radius:2px;background:#6a4635;content:""}
+body .occ-close>span::before{transform:rotate(45deg)}
+body .occ-close>span::after{transform:rotate(-45deg)}
+
+body .occ-modal-body{gap:16px;padding:20px 24px 24px}
+body .occ-profile-status{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;
+  border:1px solid #e9ddd3;border-radius:15px;background:#fff;
+}
+body .occ-profile-status>div:first-child{display:flex;align-items:center;gap:10px}
+body .occ-profile-status>div:first-child>small{color:#9a887d;font-size:9px}
+body .occ-member-since{text-align:right}
+body .occ-member-since span{display:block;color:#9b877b;font-size:8px;text-transform:uppercase;letter-spacing:.08em}
+body .occ-member-since strong{display:block;margin-top:4px;color:#56392b;font-size:10px}
+
+body .occ-detail-grid{gap:11px}
+body .occ-detail-grid>div.occ-detail-card{min-height:92px;padding:15px 16px;border-radius:15px;background:linear-gradient(145deg,#fff,#fffaf6)}
+body .occ-detail-card span{font-size:8px;letter-spacing:.08em}
+body .occ-detail-card strong{margin-top:7px;font-size:15px;line-height:1.2}
+body .occ-detail-card small{display:block;margin-top:6px;color:#9a877b;font-size:8px}
+
+body .occ-contact-card{padding:15px 16px;border-radius:15px;background:#fff}
+body .occ-section-label{margin-bottom:10px;color:#a35d38;font-size:8px;font-weight:900;letter-spacing:.14em}
+body .occ-contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+body .occ-contact-grid>div{min-width:0;padding:11px 12px;border-radius:11px;background:#fbf7f3}
+body .occ-contact-grid span{font-size:8px}
+body .occ-contact-grid strong{overflow-wrap:anywhere;margin-top:5px;font-size:10px}
+
+body .occ-rule-note{display:grid;grid-template-columns:34px minmax(0,1fr);gap:11px;align-items:start;padding:14px 15px;border-radius:15px}
+body .occ-rule-icon{display:grid;place-items:center;width:30px;height:30px;border-radius:10px;background:#f4dfc9;color:#8a4d2d;font-size:13px;font-weight:900}
+body .occ-rule-note strong{font-size:10px}
+body .occ-rule-note div>span{font-size:9px;line-height:1.55}
+
+body .occ-modal-footer{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding-top:2px;
+}
+body .occ-modal-secondary,body .occ-modal-action{
+  width:100%;min-height:44px;padding:0 12px;border-radius:12px;font-size:10px;font-weight:900;cursor:pointer;
+  transition:transform .15s ease,box-shadow .15s ease,background .15s ease;
+}
+body .occ-modal-secondary{border:1px solid #dccabd;background:#fff;color:#704f3e}
+body .occ-modal-secondary:hover{background:#fff5ec;transform:translateY(-1px)}
+body .occ-modal-action:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(78,42,23,.12)}
+
+body .occ-backdrop.confirm{place-items:center;padding:20px}
+body .occ-confirm{
+  width:min(420px,calc(100vw - 40px));margin:auto;padding:22px 22px 20px;
+  border:1px solid #dfcdbd;border-radius:22px;background:#fffaf6;
+  box-shadow:0 30px 82px rgba(52,29,16,.3);text-align:center;
+}
+body .occ-confirm.success{border-color:#cfe4d5}
+body .occ-confirm.danger{border-color:#ebc9bf}
+body .occ-confirm-icon{
+  display:grid;place-items:center;width:50px;height:50px;margin:0 auto 11px;
+  border-radius:16px;font-size:21px;font-weight:900;
+}
+body .occ-confirm-kicker{display:block;margin-bottom:6px;color:#a05a36;font-size:8px;font-weight:900;letter-spacing:.16em}
+body .occ-confirm h3{margin:0;color:#3f2a1f;font-size:20px;line-height:1.2}
+body .occ-confirm-customer{
+  display:flex;align-items:center;gap:10px;margin:14px 0 0;padding:11px 12px;
+  border:1px solid #e8d9cd;border-radius:13px;background:#fff;text-align:left;
+}
+body .occ-confirm-avatar{display:grid;place-items:center;flex:0 0 auto;width:36px;height:36px;border-radius:11px;background:#f2dfd0;color:#7c4328;font-size:10px;font-weight:900}
+body .occ-confirm-customer strong{display:block;color:#432d22;font-size:11px}
+body .occ-confirm-customer small{display:block;margin-top:3px;color:#958176;font-size:8px}
+body .occ-confirm p{max-width:340px;margin:12px auto 0;color:#806e63;font-size:9.5px;line-height:1.55}
+body .occ-confirm-actions{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:16px;
+}
+body .occ-confirm-actions button{
+  width:100%;min-height:42px;padding:0 12px;border-radius:11px;font-size:9.5px;font-weight:900;
+  transition:transform .15s ease,box-shadow .15s ease,background .15s ease;
+}
+body .occ-confirm-actions button:hover:not(:disabled){transform:translateY(-1px)}
+body .occ-confirm-actions button.success:hover:not(:disabled){background:#2f663f;box-shadow:0 8px 18px rgba(57,114,74,.16)}
+body .occ-confirm-actions button.danger:hover:not(:disabled){background:#813527;box-shadow:0 8px 18px rgba(143,63,47,.16)}
+
+@media(max-width:1180px) and (min-width:761px){
+  body .occ-row{padding-right:212px}
+  body .occ-actions{
+    position:absolute;right:18px;top:50%;transform:translateY(-50%);
+    grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;width:194px;
+  }
+}
+
+@media(max-width:760px){
+  body .occ-actions{
+    position:static;grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+    width:100%;max-width:none;transform:none;align-items:stretch;gap:8px;
+  }
+  body .occ-action-button{width:100%;min-height:40px;padding:0 8px;font-size:9px}
+  body .occ-modal{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);border-radius:20px}
+  body .occ-modal-head{grid-template-columns:48px minmax(0,1fr) 38px;gap:11px;padding:16px 15px 14px}
+  body .occ-modal-avatar{width:46px;height:46px;border-radius:14px;font-size:12px}
+  body .occ-modal-title h3{font-size:18px}
+  body .occ-close{width:36px;height:36px;border-radius:11px}
+  body .occ-close>span{transform:scale(.9)}
+  body .occ-modal-body{gap:11px;padding:14px 15px 16px}
+  body .occ-profile-status{align-items:flex-start;padding:12px 13px}
+  body .occ-profile-status>div:first-child{align-items:flex-start;flex-direction:column;gap:5px}
+  body .occ-member-since{padding-top:1px}
+  body .occ-detail-grid{grid-template-columns:1fr 1fr;gap:8px}
+  body .occ-detail-grid>div.occ-detail-card{min-height:84px;padding:12px}
+  body .occ-detail-card strong{font-size:13px}
+  body .occ-contact-grid{grid-template-columns:1fr}
+  body .occ-modal-footer{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  body .occ-modal-secondary,body .occ-modal-action{min-height:42px;padding:0 8px;font-size:9px}
+
+  body .occ-backdrop.confirm{padding:14px}
+  body .occ-confirm{width:min(400px,calc(100vw - 28px));padding:20px 18px 18px;border-radius:20px}
+  body .occ-confirm-icon{width:48px;height:48px;margin-bottom:10px;border-radius:15px;font-size:20px}
+  body .occ-confirm h3{font-size:19px}
+  body .occ-confirm-customer{margin-top:13px;padding:10px 11px}
+  body .occ-confirm p{margin-top:11px;font-size:9px}
+  body .occ-confirm-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:15px}
+  body .occ-confirm-actions button{min-height:42px;padding:0 8px;font-size:9px}
+}
+
+@media(max-width:480px){
+  body .occ-backdrop{place-items:center;padding:12px}
+
+  body .occ-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:12px}
+  body .occ-customer-cell{grid-column:1/2;min-width:0}
+  body .occ-status{grid-column:2/3;grid-row:1;justify-self:end}
+  body .occ-metric,body .occ-activity{
+    grid-column:auto!important;display:flex;min-width:0;min-height:50px;flex-direction:column;
+    align-items:flex-start;justify-content:center;gap:3px;padding:9px 10px;
+  }
+  body .occ-metric small,body .occ-activity small{margin-top:0;text-align:left}
+  body .occ-actions{grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:2px}
+  body .occ-action-button{min-width:0;min-height:40px;padding:0 6px;font-size:8.5px}
+
+  body .occ-modal{
+    width:min(380px,calc(100vw - 24px));height:auto;max-height:calc(100dvh - 24px);margin:auto;
+    justify-self:center;align-self:center;border:1px solid #e4d3c5;border-radius:20px;
+  }
+  body .occ-modal-head{padding-top:14px}
+  body .occ-modal-body{padding-bottom:16px}
+  body .occ-profile-status{flex-direction:column}
+  body .occ-member-since{text-align:left}
+  body .occ-detail-grid{grid-template-columns:1fr 1fr}
+  body .occ-modal-footer{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  body .occ-modal-secondary,body .occ-modal-action{min-width:0;min-height:42px;padding:0 6px;font-size:8.5px;white-space:normal;line-height:1.2}
+
+  body .occ-backdrop.confirm{padding:12px}
+  body .occ-confirm{
+    width:min(360px,calc(100vw - 24px));margin:auto;padding:18px 16px 16px;border-radius:19px;
+  }
+  body .occ-confirm-icon{width:46px;height:46px;margin-bottom:9px;border-radius:14px;font-size:19px}
+  body .occ-confirm-kicker{margin-bottom:5px;font-size:7.5px}
+  body .occ-confirm h3{font-size:18px;line-height:1.22}
+  body .occ-confirm-customer{gap:9px;margin-top:12px;padding:10px;border-radius:12px}
+  body .occ-confirm-avatar{width:34px;height:34px;border-radius:10px;font-size:9px}
+  body .occ-confirm-customer strong{font-size:10px}
+  body .occ-confirm-customer small{font-size:7.5px}
+  body .occ-confirm p{max-width:300px;margin-top:10px;font-size:8.5px;line-height:1.5}
+  body .occ-confirm-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:14px}
+  body .occ-confirm-actions button{min-width:0;min-height:40px;padding:0 6px;font-size:8.5px}
+}

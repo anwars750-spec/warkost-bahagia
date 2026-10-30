@@ -22,7 +22,7 @@ export default defineConfig({
       name: "mobile-chromium",
       use: {
         browserName: "chromium",
-        viewport: { width: 390, height: 844 },
+        viewport: { width: 393, height: 852 },
         isMobile: true,
         hasTouch: true,
       },

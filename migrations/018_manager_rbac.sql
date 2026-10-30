@@ -1,0 +1,15 @@
+INSERT INTO audit_logs(actor_id,action,details)
+SELECT NULL,'LEGACY_CASHIER_MIGRATED',JSON_OBJECT(
+  'userId',id,
+  'previousRole',role,
+  'role','ADMIN'
+)
+FROM users
+WHERE UPPER(CAST(role AS CHAR)) IN ('CASHIER','KASIR');
+
+UPDATE users
+SET role='ADMIN'
+WHERE UPPER(CAST(role AS CHAR)) IN ('CASHIER','KASIR');
+
+ALTER TABLE users
+  MODIFY COLUMN role ENUM('OWNER','MANAGER','ADMIN','KITCHEN','DRIVER','CUSTOMER') NOT NULL;

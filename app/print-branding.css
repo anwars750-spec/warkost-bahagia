@@ -1,0 +1,89 @@
+/* Unified print branding: Warkost Bahagia + DELIVERY. */
+
+.warkost-print-brand {
+  display: none;
+}
+
+@media print {
+  .warkost-print-brand {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    width: 100% !important;
+    margin: 0 0 10px !important;
+    padding: 2px 0 8px !important;
+    overflow: visible !important;
+    border-bottom: 1px dashed #111;
+    color: #000;
+    text-align: left;
+    break-inside: avoid;
+  }
+
+  .warkost-print-brand-logo-wrap {
+    width: 64px !important;
+    height: 38px !important;
+    flex: 0 0 64px !important;
+    display: grid !important;
+    place-items: center !important;
+    overflow: visible !important;
+  }
+
+  .warkost-print-brand img {
+    display: block !important;
+    width: 64px !important;
+    height: 38px !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    overflow: visible !important;
+    clip-path: none !important;
+    transform: none !important;
+    filter: grayscale(1) contrast(1.14);
+  }
+
+  .warkost-print-brand-copy {
+    display: grid !important;
+    gap: 1px !important;
+    align-content: center !important;
+    min-width: 0;
+  }
+
+  .warkost-print-brand strong {
+    font-size: 11px;
+    line-height: 1.08;
+    letter-spacing: .03em;
+    white-space: nowrap;
+  }
+
+  .warkost-print-brand span {
+    font-size: 8px;
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: .2em;
+  }
+
+  .admin-settlement-print-sheet > .admin-settlement-print-logo {
+    display: none !important;
+  }
+}
+
+/* Prevent the Manager → Owner amount field from looking broken when no verified cash exists. */
+.manager-owner-panel.manager-mode label:has(.manager-owner-money-input input:disabled)::after {
+  content: "Belum ada Kas Manager yang siap disetor. Verifikasi setoran Admin terlebih dahulu di menu Kas & Setoran.";
+  display: block;
+  margin-top: 7px;
+  color: #8a6a5d;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.manager-owner-panel.manager-mode .manager-owner-money-input:has(input:disabled) {
+  border-style: dashed;
+  background: #f8f2ed;
+  opacity: .82;
+}

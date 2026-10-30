@@ -1,47 +1,106 @@
+import { authStage, withAuthTimings } from "../../../lib/auth-timing.mjs";
 import { NextResponse } from "next/server";
-import { recordAttempt } from "../../../lib/rate-limit.mjs";
+import {
+  recordAttempt,
+  authAttemptIdentifier,
+} from "../../../lib/rate-limit.mjs";
 import { assertSameOrigin, readJsonBody } from "../../../lib/request.mjs";
 import * as store from "../../../lib/store.mjs";
 import {
   currentUser,
-  hashPassword,
-  checkPassword,
   issueSession,
+  issueSessionForAuthenticatedAccount,
   revokeSession,
   sessionSecret,
 } from "../../../lib/auth.mjs";
+import {
+  disconnectRealtimeUser,
+  publishActionRealtime,
+} from "../../../lib/realtime.mjs";
 import {
   required,
   createOrder,
   changeStatus,
   updateStationStatus,
   acceptDelivery,
+  claimDelivery,
+  claimReadyDeliveries,
+  customerDriverWaitNotice,
+  deliveryAvailability,
+  listDriverOrders,
+  pickupAllDeliveries,
   DomainError,
+  requiredCapability,
 } from "../../../lib/domain.mjs";
 import {
   listCatalog,
   saveProduct,
   saveCategory,
+  saveSubcategory,
 } from "../../../lib/catalog.mjs";
-import { createDriver, setDriverActive } from "../../../lib/staff.mjs";
+import {
+  createDriver,
+  createStaff,
+  listStaff,
+  resetStaffPassword,
+  setDriverActive,
+} from "../../../lib/staff.mjs";
 import { listCustomers, setCustomerActive } from "../../../lib/customers.mjs";
 import { dailyReport } from "../../../lib/reports.mjs";
 import { nonNegativeInteger } from "../../../lib/numbers.mjs";
 import {
   expirePendingPayments,
+  getPaymentStatus,
   verifyPayment,
 } from "../../../lib/payments.mjs";
+import { paymentProviderConfiguration } from "../../../lib/payment-provider.mjs";
+import {
+  submitCodSettlement,
+  verifyCodSettlement,
+} from "../../../lib/cod-settlements.mjs";
+import {
+  getCodBatch,
+  getDriverCodBatch,
+  listAdminCodBatches,
+  submitCodBatch,
+  verifyCodBatch,
+} from "../../../lib/cod-settlement-batches.mjs";
 import { getSettings, saveSettings } from "../../../lib/settings.mjs";
+import {
+  getStoreOperatingStatus,
+  saveStoreOperatingHours,
+} from "../../../lib/store-operating-hours.mjs";
 import {
   listNotifications,
   readNotification,
 } from "../../../lib/notifications.mjs";
 import {
+  getConversation,
+  listAdminConversations,
+  openConversation,
+  sendConversationMessage,
+  updateConversationStatus,
+} from "../../../lib/communications.mjs";
+import {
   addAddress,
+  getCustomerAccount,
   replaceAddress,
   removeAddress,
+  setDefaultAddress,
   updateProfile,
 } from "../../../lib/account.mjs";
+import {
+  authenticateCustomer,
+  registerCustomer,
+} from "../../../lib/customer-auth.mjs";
+import {
+  OTP_PURPOSES,
+  requestPasswordReset,
+  resendOtp,
+  resetPassword,
+  verifyPasswordResetOtp,
+  verifyRegistrationOtp,
+} from "../../../lib/otp.mjs";
 import {
   adjustStock,
   listStock,
@@ -50,9 +109,49 @@ import {
 import { listPrintJobs, retryPrintJob } from "../../../lib/printer.mjs";
 import { driverContactIsVisible } from "../../../lib/delivery.mjs";
 import { listPromotions, savePromotion } from "../../../lib/promotions.mjs";
+import {
+  deleteBanner,
+  listBanners,
+  saveBanner,
+} from "../../../lib/banners.mjs";
+import {
+  claimVoucher,
+  listCustomerVouchers,
+  quoteVoucher,
+} from "../../../lib/vouchers.mjs";
+import {
+  listCustomerRewards,
+  listRewardRules,
+  quoteLoyaltyReward,
+  saveRewardRule,
+} from "../../../lib/loyalty.mjs";
+import { CAPABILITIES } from "../../../lib/rbac.mjs";
+import { createGuestCustomer } from "../../../lib/guest.mjs";
+import { isGuestCustomer } from "../../../lib/customer-kind.mjs";
+import { managerAnalytics } from "../../../lib/manager-analytics.mjs";
+import {
+  listCustomerEnginePromotions,
+  quoteEnginePromotion,
+} from "../../../lib/promotion-engine.mjs";
 export const runtime = "nodejs";
 const out = (data, status = 200) =>
   NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
+async function mutation(action, user, body, operation, status = 200) {
+  try {
+    const result = await operation();
+    try {
+      await publishActionRealtime(action, user, body, result);
+    } catch (realtimeError) {
+      console.error("Realtime publication failed", {
+        action,
+        error: realtimeError,
+      });
+    }
+    return out(result, status);
+  } catch (e) {
+    return error(e);
+  }
+}
 const integer = (value) =>
   Number.isSafeInteger(Number(value)) && Number(value) > 0
     ? Number(value)
@@ -63,11 +162,12 @@ function error(e) {
   return out({ error: "Terjadi kesalahan server" }, 500);
 }
 function cookieOptions(request) {
+  const isDemo = process.env.DEPLOYMENT_ENV === "demo";
   return {
     httpOnly: true,
     sameSite: "lax",
     secure:
-      process.env.NODE_ENV === "production" ||
+      (!isDemo && process.env.NODE_ENV === "production") ||
       request.nextUrl.protocol === "https:",
     path: "/",
     maxAge: 7 * 86400,
@@ -79,12 +179,35 @@ export async function GET(request, { params }) {
     const user = await currentUser(request);
     if (action === "me") return out({ user });
     if (action === "notifications") return out(await listNotifications(user));
+    if (action === "chat-inbox")
+      return out(
+        await listAdminConversations(user, {
+          filter: request.nextUrl.searchParams.get("filter") || "all",
+          query: request.nextUrl.searchParams.get("q") || "",
+        }),
+      );
+    if (action === "chat")
+      return out(
+        await getConversation(
+          user,
+          integer(request.nextUrl.searchParams.get("conversationId")),
+        ),
+      );
     if (action === "menu") return out(await listCatalog(false));
+    if (action === "manager-dashboard")
+      return out(
+        await managerAnalytics(user, {
+          preset: request.nextUrl.searchParams.get("preset") || "today",
+          from: request.nextUrl.searchParams.get("from") || "",
+          to: request.nextUrl.searchParams.get("to") || "",
+        }),
+      );
     if (action === "inventory") {
-      required(user, ["ADMIN", "OWNER"]);
+      requiredCapability(user, CAPABILITIES.CATALOG_READ);
       return out(await listCatalog(true));
     }
-    if (action === "stock") return out(await listStock(user));
+    if (action === "stock" || action === "admin-beverage-stock")
+      return out(await listStock(user));
     if (action === "audit") {
       const rawBefore = request.nextUrl.searchParams.get("before");
       return out(
@@ -95,26 +218,31 @@ export async function GET(request, { params }) {
       );
     }
     if (action === "settings") return out(await getSettings(user));
+    if (action === "store-hours") {
+      const status = await getStoreOperatingStatus();
+      return out({
+        ...status,
+        qrisAvailable: paymentProviderConfiguration().available === true,
+      });
+    }
     if (action === "promotions")
       return out({ promotions: await listPromotions(user) });
+    if (action === "banners") return out({ banners: await listBanners(user) });
+    if (action === "vouchers")
+      return out({ vouchers: await listCustomerVouchers(user) });
+    if (action === "loyalty-rewards")
+      return out({ rewards: await listRewardRules(user) });
     if (action === "print-jobs")
       return out({ jobs: await listPrintJobs(user) });
     if (action === "delivery-capacity") {
       required(user, ["CUSTOMER", "ADMIN", "OWNER"]);
-      const result = await store.get(
-        "SELECT COUNT(*) available_drivers,COALESCE(SUM(5-active_load),0) available_slots FROM (SELECT u.id,(SELECT COUNT(*) FROM deliveries d JOIN orders o ON o.id=d.order_id WHERE d.driver_id=u.id AND o.status IN ('ASSIGNED','PICKED_UP','ON_DELIVERY')) active_load FROM users u WHERE u.role='DRIVER' AND u.active=1) capacity WHERE active_load<5",
-      );
-      const availableDrivers = nonNegativeInteger(
-        result.available_drivers,
-        "Driver tersedia",
-      );
+      const availability = await deliveryAvailability();
       return out({
-        availableDrivers,
-        availableSlots: nonNegativeInteger(
-          result.available_slots,
-          "Slot tersedia",
-        ),
-        delayed: availableDrivers === 0,
+        availableDrivers: availability.availableAtStore,
+        onlineDrivers: availability.onlineDrivers,
+        awayDrivers: availability.awayDrivers,
+        availableSlots: availability.availableSlots,
+        delayed: availability.delayed,
       });
     }
     if (action === "report")
@@ -131,7 +259,7 @@ export async function GET(request, { params }) {
         ),
       );
     if (action === "dashboard") {
-      required(user, ["ADMIN", "OWNER"]);
+      requiredCapability(user, CAPABILITIES.DASHBOARD_READ);
       await expirePendingPayments();
       const localDate = new Intl.DateTimeFormat("en-CA", {
         timeZone: "Asia/Jakarta",
@@ -216,20 +344,14 @@ export async function GET(request, { params }) {
       let orders;
       if (user.role === "CUSTOMER")
         orders = await store.all(
-          "SELECT o.*,a.label address_label,a.detail address,p.method,p.status payment_status,d.driver_id,d.accepted_at,d.delivered_at,du.phone driver_phone FROM orders o JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id LEFT JOIN users du ON du.id=d.driver_id WHERE o.customer_id=?" +
+          "SELECT o.*,a.label address_label,a.detail address,p.method,p.status payment_status,p.amount payment_amount,p.provider_reference,p.transaction_reference,p.qr_payload,p.payment_url,p.expires_at payment_expires_at,d.driver_id,d.accepted_at,d.delivered_at,du.phone driver_phone FROM orders o JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id LEFT JOIN users du ON du.id=d.driver_id WHERE o.customer_id=?" +
             bound +
             " ORDER BY o.id DESC LIMIT 26",
           user.id,
           ...(before === null ? [] : [before]),
         );
       else if (user.role === "DRIVER")
-        orders = await store.all(
-          "SELECT o.*,a.detail address,a.latitude,a.longitude,u.name customer_name,d.accepted_at FROM orders o JOIN deliveries d ON d.order_id=o.id JOIN addresses a ON a.id=o.address_id JOIN users u ON u.id=o.customer_id WHERE d.driver_id=?" +
-            bound +
-            " ORDER BY o.id DESC LIMIT 26",
-          user.id,
-          ...(before === null ? [] : [before]),
-        );
+        orders = await listDriverOrders(user, before);
       else if (user.role === "KITCHEN")
         orders = await store.all(
           "SELECT o.*,u.name customer_name,s.status kitchen_status FROM orders o JOIN order_stations s ON s.order_id=o.id AND s.station='KITCHEN' JOIN users u ON u.id=o.customer_id WHERE o.status IN ('CONFIRMED','PREPARING','READY')" +
@@ -239,7 +361,7 @@ export async function GET(request, { params }) {
         );
       else
         orders = await store.all(
-          "SELECT o.*,u.name customer_name,a.detail address,p.status payment_status,d.driver_id,(SELECT status FROM order_stations WHERE order_id=o.id AND station='KITCHEN') kitchen_status,(SELECT status FROM order_stations WHERE order_id=o.id AND station='CASHIER') cashier_status FROM orders o JOIN users u ON u.id=o.customer_id JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id WHERE 1=1" +
+          "SELECT o.*,u.name customer_name,a.detail address,p.method,p.status payment_status,p.amount payment_amount,d.driver_id,s.id settlement_id,s.status settlement_status,s.expected_amount,s.cash_amount,s.evidence_reference,s.submitted_at,s.admin_verifier_id,s.verified_at,s.discrepancy_amount,(SELECT status FROM order_stations WHERE order_id=o.id AND station='KITCHEN') kitchen_status,(SELECT status FROM order_stations WHERE order_id=o.id AND station='CASHIER') cashier_status FROM orders o JOIN users u ON u.id=o.customer_id JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id LEFT JOIN cod_settlements s ON s.order_id=o.id WHERE 1=1" +
             bound +
             " ORDER BY o.id DESC LIMIT 26",
           ...(before === null ? [] : [before]),
@@ -247,6 +369,7 @@ export async function GET(request, { params }) {
       const hasMore = orders.length > 25;
       const page = orders.slice(0, 25);
       if (user.role === "CUSTOMER") {
+        const availability = await deliveryAvailability();
         const businessWhatsApp =
           (
             await store.get(
@@ -254,6 +377,10 @@ export async function GET(request, { params }) {
             )
           )?.value || "6281546407856";
         for (const order of page) {
+          order.driver_delay_notice = customerDriverWaitNotice(
+            order,
+            availability,
+          );
           order.admin_whatsapp = businessWhatsApp;
           order.driver_whatsapp = driverContactIsVisible(
             order.accepted_at,
@@ -266,12 +393,42 @@ export async function GET(request, { params }) {
       }
       return out({ orders: page, nextCursor: hasMore ? page.at(-1).id : null });
     }
+    if (action === "payment-status")
+      return out(
+        await getPaymentStatus(
+          user,
+          integer(request.nextUrl.searchParams.get("orderId")),
+        ),
+      );
+    if (action === "cod-batch-driver")
+      return out(await getDriverCodBatch(user));
+    if (action === "cod-batches")
+      return out({
+        batches: await listAdminCodBatches(
+          user,
+          request.nextUrl.searchParams.get("filter") || "pending",
+        ),
+      });
+    if (action === "cod-batch")
+      return out(
+        await getCodBatch(
+          user,
+          integer(request.nextUrl.searchParams.get("batchId")),
+        ),
+      );
     if (action === "account") {
       required(user, ["CUSTOMER"]);
-      const addresses = await store.all(
-        "SELECT * FROM addresses WHERE user_id=? AND active=1 ORDER BY id DESC",
-        user.id,
-      );
+      const { profile, addresses } = await getCustomerAccount(user);
+      if (isGuestCustomer(user))
+        return out({
+          profile: { ...profile, email: "" },
+          addresses,
+          loyalty: 0,
+          transactions: [],
+          vouchers: [],
+          rewards: [],
+          guest: true,
+        });
       const loyalty =
         (
           await store.get(
@@ -283,16 +440,28 @@ export async function GET(request, { params }) {
         "SELECT * FROM loyalty_transactions WHERE user_id=? ORDER BY id DESC LIMIT 50",
         user.id,
       );
-      return out({ addresses, loyalty, transactions });
+      const vouchers = await listCustomerVouchers(user);
+      const promotions = await listCustomerEnginePromotions(user);
+      const rewards = await listCustomerRewards(user);
+      return out({
+        profile,
+        addresses,
+        loyalty,
+        transactions,
+        vouchers,
+        promotions,
+        rewards,
+      });
     }
     if (action === "drivers") {
-      required(user, ["ADMIN", "OWNER"]);
+      requiredCapability(user, CAPABILITIES.DELIVERY_READ);
       return out({
         drivers: await store.all(
           "SELECT u.id,u.name,u.email,u.phone,u.active,(SELECT COUNT(*) FROM deliveries d JOIN orders o ON o.id=d.order_id WHERE d.driver_id=u.id AND o.status IN ('ASSIGNED','PICKED_UP','ON_DELIVERY')) active_load FROM users u WHERE u.role='DRIVER' ORDER BY active_load,u.name",
         ),
       });
     }
+    if (action === "staff") return out({ staff: await listStaff(user) });
     if (action === "customers") {
       const rawBefore = request.nextUrl.searchParams.get("before");
       return out(
@@ -328,7 +497,7 @@ export async function GET(request, { params }) {
         throw new DomainError("Akses ditolak", 403);
       return out({
         items: await store.all(
-          "SELECT name,price,quantity,prep_station FROM order_items WHERE order_id=?" +
+          "SELECT name,price,quantity,note,prep_station,stock_unit,price_unit_quantity,is_promotion_gift,promotion_id FROM order_items WHERE order_id=?" +
             (user.role === "KITCHEN" ? " AND prep_station='KITCHEN'" : ""),
           id,
         ),
@@ -343,20 +512,37 @@ export async function GET(request, { params }) {
     return error(e);
   }
 }
-export async function POST(request, { params }) {
+export async function POST(request, context) {
+  const { action } = await context.params;
+  return withAuthTimings(action, () =>
+    postAction(request, { params: Promise.resolve({ action }) }),
+  );
+}
+async function postAction(request, { params }) {
   try {
     assertSameOrigin(request);
     const { action } = await params;
-    const body = await readJsonBody(request);
-    if (["login", "register"].includes(action)) {
+    const body = await authStage("request.parse", () => readJsonBody(request));
+    if (
+      [
+        "login",
+        "guest",
+        "register",
+        "otp-verify",
+        "otp-resend",
+        "password-reset-request",
+        "password-reset",
+      ].includes(action)
+    ) {
       if (
-        !(await recordAttempt(
-          action,
-          String(body.email || "")
-            .trim()
-            .toLowerCase()
-            .slice(0, 255),
-          12,
+        !(await authStage(
+          action === "login" ? "login.rate_limit" : "request.rate_limit",
+          () =>
+            recordAttempt(
+              action,
+              authAttemptIdentifier(action, body),
+              action === "otp-verify" ? 10 : 12,
+            ),
         ))
       )
         throw new DomainError(
@@ -364,7 +550,10 @@ export async function POST(request, { params }) {
           429,
         );
     }
-    const user = await currentUser(request);
+    const user =
+      action === "login"
+        ? null
+        : await authStage("request.session_lookup", () => currentUser(request));
     if (action === "profile" && body.newPassword && user) {
       if (!(await recordAttempt("profile", user.id, 5)))
         throw new DomainError(
@@ -374,71 +563,95 @@ export async function POST(request, { params }) {
     }
     if (action === "register") {
       sessionSecret();
-      const name = String(body.name || "").trim(),
-        email = String(body.email || "")
-          .trim()
-          .toLowerCase(),
-        password = String(body.password || "");
-      if (
-        name.length < 2 ||
-        name.length > 80 ||
-        !/^\S+@\S+\.\S+$/.test(email) ||
-        password.length < 10 ||
-        password.length > 128
-      )
-        throw new DomainError(
-          "Nama, email, atau password tidak valid (minimal 10 karakter)",
-        );
-      let id;
-      try {
-        id = await store.transaction(async (tx) => {
-          const created = await tx.run(
-            "INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,'CUSTOMER')",
-            name,
-            email,
-            hashPassword(password),
-          );
-          await tx.run(
-            "INSERT INTO loyalty_accounts(user_id) VALUES(?)",
-            created.lastInsertRowid,
-          );
-          return created.lastInsertRowid;
-        });
-      } catch (e) {
-        if (
-          e.code === "ER_DUP_ENTRY" ||
-          /UNIQUE constraint failed: users.email/.test(e.message || "")
-        )
-          throw new DomainError("Email sudah terdaftar");
-        throw e;
-      }
-      const response = out({ user: { id, name, email, role: "CUSTOMER" } });
+      const result = await registerCustomer(body);
+      return out(result, 201);
+    }
+    if (action === "guest") {
+      sessionSecret();
+      const account = await createGuestCustomer(body);
+      const response = out(
+        {
+          user: {
+            id: account.id,
+            name: account.name,
+            role: account.role,
+            isGuest: true,
+          },
+        },
+        201,
+      );
       response.cookies.set(
         "wb_session",
-        await issueSession({ id, role: "CUSTOMER" }),
+        await issueSession(account),
         cookieOptions(request),
       );
       return response;
     }
-    if (action === "login") {
-      const account = await store.get(
-        "SELECT * FROM users WHERE email=?",
-        String(body.email || "")
-          .trim()
-          .toLowerCase(),
+    if (action === "otp-resend") {
+      return out(
+        await resendOtp({
+          challengeId: body.challengeId,
+          purpose: body.purpose,
+        }),
       );
-      if (
-        !account ||
-        account.active !== 1 ||
-        !checkPassword(String(body.password || ""), account.password_hash)
-      )
-        throw new DomainError("Email atau password salah", 401);
+    }
+    if (action === "otp-verify") {
+      if (body.purpose === OTP_PURPOSES.REGISTRATION) {
+        const result = await verifyRegistrationOtp(body, Date.now(), {
+          createSession: true,
+        });
+        if (result.alreadyVerified)
+          return out({ verified: true, alreadyVerified: true });
+        const response = out({
+          verified: true,
+          alreadyVerified: false,
+          user: {
+            id: result.user.id,
+            name: result.user.name,
+            role: result.user.role,
+          },
+        });
+        authStage("session.cookie", () =>
+          response.cookies.set(
+            "wb_session",
+            result.sessionToken,
+            cookieOptions(request),
+          ),
+        );
+        return response;
+      }
+      if (body.purpose === OTP_PURPOSES.PASSWORD_RESET)
+        return out(await verifyPasswordResetOtp(body));
+      throw new DomainError("Tujuan OTP tidak valid");
+    }
+    if (action === "password-reset-request") {
+      return out(await requestPasswordReset(body.identifier));
+    }
+    if (action === "password-reset") {
+      const result = await resetPassword(body);
+      const response = out({
+        ...result,
+        message: "Password berhasil diperbarui. Silakan masuk kembali.",
+      });
+      response.cookies.set("wb_session", "", {
+        ...cookieOptions(request),
+        maxAge: 0,
+      });
+      return response;
+    }
+    if (action === "login") {
+      const account = await authenticateCustomer(
+        body.identifier || body.email,
+        body.password,
+      );
       const response = out({
         user: { id: account.id, name: account.name, role: account.role },
       });
       response.cookies.set(
         "wb_session",
-        await issueSession(account),
+        await authStage("login.session_issue", () =>
+          issueSessionForAuthenticatedAccount(account),
+        ),
         cookieOptions(request),
       );
       return response;
@@ -454,36 +667,101 @@ export async function POST(request, { params }) {
     }
     if (action === "notification-read")
       return out(await readNotification(user, integer(body.id)));
+    if (action === "chat-open")
+      return mutation(action, user, body, () =>
+        openConversation(user, {
+          type: body.type,
+          orderId: integer(body.orderId),
+        }),
+      );
+    if (action === "chat-message")
+      return mutation(
+        action,
+        user,
+        body,
+        () =>
+          sendConversationMessage(user, {
+            conversationId: integer(body.conversationId),
+            message: body.message,
+          }),
+        201,
+      );
+    if (action === "chat-status")
+      return mutation(action, user, body, () =>
+        updateConversationStatus(
+          user,
+          integer(body.conversationId),
+          body.status,
+        ),
+      );
     if (action === "address") return out(await addAddress(user, body));
     if (action === "address-replace")
       return out(await replaceAddress(user, integer(body.id), body));
+    if (action === "address-default")
+      return out(await setDefaultAddress(user, integer(body.id)));
     if (action === "address-remove")
       return out(await removeAddress(user, integer(body.id)));
     if (action === "profile") {
       const result = await updateProfile(user, body);
-      const response = out({ user: result.user });
-      if (result.passwordChanged)
-        response.cookies.set(
-          "wb_session",
-          await issueSession(result.user),
-          cookieOptions(request),
-        );
+      const response = out({
+        user: result.user,
+        sessionRotated: result.passwordChanged,
+      });
+      if (result.passwordChanged) {
+        const nextSession = await issueSession(result.user);
+        response.cookies.set("wb_session", nextSession, cookieOptions(request));
+        disconnectRealtimeUser(user.id, "session-rotated");
+      }
       return response;
     }
     if (action === "checkout") {
       if (!body.idempotencyKey)
         throw new DomainError("Kunci checkout wajib diisi");
-      return out(
-        await createOrder(user, {
-          ...body,
-          addressId: integer(body.addressId),
-        }),
+      return mutation(
+        action,
+        user,
+        body,
+        () =>
+          createOrder(user, {
+            ...body,
+            addressId: integer(body.addressId),
+            promotionId:
+              body.promotionId == null ? null : integer(body.promotionId),
+            loyaltyRewardId:
+              body.loyaltyRewardId == null
+                ? null
+                : integer(body.loyaltyRewardId),
+          }),
         201,
       );
     }
-    if (action === "status")
+    if (action === "voucher-claim")
+      return mutation(action, user, body, () =>
+        claimVoucher(user, integer(body.promotionId)),
+      );
+    if (action === "voucher-quote")
       return out(
-        await changeStatus(
+        (await quoteEnginePromotion(user, {
+          promotionId: integer(body.promotionId),
+          items: body.items,
+          paymentMethod: body.paymentMethod,
+        })) ||
+          (await quoteVoucher(user, {
+            promotionId: integer(body.promotionId),
+            items: body.items,
+            paymentMethod: body.paymentMethod,
+          })),
+      );
+    if (action === "loyalty-quote")
+      return out(
+        await quoteLoyaltyReward(user, {
+          rewardRuleId: integer(body.rewardRuleId),
+          items: body.items,
+        }),
+      );
+    if (action === "status")
+      return mutation(action, user, body, () =>
+        changeStatus(
           user,
           integer(body.orderId),
           body.status,
@@ -491,32 +769,118 @@ export async function POST(request, { params }) {
         ),
       );
     if (action === "station-status")
-      return out(
-        await updateStationStatus(user, integer(body.orderId), body.status),
+      return mutation(action, user, body, () =>
+        updateStationStatus(user, integer(body.orderId), body.status),
       );
     if (action === "stock")
-      return out(
-        await adjustStock(user, {
+      return mutation(action, user, body, () =>
+        adjustStock(user, {
           productId: integer(body.productId),
           quantity: Number(body.quantity),
           reason: body.reason,
         }),
       );
     if (action === "accept")
-      return out(await acceptDelivery(user, integer(body.orderId)));
+      return mutation(action, user, body, () =>
+        acceptDelivery(user, integer(body.orderId)),
+      );
+    if (action === "claim-delivery")
+      return mutation(action, user, body, () =>
+        claimDelivery(user, integer(body.orderId)),
+      );
+    if (action === "claim-all-deliveries")
+      return mutation(action, user, body, () => claimReadyDeliveries(user));
+    if (action === "pickup-all-deliveries")
+      return mutation(action, user, body, () => pickupAllDeliveries(user));
     if (action === "payment")
-      return out(await verifyPayment(user, integer(body.orderId), body.status));
+      return mutation(action, user, body, () =>
+        verifyPayment(user, integer(body.orderId), body.status),
+      );
+    if (action === "cod-settlement-submit")
+      return mutation(action, user, body, () =>
+        submitCodSettlement(user, {
+          orderId: integer(body.orderId),
+          cashAmount: body.cashAmount,
+          evidenceReference: body.evidenceReference,
+        }),
+      );
+    if (action === "cod-settlement-verify")
+      return mutation(action, user, body, () =>
+        verifyCodSettlement(user, integer(body.orderId)),
+      );
+    if (action === "cod-batch-submit")
+      return mutation(action, user, body, () =>
+        submitCodBatch(user, {
+          cashAmount: body.cashAmount,
+          evidenceReference: body.evidenceReference,
+        }),
+      );
+    if (action === "cod-batch-verify")
+      return mutation(action, user, body, () =>
+        verifyCodBatch(user, integer(body.batchId)),
+      );
     if (action === "print-retry")
-      return out(await retryPrintJob(user, integer(body.id)));
-    if (action === "settings") return out(await saveSettings(user, body));
-    if (action === "driver") return out(await createDriver(user, body), 201);
+      return mutation(action, user, body, () =>
+        retryPrintJob(user, integer(body.id)),
+      );
+    if (action === "settings")
+      return mutation(action, user, body, () => saveSettings(user, body));
+    if (action === "store-hours")
+      return mutation(action, user, body, () =>
+        saveStoreOperatingHours(user, body),
+      );
+    if (action === "driver")
+      return mutation(action, user, body, () => createDriver(user, body), 201);
+    if (action === "staff")
+      return mutation(action, user, body, () => createStaff(user, body), 201);
+    if (action === "staff-password")
+      return mutation(action, user, body, async () => {
+        const result = await resetStaffPassword(
+          user,
+          integer(body.id),
+          body.password,
+        );
+        disconnectRealtimeUser(result.id, "session-revoked");
+        return result;
+      });
     if (action === "driver-active")
-      return out(await setDriverActive(user, integer(body.id), body.active));
+      return mutation(action, user, body, async () => {
+        const result = await setDriverActive(
+          user,
+          integer(body.id),
+          body.active,
+        );
+        if (!result.active)
+          disconnectRealtimeUser(result.id, "session-revoked");
+        return result;
+      });
     if (action === "customer-active")
-      return out(await setCustomerActive(user, integer(body.id), body.active));
-    if (action === "product") return out(await saveProduct(user, body));
-    if (action === "promotion") return out(await savePromotion(user, body));
-    if (action === "category") return out(await saveCategory(user, body));
+      return mutation(action, user, body, async () => {
+        const result = await setCustomerActive(
+          user,
+          integer(body.id),
+          body.active,
+        );
+        if (!result.active)
+          disconnectRealtimeUser(result.id, "session-revoked");
+        return result;
+      });
+    if (action === "product")
+      return mutation(action, user, body, () => saveProduct(user, body));
+    if (action === "promotion")
+      return mutation(action, user, body, () => savePromotion(user, body));
+    if (action === "banner")
+      return mutation(action, user, body, () => saveBanner(user, body));
+    if (action === "banner-delete")
+      return mutation(action, user, body, () =>
+        deleteBanner(user, integer(body.id)),
+      );
+    if (action === "loyalty-reward")
+      return mutation(action, user, body, () => saveRewardRule(user, body));
+    if (action === "category")
+      return mutation(action, user, body, () => saveCategory(user, body));
+    if (action === "subcategory")
+      return mutation(action, user, body, () => saveSubcategory(user, body));
     throw new DomainError("Endpoint tidak ditemukan", 404);
   } catch (e) {
     return error(e);

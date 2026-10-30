@@ -1,0 +1,85 @@
+/* Precise close control for Admin order modal */
+.admin-order-modal-close {
+  position: relative;
+  display: inline-flex !important;
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  flex: 0 0 40px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  overflow: hidden;
+  border: 1px solid #dccfc5 !important;
+  border-radius: 12px !important;
+  color: transparent !important;
+  background: #fffaf6 !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  text-indent: -9999px;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(67, 37, 27, 0.035);
+  transform: none !important;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease !important;
+}
+
+.admin-order-modal-close::before,
+.admin-order-modal-close::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 15px;
+  height: 1.8px;
+  border-radius: 999px;
+  background: #6d3b2c;
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.admin-order-modal-close::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.admin-order-modal-close::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.admin-order-modal-close:hover {
+  border-color: #cba995 !important;
+  background: #f8eee7 !important;
+  box-shadow: 0 5px 14px rgba(86, 46, 31, 0.08);
+  transform: translateY(-1px) !important;
+}
+
+.admin-order-modal-close:active {
+  transform: translateY(0) scale(0.97) !important;
+}
+
+.admin-order-modal-close:focus-visible {
+  outline: 3px solid rgba(143, 72, 43, 0.15);
+  outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  .admin-order-modal-close {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+    flex-basis: 38px !important;
+    border-radius: 11px !important;
+  }
+
+  .admin-order-modal-close::before,
+  .admin-order-modal-close::after {
+    width: 14px;
+  }
+}

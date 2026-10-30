@@ -13,14 +13,15 @@ const { listCatalog, saveProduct, saveCategory } =
 const database = db();
 database
   .prepare(
-    "INSERT INTO users(name,email,password_hash,role) VALUES('Admin','admin@t','x','ADMIN')",
+    "INSERT INTO users(name,email,password_hash,role) VALUES('Manager','manager@t','x','MANAGER'),('Admin','admin@t','x','ADMIN')",
   )
   .run();
-const admin = { id: 1, role: "ADMIN" },
+const manager = { id: 1, role: "MANAGER" },
+  admin = { id: 2, role: "ADMIN" },
   customer = { id: 1, role: "CUSTOMER" };
 test("kategori dan produk inactive terlihat admin, tidak terlihat customer", async () => {
-  await saveCategory(admin, { name: "Kopi" });
-  await saveProduct(admin, {
+  await saveCategory(manager, { name: "Kopi" });
+  await saveProduct(manager, {
     name: "Kopi Susu",
     description: "Segar",
     price: 18000,
@@ -28,7 +29,7 @@ test("kategori dan produk inactive terlihat admin, tidak terlihat customer", asy
     active: true,
   });
   assert.equal((await listCatalog()).products.length, 1);
-  await saveProduct(admin, {
+  await saveProduct(manager, {
     id: 1,
     name: "Kopi Susu",
     description: "Segar",
@@ -38,17 +39,18 @@ test("kategori dan produk inactive terlihat admin, tidak terlihat customer", asy
   });
   assert.equal((await listCatalog()).products.length, 0);
   assert.equal((await listCatalog(true)).products[0].price, 19000);
-  await saveCategory(admin, { id: 1, name: "Kopi", active: false });
+  await saveCategory(manager, { id: 1, name: "Kopi", active: false });
   assert.equal((await listCatalog(true)).categories[0].active, 0);
 });
 test("peran dan input katalog diverifikasi", async () => {
   await assert.rejects(saveCategory(customer, { name: "Rahasia" }), /Akses/);
+  await assert.rejects(saveCategory(admin, { name: "Rahasia" }), /Akses/);
   await assert.rejects(
-    saveProduct(admin, { name: "X", price: -1, categoryId: 1 }),
+    saveProduct(manager, { name: "X", price: -1, categoryId: 1 }),
     /tidak valid/,
   );
   await assert.rejects(
-    saveProduct(admin, {
+    saveProduct(manager, {
       name: "Kopi",
       price: 1000,
       categoryId: 1,

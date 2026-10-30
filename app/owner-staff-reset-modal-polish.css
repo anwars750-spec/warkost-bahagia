@@ -1,0 +1,246 @@
+.osc-modal.compact{
+  position:relative!important;
+  width:min(540px,calc(100vw - 36px))!important;
+  max-height:calc(100dvh - 32px)!important;
+  overflow:hidden!important;
+  border:1px solid #e5d4c8!important;
+  border-radius:24px!important;
+  background:#fffaf6!important;
+  box-shadow:0 34px 90px rgba(45,28,18,.34)!important;
+}
+
+.osc-modal.compact>header{
+  position:relative!important;
+  display:flex!important;
+  align-items:flex-start!important;
+  gap:12px!important;
+  min-height:106px!important;
+  padding:22px 76px 14px 22px!important;
+  border-bottom:1px solid #efe3d9!important;
+  background:linear-gradient(135deg,#fffaf6 0%,#fffdfb 100%)!important;
+}
+
+.osc-modal.compact>header::before{
+  content:"✦";
+  display:grid;
+  place-items:center;
+  width:40px;
+  height:40px;
+  flex:0 0 40px;
+  border-radius:50%;
+  background:#f7e8dc;
+  color:#8a4a2b;
+  font-size:15px;
+  box-shadow:inset 0 0 0 1px rgba(138,74,43,.08);
+}
+
+.osc-modal.compact>header>div{
+  min-width:0;
+  flex:1 1 auto;
+}
+
+.osc-modal.compact>header span{
+  display:block!important;
+  margin:0 0 5px!important;
+  color:#985a38!important;
+  font-size:9px!important;
+  font-weight:900!important;
+  letter-spacing:.17em!important;
+}
+
+.osc-modal.compact>header h2{
+  margin:0!important;
+  color:#2f211a!important;
+  font-size:25px!important;
+  line-height:1.08!important;
+  letter-spacing:-.025em!important;
+}
+
+.osc-modal.compact>header p{
+  margin:6px 0 0!important;
+  color:#806f64!important;
+  font-size:11px!important;
+  line-height:1.4!important;
+}
+
+/* Keep the close button anchored to the compact modal header. */
+.osc-modal.compact>header>button[aria-label="Tutup"]{
+  top:20px!important;
+  right:20px!important;
+  width:42px!important;
+  height:42px!important;
+  min-width:42px!important;
+  min-height:42px!important;
+  border-radius:14px!important;
+}
+
+.osc-modal.compact form{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:12px!important;
+  margin:0!important;
+  padding:18px 20px 20px!important;
+  border:0!important;
+  border-radius:0!important;
+  background:#fffaf6!important;
+  box-shadow:none!important;
+}
+
+.osc-modal.compact form::before{
+  content:"PASSWORD BARU";
+  display:block;
+  margin:0 0 -2px;
+  color:#9b684b;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.15em;
+}
+
+.osc-modal.compact label{
+  gap:6px!important;
+  color:#59473c!important;
+  font-size:11px!important;
+  font-weight:800!important;
+}
+
+.osc-modal.compact input{
+  height:44px!important;
+  min-height:44px!important;
+  padding:0 13px!important;
+  border:1px solid #ddcabd!important;
+  border-radius:11px!important;
+  background:#fff!important;
+  color:#342820!important;
+  font-size:12px!important;
+  font-weight:650!important;
+  outline:none!important;
+  box-shadow:0 1px 2px rgba(68,43,27,.025)!important;
+  transition:border-color .15s ease,box-shadow .15s ease,background .15s ease!important;
+}
+
+.osc-modal.compact input:focus{
+  border-color:#a66c4b!important;
+  background:#fffefc!important;
+  box-shadow:0 0 0 3px rgba(139,72,39,.10)!important;
+}
+
+.osc-modal.compact .osc-form-note{
+  margin:1px 0 0!important;
+  padding:10px 12px!important;
+  border:1px solid #eee1d6!important;
+  border-radius:11px!important;
+  background:#f9f4ef!important;
+  color:#7d6e64!important;
+  font-size:9px!important;
+  line-height:1.4!important;
+}
+
+.osc-modal.compact .osc-modal-actions{
+  display:flex!important;
+  justify-content:flex-end!important;
+  align-items:center!important;
+  gap:9px!important;
+  margin:3px -20px -20px!important;
+  padding:12px 20px!important;
+  border-top:1px solid #eee0d5!important;
+  background:#fff7f1!important;
+}
+
+.osc-modal.compact .osc-modal-actions button{
+  height:40px!important;
+  min-height:40px!important;
+  min-width:92px!important;
+  padding:0 16px!important;
+  border-radius:10px!important;
+  font-size:11px!important;
+  font-weight:850!important;
+  transition:background .15s ease,border-color .15s ease,box-shadow .15s ease,transform .15s ease!important;
+}
+
+.osc-modal.compact .osc-modal-actions button:hover:not(:disabled){
+  transform:translateY(-1px)!important;
+  background:#fff4eb!important;
+  border-color:#d1b49f!important;
+}
+
+.osc-modal.compact .osc-modal-actions button.primary,
+.osc-modal.compact .osc-modal-actions button.primary:hover:not(:disabled),
+.osc-modal.compact .osc-modal-actions button.primary:focus-visible{
+  min-width:154px!important;
+  border-color:#743a20!important;
+  background:linear-gradient(180deg,#8d4827 0%,#74381e 100%)!important;
+  color:#fff!important;
+  box-shadow:0 8px 18px rgba(116,55,29,.15)!important;
+}
+
+.osc-modal.compact .osc-modal-actions button.primary:hover:not(:disabled){
+  background:linear-gradient(180deg,#995031 0%,#804020 100%)!important;
+  box-shadow:0 10px 20px rgba(116,55,29,.21)!important;
+}
+
+@media(max-width:600px){
+  .osc-modal.compact{
+    width:100vw!important;
+    max-width:none!important;
+    max-height:100dvh!important;
+    border:0!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+  }
+
+  .osc-modal.compact>header{
+    min-height:86px!important;
+    padding:14px 62px 10px 14px!important;
+    gap:9px!important;
+  }
+
+  .osc-modal.compact>header::before{
+    width:34px;
+    height:34px;
+    flex-basis:34px;
+    font-size:13px;
+  }
+
+  .osc-modal.compact>header h2{
+    font-size:20px!important;
+  }
+
+  .osc-modal.compact>header p{
+    margin-top:3px!important;
+    font-size:9px!important;
+  }
+
+  .osc-modal.compact>header>button[aria-label="Tutup"]{
+    top:14px!important;
+    right:14px!important;
+    width:36px!important;
+    height:36px!important;
+    min-width:36px!important;
+    min-height:36px!important;
+    border-radius:11px!important;
+  }
+
+  .osc-modal.compact form{
+    padding:14px!important;
+    gap:10px!important;
+  }
+
+  .osc-modal.compact input{
+    height:40px!important;
+    min-height:40px!important;
+  }
+
+  .osc-modal.compact .osc-modal-actions{
+    margin:2px -14px -14px!important;
+    padding:10px 14px!important;
+  }
+
+  .osc-modal.compact .osc-modal-actions button{
+    flex:1 1 0!important;
+    min-width:0!important;
+  }
+
+  .osc-modal.compact .osc-modal-actions button.primary{
+    min-width:0!important;
+  }
+}

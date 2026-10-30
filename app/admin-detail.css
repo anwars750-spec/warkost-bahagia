@@ -1,0 +1,651 @@
+/* Admin order detail v1 — presentation layer only */
+.admin-ui-mode .admin-order-expanded {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.8fr) minmax(260px, 0.72fr) !important;
+  gap: 14px 18px !important;
+  align-items: start !important;
+  padding: 18px !important;
+  border-left-width: 1px !important;
+  overflow: visible !important;
+}
+
+.admin-ui-mode .admin-order-expanded > .order-head,
+.admin-ui-mode .admin-order-expanded > p,
+.admin-ui-mode .admin-order-expanded > .line,
+.admin-ui-mode .admin-order-expanded > .station-statuses,
+.admin-ui-mode .admin-order-expanded > .order-details {
+  display: none !important;
+}
+
+.admin-ui-mode .admin-order-expanded > .admin-detail-toggle {
+  grid-column: 1 / -1 !important;
+  grid-row: 1 !important;
+  justify-self: end;
+  width: auto !important;
+  min-height: 34px;
+  margin: 0 !important;
+  padding: 7px 11px !important;
+  border: 1px solid #e8d9cb;
+  border-radius: 9px;
+  color: #6b3829;
+  background: #fffaf5;
+  font-size: 10px;
+  font-weight: 760;
+}
+
+.admin-ui-mode .admin-order-detail-v1 {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+}
+
+.admin-ui-mode .admin-detail-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding: 16px;
+  border: 1px solid #eadfd4;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #fffdfb, #fff8f2);
+}
+
+.admin-ui-mode .admin-detail-order-id {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-ui-mode .admin-detail-hero-icon {
+  width: 42px;
+  height: 42px;
+  padding: 10px;
+  border-radius: 12px;
+  color: #944b25;
+  background: #f9eadc;
+}
+
+.admin-ui-mode .admin-detail-order-id small,
+.admin-ui-mode .admin-detail-info-card small,
+.admin-ui-mode .admin-detail-section-title small,
+.admin-ui-mode .admin-detail-action-summary > small {
+  display: block;
+  color: #9b5a3c;
+  font-size: 9px;
+  font-weight: 820;
+  letter-spacing: 0.11em;
+}
+
+.admin-ui-mode .admin-detail-order-id strong {
+  display: block;
+  margin-top: 2px;
+  color: #2c1913;
+  font-size: 20px;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+}
+
+.admin-ui-mode .admin-detail-order-id span {
+  display: block;
+  margin-top: 2px;
+  color: #7b6d65;
+  font-size: 10px;
+}
+
+.admin-ui-mode .admin-detail-status {
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-height: 30px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: #8c5807;
+  background: #fff1c9;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.admin-ui-mode .admin-detail-status.preparing {
+  color: #2566a8;
+  background: #e8f1ff;
+}
+
+.admin-ui-mode .admin-detail-status.ready,
+.admin-ui-mode .admin-detail-status.done {
+  color: #187c42;
+  background: #e7f7eb;
+}
+
+.admin-ui-mode .admin-detail-status.delivery {
+  color: #6049c4;
+  background: #eeeaff;
+}
+
+.admin-ui-mode .admin-detail-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.admin-ui-mode .admin-detail-info-card {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid #eee2d7;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.admin-ui-mode .admin-detail-info-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 10px;
+  color: #8a4b31;
+  background: #faeee4;
+}
+
+.admin-ui-mode .admin-detail-info-icon svg,
+.admin-ui-mode .admin-detail-section-title > span svg,
+.admin-ui-mode .admin-detail-step-dot svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.admin-ui-mode .admin-detail-info-card strong {
+  display: block;
+  margin-top: 2px;
+  color: #2c1913;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.admin-ui-mode .admin-detail-info-card span:not(.admin-detail-info-icon):not(.admin-svg-icon) {
+  display: block;
+  margin-top: 3px;
+  color: #76685f;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.admin-ui-mode .admin-detail-info-card button {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 31px;
+  align-items: center;
+  gap: 6px;
+  margin-top: 9px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  color: #8e7c73;
+  background: #faf7f4;
+  font-size: 9px;
+  font-weight: 720;
+}
+
+.admin-ui-mode .admin-detail-info-card button .admin-svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.admin-ui-mode .admin-detail-delivery-state {
+  color: #975735 !important;
+  font-weight: 720;
+}
+
+.admin-ui-mode .admin-detail-section {
+  margin-bottom: 12px;
+  padding: 14px;
+  border: 1px solid #eadfd4;
+  border-radius: 15px;
+  background: #fff;
+}
+
+.admin-ui-mode .admin-detail-section-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 11px;
+}
+
+.admin-ui-mode .admin-detail-section-title > span {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 9px;
+  color: #8b4b2d;
+  background: #faeee4;
+}
+
+.admin-ui-mode .admin-detail-section-title h3 {
+  margin: 1px 0 0;
+  color: #2c1913;
+  font-size: 14px;
+  font-weight: 820;
+}
+
+.admin-ui-mode .admin-detail-items {
+  border-top: 1px solid #f1e7dd;
+}
+
+.admin-ui-mode .admin-detail-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 0;
+  border-bottom: 1px solid #f2e9e1;
+}
+
+.admin-ui-mode .admin-detail-item > div > strong {
+  display: block;
+  color: #2d1b15;
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.admin-ui-mode .admin-detail-item > div > span {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 4px;
+  color: #796c64;
+  font-size: 9px;
+}
+
+.admin-ui-mode .admin-detail-item em {
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: #7a452e;
+  background: #faf0e7;
+  font-style: normal;
+  font-weight: 720;
+}
+
+.admin-ui-mode .admin-detail-item > strong {
+  color: #2b1913;
+  font-size: 12px;
+  font-weight: 820;
+}
+
+.admin-ui-mode .admin-detail-total-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 12px;
+}
+
+.admin-ui-mode .admin-detail-total-row span {
+  color: #71635b;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.admin-ui-mode .admin-detail-total-row strong {
+  color: #2b1711;
+  font-size: 18px;
+  font-weight: 860;
+}
+
+.admin-ui-mode .admin-detail-timeline {
+  display: grid;
+  gap: 0;
+  padding-left: 4px;
+}
+
+.admin-ui-mode .admin-detail-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 9px;
+  min-height: 42px;
+  align-items: start;
+}
+
+.admin-ui-mode .admin-detail-step:not(:last-child)::after {
+  position: absolute;
+  top: 24px;
+  bottom: 2px;
+  left: 12px;
+  width: 1px;
+  background: #eadfd4;
+  content: "";
+}
+
+.admin-ui-mode .admin-detail-step-dot {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border: 1px solid #e4d8cc;
+  border-radius: 50%;
+  color: #9c8c82;
+  background: #fff;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.admin-ui-mode .admin-detail-step.complete .admin-detail-step-dot {
+  border-color: #cfe8d7;
+  color: #187c42;
+  background: #e9f7ed;
+}
+
+.admin-ui-mode .admin-detail-step.current .admin-detail-step-dot {
+  border-color: #d7a56e;
+  color: #fff;
+  background: #8a3d29;
+  box-shadow: 0 0 0 3px #f8e9dd;
+}
+
+.admin-ui-mode .admin-detail-step strong {
+  display: block;
+  padding-top: 3px;
+  color: #39231b;
+  font-size: 10px;
+  font-weight: 770;
+}
+
+.admin-ui-mode .admin-detail-step.upcoming strong {
+  color: #9b8e86;
+}
+
+.admin-ui-mode .admin-detail-step small {
+  display: block;
+  margin-top: 2px;
+  color: #93857d;
+  font-size: 8px;
+}
+
+.admin-ui-mode .admin-order-expanded > .actions {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  position: sticky;
+  top: 94px;
+  display: flex !important;
+  align-self: start !important;
+  justify-content: flex-start !important;
+  flex-direction: column !important;
+  gap: 8px;
+  min-width: 0;
+  margin: 0 !important;
+  padding: 14px;
+  border: 1px solid #eadfd4;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(69, 39, 24, 0.045);
+}
+
+.admin-ui-mode .admin-detail-action-summary {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 2px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eee3d9;
+}
+
+.admin-ui-mode .admin-detail-action-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-ui-mode .admin-detail-action-total span {
+  color: #76675f;
+  font-size: 9px;
+}
+
+.admin-ui-mode .admin-detail-action-total strong {
+  color: #2c1913;
+  font-size: 19px;
+  font-weight: 860;
+}
+
+.admin-ui-mode .admin-detail-payment {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 24px;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #a23e32;
+  background: #ffeae7;
+  font-size: 8px;
+  font-weight: 820;
+}
+
+.admin-ui-mode .admin-order-expanded[data-payment-status="PAID"] .admin-detail-payment {
+  color: #187c42;
+  background: #e7f7eb;
+}
+
+.admin-ui-mode .admin-detail-stations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.admin-ui-mode .admin-detail-stations span {
+  padding: 5px 7px;
+  border: 1px solid #eee2d7;
+  border-radius: 8px;
+  color: #714937;
+  background: #fff9f3;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.admin-ui-mode .admin-order-expanded > .actions > button {
+  width: 100% !important;
+  min-height: 40px !important;
+  margin: 0 !important;
+  border-radius: 10px !important;
+  font-size: 10px !important;
+  font-weight: 790 !important;
+}
+
+.admin-ui-mode .admin-order-expanded > .actions > .primary {
+  border-color: #6d2f20 !important;
+  background: linear-gradient(135deg, #7a3422, #5a2117) !important;
+}
+
+.admin-ui-mode .admin-detail-empty {
+  margin: 0;
+  padding: 12px 0;
+  color: #8f8178;
+  font-size: 10px;
+}
+
+@media (max-width: 900px) {
+  .admin-ui-mode .admin-order-expanded {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-ui-mode .admin-order-detail-v1,
+  .admin-ui-mode .admin-order-expanded > .actions {
+    grid-column: 1 !important;
+  }
+
+  .admin-ui-mode .admin-order-expanded > .actions {
+    grid-row: 3 !important;
+    position: static;
+  }
+}
+
+@media (max-width: 620px) {
+  .admin-ui-mode .admin-order-expanded {
+    display: block !important;
+    padding: 10px !important;
+    border-radius: 13px !important;
+  }
+
+  .admin-ui-mode .admin-order-expanded > .admin-detail-toggle {
+    display: block;
+    width: 100% !important;
+    margin: 0 0 8px !important;
+  }
+
+  .admin-ui-mode .admin-detail-hero {
+    align-items: flex-start;
+    margin-bottom: 8px;
+    padding: 11px;
+    border-radius: 12px;
+  }
+
+  .admin-ui-mode .admin-detail-hero-icon {
+    width: 34px;
+    height: 34px;
+    padding: 8px;
+    border-radius: 10px;
+  }
+
+  .admin-ui-mode .admin-detail-order-id {
+    gap: 8px;
+  }
+
+  .admin-ui-mode .admin-detail-order-id strong {
+    font-size: 16px;
+  }
+
+  .admin-ui-mode .admin-detail-order-id span {
+    font-size: 8px;
+  }
+
+  .admin-ui-mode .admin-detail-status {
+    min-height: 25px;
+    padding: 4px 7px;
+    font-size: 8px;
+  }
+
+  .admin-ui-mode .admin-detail-info-grid {
+    grid-template-columns: 1fr;
+    gap: 7px;
+    margin-bottom: 8px;
+  }
+
+  .admin-ui-mode .admin-detail-info-card {
+    grid-template-columns: 29px minmax(0, 1fr);
+    gap: 8px;
+    padding: 9px;
+    border-radius: 11px;
+  }
+
+  .admin-ui-mode .admin-detail-info-icon {
+    width: 29px;
+    height: 29px;
+    border-radius: 9px;
+  }
+
+  .admin-ui-mode .admin-detail-info-card strong {
+    font-size: 11px;
+  }
+
+  .admin-ui-mode .admin-detail-info-card span:not(.admin-detail-info-icon):not(.admin-svg-icon) {
+    font-size: 8px;
+  }
+
+  .admin-ui-mode .admin-detail-section {
+    margin-bottom: 8px;
+    padding: 10px;
+    border-radius: 11px;
+  }
+
+  .admin-ui-mode .admin-detail-section-title {
+    margin-bottom: 7px;
+  }
+
+  .admin-ui-mode .admin-detail-section-title h3 {
+    font-size: 12px;
+  }
+
+  .admin-ui-mode .admin-detail-item {
+    padding: 8px 0;
+  }
+
+  .admin-ui-mode .admin-detail-item > div > strong,
+  .admin-ui-mode .admin-detail-item > strong {
+    font-size: 10px;
+  }
+
+  .admin-ui-mode .admin-detail-total-row strong {
+    font-size: 15px;
+  }
+
+  .admin-ui-mode .admin-detail-step {
+    min-height: 36px;
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .admin-ui-mode .admin-detail-step-dot {
+    width: 21px;
+    height: 21px;
+    font-size: 8px;
+  }
+
+  .admin-ui-mode .admin-detail-step:not(:last-child)::after {
+    top: 20px;
+    left: 10px;
+  }
+
+  .admin-ui-mode .admin-detail-step strong {
+    padding-top: 2px;
+    font-size: 9px;
+  }
+
+  .admin-ui-mode .admin-order-expanded > .actions {
+    position: sticky;
+    bottom: 8px;
+    z-index: 8;
+    margin-top: 8px !important;
+    padding: 9px;
+    border-radius: 12px;
+    box-shadow: 0 10px 28px rgba(75, 39, 25, 0.13);
+  }
+
+  .admin-ui-mode .admin-detail-action-summary {
+    grid-template-columns: 1fr auto;
+    gap: 5px 8px;
+    padding-bottom: 8px;
+  }
+
+  .admin-ui-mode .admin-detail-action-summary > small,
+  .admin-ui-mode .admin-detail-stations {
+    grid-column: 1 / -1;
+  }
+
+  .admin-ui-mode .admin-detail-action-total {
+    grid-column: 1;
+  }
+
+  .admin-ui-mode .admin-detail-payment {
+    grid-column: 2;
+    align-self: center;
+  }
+
+  .admin-ui-mode .admin-detail-action-total strong {
+    font-size: 15px;
+  }
+
+  .admin-ui-mode .admin-order-expanded > .actions > button {
+    min-height: 37px !important;
+    font-size: 9px !important;
+  }
+}

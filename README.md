@@ -1,19 +1,19 @@
 # Warkost Bahagia — checkpoint MVP
 
-Next.js 16, React, API/service terpisah. Database development SQLite (`node:sqlite`, Node 24+); adapter MySQL memakai `mysql2/promise` dan transaksi. MySQL 8 recovery dan production-mode staging UAT berjalan otomatis di GitHub Actions. Deployment Hostinger tetap harus melewati staging publik sebelum production.
+Next.js 16, React, API/service terpisah. Database development SQLite (`node:sqlite`, Node 24+); adapter MySQL memakai `mysql2/promise` dan transaksi. MySQL 8 recovery dan production-mode staging UAT berjalan otomatis di GitHub Actions. Deployment staging/production menggunakan runbook provider-neutral; target VPS saat ini adalah IDCloudHost.
 
 ## Development SQLite
 
 1. `npm install` dan salin `.env.example` ke `.env.local`; ganti `SESSION_SECRET` (minimal 32 byte acak untuk produksi).
-2. `SEED_DEMO_PASSWORD='password-unik-minimal-10' node scripts/seed.mjs`, lalu `npm run dev`.
-3. Login demo memakai `customer@warkost.local`, `admin@warkost.local`, `kitchen@warkost.local`, `driver@warkost.local`, atau `owner@warkost.local` dengan password seed.
-4. `npm test`, `npm run build`; dengan server di port 3000, `SEED_DEMO_PASSWORD='...' node scripts/http-smoke.mjs` menguji lima role sampai poin loyalitas.
+2. Untuk UAT lokal yang deterministik, jalankan `npm run setup:uat`, lalu `npm run dev`. Perintah local-only ini menyiapkan katalog/promo demo dan akun `customer@warkost.local` dengan password `WarkostLocal#2026`; perintah menolak production, MySQL, dan database di luar folder project.
+3. Untuk seed development multi-role dengan password pilihan sendiri, gunakan `SEED_DEMO_PASSWORD='password-unik-minimal-10' node scripts/seed.mjs`. Tanpa flag fixture eksplisit, seed tidak mengganti password akun yang sudah ada.
+4. `npm test`, `npm run build`; dengan server di port 3000, `SEED_DEMO_PASSWORD='...' node scripts/http-smoke.mjs` menguji enam role sampai poin loyalitas.
 
 ## Production preflight dan health
 
 Sebelum server production dijalankan, set `NODE_ENV=production`, `SESSION_SECRET` minimal 32 byte, database, `UPLOAD_DIRECTORY`, dan `BACKUP_DIRECTORY` memakai path absolut. Jalankan `npm run preflight`; proses gagal jika konfigurasi, koneksi database, skema inti, storage, atau lokasi backup tidak siap. `GET /api/health/live` hanya memeriksa proses hidup. `GET /api/health/ready` memeriksa konfigurasi, database, storage, dan backup tanpa menampilkan secret atau detail error internal.
 
-Untuk Hostinger staging, ikuti [runbook Hostinger](docs/HOSTINGER_STAGING.md). Startup `npm run start:hostinger` menjalankan migrasi, bootstrap staging, verifikasi schema, dan preflight sebelum membuka server.
+Untuk staging VPS, ikuti [runbook staging deployment](docs/STAGING_DEPLOYMENT.md). Startup `npm run start:staging` menjalankan migrasi, bootstrap staging, verifikasi schema, dan preflight sebelum membuka server.
 
 ## Development MySQL (database khusus development)
 
@@ -21,7 +21,7 @@ Untuk Hostinger staging, ikuti [runbook Hostinger](docs/HOSTINGER_STAGING.md). S
 2. `node scripts/migrate-mysql.mjs` menerapkan migrasi bernomor di `migrations/` secara berurutan; perubahan berikutnya perlu migrasi baru, bukan mengubah tabel produksi manual.
 3. `SEED_DEMO_PASSWORD='password-unik-minimal-10' node scripts/seed.mjs` untuk database development saja.
 4. Jalankan `npm run dev`; lakukan uji HTTP end-to-end memakai `SEED_DEMO_PASSWORD='...' node scripts/http-smoke.mjs` terhadap server yang memakai `DATABASE_URL` yang sama. Jangan jalankan seed atau smoke pada database pelanggan.
-5. Untuk staf produksi, siapkan akun lewat `STAFF_ROLE=ADMIN STAFF_NAME='...' STAFF_EMAIL='...' STAFF_PASSWORD='password-panjang-unik' node scripts/create-staff.mjs`. Nilai `STAFF_ROLE` yang tersedia adalah `ADMIN`, `DRIVER`, `KITCHEN`, dan `OWNER`; semuanya tidak tersedia melalui register publik.
+5. Untuk staf produksi, siapkan akun lewat `STAFF_ROLE=ADMIN STAFF_NAME='...' STAFF_EMAIL='...' STAFF_PASSWORD='password-panjang-unik' node scripts/create-staff.mjs`. Nilai `STAFF_ROLE` yang tersedia adalah `ADMIN`, `MANAGER`, `DRIVER`, `KITCHEN`, dan `OWNER`; semuanya tidak tersedia melalui register publik.
 
 ### Backup dan restore MySQL
 
@@ -29,11 +29,11 @@ Untuk Hostinger staging, ikuti [runbook Hostinger](docs/HOSTINGER_STAGING.md). S
 
 Restore hanya menerima database target yang benar-benar kosong: `DATABASE_URL='mysql://.../database_kosong' npm run restore:mysql -- /path/backup.sql`. Checksum diperiksa sebelum koneksi dan hasil restore diverifikasi terhadap charset `utf8mb4`, engine InnoDB, tabel, kolom, serta checksum seluruh migration. Set `MYSQL_BINARY` bila client `mysql` tidak ada di `PATH`. Jangan mengarahkan restore ke database aktif.
 
-`npm run test:mysql` menyediakan MySQL 8.0 sementara, menerapkan dan mengulang migrasi, menjalankan HTTP E2E lima peran, membuat backup, memulihkan ke database baru, lalu membandingkan seluruh jumlah record. Test ini memerlukan environment yang mengizinkan TCP dan UNIX socket lokal serta download binary MySQL pada eksekusi pertama.
+`npm run test:mysql` menyediakan MySQL 8.0 sementara, menerapkan dan mengulang migrasi, menjalankan HTTP E2E enam peran, membuat backup, memulihkan ke database baru, lalu membandingkan seluruh jumlah record. Test ini memerlukan environment yang mengizinkan TCP dan UNIX socket lokal serta download binary MySQL pada eksekusi pertama.
 
 ## Implementasi
 
-Customer: registrasi/login dengan sesi yang dapat dicabut, ubah nama/password, alamat ber-pin koordinat, menu, promo aktif, checkout server-side, riwayat, notifikasi, WhatsApp bantuan, dan poin ledger. Promo memiliki jadwal mulai/selesai inklusif-eksklusif, status terjadwal/aktif/kedaluwarsa/nonaktif, dan hanya promo aktif yang muncul di halaman Customer; saat ini promo bersifat materi komunikasi dan tidak mengubah harga checkout otomatis. Ongkir gratis sampai 5 km, lalu Rp2.500 per kilometer dimulai berikutnya, dengan batas layanan 15 km; jarak dan tarif dihitung server dan nilai dari browser diabaikan. Nomor Driver baru terlihat oleh pemilik order setelah tugas diterima sampai dua jam setelah `DELIVERED`. Admin/Kasir: KPI, katalog, promo terjadwal, customer, driver, pembayaran, stasiun minuman, stok masuk, laporan, pengaturan, serta print queue struk 80 mm. Kitchen hanya menerima item makanan dan tiket makanan. Pesanan campuran menjadi `READY` setelah Dapur dan Kasir sama-sama siap. Owner memiliki dashboard, laporan, kontrol stok naik/turun, audit log hanya-baca, dan pantauan printer. Stok dipotong atomik saat konfirmasi, dipulihkan sekali saat pembatalan yang valid, dan seluruh perubahan memiliki ledger. Driver menangani maksimal lima pesanan aktif sekaligus; tugas keenam ditolak atomik dan checkout memberi peringatan keterlambatan ketika seluruh Driver penuh. Driver: notifikasi, terima tugas, pickup, antar, selesai. Poin diberikan sekali saat `DELIVERED`. Tunai dan transfer manual tersedia tanpa gateway; transfer `PENDING` yang melewati batas waktu menjadi `EXPIRED` dan tercatat pada audit/dashboard.
+Customer: registrasi/login dengan sesi yang dapat dicabut, ubah nama/password, alamat ber-pin koordinat, menu, promo aktif, checkout server-side, riwayat, notifikasi, bantuan, dan poin ledger. Manager mengelola katalog, harga, gambar, stok, promo/voucher, serta pengaturan komersial. Admin menangani cross-check pembayaran/order, dukungan customer, koordinasi operasional, dan stasiun minuman; Admin tidak dapat mengubah katalog, stok master, promo/voucher, atau aturan loyalty. Kitchen hanya menerima item makanan dan tiket makanan. Pesanan campuran menjadi `READY` setelah Dapur dan stasiun minuman Admin sama-sama siap. Owner memiliki dashboard, laporan, kontrol staf, audit log hanya-baca, oversight katalog/stok/promo, dan pantauan printer. Role aktif final adalah Owner, Manager, Admin, Kitchen, Driver, dan Customer; Cashier/Kasir bukan role aktif. Stok dipotong atomik saat konfirmasi, dipulihkan sekali saat pembatalan yang valid, dan seluruh perubahan memiliki ledger. Driver menangani maksimal lima pesanan aktif sekaligus; tugas keenam ditolak atomik dan checkout memberi peringatan keterlambatan ketika seluruh Driver penuh. Poin diberikan sekali saat `DELIVERED`. Tunai dan transfer manual tersedia tanpa gateway; transfer `PENDING` yang melewati batas waktu menjadi `EXPIRED` dan tercatat pada audit/dashboard.
 
 Body JSON API dibatasi 64 KiB dan harus berupa objek JSON dengan `Content-Type: application/json`; format rusak dan ukuran berlebih mendapat respons 400/413. Endpoint gambar memiliki batas terpisah.
 
@@ -51,4 +51,4 @@ Admin dapat unggah JPEG, PNG, WebP, atau AVIF maksimal 8 MB. Server memvalidasi 
 
 ## Batas saat ini
 
-MySQL adapter, migrasi ber-checksum, backup/restore, schema verifier, recovery drill MySQL 8, health check, HTTP smoke, browser UAT desktop/mobile, promo terjadwal, ongkir radius, bantuan WhatsApp, observabilitas pembayaran manual, dan print queue simulasi tersedia. ORM belum dipakai. Printer LAN fisik belum dipasangkan dan upload gambar serta backup path belum diverifikasi pada filesystem Hostinger nyata. Kupon atau diskon checkout otomatis, payment gateway, maps/routing berbayar, profil driver lanjutan, reset password, rate limit berbasis IP/tepi jaringan, CSRF token tambahan, review keamanan/performa menyeluruh, Hostinger PoC publik, UAT pengguna, dan handover masih tertunda. Jangan gunakan data pelanggan nyata sampai gate tersebut selesai.
+Release Candidate lokal sudah melewati final cross-role Product Owner UAT, full regression, dan production build. MySQL adapter, migrasi ber-checksum, backup/restore, schema verifier, recovery drill MySQL 8, health check, HTTP smoke, browser UAT desktop/mobile, promo terjadwal, ongkir radius, bantuan WhatsApp, observabilitas pembayaran, dan print queue simulasi tersedia. ORM belum dipakai. Printer LAN fisik belum dipasangkan dan upload gambar serta backup path belum diverifikasi pada filesystem VPS nyata. Integrasi payment provider produksi, maps/routing berbayar, reset-password recovery, rate limit berbasis IP/tepi jaringan, review keamanan/performa menyeluruh, staging VPS publik, backup/restore drill pada VPS, dan operational handover masih menjadi gate deployment/production. Jangan gunakan data pelanggan nyata sampai gate deployment tersebut selesai.

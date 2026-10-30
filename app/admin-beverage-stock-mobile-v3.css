@@ -1,0 +1,300 @@
+/* Mobile-first refinement for Admin -> Stok Minuman.
+   UI only: keeps stock read-only and does not change backend/RBAC behavior. */
+
+@media (max-width: 700px) {
+  body.admin-beverage-stock-view header.top nav {
+    justify-content: flex-start;
+    gap: 2px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body.admin-beverage-stock-view header.top nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  body.admin-beverage-stock-view header.top nav button {
+    flex: 0 0 auto;
+    min-width: max-content;
+    padding-inline: 8px;
+    scroll-snap-align: start;
+  }
+
+  .admin-beverage-stock-shell {
+    width: calc(100% - 14px);
+    padding: 10px 0 44px;
+  }
+
+  .admin-beverage-stock-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 8px;
+    margin-bottom: 9px;
+    padding: 13px 13px 12px;
+    border-radius: 16px;
+  }
+
+  .admin-beverage-stock-hero > div > small {
+    font-size: 7px;
+    letter-spacing: .14em;
+  }
+
+  .admin-beverage-stock-hero h1 {
+    margin: 3px 0 4px;
+    font-size: 22px;
+    line-height: 1.02;
+    letter-spacing: -.035em;
+  }
+
+  .admin-beverage-stock-hero p {
+    max-width: 250px;
+    font-size: 8.5px;
+    line-height: 1.42;
+  }
+
+  .admin-beverage-readonly {
+    min-height: 25px;
+    padding: 0 8px;
+    font-size: 7px;
+    border-radius: 999px;
+  }
+
+  .admin-beverage-stock-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+
+  .admin-beverage-stock-stats article {
+    min-height: 66px;
+    padding: 6px 3px;
+    border-radius: 13px;
+    box-shadow: 0 5px 14px rgba(80, 51, 38, .025);
+  }
+
+  .admin-beverage-stock-stats article > span {
+    width: 25px;
+    height: 25px;
+    border-radius: 9px;
+  }
+
+  .admin-beverage-stock-stats article > span svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .admin-beverage-stock-stats article small {
+    max-width: 62px;
+    font-size: 6.4px;
+    line-height: 1.12;
+  }
+
+  .admin-beverage-stock-stats article strong {
+    font-size: 15px;
+    line-height: 1;
+  }
+
+  .admin-beverage-stock-notice {
+    gap: 8px;
+    margin-bottom: 9px;
+    padding: 8px 9px;
+    border-radius: 12px;
+  }
+
+  .admin-beverage-stock-notice > span {
+    flex-basis: 28px;
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+  }
+
+  .admin-beverage-stock-notice > span svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .admin-beverage-stock-notice strong {
+    font-size: 9px;
+  }
+
+  .admin-beverage-stock-notice p {
+    margin-top: 1px;
+    font-size: 7.2px;
+    line-height: 1.35;
+  }
+
+  .admin-beverage-stock-toolbar {
+    gap: 5px;
+    margin-bottom: 9px;
+    padding: 6px;
+    border-radius: 13px;
+  }
+
+  .admin-beverage-stock-toolbar > label {
+    min-height: 36px;
+    padding: 0 10px;
+    border-radius: 10px;
+  }
+
+  .admin-beverage-stock-toolbar > label > span {
+    width: 15px;
+    height: 15px;
+  }
+
+  .admin-beverage-stock-toolbar input {
+    font-size: 8.5px;
+  }
+
+  .admin-beverage-stock-filters {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    width: 100%;
+    gap: 2px;
+    padding: 3px;
+    overflow: visible;
+    border-radius: 10px;
+  }
+
+  .admin-beverage-stock-filters button {
+    min-width: 0;
+    min-height: 29px;
+    padding: 0 2px;
+    border-radius: 8px;
+    font-size: 7px;
+    white-space: nowrap;
+  }
+
+  .admin-beverage-stock-list {
+    grid-template-columns: 1fr;
+    gap: 9px;
+  }
+
+  .admin-beverage-stock-card {
+    border-radius: 16px;
+    box-shadow: 0 8px 22px rgba(70, 45, 34, .05);
+  }
+
+  .admin-beverage-stock-card:hover {
+    transform: none;
+  }
+
+  .admin-beverage-stock-card-head {
+    position: relative;
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 10px;
+    min-height: 92px;
+    padding: 10px 82px 10px 10px;
+    border-bottom: 0;
+  }
+
+  .admin-beverage-stock-product-media {
+    width: 72px;
+    height: 72px;
+    border-radius: 12px;
+  }
+
+  .admin-beverage-stock-card-head small {
+    min-height: 18px;
+    padding: 0 6px;
+    font-size: 6.3px;
+  }
+
+  .admin-beverage-stock-card-head h3 {
+    margin-top: 5px;
+    font-size: 13.5px;
+    line-height: 1.2;
+  }
+
+  .admin-beverage-stock-status {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    min-height: 21px;
+    max-width: 76px;
+    padding: 0 6px;
+    overflow: hidden;
+    font-size: 6.2px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-beverage-stock-quantity {
+    margin: 0 10px 9px;
+    padding: 9px 10px;
+    border-radius: 12px;
+  }
+
+  .admin-beverage-stock-quantity > span {
+    font-size: 7.5px;
+  }
+
+  .admin-beverage-stock-quantity > small {
+    font-size: 6.8px;
+  }
+
+  .admin-beverage-stock-quantity > strong {
+    font-size: 21px;
+  }
+
+  .admin-beverage-stock-meta > div {
+    padding: 9px 10px 11px;
+  }
+
+  .admin-beverage-stock-meta small {
+    margin-bottom: 3px;
+    font-size: 6.7px;
+  }
+
+  .admin-beverage-stock-meta strong,
+  .admin-beverage-stock-meta .no-promo {
+    font-size: 10.5px;
+  }
+
+  .admin-beverage-stock-state {
+    min-height: 180px;
+    padding: 20px;
+  }
+}
+
+@media (max-width: 430px) {
+  body.admin-beverage-stock-view header.top nav button {
+    padding-inline: 7px;
+    font-size: 9px;
+  }
+
+  .admin-beverage-stock-shell {
+    width: calc(100% - 12px);
+  }
+
+  .admin-beverage-stock-hero {
+    padding: 12px;
+  }
+
+  .admin-beverage-stock-hero h1 {
+    font-size: 21px;
+  }
+
+  .admin-beverage-stock-stats {
+    gap: 4px;
+  }
+
+  .admin-beverage-stock-stats article {
+    min-height: 64px;
+    border-radius: 12px;
+  }
+
+  .admin-beverage-stock-card-head {
+    grid-template-columns: 70px minmax(0, 1fr);
+    min-height: 90px;
+    padding-right: 79px;
+  }
+
+  .admin-beverage-stock-product-media {
+    width: 70px;
+    height: 70px;
+  }
+}

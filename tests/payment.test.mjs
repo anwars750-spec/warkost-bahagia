@@ -34,12 +34,23 @@ database
   .run();
 const admin = { id: 1, role: "ADMIN" },
   customer = { id: 2, role: "CUSTOMER" };
-test("verifikasi pembayaran atomic, role, duplikasi dan pembatalan", async () => {
-  const first = await createOrder(customer, {
+
+async function createLegacyTransferOrder() {
+  const order = await createOrder(customer, {
     addressId: 1,
-    method: "BANK_TRANSFER",
+    method: "CASH",
     items: [{ productId: 1, quantity: 1 }],
   });
+  database
+    .prepare(
+      "UPDATE payments SET method='BANK_TRANSFER',status='PENDING' WHERE order_id=?",
+    )
+    .run(order.id);
+  return order;
+}
+
+test("verifikasi pembayaran atomic, role, duplikasi dan pembatalan", async () => {
+  const first = await createLegacyTransferOrder();
   await assert.rejects(verifyPayment(customer, first.id, "PAID"), /Akses/);
   await verifyPayment(admin, first.id, "PAID");
   await assert.rejects(
@@ -74,11 +85,7 @@ test("verifikasi pembayaran atomic, role, duplikasi dan pembatalan", async () =>
     "CANCELLED",
   );
   await assert.rejects(verifyPayment(admin, second.id, "PAID"), /tidak dapat/);
-  const third = await createOrder(customer, {
-    addressId: 1,
-    method: "BANK_TRANSFER",
-    items: [{ productId: 1, quantity: 1 }],
-  });
+  const third = await createLegacyTransferOrder();
   const racing = await Promise.allSettled([
     verifyPayment(admin, third.id, "PAID"),
     changeStatus(admin, third.id, "CANCELLED"),

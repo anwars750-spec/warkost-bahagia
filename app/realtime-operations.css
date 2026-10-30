@@ -1,0 +1,63 @@
+.realtime-status {
+  position: fixed;
+  z-index: 1190;
+  right: 14px;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 6px 5px 9px;
+  border: 1px solid rgba(86, 57, 38, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 250, 240, 0.94);
+  box-shadow: 0 5px 18px rgba(62, 38, 22, 0.12);
+  color: #5b3a27;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  backdrop-filter: blur(10px);
+}
+
+.realtime-status > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.realtime-status i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #9b7b67;
+}
+
+.realtime-status-live i { background: #2f8a52; }
+.realtime-status-reconnecting i { background: #d58d2c; }
+
+.realtime-status button {
+  min-height: 27px;
+  padding: 4px 9px;
+  border: 0;
+  border-radius: 999px;
+  background: #f0e2cf;
+  color: #62402d;
+  font: inherit;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+@media (max-width: 680px) {
+  .realtime-status {
+    right: 8px;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    opacity: 0.9;
+  }
+}
+
+/* Manager & Owner: keep realtime controls on tablet/desktop, remove the floating pill on phone layouts. */
+@media (max-width: 560px) {
+  body.manager-dashboard-polished .realtime-status,
+  body.owner-navigation-v2-active .realtime-status {
+    display: none !important;
+  }
+}

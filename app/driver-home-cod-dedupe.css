@@ -1,0 +1,27 @@
+/* Driver Beranda — remove duplicate COD settlement panel.
+   COD execution remains centralized in the dedicated COD tab/settlement center. */
+
+.driver-v2-home-grid {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.driver-v2-home-grid > .driver-v2-side-card {
+  display: none !important;
+}
+
+/* Keep the COD KPI as the lightweight summary on Beranda. */
+.driver-v2-kpis article:nth-child(4) {
+  border-color: #ead7bb;
+  background: linear-gradient(145deg, #fffaf1, #fffdf9);
+}
+
+.driver-v2-kpis article:nth-child(4) > span {
+  color: var(--driver-warning);
+  background: var(--driver-warning-soft);
+}
+
+@media (max-width: 760px) {
+  .driver-v2-home-grid {
+    display: block !important;
+  }
+}

@@ -1,4 +1,55 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import sharp from 'sharp';
-const folder=fs.mkdtempSync(path.join(os.tmpdir(),'media-test-'));process.env.DATABASE_PATH=path.join(folder,'data.db');process.env.UPLOAD_DIRECTORY=path.join(folder,'uploads');const {db}=await import('../lib/db.mjs');const {uploadImage,readImage}=await import('../lib/media.mjs');const database=db();database.prepare("INSERT INTO users(name,email,password_hash,role) VALUES('Admin','admin@media.test','x','ADMIN')").run();const admin={id:1,role:'ADMIN'},customer={id:1,role:'CUSTOMER'};
-test('gambar valid dikonversi dan hanya admin dapat mengunggah',async()=>{const png=await sharp({create:{width:1600,height:1000,channels:3,background:'#db7a34'}}).png().toBuffer();const file=new File([png],'menu.png',{type:'image/png'});await assert.rejects(uploadImage(customer,file),/Akses/);const result=await uploadImage(admin,file);assert.match(result.url,/^\/api\/media\/[0-9a-f-]{36}$/);const read=await readImage(result.id);assert.equal(read.mimeType,'image/webp');assert.equal((await sharp(read.bytes).metadata()).width,1280);assert.equal(database.prepare('SELECT bytes_size FROM media_assets WHERE id=?').get(result.id).bytes_size,read.bytes.length);await assert.rejects(readImage('../data.db'),/tidak ditemukan/)});
-test('gambar palsu dan file kosong ditolak',async()=>{await assert.rejects(uploadImage(admin,new File(['not a real image'],'fake.png',{type:'image/png'})),/Gambar tidak valid/);await assert.rejects(uploadImage(admin,new File([],'empty.png',{type:'image/png'})),/Gambar harus/)});
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import sharp from "sharp";
+const folder = fs.mkdtempSync(path.join(os.tmpdir(), "media-test-"));
+process.env.DATABASE_PATH = path.join(folder, "data.db");
+process.env.UPLOAD_DIRECTORY = path.join(folder, "uploads");
+const { db } = await import("../lib/db.mjs");
+const { uploadImage, readImage } = await import("../lib/media.mjs");
+const database = db();
+database
+  .prepare(
+    "INSERT INTO users(name,email,password_hash,role) VALUES('Manager','manager@media.test','x','MANAGER'),('Admin','admin@media.test','x','ADMIN')",
+  )
+  .run();
+const manager = { id: 1, role: "MANAGER" },
+  admin = { id: 2, role: "ADMIN" },
+  customer = { id: 1, role: "CUSTOMER" };
+test("gambar valid dikonversi dan hanya Manager/Owner dapat mengunggah", async () => {
+  const png = await sharp({
+    create: { width: 1600, height: 1000, channels: 3, background: "#db7a34" },
+  })
+    .png()
+    .toBuffer();
+  const file = new File([png], "menu.png", { type: "image/png" });
+  await assert.rejects(uploadImage(customer, file), /Akses/);
+  await assert.rejects(uploadImage(admin, file), /Akses/);
+  const result = await uploadImage(manager, file);
+  assert.match(result.url, /^\/api\/media\/[0-9a-f-]{36}$/);
+  const read = await readImage(result.id);
+  assert.equal(read.mimeType, "image/webp");
+  assert.equal((await sharp(read.bytes).metadata()).width, 1280);
+  assert.equal(
+    database
+      .prepare("SELECT bytes_size FROM media_assets WHERE id=?")
+      .get(result.id).bytes_size,
+    read.bytes.length,
+  );
+  await assert.rejects(readImage("../data.db"), /tidak ditemukan/);
+});
+test("gambar palsu dan file kosong ditolak", async () => {
+  await assert.rejects(
+    uploadImage(
+      manager,
+      new File(["not a real image"], "fake.png", { type: "image/png" }),
+    ),
+    /Gambar tidak valid/,
+  );
+  await assert.rejects(
+    uploadImage(manager, new File([], "empty.png", { type: "image/png" })),
+    /Gambar harus/,
+  );
+});

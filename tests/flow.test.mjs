@@ -12,8 +12,9 @@ process.env.SESSION_SECRET =
 const { db } = await import("../lib/db.mjs");
 const { hashPassword, checkPassword, issueSession, sessionSecret } =
   await import("../lib/auth.mjs");
-const { createOrder, changeStatus, acceptDelivery, updateStationStatus } =
+const { createOrder, changeStatus, claimDelivery, updateStationStatus } =
   await import("../lib/domain.mjs");
+const { verifyPayment } = await import("../lib/payments.mjs");
 const database = db();
 const insert = database.prepare(
   "INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,?)",
@@ -85,20 +86,21 @@ test("order sampai delivered, poin tepat sekali, otorisasi dan status tervalidas
     method: "CASH",
     items: [{ productId: 1, quantity: 2 }],
   });
+  database
+    .prepare(
+      "UPDATE payments SET method='BANK_TRANSFER',status='PENDING' WHERE order_id=?",
+    )
+    .run(o.id);
   assert.equal(o.total, 50000);
   await assert.rejects(
     changeStatus(people.ADMIN, o.id, "DELIVERED"),
     /tidak diizinkan/,
   );
   await changeStatus(people.ADMIN, o.id, "CONFIRMED");
+  await verifyPayment(people.ADMIN, o.id, "PAID");
   await updateStationStatus(people.KITCHEN, o.id, "PREPARING");
   await updateStationStatus(people.KITCHEN, o.id, "READY");
-  await changeStatus(people.ADMIN, o.id, "ASSIGNED", people.DRIVER.id);
-  await assert.rejects(
-    changeStatus(people.DRIVER, o.id, "PICKED_UP"),
-    /Terima tugas/,
-  );
-  await acceptDelivery(people.DRIVER, o.id);
+  await claimDelivery(people.DRIVER, o.id);
   for (const status of ["PICKED_UP", "ON_DELIVERY", "DELIVERED"])
     await changeStatus(people.DRIVER, o.id, status);
   assert.equal(

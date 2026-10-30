@@ -1,0 +1,403 @@
+@media (max-width: 760px) {
+  #admin-customers-v1:has(#admin-customer-service-mobile-v2) .admin-service-shell {
+    display: none !important;
+  }
+
+  .admin-cs-mobile-v2 {
+    display: block;
+    margin-top: 10px;
+    padding-bottom: 18px;
+    color: #2f1b14;
+  }
+
+  .admin-cs-mobile-head,
+  .admin-cs-mobile-stats,
+  .admin-cs-mobile-search,
+  .admin-cs-mobile-tabs,
+  .admin-cs-mobile-selected,
+  .admin-cs-mobile-inbox-empty,
+  .admin-cs-mobile-chat-head,
+  .admin-cs-mobile-order-context,
+  .admin-cs-mobile-chat-body,
+  .admin-cs-mobile-composer {
+    box-sizing: border-box;
+  }
+
+  .admin-cs-mobile-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid #eadfd7;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #fff 0%, #fff9f4 100%);
+    box-shadow: 0 10px 28px rgba(63, 37, 25, .05);
+  }
+
+  .admin-cs-mobile-head small,
+  .admin-cs-mobile-order-context small,
+  .admin-cs-mobile-selected-copy small {
+    color: #a45738;
+    font-size: 8px;
+    font-weight: 850;
+    letter-spacing: .12em;
+  }
+
+  .admin-cs-mobile-head h3 {
+    margin: 4px 0 0;
+    font-size: 20px;
+    line-height: 1.1;
+  }
+
+  .admin-cs-mobile-head p {
+    margin: 6px 0 0;
+    color: #8b7a72;
+    font-size: 10px;
+    line-height: 1.45;
+  }
+
+  .admin-cs-mobile-count,
+  .admin-cs-mobile-status {
+    flex: 0 0 auto;
+    padding: 7px 9px;
+    border-radius: 999px;
+    color: #7b3524;
+    background: #f6e6dc;
+    font-size: 8px;
+    font-weight: 850;
+  }
+
+  .admin-cs-mobile-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .admin-cs-mobile-stats article {
+    min-width: 0;
+    padding: 12px 10px;
+    border: 1px solid #eadfd7;
+    border-radius: 14px;
+    background: #fff;
+    text-align: center;
+  }
+
+  .admin-cs-mobile-stats span,
+  .admin-cs-mobile-stats strong {
+    display: block;
+  }
+
+  .admin-cs-mobile-stats span {
+    color: #8f8078;
+    font-size: 8px;
+  }
+
+  .admin-cs-mobile-stats strong {
+    margin-top: 4px;
+    font-size: 18px;
+  }
+
+  .admin-cs-mobile-search {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    gap: 8px;
+    align-items: center;
+    min-height: 44px;
+    margin-top: 10px;
+    padding: 0 12px;
+    border: 1px solid #e7dcd4;
+    border-radius: 14px;
+    background: #fff;
+  }
+
+  .admin-cs-mobile-search svg,
+  .admin-cs-mobile-icon-btn svg,
+  .admin-cs-mobile-empty-icon svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.7;
+  }
+
+  .admin-cs-mobile-search input {
+    width: 100%;
+    border: 0;
+    outline: 0;
+    color: #75655e;
+    background: transparent;
+    font: inherit;
+    font-size: 10px;
+  }
+
+  .admin-cs-mobile-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 9px;
+    padding: 4px;
+    border: 1px solid #eadfd7;
+    border-radius: 14px;
+    background: #f7f2ee;
+  }
+
+  .admin-cs-mobile-tabs button {
+    min-height: 34px;
+    border: 0;
+    border-radius: 10px;
+    color: #7f6c63;
+    background: transparent;
+    font-size: 9px;
+    font-weight: 760;
+  }
+
+  .admin-cs-mobile-tabs button.active {
+    color: #fff;
+    background: #7b3524;
+    box-shadow: 0 4px 12px rgba(123, 53, 36, .18);
+  }
+
+  .admin-cs-mobile-selected {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    margin-top: 10px;
+    padding: 12px;
+    border: 1px solid #e8ddd5;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 8px 20px rgba(62, 39, 29, .04);
+  }
+
+  .admin-cs-mobile-avatar {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border-radius: 14px;
+    color: #7b3524;
+    background: #f5e5dc;
+    font-size: 12px;
+    font-weight: 850;
+  }
+
+  .admin-cs-mobile-selected-copy {
+    min-width: 0;
+  }
+
+  .admin-cs-mobile-selected-copy strong,
+  .admin-cs-mobile-selected-copy span {
+    display: block;
+  }
+
+  .admin-cs-mobile-selected-copy strong {
+    margin-top: 2px;
+    overflow: hidden;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-cs-mobile-selected-copy span {
+    margin-top: 2px;
+    overflow: hidden;
+    color: #95867e;
+    font-size: 8px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-cs-mobile-selected button {
+    min-height: 34px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 10px;
+    color: #fff;
+    background: #7b3524;
+    font-size: 9px;
+    font-weight: 800;
+  }
+
+  .admin-cs-mobile-inbox-empty,
+  .admin-cs-mobile-chat-body {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    margin-top: 10px;
+    padding: 34px 22px;
+    border: 1px dashed #e2d6ce;
+    border-radius: 18px;
+    background: #fff;
+    text-align: center;
+  }
+
+  .admin-cs-mobile-inbox-empty {
+    min-height: 230px;
+  }
+
+  .admin-cs-mobile-empty-icon {
+    display: grid;
+    width: 46px;
+    height: 46px;
+    place-items: center;
+    border-radius: 15px;
+    color: #8d4934;
+    background: #f5e7de;
+  }
+
+  .admin-cs-mobile-empty-icon.large {
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
+  }
+
+  .admin-cs-mobile-inbox-empty strong,
+  .admin-cs-mobile-chat-body strong {
+    margin-top: 12px;
+    font-size: 12px;
+  }
+
+  .admin-cs-mobile-inbox-empty p,
+  .admin-cs-mobile-chat-body p {
+    max-width: 290px;
+    margin: 6px 0 0;
+    color: #91827a;
+    font-size: 9px;
+    line-height: 1.55;
+  }
+
+  .admin-cs-mobile-chat-head {
+    display: grid;
+    grid-template-columns: 38px 42px minmax(0, 1fr) 38px;
+    gap: 9px;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid #e8ddd5;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(62, 39, 29, .05);
+  }
+
+  .admin-cs-mobile-icon-btn {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    border: 1px solid #e5d9d0;
+    border-radius: 12px;
+    color: #744331;
+    background: #fffaf7;
+  }
+
+  .admin-cs-mobile-chat-title {
+    min-width: 0;
+  }
+
+  .admin-cs-mobile-chat-title strong,
+  .admin-cs-mobile-chat-title span {
+    display: block;
+  }
+
+  .admin-cs-mobile-chat-title strong {
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-cs-mobile-chat-title span {
+    margin-top: 2px;
+    overflow: hidden;
+    color: #91827a;
+    font-size: 8px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-cs-mobile-order-context {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 10px;
+    padding: 12px 14px;
+    border: 1px solid #eadfd7;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #fffaf7, #fff);
+  }
+
+  .admin-cs-mobile-order-context strong,
+  .admin-cs-mobile-order-context span:not(.admin-cs-mobile-status) {
+    display: block;
+  }
+
+  .admin-cs-mobile-order-context strong {
+    margin-top: 3px;
+    font-size: 11px;
+  }
+
+  .admin-cs-mobile-order-context span:not(.admin-cs-mobile-status) {
+    margin-top: 2px;
+    color: #94857d;
+    font-size: 8px;
+  }
+
+  .admin-cs-mobile-chat-body {
+    min-height: 330px;
+    border-style: solid;
+  }
+
+  .admin-cs-mobile-composer {
+    position: sticky;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr) 64px;
+    gap: 7px;
+    align-items: center;
+    margin-top: 10px;
+    padding: 9px;
+    border: 1px solid #e6dbd3;
+    border-radius: 16px;
+    background: rgba(255, 252, 249, .96);
+    backdrop-filter: blur(10px);
+  }
+
+  .admin-cs-mobile-composer input,
+  .admin-cs-mobile-composer button {
+    min-height: 38px;
+    border: 1px solid #e4d8d0;
+    border-radius: 11px;
+    font: inherit;
+  }
+
+  .admin-cs-mobile-composer input {
+    width: 100%;
+    padding: 0 11px;
+    color: #8d7d75;
+    background: #fff;
+    font-size: 9px;
+  }
+
+  .admin-cs-mobile-composer button {
+    color: #8c776e;
+    background: #fff;
+  }
+
+  .admin-cs-mobile-composer button.send {
+    color: #fff;
+    border-color: #a77a6c;
+    background: #a77a6c;
+    font-size: 9px;
+    font-weight: 800;
+  }
+
+  .admin-cs-mobile-composer :disabled {
+    cursor: not-allowed;
+    opacity: .75;
+  }
+}

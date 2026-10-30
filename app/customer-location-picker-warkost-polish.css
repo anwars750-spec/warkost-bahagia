@@ -1,0 +1,454 @@
+.wloc-shell {
+  --wloc-brand: #682c20;
+  --wloc-brand-hover: #843e2b;
+  --wloc-accent: #a25931;
+  --wloc-text: #352721;
+  --wloc-muted: #81736b;
+  --wloc-border: #e2d9cf;
+  --wloc-border-strong: #d3c2b3;
+  --wloc-surface: #f8f5ef;
+  --wloc-surface-soft: #fffaf4;
+  --wloc-surface-warm: #f5e8dc;
+  --wloc-surface-active: #f8eadc;
+  --wloc-shadow: rgba(74, 37, 25, 0.16);
+
+  background: rgba(45, 29, 23, 0.46);
+  backdrop-filter: blur(4px);
+}
+
+.wloc-sheet {
+  background: var(--wloc-surface);
+  color: var(--wloc-text);
+  box-shadow: 0 -20px 60px var(--wloc-shadow);
+}
+
+.wloc-header {
+  gap: 12px;
+  min-height: 70px;
+  padding: 13px 16px;
+  background: rgba(255, 252, 248, 0.98);
+  border-bottom-color: var(--wloc-border);
+}
+
+.wloc-header > div {
+  min-width: 0;
+  gap: 1px;
+}
+
+.wloc-header strong {
+  color: var(--wloc-text);
+  font-size: 17px;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+}
+
+.wloc-header small {
+  color: var(--wloc-muted);
+  font-size: 11px;
+  font-weight: 560;
+}
+
+/* Precise back icon: avoid font glyph alignment differences across browsers. */
+.wloc-back {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  padding: 0;
+  border: 1px solid var(--wloc-border);
+  border-radius: 13px;
+  background: #fffdfb;
+  color: var(--wloc-brand);
+  font-size: 0;
+  line-height: 0;
+  box-shadow: 0 3px 10px rgba(74, 37, 25, 0.05);
+}
+
+.wloc-back::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-50%) rotate(45deg);
+  transform-origin: center;
+}
+
+.wloc-back::after {
+  content: "";
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  width: 15px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  transform: translateY(-50%);
+}
+
+.wloc-back:hover {
+  border-color: #cdb7a6;
+  background: #fff8f2;
+  color: var(--wloc-brand-hover);
+}
+
+.wloc-back:focus-visible,
+.wloc-search-box button:focus-visible,
+.wloc-current:focus-visible,
+.wloc-result:focus-visible,
+.wloc-manual:focus-visible,
+.wloc-chips button:focus-visible,
+.wloc-primary:focus-visible,
+.wloc-secondary:focus-visible,
+.wloc-location-launcher:focus-visible {
+  outline: 3px solid rgba(162, 89, 49, 0.2);
+  outline-offset: 2px;
+}
+
+.wloc-body {
+  background: var(--wloc-surface);
+}
+
+.wloc-search-box {
+  grid-template-columns: 24px minmax(0, 1fr) 32px;
+  min-height: 54px;
+  border-color: var(--wloc-border);
+  background: #fffdfb;
+  box-shadow: 0 10px 28px rgba(74, 37, 25, 0.075);
+}
+
+/* Precise search icon, drawn with CSS instead of the old text glyph. */
+.wloc-search-box > span:first-child {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  display: block;
+  color: var(--wloc-brand);
+  font-size: 0;
+  transform: none;
+}
+
+.wloc-search-box > span:first-child::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 11px;
+  height: 11px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+
+.wloc-search-box > span:first-child::after {
+  content: "";
+  position: absolute;
+  left: 13px;
+  top: 14px;
+  width: 7px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  transform: rotate(45deg);
+  transform-origin: left center;
+}
+
+.wloc-search-box input {
+  color: var(--wloc-text);
+}
+
+.wloc-search-box input::placeholder {
+  color: #9b8d83;
+}
+
+/* Precise clear/X icon. */
+.wloc-search-box button {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: #f3ebe4;
+  color: #6f5042;
+  font-size: 0;
+  line-height: 0;
+}
+
+.wloc-search-box button::before,
+.wloc-search-box button::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 1.8px;
+  border-radius: 999px;
+  background: currentColor;
+  transform-origin: center;
+}
+
+.wloc-search-box button::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.wloc-search-box button::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.wloc-search-box button:hover {
+  background: #eadbd0;
+  color: var(--wloc-brand);
+}
+
+.wloc-search-box:focus-within {
+  border-color: #b98063;
+  box-shadow: 0 0 0 3px rgba(162, 89, 49, 0.11);
+}
+
+.wloc-current {
+  border-color: var(--wloc-border);
+  background: #fffdfb;
+  color: var(--wloc-text);
+  box-shadow: 0 5px 18px rgba(74, 37, 25, 0.035);
+}
+
+.wloc-current:hover {
+  border-color: #d1b9a8;
+  background: #fff9f4;
+}
+
+.wloc-current-icon {
+  background: var(--wloc-surface-warm);
+  color: var(--wloc-brand);
+}
+
+.wloc-current small,
+.wloc-result small {
+  color: var(--wloc-muted);
+}
+
+.wloc-current > span:last-child,
+.wloc-result > span:last-child {
+  color: #9b7662;
+}
+
+.wloc-section-title {
+  color: #7c665a;
+}
+
+.wloc-section-title small {
+  color: var(--wloc-accent);
+}
+
+.wloc-results {
+  border-color: var(--wloc-border);
+  background: #fffdfb;
+}
+
+.wloc-result {
+  border-bottom-color: #eee4dc;
+  background: #fffdfb;
+  color: var(--wloc-text);
+}
+
+.wloc-result:hover,
+.wloc-result:active {
+  background: #fff8f2;
+}
+
+.wloc-pin,
+.wloc-saved-icon {
+  background: var(--wloc-surface-warm);
+  color: var(--wloc-brand);
+}
+
+.wloc-empty {
+  border-color: #dccdbf;
+  background: #fffaf5;
+}
+
+.wloc-empty span {
+  color: var(--wloc-muted);
+}
+
+.wloc-alert {
+  border-color: #e6c8ac;
+  background: #fff5e8;
+  color: #7a4c2b;
+}
+
+.wloc-manual {
+  border-color: #cba891;
+  background: #fffdfb;
+  color: var(--wloc-brand);
+  box-shadow: 0 4px 12px rgba(74, 37, 25, 0.035);
+}
+
+.wloc-manual:hover {
+  border-color: var(--wloc-accent);
+  background: #fff7f0;
+  color: var(--wloc-brand-hover);
+}
+
+.wloc-footnote {
+  color: var(--wloc-muted);
+}
+
+.wloc-map-card,
+.wloc-place-card,
+.wloc-form-card {
+  border-color: var(--wloc-border);
+  background: #fffdfb;
+  box-shadow: 0 8px 24px rgba(74, 37, 25, 0.055);
+}
+
+.wloc-map-placeholder {
+  background:
+    linear-gradient(90deg, rgba(125, 79, 57, 0.055) 1px, transparent 1px),
+    linear-gradient(rgba(125, 79, 57, 0.055) 1px, transparent 1px),
+    #f4ede6;
+  background-size: 28px 28px;
+}
+
+.wloc-map-placeholder small {
+  background: rgba(255, 252, 248, 0.94);
+  color: #79675d;
+}
+
+.wloc-map-road {
+  border-color: #fffaf6;
+  background: #e2d6cc;
+}
+
+.wloc-map-pin {
+  border-color: #fffaf6;
+  background: var(--wloc-brand);
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(104, 44, 32, 0.26);
+}
+
+.wloc-place-title small {
+  color: var(--wloc-muted);
+}
+
+.wloc-quote-grid > div {
+  background: #f7efe8;
+}
+
+.wloc-quote-grid span,
+.wloc-field > span,
+.wloc-label-block > span {
+  color: #7c685d;
+}
+
+.wloc-quote-grid strong {
+  color: var(--wloc-text);
+}
+
+/* Keep the whole picker on-brand; free delivery is highlighted without green. */
+.wloc-quote-grid strong.is-free {
+  color: var(--wloc-brand);
+}
+
+.wloc-free-badge {
+  border: 1px solid #dfc1ae;
+  background: #f7e7dc;
+  color: var(--wloc-brand);
+}
+
+.wloc-field textarea,
+.wloc-custom-label {
+  border-color: var(--wloc-border);
+  background: #fffdfb;
+  color: var(--wloc-text);
+}
+
+.wloc-field textarea::placeholder,
+.wloc-custom-label::placeholder {
+  color: #a09187;
+}
+
+.wloc-field textarea:focus,
+.wloc-custom-label:focus {
+  border-color: #b98063;
+  box-shadow: 0 0 0 3px rgba(162, 89, 49, 0.11);
+}
+
+.wloc-chips button {
+  border-color: var(--wloc-border);
+  background: #fffdfb;
+  color: #665046;
+}
+
+.wloc-chips button:hover {
+  border-color: #c9a68f;
+  background: #fff8f2;
+}
+
+.wloc-chips button.is-selected {
+  border-color: #a86546;
+  background: #f3dfcf;
+  color: var(--wloc-brand);
+}
+
+.wloc-confirm-actions {
+  border-top-color: var(--wloc-border);
+  background: rgba(255, 252, 248, 0.98);
+}
+
+.wloc-primary {
+  border: 1px solid var(--wloc-brand);
+  background: var(--wloc-brand);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(104, 44, 32, 0.23);
+}
+
+.wloc-primary:hover {
+  border-color: var(--wloc-brand-hover);
+  background: var(--wloc-brand-hover);
+}
+
+.wloc-primary:disabled {
+  border-color: #bda89d;
+  background: #bda89d;
+  color: #fffaf6;
+  box-shadow: none;
+}
+
+.wloc-secondary {
+  border-color: #c9aa96;
+  background: #fffdfb;
+  color: var(--wloc-brand);
+}
+
+.wloc-secondary:hover {
+  border-color: var(--wloc-accent);
+  background: #fff7f0;
+}
+
+/* Launcher on checkout should look native to the parent Warkost UI. */
+.wloc-location-launcher {
+  border-color: #cba891 !important;
+  background: #fffaf5 !important;
+  color: var(--wloc-brand, #682c20) !important;
+  font-weight: 760 !important;
+  box-shadow: 0 4px 12px rgba(74, 37, 25, 0.035);
+}
+
+.wloc-location-launcher:hover {
+  border-color: #a25931 !important;
+  background: #f8eadc !important;
+  color: #682c20 !important;
+}
+
+@media (min-width: 700px) {
+  .wloc-confirm-actions {
+    border-color: var(--wloc-border);
+    box-shadow: 0 10px 30px rgba(74, 37, 25, 0.12);
+  }
+}
