@@ -89,8 +89,8 @@ test("runtime Admin hanya menyediakan +5 menit pada ETA aktif dan me-refresh sna
     "utf8",
   );
   const layout = fs.readFileSync(path.resolve("app/layout.js"), "utf8");
-  assert.match(runtime, /preparing-eta-ops.*active/);
-  assert.match(runtime, /preparing-eta-ops.*overdue/);
+  assert.match(runtime, /classList\.contains\("active"\)/);
+  assert.match(runtime, /classList\.contains\("overdue"\)/);
   assert.match(runtime, /\+5 menit/);
   assert.match(runtime, /\/api\/preparing-eta\/extend/);
   assert.match(runtime, /warkost:realtime-recovered/);
