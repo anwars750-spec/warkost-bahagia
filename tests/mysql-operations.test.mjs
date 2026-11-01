@@ -4,21 +4,24 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import {
   createMysqlDefaultsFile,
   loadMysqlMigrations,
   parseMysqlUrl,
 } from "../lib/mysql-operations.mjs";
 
+const projectRoot = fileURLToPath(new URL("..", import.meta.url));
+
 test("migration MySQL memiliki urutan dan checksum stabil", () => {
   const migrations = loadMysqlMigrations();
-  assert.equal(migrations.length, 12);
+  assert.equal(migrations.length, 33);
   assert.equal(migrations[0].version, "001_mysql.sql");
-  assert.equal(migrations.at(-1).version, "012_promotions.sql");
+  assert.equal(migrations.at(-1).version, "033_delivery_proof_v1.sql");
   assert.ok(
     migrations.every(({ checksum }) => /^[0-9a-f]{64}$/.test(checksum)),
   );
-  assert.equal(new Set(migrations.map(({ checksum }) => checksum)).size, 12);
+  assert.equal(new Set(migrations.map(({ checksum }) => checksum)).size, 33);
 });
 
 test("DATABASE_URL MySQL diparsing tanpa kehilangan karakter kredensial", () => {
@@ -46,7 +49,9 @@ test("file kredensial MySQL berizin terbatas dan dapat dibersihkan", () => {
   const credentials = createMysqlDefaultsFile(
     parseMysqlUrl("mysql://user:secret@127.0.0.1/warkost"),
   );
-  assert.equal(fs.statSync(credentials.file).mode & 0o777, 0o600);
+  assert.equal(fs.existsSync(credentials.file), true);
+  if (process.platform !== "win32")
+    assert.equal(fs.statSync(credentials.file).mode & 0o777, 0o600);
   assert.match(fs.readFileSync(credentials.file, "utf8"), /password="secret"/);
   const directory = path.dirname(credentials.file);
   credentials.cleanup();
@@ -58,45 +63,53 @@ test("backup MySQL membuat checksum dan menolak output dump yang tidak valid", (
     path.join(os.tmpdir(), "warkost-mysql-backup-test-"),
   );
   try {
-    const valid = path.join(directory, "valid-dump.mjs");
+    const backupScript = path.join(projectRoot, "scripts", "backup-mysql.mjs");
+    const restoreScript = path.join(
+      projectRoot,
+      "scripts",
+      "restore-mysql.mjs",
+    );
+    const fixtureRunner = path.join(directory, "mysqldump-fixture-runner.mjs");
+    fs.writeFileSync(
+      fixtureRunner,
+      `import fs from "node:fs";\nimport childProcess from "node:child_process";\nimport { syncBuiltinESMExports } from "node:module";\nimport { pathToFileURL } from "node:url";\n\nchildProcess.spawnSync = (_command, _args, options) => {\n  const output = fs.readFileSync(process.env.MYSQLDUMP_FIXTURE_FILE);\n  fs.writeSync(options.stdio[1], output);\n  return { status: 0, signal: null, error: undefined, stderr: "" };\n};\nsyncBuiltinESMExports();\nawait import(pathToFileURL(process.env.BACKUP_SCRIPT_PATH).href);\n`,
+    );
+    const valid = path.join(directory, "valid-dump.sql");
     fs.writeFileSync(
       valid,
-      "#!/usr/bin/env node\nprocess.stdout.write('-- MySQL dump 8.0\\n-- Host: test\\nCREATE TABLE users(id BIGINT);\\n');\n",
-      { mode: 0o700 },
+      "-- MySQL dump 8.0\n-- Host: test\nCREATE TABLE users(id BIGINT);\n",
     );
     const env = {
       ...process.env,
       DATABASE_URL: "mysql://user:secret@127.0.0.1/warkost",
       BACKUP_DIRECTORY: path.join(directory, "backups"),
-      MYSQLDUMP_BINARY: valid,
+      MYSQLDUMP_BINARY: "mysqldump-test-fixture",
+      MYSQLDUMP_FIXTURE_FILE: valid,
+      BACKUP_SCRIPT_PATH: backupScript,
     };
-    const result = spawnSync(process.execPath, ["scripts/backup-mysql.mjs"], {
+    const result = spawnSync(process.execPath, [fixtureRunner], {
       encoding: "utf8",
       env,
     });
     assert.equal(result.status, 0, result.stderr);
     const backup = result.stdout.trim();
     assert.ok(fs.existsSync(backup + ".sha256"));
-    assert.equal(fs.statSync(backup).mode & 0o777, 0o600);
+    if (process.platform !== "win32")
+      assert.equal(fs.statSync(backup).mode & 0o777, 0o600);
 
     fs.writeFileSync(backup + ".sha256", "0".repeat(64) + "\n");
-    const restore = spawnSync(
-      process.execPath,
-      ["scripts/restore-mysql.mjs", backup],
-      { encoding: "utf8", env },
-    );
+    const restore = spawnSync(process.execPath, [restoreScript, backup], {
+      encoding: "utf8",
+      env,
+    });
     assert.notEqual(restore.status, 0);
     assert.match(restore.stderr, /Checksum backup MySQL tidak cocok/);
 
-    const invalid = path.join(directory, "invalid-dump.mjs");
-    fs.writeFileSync(
-      invalid,
-      "#!/usr/bin/env node\nprocess.stdout.write('not a database dump');\n",
-      { mode: 0o700 },
-    );
-    const rejected = spawnSync(process.execPath, ["scripts/backup-mysql.mjs"], {
+    const invalid = path.join(directory, "invalid-dump.sql");
+    fs.writeFileSync(invalid, "not a database dump");
+    const rejected = spawnSync(process.execPath, [fixtureRunner], {
       encoding: "utf8",
-      env: { ...env, MYSQLDUMP_BINARY: invalid },
+      env: { ...env, MYSQLDUMP_FIXTURE_FILE: invalid },
     });
     assert.notEqual(rejected.status, 0);
     assert.match(rejected.stderr, /Output mysqldump tidak valid/);
@@ -107,6 +120,11 @@ test("backup MySQL membuat checksum dan menolak output dump yang tidak valid", (
       false,
     );
   } finally {
-    fs.rmSync(directory, { recursive: true, force: true });
+    fs.rmSync(directory, {
+      recursive: true,
+      force: true,
+      maxRetries: process.platform === "win32" ? 8 : 2,
+      retryDelay: 100,
+    });
   }
 });

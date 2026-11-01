@@ -1,0 +1,54 @@
+/* Safety fallback: admin detail must never expand inline. */
+.admin-ui-mode .admin-order-card-v2 > .admin-order-detail-v1,
+.admin-ui-mode .admin-order-card-v2 > .order-details,
+.admin-ui-mode .admin-order-card-v2 > .admin-detail-action-summary {
+  display: none !important;
+}
+
+.admin-ui-mode .admin-order-card-v2.admin-order-expanded,
+.admin-ui-mode .admin-order-card-v2.admin-order-card-v2-expanded {
+  display: flex !important;
+  grid-column: auto !important;
+  grid-template-columns: none !important;
+  gap: 11px !important;
+  height: 100% !important;
+  padding: 16px !important;
+  overflow: hidden !important;
+  transform: none !important;
+}
+
+.admin-ui-mode .admin-order-card-v2.admin-order-expanded > .order-head,
+.admin-ui-mode .admin-order-card-v2.admin-order-card-v2-expanded > .order-head {
+  display: flex !important;
+}
+
+.admin-ui-mode .admin-order-card-v2.admin-order-expanded > p,
+.admin-ui-mode .admin-order-card-v2.admin-order-card-v2-expanded > p {
+  display: -webkit-box !important;
+}
+
+.admin-ui-mode .admin-order-card-v2.admin-order-expanded > .admin-card-preview-v2,
+.admin-ui-mode .admin-order-card-v2.admin-order-card-v2-expanded > .admin-card-preview-v2 {
+  display: grid !important;
+}
+
+.admin-ui-mode .admin-order-card-v2.admin-order-expanded > .station-statuses,
+.admin-ui-mode .admin-order-card-v2.admin-order-card-v2-expanded > .station-statuses {
+  display: flex !important;
+}
+
+.admin-ui-mode .admin-order-card-v2.admin-order-expanded > .actions,
+.admin-ui-mode .admin-order-card-v2.admin-order-card-v2-expanded > .actions {
+  position: static !important;
+  display: flex !important;
+  grid-column: auto !important;
+  grid-row: auto !important;
+  width: 100% !important;
+  flex-direction: column !important;
+  gap: 7px !important;
+  margin: auto 0 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}

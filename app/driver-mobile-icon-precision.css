@@ -1,0 +1,75 @@
+/* Driver mobile icon precision — normalize SVG box, optical centering, and tap targets. */
+
+@media (max-width: 760px) {
+  .driver-v2-icon {
+    display: block !important;
+    flex: 0 0 auto !important;
+    width: 18px !important;
+    height: 18px !important;
+    margin: 0 !important;
+    transform: none !important;
+    overflow: visible;
+    vertical-align: middle;
+  }
+
+  .driver-v2-bell {
+    display: grid !important;
+    place-items: center !important;
+    padding: 0 !important;
+  }
+
+  .driver-v2-bell > .driver-v2-icon {
+    width: 19px !important;
+    height: 19px !important;
+  }
+
+  .driver-v2-kpis article > span,
+  .driver-v2-empty > span,
+  .driver-v2-address > span,
+  .driver-v2-contact-cta-icon {
+    display: grid !important;
+    place-items: center !important;
+    line-height: 0 !important;
+  }
+
+  .driver-v2-kpis article > span .driver-v2-icon {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .driver-v2-bottom-nav .driver-v2-nav-link {
+    display: grid !important;
+    grid-template-rows: 22px auto;
+    place-items: center !important;
+    align-content: center !important;
+    justify-content: center !important;
+    gap: 1px !important;
+    line-height: 1.05 !important;
+  }
+
+  .driver-v2-bottom-nav .driver-v2-nav-link > .driver-v2-icon {
+    width: 18px !important;
+    height: 18px !important;
+    place-self: center !important;
+  }
+
+  .driver-v2-bottom-nav .driver-v2-nav-link > span {
+    display: block;
+    min-height: 9px;
+    margin: 0 !important;
+    text-align: center;
+    line-height: 1.05;
+  }
+
+  .driver-v2-order-actions a,
+  .driver-v2-order-actions button,
+  .driver-v2-page-title > button {
+    align-items: center !important;
+  }
+
+  .driver-v2-order-actions .driver-v2-icon,
+  .driver-v2-page-title > button .driver-v2-icon {
+    width: 17px !important;
+    height: 17px !important;
+  }
+}

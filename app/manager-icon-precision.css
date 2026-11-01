@@ -1,0 +1,238 @@
+/* Manager icon precision pass — visual-only overrides. */
+
+.manager-dashboard-polished {
+  --mgr-icon-sm: 16px;
+  --mgr-icon-md: 18px;
+  --mgr-icon-lg: 20px;
+  --mgr-icon-stroke-color: currentColor;
+}
+
+/* ---------- Desktop top navigation ---------- */
+.manager-dashboard-polished .manager-role-header nav {
+  align-items: center;
+}
+
+.manager-dashboard-polished .manager-role-header .manager-role-nav-item {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  min-height: 44px;
+  line-height: 1;
+}
+
+.manager-dashboard-polished .manager-role-header .manager-role-nav-item::before {
+  content: "";
+  width: var(--mgr-icon-md);
+  height: var(--mgr-icon-md);
+  flex: 0 0 var(--mgr-icon-md);
+  display: block;
+  background: currentColor;
+  -webkit-mask: var(--manager-nav-mask) center / contain no-repeat;
+  mask: var(--manager-nav-mask) center / contain no-repeat;
+}
+
+/* Avoid duplicate native SVG/icon on notification after adding unified mask icon. */
+.manager-dashboard-polished .manager-role-header .manager-role-nav-item > svg,
+.manager-dashboard-polished .manager-role-header .manager-role-nav-item > .notification-count {
+  flex: 0 0 auto;
+}
+.manager-dashboard-polished .manager-role-header .manager-role-nav-item[data-manager-nav="notifications"] > svg {
+  display: none;
+}
+
+.manager-dashboard-polished [data-manager-nav="dashboard"] {
+  --manager-nav-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 3h6a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm10 0h6a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1ZM4 13h6a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1Zm10-3h6a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z'/%3E%3C/svg%3E");
+}
+.manager-dashboard-polished [data-manager-nav="products"] {
+  --manager-nav-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 4h16a2 2 0 0 1 2 2v3H2V6a2 2 0 0 1 2-2Zm-2 7h20v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7Zm5 2v2h4v-2H7Z'/%3E%3C/svg%3E");
+}
+.manager-dashboard-polished [data-manager-nav="subcategories"] {
+  --manager-nav-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 4h7v6H4V4Zm9 0h7v4h-7V4ZM4 12h7v8H4v-8Zm9-2h7v10h-7V10Z'/%3E%3C/svg%3E");
+}
+.manager-dashboard-polished [data-manager-nav="stock"] {
+  --manager-nav-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='m12 2 9 5-9 5-9-5 9-5Zm-9 8 8 4.44V22l-8-4.44V10Zm18 0v7.56L13 22v-7.56L21 10Z'/%3E%3C/svg%3E");
+}
+.manager-dashboard-polished [data-manager-nav="promotions"] {
+  --manager-nav-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M20.5 13.5 13.5 20.5a2.1 2.1 0 0 1-3 0L3.5 13.5A2 2 0 0 1 3 12.1V5a2 2 0 0 1 2-2h7.1a2 2 0 0 1 1.4.6l7 7a2.1 2.1 0 0 1 0 2.9ZM8 8.5A1.5 1.5 0 1 0 8 5a1.5 1.5 0 0 0 0 3.5Z'/%3E%3C/svg%3E");
+}
+.manager-dashboard-polished [data-manager-nav="notifications"] {
+  --manager-nav-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 1 0-14 0v5l-2 2h18l-2-2Z'/%3E%3C/svg%3E");
+}
+.manager-dashboard-polished [data-manager-nav="logout"] {
+  --manager-nav-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M10 3H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6v-2H4V5h6V3Zm7.59 4.59L16.17 9 18.17 11H9v2h9.17l-2 2 1.42 1.41L22 12l-4.41-4.41Z'/%3E%3C/svg%3E");
+}
+
+/* ---------- Period filter ---------- */
+.manager-dashboard-polished .manager-period-tabs button {
+  min-height: 44px !important;
+  gap: 8px !important;
+  line-height: 1 !important;
+}
+.manager-dashboard-polished .manager-period-tabs button::before {
+  width: var(--mgr-icon-sm) !important;
+  height: var(--mgr-icon-sm) !important;
+  flex-basis: var(--mgr-icon-sm) !important;
+  margin: 0 !important;
+}
+.manager-dashboard-polished .manager-period-tabs button span {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1 !important;
+}
+
+/* ---------- KPI and section icon containers ---------- */
+.manager-dashboard-polished .manager-summary-card {
+  align-items: flex-start;
+}
+.manager-dashboard-polished .manager-summary-icon,
+.manager-dashboard-polished .manager-card-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.manager-dashboard-polished .manager-summary-icon {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  flex: 0 0 40px !important;
+  border-radius: 13px !important;
+}
+.manager-dashboard-polished .manager-card-icon {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  flex: 0 0 42px !important;
+  border-radius: 13px !important;
+}
+.manager-dashboard-polished .manager-summary-icon::before,
+.manager-dashboard-polished .manager-card-icon::before {
+  width: var(--mgr-icon-md) !important;
+  height: var(--mgr-icon-md) !important;
+  flex: 0 0 var(--mgr-icon-md) !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+.manager-dashboard-polished .manager-summary-card > div:last-child {
+  min-width: 0;
+  padding-top: 1px;
+}
+.manager-dashboard-polished .manager-card > header > div {
+  gap: 12px !important;
+  align-items: center !important;
+}
+
+/* ---------- Mobile bottom navigation ---------- */
+@media (max-width: 760px) {
+  .manager-dashboard-polished .manager-mobile-nav {
+    align-items: stretch;
+    min-height: 68px;
+    padding-top: 6px;
+  }
+
+  .manager-dashboard-polished .manager-mobile-nav button {
+    position: relative;
+    display: flex !important;
+    flex-direction: column;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    min-width: 0;
+    min-height: 52px;
+    padding: 5px 2px !important;
+    font-size: 0 !important; /* hides legacy unicode glyph */
+    line-height: 1 !important;
+  }
+
+  .manager-dashboard-polished .manager-mobile-nav button::before {
+    width: 19px !important;
+    height: 19px !important;
+    flex: 0 0 19px !important;
+    margin: 0 !important;
+    background: currentColor;
+    -webkit-mask: var(--mobile-nav-mask) center / contain no-repeat;
+    mask: var(--mobile-nav-mask) center / contain no-repeat;
+  }
+
+  .manager-dashboard-polished .manager-mobile-nav button span {
+    display: block;
+    width: 100%;
+    max-width: 64px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.58rem !important;
+    line-height: 1.12 !important;
+    font-weight: 720 !important;
+    letter-spacing: -0.01em !important;
+    text-align: center;
+  }
+
+  .manager-dashboard-polished .manager-mobile-nav button:nth-child(1) {
+    --mobile-nav-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 3h6v8H3V4a1 1 0 0 1 1-1Zm10 0h6a1 1 0 0 1 1 1v4h-8V4a1 1 0 0 1 1-1ZM3 14h8v7H4a1 1 0 0 1-1-1v-6Zm10-3h8v9a1 1 0 0 1-1 1h-7V11Z'/%3E%3C/svg%3E");
+  }
+  .manager-dashboard-polished .manager-mobile-nav button:nth-child(2) {
+    --mobile-nav-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 4h16a2 2 0 0 1 2 2v3H2V6a2 2 0 0 1 2-2Zm-2 7h20v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7Zm5 2v2h4v-2H7Z'/%3E%3C/svg%3E");
+  }
+  .manager-dashboard-polished .manager-mobile-nav button:nth-child(3) {
+    --mobile-nav-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='m12 2 9 5-9 5-9-5 9-5Zm-9 8 8 4.44V22l-8-4.44V10Zm18 0v7.56L13 22v-7.56L21 10Z'/%3E%3C/svg%3E");
+  }
+  .manager-dashboard-polished .manager-mobile-nav button:nth-child(4) {
+    --mobile-nav-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M20.5 13.5 13.5 20.5a2.1 2.1 0 0 1-3 0L3.5 13.5A2 2 0 0 1 3 12.1V5a2 2 0 0 1 2-2h7.1a2 2 0 0 1 1.4.6l7 7a2.1 2.1 0 0 1 0 2.9ZM8 8.5A1.5 1.5 0 1 0 8 5a1.5 1.5 0 0 0 0 3.5Z'/%3E%3C/svg%3E");
+  }
+  .manager-dashboard-polished .manager-mobile-nav button:nth-child(5) {
+    --mobile-nav-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='5' cy='12' r='2' fill='black'/%3E%3Ccircle cx='12' cy='12' r='2' fill='black'/%3E%3Ccircle cx='19' cy='12' r='2' fill='black'/%3E%3C/svg%3E");
+  }
+
+  .manager-dashboard-polished .manager-mobile-nav button.active::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 2px;
+    width: 22px;
+    height: 2px;
+    border-radius: 999px;
+    background: currentColor;
+    transform: translateX(-50%);
+    opacity: 0.9;
+  }
+
+  /* Smaller, uniform dashboard icon geometry on phone. */
+  .manager-dashboard-polished .manager-summary-icon {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    flex-basis: 32px !important;
+    border-radius: 10px !important;
+  }
+  .manager-dashboard-polished .manager-card-icon {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    flex-basis: 34px !important;
+    border-radius: 10px !important;
+  }
+  .manager-dashboard-polished .manager-summary-icon::before,
+  .manager-dashboard-polished .manager-card-icon::before {
+    width: 15px !important;
+    height: 15px !important;
+    flex-basis: 15px !important;
+  }
+
+  .manager-dashboard-polished .manager-period-tabs button {
+    min-height: 40px !important;
+    gap: 4px !important;
+    padding: 6px 3px !important;
+  }
+  .manager-dashboard-polished .manager-period-tabs button::before {
+    width: 14px !important;
+    height: 14px !important;
+    flex-basis: 14px !important;
+  }
+  .manager-dashboard-polished .manager-period-tabs button span {
+    font-size: 0.62rem !important;
+    line-height: 1 !important;
+  }
+}

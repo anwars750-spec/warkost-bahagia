@@ -1,0 +1,47 @@
+.conversation-screen.support-chat.general-support {
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+}
+
+.conversation-screen.support-chat.general-support .conversation-messages {
+  padding-top: 18px;
+  padding-bottom: 14px;
+}
+
+.conversation-screen.support-chat.general-support .conversation-empty {
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+
+.conversation-screen.support-chat.general-support .conversation-prompts {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.conversation-screen.support-chat.general-support .conversation-composer {
+  padding-top: 10px;
+  padding-bottom: 12px;
+}
+
+@media (max-width: 760px) {
+  .conversation-screen.support-chat.general-support {
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+  }
+
+  .conversation-screen.support-chat.general-support .conversation-messages {
+    padding-top: 12px;
+    padding-bottom: 10px;
+  }
+
+  .conversation-screen.support-chat.general-support .conversation-empty {
+    padding: 14px 12px 16px;
+  }
+
+  .conversation-screen.support-chat.general-support .conversation-prompts {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .conversation-screen.support-chat.general-support .conversation-composer {
+    padding-top: 8px;
+  }
+}

@@ -8,7 +8,7 @@ process.env.DATABASE_PATH = path.join(
   "data.db",
 );
 const { db } = await import("../lib/db.mjs");
-const { createOrder, changeStatus, acceptDelivery, updateStationStatus } =
+const { createOrder, changeStatus, claimDelivery, updateStationStatus } =
   await import("../lib/domain.mjs");
 const { verifyPayment } = await import("../lib/payments.mjs");
 const { listNotifications, readNotification } =
@@ -39,6 +39,11 @@ test("notifikasi terikat status, role, pembacaan dan duplikasi", async () => {
     method: "CASH",
     items: [{ productId: 1, quantity: 1 }],
   });
+  database
+    .prepare(
+      "UPDATE payments SET method='BANK_TRANSFER',status='PENDING' WHERE order_id=?",
+    )
+    .run(order.id);
   assert.equal((await listNotifications(admin)).unread, 1);
   const first = (await listNotifications(customer)).notifications[0];
   await readNotification(admin, first.id);
@@ -48,9 +53,8 @@ test("notifikasi terikat status, role, pembacaan dan duplikasi", async () => {
   await changeStatus(admin, order.id, "CONFIRMED");
   await updateStationStatus(kitchen, order.id, "PREPARING");
   await updateStationStatus(kitchen, order.id, "READY");
-  await changeStatus(admin, order.id, "ASSIGNED", driver.id);
+  await claimDelivery(driver, order.id);
   assert.equal((await listNotifications(driver)).unread, 1);
-  await acceptDelivery(driver, order.id);
   for (const status of ["PICKED_UP", "ON_DELIVERY", "DELIVERED"])
     await changeStatus(driver, order.id, status);
   const count = (await listNotifications(customer)).notifications.length;
@@ -60,9 +64,10 @@ test("notifikasi terikat status, role, pembacaan dan duplikasi", async () => {
   );
   assert.equal((await listNotifications(customer)).notifications.length, count);
   await verifyPayment(admin, order.id, "PAID");
-  assert.match(
-    (await listNotifications(customer)).notifications[0].message,
-    /Pembayaran/,
+  const messages = (await listNotifications(customer)).notifications.map(
+    (notification) => notification.message,
   );
+  assert.ok(messages.some((message) => /Pembayaran/.test(message)));
+  assert.ok(messages.some((message) => /mendapatkan 2 poin/.test(message)));
   await assert.rejects(readNotification(customer, 0), /tidak valid/);
 });

@@ -1,0 +1,889 @@
+/* Kitchen Stock Center + semantic Kitchen navigation */
+
+body.kitchen-shell-active .top nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-left: auto;
+  flex-wrap: nowrap;
+}
+
+body.kitchen-shell-active .top nav button[data-kitchen-nav] {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  background: transparent;
+  color: #4f362b;
+  font-weight: 800;
+  white-space: nowrap;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+body.kitchen-shell-active .top nav button[data-kitchen-nav] > svg {
+  display: none;
+}
+
+body.kitchen-shell-active .top nav button[data-kitchen-nav]:hover {
+  border-color: #ead5c6;
+  background: #fff8f2;
+  color: #9d4325;
+  transform: translateY(-1px);
+}
+
+body.kitchen-shell-active .top nav button[data-kitchen-nav].kitchen-nav-active,
+body.kitchen-shell-active.admin-printer-stable-view
+  .top
+  nav
+  button[data-kitchen-nav="printer"] {
+  border-color: #efc7af;
+  background: #fff0e5;
+  color: #a64020;
+  box-shadow: 0 7px 18px rgba(154, 70, 35, 0.09);
+}
+
+body.kitchen-shell-active .kitchen-nav-symbol {
+  display: inline-grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  flex: 0 0 19px;
+}
+
+body.kitchen-shell-active .kitchen-nav-symbol svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+body.kitchen-shell-active .top nav button[data-kitchen-nav="notification"] .notification-count {
+  top: 2px;
+  right: 2px;
+}
+
+/* Kitchen Stock is rendered directly; no native panel takeover is needed. */
+body.kitchen-stock-modern-active main {
+  width: 100%;
+  max-width: none;
+  padding-top: 0;
+}
+
+.kitchen-stock-center {
+  width: min(1280px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 36px 0 56px;
+  color: #311d15;
+}
+
+.kitchen-stock-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 28px;
+  margin-bottom: 24px;
+}
+
+.kitchen-stock-hero-copy {
+  min-width: 0;
+}
+
+.kitchen-stock-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 8px;
+  color: #a64b2d;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.kitchen-stock-eyebrow::before {
+  content: "";
+  width: 18px;
+  height: 2px;
+  border-radius: 99px;
+  background: #bb4b29;
+}
+
+.kitchen-stock-hero h1 {
+  margin: 0;
+  font-size: clamp(36px, 4vw, 54px);
+  line-height: 1.02;
+  letter-spacing: -0.045em;
+  color: #2c1912;
+}
+
+.kitchen-stock-hero p {
+  max-width: 680px;
+  margin: 10px 0 0;
+  color: #83695d;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.kitchen-stock-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  padding-top: 8px;
+}
+
+.kitchen-stock-readonly,
+.kitchen-stock-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  border-radius: 13px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.kitchen-stock-readonly {
+  padding: 0 13px;
+  border: 1px solid #e8d8cc;
+  background: #fffaf6;
+  color: #775a4d;
+}
+
+.kitchen-stock-refresh {
+  padding: 0 15px;
+  border: 1px solid #cfe5d7;
+  background: #effaf3;
+  color: #167249;
+  cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+
+.kitchen-stock-refresh:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #e5f7ec;
+  box-shadow: 0 8px 18px rgba(31, 133, 86, 0.1);
+}
+
+.kitchen-stock-refresh:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.kitchen-stock-readonly svg,
+.kitchen-stock-refresh svg {
+  width: 17px;
+  height: 17px;
+}
+
+.kitchen-stock-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.kitchen-stock-summary article {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+  min-height: 112px;
+  padding: 18px;
+  border: 1px solid #ead9cd;
+  border-radius: 18px;
+  background: #fffdfa;
+  box-shadow: 0 10px 30px rgba(78, 43, 26, 0.035);
+}
+
+.kitchen-stock-summary article > span {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  flex: 0 0 44px;
+}
+
+.kitchen-stock-summary article > span svg {
+  width: 21px;
+  height: 21px;
+}
+
+.kitchen-stock-summary .total {
+  background: #fff0e8;
+  color: #b34b27;
+}
+
+.kitchen-stock-summary .safe {
+  background: #e8f8ef;
+  color: #168158;
+}
+
+.kitchen-stock-summary .low {
+  background: #fff4d9;
+  color: #b87505;
+}
+
+.kitchen-stock-summary .empty {
+  background: #fff0ed;
+  color: #c44f3d;
+}
+
+.kitchen-stock-summary article div {
+  min-width: 0;
+}
+
+.kitchen-stock-summary small {
+  display: block;
+  color: #755b4f;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.kitchen-stock-summary strong {
+  display: block;
+  margin-top: 2px;
+  color: #2e1b13;
+  font-size: 27px;
+  line-height: 1;
+}
+
+.kitchen-stock-summary p {
+  margin: 5px 0 0;
+  color: #a08c82;
+  font-size: 10.5px;
+}
+
+.kitchen-stock-toolbar {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 10px;
+  border: 1px solid #e8d8cc;
+  border-radius: 17px;
+  background: #fffdfa;
+}
+
+.kitchen-stock-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid #eadcd2;
+  border-radius: 13px;
+  background: #fff;
+  color: #8d766a;
+}
+
+.kitchen-stock-search svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+
+.kitchen-stock-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #3c261d;
+  font: inherit;
+  font-size: 13px;
+}
+
+.kitchen-stock-search input::placeholder {
+  color: #aa958a;
+}
+
+.kitchen-stock-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kitchen-stock-filters button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: #f8f2ed;
+  color: #73584c;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.kitchen-stock-filters button:hover {
+  border-color: #e3cdbf;
+  background: #fff8f2;
+}
+
+.kitchen-stock-filters button.active {
+  border-color: #673523;
+  background: #673523;
+  color: #fff;
+}
+
+.kitchen-stock-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid #f0c1b6;
+  border-radius: 13px;
+  background: #fff1ed;
+  color: #9f3d29;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.kitchen-stock-error svg {
+  width: 18px;
+  height: 18px;
+}
+
+.kitchen-stock-list {
+  overflow: hidden;
+  border: 1px solid #e7d5c8;
+  border-radius: 20px;
+  background: #fffdfa;
+  box-shadow: 0 14px 38px rgba(73, 41, 25, 0.045);
+}
+
+.kitchen-stock-list-head,
+.kitchen-stock-row {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.65fr) minmax(100px, 0.72fr) minmax(100px, 0.72fr) minmax(100px, 0.72fr) minmax(96px, 0.55fr);
+  align-items: center;
+  gap: 18px;
+}
+
+.kitchen-stock-list-head {
+  min-height: 48px;
+  padding: 0 20px;
+  border-bottom: 1px solid #eaded5;
+  background: #fbf6f1;
+  color: #826659;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.kitchen-stock-row {
+  min-height: 106px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee3da;
+  transition: background 140ms ease;
+}
+
+.kitchen-stock-row:last-child {
+  border-bottom: 0;
+}
+
+.kitchen-stock-row:hover {
+  background: #fffbf7;
+}
+
+.kitchen-stock-product {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+}
+
+.kitchen-stock-product-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border-radius: 15px;
+  background: #fff0e8;
+  color: #b44e2b;
+}
+
+.kitchen-stock-product-icon svg {
+  width: 23px;
+  height: 23px;
+}
+
+.kitchen-stock-product > div {
+  min-width: 0;
+}
+
+.kitchen-stock-product strong {
+  display: block;
+  overflow: hidden;
+  color: #2d1a13;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kitchen-stock-product small {
+  display: block;
+  overflow: hidden;
+  margin-top: 4px;
+  color: #8f776b;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kitchen-stock-availability {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 7px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 900;
+}
+
+.kitchen-stock-availability.active {
+  background: #e6f7ed;
+  color: #167a52;
+}
+
+.kitchen-stock-availability.inactive {
+  background: #f1ece8;
+  color: #8a7469;
+}
+
+.kitchen-stock-metric small {
+  display: block;
+  margin-bottom: 4px;
+  color: #9a8479;
+  font-size: 10px;
+}
+
+.kitchen-stock-metric strong {
+  color: #311d15;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.kitchen-stock-metric.available strong {
+  color: #177650;
+}
+
+.kitchen-stock-status-wrap {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.kitchen-stock-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  min-height: 29px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.kitchen-stock-status.safe {
+  border: 1px solid #bfe6cf;
+  background: #e7f8ee;
+  color: #14784f;
+}
+
+.kitchen-stock-status.low {
+  border: 1px solid #f1d89d;
+  background: #fff5dc;
+  color: #9e6508;
+}
+
+.kitchen-stock-status.empty {
+  border: 1px solid #efc1b7;
+  background: #fff0ed;
+  color: #b84231;
+}
+
+.kitchen-stock-state {
+  display: grid;
+  place-items: center;
+  min-height: 260px;
+  padding: 38px 20px;
+  text-align: center;
+  color: #7d6559;
+}
+
+.kitchen-stock-state strong {
+  margin-top: 10px;
+  color: #3b251c;
+  font-size: 15px;
+}
+
+.kitchen-stock-state p {
+  margin: 5px 0 0;
+  color: #9d887e;
+  font-size: 11px;
+}
+
+.kitchen-stock-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 16px;
+  background: #fff0e8;
+  color: #b4532f;
+}
+
+.kitchen-stock-empty-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.kitchen-stock-loader {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #ead7ca;
+  border-top-color: #a74426;
+  border-radius: 50%;
+  animation: kitchen-stock-spin 700ms linear infinite;
+}
+
+@keyframes kitchen-stock-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* The old Printer frame used the second button as a positional active state.
+   Kitchen now has five semantic navigation items, so neutralize that legacy
+   position rule and let data-kitchen-nav own the active state. */
+body.kitchen-shell-active.admin-printer-stable-view .top nav > button:nth-child(2) {
+  border-color: transparent;
+  background: transparent;
+  color: #4f362b;
+  box-shadow: none;
+}
+
+body.kitchen-shell-active.admin-printer-stable-view
+  .top
+  nav
+  > button[data-kitchen-nav="printer"] {
+  border-color: #efc7af;
+  background: #fff0e5;
+  color: #a64020;
+}
+
+@media (max-width: 1020px) {
+  body.kitchen-shell-active .top {
+    padding-inline: 18px;
+  }
+
+  body.kitchen-shell-active .top nav {
+    gap: 3px;
+  }
+
+  body.kitchen-shell-active .top nav button[data-kitchen-nav] {
+    min-height: 39px;
+    padding: 7px 8px;
+    font-size: 11.5px;
+  }
+
+  .kitchen-stock-center {
+    width: min(100% - 32px, 980px);
+    padding-top: 28px;
+  }
+
+  .kitchen-stock-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kitchen-stock-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .kitchen-stock-filters {
+    flex-wrap: wrap;
+  }
+
+  .kitchen-stock-list-head,
+  .kitchen-stock-row {
+    grid-template-columns: minmax(230px, 1.5fr) repeat(3, minmax(86px, 0.7fr)) minmax(80px, 0.55fr);
+    gap: 12px;
+  }
+}
+
+@media (max-width: 760px) {
+  body.kitchen-shell-active .top {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  body.kitchen-shell-active .top .brand {
+    width: 100%;
+  }
+
+  body.kitchen-shell-active .top nav,
+  body.kitchen-shell-active.admin-printer-stable-view .top nav {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    width: 100%;
+    margin: 0;
+    gap: 4px;
+  }
+
+  body.kitchen-shell-active .top nav button[data-kitchen-nav] {
+    min-width: 0;
+    min-height: 48px;
+    padding: 6px 3px;
+    flex-direction: column;
+    gap: 3px;
+    border-radius: 11px;
+    font-size: 9.5px;
+    line-height: 1.05;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  body.kitchen-shell-active .kitchen-nav-symbol,
+  body.kitchen-shell-active .kitchen-nav-symbol svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  body.kitchen-shell-active .top nav button[data-kitchen-nav="notification"] .notification-count {
+    top: 1px;
+    right: 5px;
+  }
+
+  .kitchen-stock-center {
+    width: 100%;
+    padding: 20px 12px 42px;
+  }
+
+  .kitchen-stock-hero {
+    display: block;
+    margin-bottom: 18px;
+  }
+
+  .kitchen-stock-hero h1 {
+    font-size: 34px;
+  }
+
+  .kitchen-stock-hero p {
+    margin-top: 8px;
+    font-size: 12px;
+  }
+
+  .kitchen-stock-hero-actions {
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 14px;
+    padding-top: 0;
+  }
+
+  .kitchen-stock-readonly,
+  .kitchen-stock-refresh {
+    min-height: 39px;
+    font-size: 11px;
+  }
+
+  .kitchen-stock-summary {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .kitchen-stock-summary article {
+    min-height: 88px;
+    padding: 12px;
+    gap: 9px;
+    border-radius: 15px;
+  }
+
+  .kitchen-stock-summary article > span {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+    border-radius: 11px;
+  }
+
+  .kitchen-stock-summary article > span svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .kitchen-stock-summary strong {
+    font-size: 21px;
+  }
+
+  .kitchen-stock-summary p {
+    display: none;
+  }
+
+  .kitchen-stock-toolbar {
+    gap: 8px;
+    padding: 8px;
+    border-radius: 15px;
+  }
+
+  .kitchen-stock-search {
+    min-height: 42px;
+  }
+
+  .kitchen-stock-filters {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .kitchen-stock-filters button {
+    min-width: 0;
+    min-height: 35px;
+    padding: 0 5px;
+    font-size: 10px;
+  }
+
+  .kitchen-stock-list {
+    border-radius: 17px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .kitchen-stock-list-head {
+    display: none;
+  }
+
+  .kitchen-stock-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px 8px;
+    min-height: 0;
+    margin-bottom: 10px;
+    padding: 14px;
+    border: 1px solid #ead8cc;
+    border-radius: 17px;
+    background: #fffdfa;
+    box-shadow: 0 8px 24px rgba(75, 43, 27, 0.04);
+  }
+
+  .kitchen-stock-row:hover {
+    background: #fffdfa;
+  }
+
+  .kitchen-stock-product {
+    grid-column: 1 / -1;
+    padding-right: 70px;
+  }
+
+  .kitchen-stock-product-icon {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+    border-radius: 13px;
+  }
+
+  .kitchen-stock-product-icon svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  .kitchen-stock-metric {
+    padding: 9px 8px;
+    border: 1px solid #eee1d8;
+    border-radius: 12px;
+    background: #fff9f5;
+  }
+
+  .kitchen-stock-metric.available {
+    border-color: #d4eadc;
+    background: #f2fbf5;
+  }
+
+  .kitchen-stock-metric small {
+    margin-bottom: 3px;
+    font-size: 9px;
+  }
+
+  .kitchen-stock-metric strong {
+    font-size: 12px;
+  }
+
+  .kitchen-stock-status-wrap {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+  }
+
+  .kitchen-stock-status {
+    min-width: 54px;
+    min-height: 25px;
+    padding: 0 8px;
+    font-size: 9px;
+  }
+
+  .kitchen-stock-state {
+    min-height: 220px;
+    border: 1px solid #ead8cc;
+    border-radius: 17px;
+    background: #fffdfa;
+  }
+}
+
+@media (max-width: 420px) {
+  body.kitchen-shell-active .top nav button[data-kitchen-nav] {
+    font-size: 8.5px;
+  }
+
+  .kitchen-stock-center {
+    padding-inline: 10px;
+  }
+
+  .kitchen-stock-summary article {
+    padding: 10px;
+  }
+
+  .kitchen-stock-summary small {
+    font-size: 9.5px;
+  }
+
+  .kitchen-stock-summary strong {
+    font-size: 19px;
+  }
+
+  .kitchen-stock-row {
+    padding: 12px;
+  }
+
+  .kitchen-stock-status-wrap {
+    top: 12px;
+    right: 12px;
+  }
+}

@@ -9,6 +9,14 @@ import { validateProductionConfig } from "../lib/readiness.mjs";
 const valid = {
   NODE_ENV: "production",
   SESSION_SECRET: "x".repeat(32),
+  OTP_SECRET: "o".repeat(32),
+  EMAIL_TRANSPORT: "smtp",
+  SMTP_HOST: "smtp.example.com",
+  SMTP_PORT: "587",
+  SMTP_SECURE: "false",
+  SMTP_USER: "production-user",
+  SMTP_PASS: "production-smtp-password",
+  SMTP_FROM: "Warkost Bahagia <no-reply@example.com>",
   DATABASE_PATH: "/srv/warkost/data/app.db",
   UPLOAD_DIRECTORY: "/srv/warkost/uploads",
   BACKUP_DIRECTORY: "/srv/warkost/backups",
@@ -42,6 +50,15 @@ test("production config menerima URI MySQL dan menolak lokasi backup yang sama",
   ]);
 });
 
+test("production config menolak QRIS simulation mode", () => {
+  assert.ok(
+    validateProductionConfig({
+      ...valid,
+      PAYMENT_PROVIDER_MODE: "simulation",
+    }).some((message) => message.includes("Simulasi QRIS")),
+  );
+});
+
 test("production preflight memeriksa database dan direktori operasional", () => {
   const directory = fs.mkdtempSync(
     path.join(os.tmpdir(), "warkost-preflight-"),
@@ -54,6 +71,14 @@ test("production preflight memeriksa database dan direktori operasional", () => 
         ...process.env,
         NODE_ENV: "production",
         SESSION_SECRET: "s".repeat(32),
+        OTP_SECRET: "o".repeat(32),
+        EMAIL_TRANSPORT: "smtp",
+        SMTP_HOST: "smtp.example.com",
+        SMTP_PORT: "587",
+        SMTP_SECURE: "false",
+        SMTP_USER: "preflight-user",
+        SMTP_PASS: "preflight-smtp-password",
+        SMTP_FROM: "Warkost Bahagia <no-reply@example.com>",
         DATABASE_URL: "",
         DATABASE_PATH: path.join(directory, "app.db"),
         UPLOAD_DIRECTORY: path.join(directory, "uploads"),

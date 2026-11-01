@@ -1,0 +1,133 @@
+.customer-home-main .home-banner {
+  min-width: 0;
+  margin: 0;
+}
+
+.home-banner .banner-card {
+  position: relative;
+  display: grid;
+  min-height: 320px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(120, 73, 47, 0.14);
+  border-radius: 24px;
+  background: linear-gradient(145deg, #f4ebe4, #fffaf6);
+  box-shadow: 0 16px 38px rgba(76, 39, 25, 0.16);
+  cursor: pointer;
+  touch-action: pan-y;
+  user-select: none;
+  transform: translateX(var(--banner-drag-x, 0));
+  opacity: var(--banner-drag-opacity, 1);
+  transition:
+    transform 220ms ease,
+    opacity 220ms ease;
+  animation: warkost-banner-slide-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.home-banner .banner-card.is-banner-dragging {
+  cursor: grabbing;
+  animation: none;
+  transition: none;
+}
+
+.home-banner .banner-image {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: min(540px, 70vh);
+  object-fit: contain;
+}
+
+.home-banner .banner-controls {
+  position: absolute;
+  right: 50%;
+  bottom: 12px;
+  z-index: 2;
+  transform: translateX(50%);
+}
+
+.home-banner .banner-dots {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(75, 33, 22, 0.52);
+  backdrop-filter: blur(8px);
+}
+
+.home-banner .banner-dots button {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  opacity: 0.75;
+  transition:
+    width 180ms ease,
+    background 180ms ease,
+    opacity 180ms ease;
+}
+
+.home-banner .banner-dots button.active {
+  width: 22px;
+  border-radius: 999px;
+  background: #fff;
+  opacity: 1;
+}
+
+@keyframes warkost-banner-slide-in {
+  from {
+    opacity: 0.82;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (pointer: coarse) {
+  .home-banner .banner-card {
+    cursor: default;
+  }
+}
+
+@media (max-width: 1050px) {
+  .home-banner .banner-card {
+    min-height: 0;
+  }
+
+  .home-banner .banner-image {
+    width: 100%;
+    max-height: none;
+  }
+}
+
+@media (max-width: 620px) {
+  .home-banner .banner-card {
+    min-height: 0;
+    border-radius: 18px;
+  }
+
+  .home-banner .banner-controls {
+    bottom: 9px;
+  }
+
+  .home-banner .banner-dots {
+    min-height: 26px;
+    padding: 6px 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-banner .banner-card,
+  .home-banner .banner-dots button {
+    animation: none !important;
+    transition: none !important;
+  }
+}

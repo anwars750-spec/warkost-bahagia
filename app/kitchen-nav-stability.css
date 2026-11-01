@@ -1,0 +1,134 @@
+/* Kitchen navigation stability
+   Navigation tabs change visual state without moving. */
+body.kitchen-shell-active .top nav button[data-kitchen-nav],
+body.kitchen-shell-active .top nav button[data-kitchen-nav]:hover,
+body.kitchen-shell-active .top nav button[data-kitchen-nav]:active,
+body.kitchen-shell-active .top nav button[data-kitchen-nav]:focus-visible {
+  transform: none !important;
+}
+
+body.kitchen-shell-active .top nav {
+  align-items: center;
+}
+
+body.kitchen-shell-active .top nav button[data-kitchen-nav] {
+  box-sizing: border-box;
+  margin: 0;
+  border-color: transparent !important;
+  background: transparent !important;
+  color: #4f362b !important;
+  box-shadow: none !important;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    box-shadow 120ms ease !important;
+}
+
+/* Hover is only a light preview. It must never look like the selected view. */
+body.kitchen-shell-active .top nav button[data-kitchen-nav]:hover {
+  border-color: #ead8ca !important;
+  background: #fff8f3 !important;
+  color: #8f4329 !important;
+  box-shadow: none !important;
+}
+
+/* Active workspace is rendered by React in the same commit as its content. */
+body.kitchen-shell-active .top nav button[data-kitchen-nav].kitchen-nav-active,
+body.kitchen-shell-active
+  .top
+  nav
+  button[data-kitchen-nav="notification"].kitchen-notification-open {
+  border-color: #efc7af !important;
+  background: #fff0e5 !important;
+  color: #a64020 !important;
+  box-shadow: 0 7px 18px rgba(154, 70, 35, 0.09) !important;
+}
+
+body.kitchen-shell-active
+  .top
+  nav
+  button[data-kitchen-nav="logout"].kitchen-logout-open {
+  border-color: #f0c6b9 !important;
+  background: #fff0ea !important;
+  color: #9b3c25 !important;
+  box-shadow: 0 7px 18px rgba(154, 70, 35, 0.07) !important;
+}
+
+body.kitchen-stock-modern-active .kitchen-stock-center {
+  animation: none !important;
+}
+
+/* Kitchen notification is intentionally denser than the shared Admin popover. */
+.kitchen-notification-popover {
+  max-width: min(390px, calc(100vw - 32px));
+}
+
+.kitchen-notification-card .admin-notification-head {
+  padding: 16px 16px 12px;
+}
+
+.kitchen-notification-card .admin-notification-title-row h2 {
+  font-size: 19px;
+}
+
+.kitchen-notification-card .kitchen-notification-subtitle {
+  max-width: 300px;
+  margin-top: 4px;
+}
+
+.kitchen-notification-card .admin-notification-filters {
+  padding: 7px;
+}
+
+.kitchen-notification-card .admin-notification-filters button {
+  min-height: 34px;
+}
+
+.kitchen-notification-card .admin-notification-list {
+  max-height: min(42vh, 320px);
+}
+
+.kitchen-notification-card .admin-notification-state {
+  min-height: 156px;
+  padding: 20px 18px;
+}
+
+.kitchen-notification-card .admin-notification-state-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+}
+
+.kitchen-notification-card .kitchen-notification-footer {
+  min-height: 34px;
+  padding-block: 7px;
+}
+
+/* Printer is shared with Owner/Admin internals, so visual alignment is scoped
+   to a confirmed Kitchen shell only. */
+
+body.kitchen-shell-active.kitchen-printer-active .admin-printer-hero {
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+body.kitchen-shell-active.kitchen-printer-active .admin-printer-kpis {
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+body.kitchen-shell-active.kitchen-printer-active .admin-printer-workspace {
+  border-radius: 20px;
+}
+
+@media (max-width: 760px) {
+  .kitchen-notification-popover {
+    max-width: calc(100vw - 24px);
+  }
+
+  .kitchen-notification-card .admin-notification-state {
+    min-height: 132px;
+    padding: 18px 14px;
+  }
+}

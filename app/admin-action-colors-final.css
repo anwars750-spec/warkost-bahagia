@@ -1,0 +1,33 @@
+/*
+ * Final, React-owned Admin order action colors.
+ *
+ * Keep this stylesheet after the other Admin layers. The native admin view
+ * marker and semantic button classes are available on the first React render,
+ * so these rules do not depend on enhancer timing or card decoration classes.
+ */
+main[data-admin-view="orders"]
+  .order
+  > .actions
+  > button.primary.admin-action-confirm {
+  border-color: #6d2f20 !important;
+  color: #fff !important;
+  background: linear-gradient(135deg, #7a3422, #5a2117) !important;
+}
+
+main[data-admin-view="orders"]
+  .order
+  > .actions
+  > button.primary.admin-action-prepare {
+  border-color: #c96a08 !important;
+  color: #fff !important;
+  background: linear-gradient(135deg, #f39a18, #d97706) !important;
+}
+
+main[data-admin-view="orders"]
+  .order
+  > .actions
+  > button.primary.admin-action-ready {
+  border-color: #18753b !important;
+  color: #fff !important;
+  background: linear-gradient(135deg, #28a95c, #18753b) !important;
+}

@@ -29,7 +29,12 @@ function validateEnvironment(env) {
   const port = Number(env.OWNER_DEMO_PORT || 3000);
   if (!Number.isSafeInteger(port) || port < 1024 || port > 65535)
     fail("OWNER_DEMO_PORT harus berupa port 1024-65535");
-  return port;
+
+  const hostname = env.OWNER_DEMO_HOST || "127.0.0.1";
+  if (!["127.0.0.1", "0.0.0.0"].includes(hostname))
+    fail("OWNER_DEMO_HOST hanya boleh 127.0.0.1 atau 0.0.0.0");
+
+  return { port, hostname };
 }
 
 function runStep(script, env) {
@@ -45,7 +50,7 @@ function runStep(script, env) {
 }
 
 async function main() {
-  const port = validateEnvironment(process.env);
+  const { port, hostname } = validateEnvironment(process.env);
   if (!prepareOnly) {
     try {
       await fsPromises.access(path.join(projectRoot, ".next", "BUILD_ID"));
@@ -63,8 +68,11 @@ async function main() {
     DATABASE_URL: "",
     DATABASE_PATH: databasePath,
     DEPLOYMENT_ENV: "demo",
+    PAYMENT_PROVIDER_MODE: "simulation",
+    PAYMENT_WEBHOOK_SECRET: crypto.randomBytes(48).toString("hex"),
     SEED_DEMO_PASSWORD: process.env.OWNER_DEMO_PASSWORD,
     SESSION_SECRET: crypto.randomBytes(48).toString("hex"),
+    OTP_SECRET: crypto.randomBytes(48).toString("hex"),
     UPLOAD_DIRECTORY: path.join(directory, "uploads"),
     BACKUP_DIRECTORY: path.join(directory, "backups"),
   };
@@ -73,12 +81,13 @@ async function main() {
   runStep("scripts/preflight.mjs", { ...commonEnv, NODE_ENV: "production" });
 
   const evidence = {
-    url: `http://127.0.0.1:${port}`,
+    url: `http://${hostname}:${port}`,
     directory,
     databasePath,
     roles: [
       "customer@warkost.local",
       "admin@warkost.local",
+      "manager@warkost.local",
       "kitchen@warkost.local",
       "owner@warkost.local",
       "driver@warkost.local",
@@ -87,7 +96,9 @@ async function main() {
   console.log("OWNER_DEMO_READY " + JSON.stringify(evidence));
   if (prepareOnly) return;
 
-  console.log("Gunakan password dari OWNER_DEMO_PASSWORD untuk kelima akun.");
+  console.log("Gunakan password dari OWNER_DEMO_PASSWORD untuk keenam akun.");
+  if (hostname === "0.0.0.0")
+    console.log("LAN UAT aktif; buka dari perangkat lain memakai IP LAN laptop dan port demo.");
   console.log("Tekan Ctrl+C setelah demo selesai.");
 
   const nextBin = path.join(
@@ -102,7 +113,7 @@ async function main() {
 
   const server = spawn(
     process.execPath,
-    [nextBin, "start", "--hostname", "127.0.0.1", "--port", String(port)],
+    [nextBin, "start", "--hostname", hostname, "--port", String(port)],
     {
       cwd: projectRoot,
       env: { ...commonEnv, NODE_ENV: "production", PORT: String(port) },

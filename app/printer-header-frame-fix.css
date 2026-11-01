@@ -1,0 +1,151 @@
+/* Printer header frame alignment — keep global navigation in the same visual frame as Kitchen */
+body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) .top {
+  width: 100%;
+  max-width: none;
+  padding-inline: clamp(24px, 3vw, 56px);
+  border-bottom-color: #eadbca;
+  background: rgba(255, 252, 247, 0.96);
+}
+
+body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) .top .brand {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) .top nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  margin-left: auto;
+  gap: 8px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) .top nav button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* Dapur, Stok Makanan, Printer, Notifikasi, Keluar — Printer is item 3. */
+body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) .top nav > button:nth-child(3) {
+  border-radius: 14px;
+  background: #f4e2d2;
+  color: #6f321e;
+}
+
+/* Keep the injected Printer Center aligned to the same outer frame. */
+body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) #admin-ui-portal-root {
+  width: 100%;
+  max-width: none;
+  padding-inline: clamp(22px, 3vw, 48px);
+}
+
+body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) #admin-printer-center-v1 {
+  width: 100%;
+  max-width: none;
+}
+
+/* Do not hide main content during Dapur <-> Printer switching.
+   PrinterCenterRuntime now swaps the enhanced view without a blocking mask. */
+body.printer-center-transition {
+  /* compatibility cleanup for clients that still carry the old class */
+}
+
+@media (max-width: 900px) {
+  body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) .top {
+    padding-inline: 18px;
+  }
+
+  body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) .brand-logo {
+    width: 92px;
+  }
+
+  body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) .brand strong {
+    font-size: 16px;
+  }
+
+  body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) .brand small {
+    font-size: 11px;
+  }
+
+  body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) .top nav {
+    gap: 4px;
+  }
+
+  body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) .top nav button {
+    padding-inline: 8px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 680px) {
+  body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) .top {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: center;
+    gap: 8px;
+    min-height: auto;
+    padding: 10px 12px;
+  }
+
+  body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) .brand {
+    width: 100%;
+    gap: 9px;
+  }
+
+  body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) .brand-logo {
+    width: 72px;
+    border-radius: 10px;
+  }
+
+  body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) .brand-copy strong {
+    font-size: 15px;
+    line-height: 1.1;
+  }
+
+  body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) .brand-copy small {
+    display: none;
+  }
+
+  body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) .top nav {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    width: 100%;
+    margin-left: 0;
+    gap: 4px;
+  }
+
+  body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) .top nav button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 38px;
+    padding: 7px 4px;
+    border-radius: 10px;
+    font-size: 10.5px;
+    line-height: 1.1;
+    gap: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) .top nav .ui-icon {
+    width: 17px;
+    height: 17px;
+    flex: 0 0 17px;
+  }
+
+  body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) .top nav .notification-count {
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    font-size: 9px;
+  }
+
+  body:is(.admin-printer-stable-view, .admin-printer-react-view, .kitchen-printer-active) #admin-ui-portal-root {
+    padding: 14px 12px 34px;
+  }
+}

@@ -1,0 +1,110 @@
+.owner-notification-popover {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 19000 !important;
+  display: grid !important;
+  width: auto !important;
+  max-width: none !important;
+  padding: 24px !important;
+  place-items: center !important;
+  pointer-events: none;
+}
+
+.owner-notification-popover .manager-notification-backdrop {
+  display: block !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 0;
+  pointer-events: auto;
+  background: rgba(48, 31, 23, 0.42) !important;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  animation: none !important;
+}
+
+.owner-notification-popover .manager-notification-panel {
+  position: relative !important;
+  inset: auto !important;
+  z-index: 1;
+  width: min(560px, calc(100vw - 48px)) !important;
+  max-width: 560px !important;
+  max-height: min(78vh, 700px) !important;
+  pointer-events: auto;
+  border-radius: 26px !important;
+  box-shadow: 0 30px 90px rgba(42, 24, 17, 0.32) !important;
+  animation: none !important;
+  transform: none !important;
+}
+
+.owner-notification-popover .manager-notification-head {
+  padding: 20px 20px 17px !important;
+}
+
+.owner-notification-popover .manager-notification-list {
+  max-height: min(430px, calc(78vh - 190px)) !important;
+}
+
+.owner-notification-popover .manager-notification-footer {
+  border-bottom-left-radius: 26px;
+  border-bottom-right-radius: 26px;
+}
+
+.owner-notification-popover .manager-notification-grabber {
+  display: none !important;
+}
+
+/* Owner notifications must feel like a modal, not a nav-attached dropdown. */
+header.top nav button.owner-notification-open {
+  box-shadow: none !important;
+}
+
+@media (max-width: 760px) {
+  .owner-notification-popover {
+    inset: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    padding: 12px !important;
+    place-items: center !important;
+  }
+
+  .owner-notification-popover .manager-notification-panel {
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: min(100%, 460px) !important;
+    max-width: 460px !important;
+    max-height: calc(100dvh - 24px) !important;
+    border-radius: 24px !important;
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .owner-notification-popover .manager-notification-list {
+    max-height: calc(100dvh - 215px) !important;
+  }
+
+  .owner-notification-popover .manager-notification-head {
+    padding: 16px 15px 14px !important;
+  }
+
+  .owner-notification-popover .manager-notification-grabber {
+    display: none !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .owner-notification-popover {
+    padding: 8px !important;
+  }
+
+  .owner-notification-popover .manager-notification-panel {
+    width: 100% !important;
+    max-height: calc(100dvh - 16px) !important;
+    border-radius: 22px !important;
+  }
+
+  .owner-notification-popover .manager-notification-list {
+    max-height: calc(100dvh - 205px) !important;
+  }
+}

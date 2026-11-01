@@ -17,6 +17,8 @@ const temporary = fs.mkdtempSync(
   path.join(os.tmpdir(), "warkost-mysql-integration-"),
 );
 const password = "mysql-integration-password-2026";
+const paymentWebhookSecret =
+  "mysql-integration-payment-webhook-secret-more-than-32-bytes";
 let database;
 let web;
 let sourceUrl;
@@ -152,6 +154,15 @@ try {
     STAGING_UAT_PASSWORD: password,
     SEED_DEMO_PASSWORD: password,
     SESSION_SECRET: "mysql-integration-session-secret-32-bytes",
+    OTP_SECRET: "mysql-integration-otp-secret-more-than-32-bytes",
+    OTP_OUTBOX_PATH: path.join(temporary, ".uat", "otp-outbox.json"),
+    EMAIL_TRANSPORT: "smtp",
+    SMTP_HOST: "smtp.example.com",
+    SMTP_PORT: "587",
+    SMTP_SECURE: "false",
+    SMTP_USER: "mysql-integration-user",
+    SMTP_PASS: "mysql-integration-smtp-password",
+    SMTP_FROM: "Warkost Bahagia <no-reply@example.com>",
     UPLOAD_DIRECTORY: path.join(temporary, "uploads"),
     BACKUP_DIRECTORY: backupDirectory,
   };
@@ -186,7 +197,14 @@ try {
     [nextBinary, "dev", "--hostname", "127.0.0.1", "--port", String(port)],
     {
       cwd: root,
-      env: { ...process.env, ...common, NODE_ENV: "development" },
+      env: {
+        ...process.env,
+        ...common,
+        NODE_ENV: "development",
+        EMAIL_TRANSPORT: "development",
+        PAYMENT_PROVIDER_MODE: "simulation",
+        PAYMENT_WEBHOOK_SECRET: paymentWebhookSecret,
+      },
       stdio: ["ignore", "pipe", "pipe"],
     },
   );
@@ -198,7 +216,16 @@ try {
   console.log("MYSQL INTEGRATION: menunggu HTTP readiness");
   await waitForReady(origin, () => serverOutput);
   console.log("MYSQL INTEGRATION: HTTP readiness PASS");
-  run("scripts/http-smoke.mjs", { ...common, SMOKE_ORIGIN: origin });
+
+  try {
+    run("scripts/http-smoke.mjs", {
+      ...common,
+      SMOKE_ORIGIN: origin,
+      PAYMENT_WEBHOOK_SECRET: paymentWebhookSecret,
+    });
+  } catch (error) {
+    throw Error(`${error.message}\nNEXT SERVER OUTPUT:\n${serverOutput}`);
+  }
 
   const binaryDirectory = database
     ? path.join(

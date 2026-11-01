@@ -1,0 +1,327 @@
+/* Admin COD settlement panel — detail modal reconciliation UI */
+
+.admin-cod-settlement-panel {
+  padding: 18px;
+  overflow: visible;
+}
+
+.admin-cod-settlement-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-cod-settlement-heading small {
+  display: block;
+  color: #a05534;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  line-height: 1.2;
+}
+
+.admin-cod-settlement-heading h3 {
+  margin: 5px 0 0;
+  color: #2f1b14;
+  font-size: 17px;
+  font-weight: 820;
+  letter-spacing: -.025em;
+}
+
+.admin-cod-settlement-status {
+  display: inline-flex;
+  min-height: 27px;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .035em;
+  white-space: nowrap;
+}
+
+.admin-cod-settlement-status.waiting {
+  color: #8a5a08;
+  background: #fff2cb;
+}
+
+.admin-cod-settlement-status.submitted {
+  color: #5b4aa6;
+  background: #efedff;
+}
+
+.admin-cod-settlement-status.review {
+  color: #a23e34;
+  background: #fdebea;
+}
+
+.admin-cod-settlement-status.verified {
+  color: #167643;
+  background: #e5f6eb;
+}
+
+.admin-cod-settlement-description {
+  margin: 11px 0 0;
+  color: #7d6d65;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.admin-cod-settlement-amounts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.admin-cod-amount-card {
+  min-width: 0;
+  padding: 11px 10px;
+  border: 1px solid #eee4dd;
+  border-radius: 12px;
+  background: #fbf8f5;
+}
+
+.admin-cod-amount-card > span,
+.admin-cod-amount-card > strong,
+.admin-cod-amount-card > small {
+  display: block;
+}
+
+.admin-cod-amount-card > span {
+  color: #8b7b73;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .045em;
+}
+
+.admin-cod-amount-card > strong {
+  margin-top: 5px;
+  overflow: hidden;
+  color: #2c1913;
+  font-size: 14px;
+  font-weight: 850;
+  letter-spacing: -.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-cod-amount-card > small {
+  margin-top: 4px;
+  color: #9a8a82;
+  font-size: 8px;
+  line-height: 1.35;
+}
+
+.admin-cod-amount-card.match {
+  border-color: #cce8d6;
+  background: #f1faf4;
+}
+
+.admin-cod-amount-card.match > strong,
+.admin-cod-amount-card.match > small {
+  color: #1a7548;
+}
+
+.admin-cod-amount-card.mismatch {
+  border-color: #f0c8c3;
+  background: #fff3f1;
+}
+
+.admin-cod-amount-card.mismatch > strong,
+.admin-cod-amount-card.mismatch > small {
+  color: #a43c33;
+}
+
+.admin-cod-settlement-alert {
+  display: grid;
+  gap: 4px;
+  margin-top: 11px;
+  padding: 10px 11px;
+  border: 1px solid #f0c8c3;
+  border-radius: 11px;
+  background: #fff5f3;
+}
+
+.admin-cod-settlement-alert strong {
+  color: #9d3c34;
+  font-size: 10px;
+  font-weight: 820;
+}
+
+.admin-cod-settlement-alert span {
+  color: #98675f;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.admin-cod-settlement-meta {
+  display: grid;
+  gap: 0;
+  margin-top: 13px;
+  border-top: 1px solid #eee6e0;
+}
+
+.admin-cod-settlement-meta > div {
+  display: grid;
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+  gap: 12px;
+  align-items: start;
+  padding: 9px 0;
+  border-bottom: 1px solid #f2ece7;
+}
+
+.admin-cod-settlement-meta > div:last-child {
+  border-bottom: 0;
+}
+
+.admin-cod-settlement-meta span {
+  color: #8c7d75;
+  font-size: 9px;
+}
+
+.admin-cod-settlement-meta strong {
+  overflow-wrap: anywhere;
+  color: #3b2921;
+  font-size: 9px;
+  font-weight: 760;
+  text-align: right;
+  line-height: 1.4;
+}
+
+.admin-cod-settlement-feedback {
+  min-height: 0;
+  margin-top: 0;
+  color: #177548;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.admin-cod-settlement-feedback:not(:empty) {
+  margin-top: 10px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: #edf8f1;
+}
+
+.admin-cod-settlement-feedback.error:not(:empty) {
+  color: #9f3b32;
+  background: #fff0ee;
+}
+
+.admin-cod-settlement-verify {
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 12px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 12px;
+  color: #fff;
+  background: #843722;
+  box-shadow: 0 8px 18px rgba(132, 55, 34, .16);
+  font-size: 10px;
+  font-weight: 820;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+}
+
+.admin-cod-settlement-verify:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(132, 55, 34, .2);
+}
+
+.admin-cod-settlement-verify:disabled {
+  cursor: wait;
+  opacity: .7;
+}
+
+.admin-cod-settlement-spinner {
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255,255,255,.45);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: adminCodSpin .7s linear infinite;
+}
+
+@keyframes adminCodSpin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 760px) {
+  .admin-cod-settlement-panel {
+    padding: 15px;
+  }
+
+  .admin-cod-settlement-heading {
+    align-items: center;
+  }
+
+  .admin-cod-settlement-heading h3 {
+    font-size: 15px;
+  }
+
+  .admin-cod-settlement-status {
+    max-width: 128px;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .admin-cod-settlement-amounts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .admin-cod-amount-card {
+    padding: 9px 7px;
+  }
+
+  .admin-cod-amount-card > span {
+    font-size: 7px;
+  }
+
+  .admin-cod-amount-card > strong {
+    font-size: 12px;
+  }
+
+  .admin-cod-amount-card > small {
+    font-size: 7px;
+  }
+
+  .admin-cod-settlement-meta > div {
+    grid-template-columns: .9fr 1.1fr;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 430px) {
+  .admin-cod-settlement-amounts {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-cod-amount-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 10px;
+    align-items: center;
+  }
+
+  .admin-cod-amount-card > strong {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    margin-top: 0;
+    font-size: 13px;
+  }
+
+  .admin-cod-amount-card > small {
+    grid-column: 1;
+  }
+}

@@ -1,9 +1,84 @@
 "use client";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import CustomerHelpRoutingRuntime from "./CustomerHelpRoutingRuntime";
+import CustomerGeneralSupportRuntime from "./CustomerGeneralSupportRuntime";
+import CustomerLocationLauncher from "./CustomerLocationLauncher";
+import CustomerLocationPickerUx from "./CustomerLocationPickerUx";
+import CustomerAccountAddressLocationFirst from "./CustomerAccountAddressLocationFirst";
+import CustomerQrisOnlyRuntime from "./CustomerQrisOnlyRuntime";
+import CustomerLoyaltyPickerRuntime from "./CustomerLoyaltyPickerRuntime";
+import CustomerAuth from "./CustomerAuth";
+import CustomerBanner from "./CustomerBanner";
+import CustomerLogoutDialog from "./CustomerLogoutDialog";
+import { catalogPresentation, compactQuantity, compactStepQuantity } from "./customer-catalog.mjs";
+import { CatalogIcon } from "./CustomerCatalogIcons";
+import KitchenWorkspace, { KitchenNavIcon } from "./KitchenWorkspace";
+import KitchenDashboardFast from "./KitchenDashboardFast";
+import KitchenStockCenter from "./KitchenStockCenter";
+import KitchenHeaderActions from "./KitchenHeaderActions";
+import { restoreKitchenView } from "./kitchen-workspace-state.mjs";
+import { Fragment, useEffect, useRef, useState } from "react";
+import AdminBeverageStockEnhancerV2 from "./AdminBeverageStockEnhancerV2";
+import AdminCustomersEnhancer from "./AdminCustomersEnhancer";
+import AdminCustomerService from "./AdminCustomerService";
+import AdminNotificationPopover from "./AdminNotificationPopover";
+import AdminOrderCardEnhancer from "./AdminOrderCardEnhancer";
+import AdminOrderModalEnhancer from "./AdminOrderModalEnhancer";
+import AdminPrinterView from "./AdminPrinterView";
+import {
+  AdminDailySummary,
+  AdminIcon,
+  AdminWorkspaceLifecycle,
+  ADMIN_KPI_ICONS,
+  ADMIN_KPI_MOBILE_LABELS,
+  adminStatusGroup,
+} from "./AdminPresentation";
+import AdminCodLauncherButton from "./AdminCodLauncherButton";
+import ConversationChat from "./ConversationChat";
+import ManagerControlCenter from "./ManagerControlCenter";
+import OwnerCustomersCenter from "./OwnerCustomersCenter";
+import {
+  ADMIN_ORDER_FILTERS,
+  adminOrderCounts,
+  filterAdminOrders,
+} from "../lib/admin-order-filter.mjs";
+import {
+  recoveryRefreshGroupsForRole,
+  refreshGroupsForEvent,
+} from "../lib/realtime-client.mjs";
+import {
+  paymentMethodLabel,
+  paymentStatusLabel,
+} from "./conversationDisplay.mjs";
+import {
+  MAX_ITEM_NOTE_LENGTH,
+  normalizeItemNote,
+  removeItemNote,
+  updateCartQuantity,
+  updateItemNote,
+} from "../lib/customer-cart.mjs";
+import {
+  formatStockQuantity,
+  productLineTotal,
+  productPriceLabel,
+  productQuantityRules,
+} from "../lib/product-units.mjs";
+import { customerWhatsAppUrl } from "../lib/customer-contact.mjs";
 const money = (n) => "Rp" + Number(n || 0).toLocaleString("id-ID");
+const orderItemQuantityLabel = (item) =>
+  item.stock_unit === "GRAM"
+    ? formatStockQuantity(item.quantity, item.stock_unit)
+    : item.quantity;
+const orderItemPriceLabel = (item) =>
+  item.stock_unit === "GRAM"
+    ? productPriceLabel(item, money)
+    : money(item.price);
+const orderItemTotal = (item) => productLineTotal(item, item.quantity);
 const whatsappLink = (number, text) =>
   `https://wa.me/${String(number || "").replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
+const PICKUP_LABEL = "Ambil di Warkost";
+const FULFILLMENT_DELIVERY = "DELIVERY";
+const FULFILLMENT_PICKUP = "PICKUP";
 const localDateTime = (value) => {
   const date = value
     ? new Date(
@@ -16,12 +91,127 @@ const localDateTime = (value) => {
     .toISOString()
     .slice(0, 16);
 };
-const promoDate = (value) =>
-  new Date(String(value).replace(" ", "T") + "Z").toLocaleDateString("id-ID", {
+const demoProductImage = (name) => {
+  const normalized = String(name || "").toLowerCase();
+  if (normalized.includes("nasi goreng"))
+    return "/demo/nasi-goreng-warkost.webp";
+  if (normalized.includes("mie ayam")) return "/demo/mie-ayam-bahagia.webp";
+  if (normalized.includes("kopi susu")) return "/demo/kopi-susu-rumah.webp";
+  if (normalized.includes("biji kopi")) return "/demo/bahan-baku-kopi.svg";
+  return "/demo/promo-warkost.webp";
+};
+const demoProductBadges = [
+  ["★", "Best Seller", "best-seller"],
+  ["●", "Populer", "popular"],
+  ["♛", "Rekomendasi", "recommended"],
+];
+const ORDER_STAGES = [
+  { key: "received", label: "Diterima" },
+  { key: "preparing", label: "Diproses" },
+  { key: "delivery", label: "Diantar" },
+  { key: "delivered", label: "Sampai" },
+];
+const PICKUP_ORDER_STAGES = [
+  { key: "received", label: "Diterima" },
+  { key: "preparing", label: "Diproses" },
+  { key: "ready", label: "Siap Diambil" },
+  { key: "completed", label: "Selesai" },
+];
+const orderStage = (status) => {
+  if (["PENDING", "CONFIRMED"].includes(status)) return 0;
+  if (["PREPARING", "READY"].includes(status)) return 1;
+  if (["ASSIGNED", "PICKED_UP", "ON_DELIVERY"].includes(status)) return 2;
+  if (status === "DELIVERED") return 3;
+  return -1;
+};
+const pickupOrderStage = (status) => {
+  if (["PENDING", "CONFIRMED"].includes(status)) return 0;
+  if (status === "PREPARING") return 1;
+  if (status === "READY") return 2;
+  if (status === "DELIVERED") return 3;
+  return -1;
+};
+const orderStatusMeta = (status, fulfillmentType = FULFILLMENT_DELIVERY) => {
+  if (fulfillmentType === FULFILLMENT_PICKUP) {
+    const pickupStatuses = {
+      PENDING: ["Pesanan Diterima", "pending"],
+      CONFIRMED: ["Pesanan Dikonfirmasi", "pending"],
+      PREPARING: ["Dalam Proses", "process"],
+      READY: ["Siap Diambil", "process"],
+      DELIVERED: ["Sudah Diambil / Selesai", "done"],
+      CANCELLED: ["Dibatalkan", "cancelled"],
+    };
+    const [label, tone] = pickupStatuses[status] || [
+      String(status || "Pesanan").replaceAll("_", " "),
+      "pending",
+    ];
+    return { label, tone };
+  }
+  const statuses = {
+    PENDING: ["Pesanan Diterima", "pending"],
+    CONFIRMED: ["Pesanan Dikonfirmasi", "pending"],
+    PREPARING: ["Dalam Proses", "process"],
+    READY: ["Siap Diantar", "process"],
+    ASSIGNED: ["Driver Ditugaskan", "delivery"],
+    PICKED_UP: ["Pesanan Diambil", "delivery"],
+    ON_DELIVERY: ["Dalam Pengantaran", "delivery"],
+    DELIVERED: ["Selesai", "done"],
+    CANCELLED: ["Dibatalkan", "cancelled"],
+  };
+  const [label, tone] = statuses[status] || [
+    String(status || "Pesanan").replaceAll("_", " "),
+    "pending",
+  ];
+  return { label, tone };
+};
+const orderHeadline = (status, fulfillmentType = FULFILLMENT_DELIVERY) => {
+  if (fulfillmentType === FULFILLMENT_PICKUP) {
+    if (["PENDING", "CONFIRMED"].includes(status))
+      return "Pesanan sudah kami terima";
+    if (status === "PREPARING") return "Pesanan sedang disiapkan";
+    if (status === "READY") return "Pesanan siap diambil di Warkost";
+    if (status === "DELIVERED") return "Pesanan sudah diambil di Warkost";
+    if (status === "CANCELLED") return "Pesanan dibatalkan";
+  }
+  if (["PENDING", "CONFIRMED"].includes(status))
+    return "Pesanan sudah kami terima";
+  if (["PREPARING", "READY"].includes(status))
+    return "Pesanan sedang diproses oleh dapur";
+  if (["ASSIGNED", "PICKED_UP", "ON_DELIVERY"].includes(status))
+    return "Pesanan sedang menuju alamatmu";
+  if (status === "DELIVERED") return "Pesanan telah selesai diantar";
+  if (status === "CANCELLED") return "Pesanan dibatalkan";
+  return "Status pesanan diperbarui";
+};
+const formatDateTime = (value) => {
+  if (!value) return "";
+  const parsed = new Date(String(value).replace(" ", "T") + "Z");
+  if (Number.isNaN(parsed.getTime())) return String(value);
+  return parsed.toLocaleString("id-ID", {
     day: "numeric",
     month: "short",
     year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
+};
+const notificationCategory = (message) => {
+  const normalized = String(message || "").toLowerCase();
+  if (/promo|voucher|diskon|poin/.test(normalized)) return "promo";
+  if (/pesanan|driver|dapur|pengantaran|pembayaran/.test(normalized))
+    return "order";
+  return "system";
+};
+const notificationTitle = (message) => {
+  const category = notificationCategory(message);
+  if (category === "promo")
+    return /poin/i.test(message) ? "Poin Warkost" : "Promo Warkost";
+  if (category === "order")
+    return /driver|pengantaran/i.test(message)
+      ? "Info Pengantaran"
+      : "Status Pesanan";
+  return "Informasi Akun";
+};
 async function api(route, body, signal) {
   const response = await fetch("/api/" + route, {
     method: body ? "POST" : "GET",
@@ -35,9 +225,19 @@ async function api(route, body, signal) {
   return data;
 }
 export default function App() {
+  const [sessionResolved, setSessionResolved] = useState(false);
+  const authAttempt = useRef(null);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [sessionFailure, setSessionFailure] = useState("");
+  const [customerLogoutOpen, setCustomerLogoutOpen] = useState(false);
   const checkoutAttempt = useRef(null);
+  const quickAddressAttempt = useRef(false);
   const pollController = useRef(null);
   const refreshController = useRef(null);
+  const messageTimer = useRef(null);
+  const realtimeRefreshTimer = useRef(null);
+  const realtimeRefreshGroups = useRef(new Set());
   const [user, setUser] = useState(null),
     [menu, setMenu] = useState({
       products: [],
@@ -48,11 +248,15 @@ export default function App() {
     [nextOrderCursor, setNextOrderCursor] = useState(null),
     [alerts, setAlerts] = useState({ notifications: [], unread: 0 }),
     [account, setAccount] = useState({
+      profile: null,
       addresses: [],
       loyalty: 0,
       transactions: [],
+      vouchers: [],
+      promotions: [],
+      rewards: [],
     }),
-    [drivers, setDrivers] = useState([]),
+    [staff, setStaff] = useState([]),
     [customers, setCustomers] = useState([]),
     [customerCursor, setCustomerCursor] = useState(null),
     [customerSearch, setCustomerSearch] = useState(""),
@@ -63,24 +267,71 @@ export default function App() {
     [report, setReport] = useState(null),
     [printJobs, setPrintJobs] = useState([]),
     [promotions, setPromotions] = useState([]),
+    [banners, setBanners] = useState([]),
+    [loyaltyRules, setLoyaltyRules] = useState([]),
     [settings, setSettings] = useState({
       brandName: "Warkost Bahagia",
       rupiahPerPoint: 10000,
       businessWhatsApp: "6281546407856",
       businessLatitude: -6.9217,
       businessLongitude: 106.9272,
+      deliveryFreeKm: 3,
+      deliveryFeePerKm: 2500,
+      deliveryMaxKm: 10,
       printerSimulation: true,
       adminPrinter: "LAN 80mm Admin (simulasi)",
       kitchenPrinter: "LAN 80mm Kitchen (simulasi)",
     }),
+    [storeStatus, setStoreStatus] = useState(null),
     [cart, setCart] = useState({}),
+    [itemNotes, setItemNotes] = useState({}),
+    [noteEditorId, setNoteEditorId] = useState(null),
     [view, setView] = useState("menu"),
     [mode, setMode] = useState("login"),
+    [passwordVisibility, setPasswordVisibility] = useState({
+      login: false,
+      register: false,
+      confirmation: false,
+      reset: false,
+      resetConfirmation: false,
+    }),
+    [otpFlow, setOtpFlow] = useState(null),
+    [authClock, setAuthClock] = useState(Date.now()),
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
     [editingAddress, setEditingAddress] = useState(null),
-    [selectedCategory, setSelectedCategory] = useState(0);
+    [selectedCategory, setSelectedCategory] = useState(0),
+    [selectedSubcategory, setSelectedSubcategory] = useState(0),
+    [stockCategoryFilter, setStockCategoryFilter] = useState("all"),
+    [productSearch, setProductSearch] = useState(""),
+    [overlay, setOverlay] = useState(null),
+    [supportTopic, setSupportTopic] = useState(null),
+    [orderFilter, setOrderFilter] = useState("all"),
+    [adminOrderFilter, setAdminOrderFilter] = useState("all"),
+    [adminOrderSearch, setAdminOrderSearch] = useState(""),
+    [notificationFilter, setNotificationFilter] = useState("all"),
+    [lastCreatedOrderId, setLastCreatedOrderId] = useState(null),
+    [focusedOrderId, setFocusedOrderId] = useState(null),
+    [supportOrderId, setSupportOrderId] = useState(null),
+    [chatTarget, setChatTarget] = useState(null),
+    [fulfillmentMode, setFulfillmentMode] = useState(FULFILLMENT_DELIVERY),
+    [pickupAddressBusy, setPickupAddressBusy] = useState(false),
+    [checkoutAddressId, setCheckoutAddressId] = useState(""),
+    [deliveryQuote, setDeliveryQuote] = useState(null),
+    [deliveryQuoteBusy, setDeliveryQuoteBusy] = useState(false),
+    [deliveryQuoteError, setDeliveryQuoteError] = useState(""),
+    [quickAddressOpen, setQuickAddressOpen] = useState(false),
+    [quickAddressBusy, setQuickAddressBusy] = useState(false),
+    [selectedVoucherId, setSelectedVoucherId] = useState(null),
+    [voucherQuote, setVoucherQuote] = useState(null),
+    [voucherQuoteBusy, setVoucherQuoteBusy] = useState(false),
+    [voucherQuoteError, setVoucherQuoteError] = useState(""),
+    [selectedRewardId, setSelectedRewardId] = useState(null),
+    [selectedPaymentMethod, setSelectedPaymentMethod] = useState("CASH"),
+    [loyaltyQuote, setLoyaltyQuote] = useState(null),
+    [loyaltyQuoteBusy, setLoyaltyQuoteBusy] = useState(false),
+    [loyaltyQuoteError, setLoyaltyQuoteError] = useState("");
   async function loadCustomers(query = "", before = null, signal) {
     const page = await api(
       "customers?q=" +
@@ -117,26 +368,43 @@ export default function App() {
     refreshController.current = controller;
     const signal = controller.signal;
     try {
-      const [m, me] = await Promise.all([
+      const [m, me, currentStoreStatus] = await Promise.all([
         api("menu", undefined, signal),
         api("me", undefined, signal),
+        api("store-hours", undefined, signal),
       ]);
       setMenu(m);
+      setStoreStatus(currentStoreStatus);
+      setSelectedCategory((current) => current || m.categories[0]?.id || 0);
+      if (signal.aborted) return;
       setUser(me.user);
+      setSessionFailure("");
+      setSessionResolved(true);
+      if (me.user?.role === "CUSTOMER") setView((previous) => previous === "auth" ? "menu" : previous);
       if (me.user && me.user.role !== "CUSTOMER")
-        setView((prev) => (prev === "menu" ? "orders" : prev));
+        setView((prev) =>
+          prev === "menu"
+            ? me.user.role === "KITCHEN"
+              ? restoreKitchenView(me.user.id)
+              : me.user.role === "MANAGER"
+              ? "manager-dashboard"
+              : "orders"
+            : prev,
+        );
       if (me.user) {
-        const o = await api("orders", undefined, signal);
-        setOrders(o.orders);
-        setNextOrderCursor(o.nextCursor);
+        if (me.user.role !== "MANAGER") {
+          const o = await api("orders", undefined, signal);
+          setOrders(o.orders);
+          setNextOrderCursor(o.nextCursor);
+        } else {
+          setOrders([]);
+          setNextOrderCursor(null);
+        }
         setAlerts(await api("notifications", undefined, signal));
         if (me.user.role === "CUSTOMER")
           setAccount(await api("account", undefined, signal));
         if (["ADMIN", "OWNER"].includes(me.user.role)) {
-          setDrivers((await api("drivers", undefined, signal)).drivers);
-          setInventory(await api("inventory", undefined, signal));
           setDashboard(await api("dashboard", undefined, signal));
-          setStock(await api("stock", undefined, signal));
           if (view === "reports")
             setReport(
               await api(
@@ -145,34 +413,66 @@ export default function App() {
                 signal,
               ),
             );
-          if (me.user.role === "ADMIN") {
-            await loadCustomers(customerSearch, null, signal);
+          await loadCustomers(customerSearch, null, signal);
+          if (me.user.role === "OWNER") {
+            setStaff((await api("staff", undefined, signal)).staff);
+            setAudit(await api("audit", undefined, signal));
             setSettings(await api("settings", undefined, signal));
-            setPromotions(
-              (await api("promotions", undefined, signal)).promotions,
+            setLoyaltyRules(
+              (await api("loyalty-rewards", undefined, signal)).rewards,
             );
           }
-          if (me.user.role === "OWNER")
-            setAudit(await api("audit", undefined, signal));
         }
+        if (["MANAGER", "OWNER"].includes(me.user.role)) {
+          setInventory(await api("inventory", undefined, signal));
+          setPromotions(
+            (await api("promotions", undefined, signal)).promotions,
+          );
+          setBanners((await api("banners", undefined, signal)).banners);
+        }
+        if (["MANAGER", "OWNER", "ADMIN", "KITCHEN"].includes(me.user.role))
+          setStock(await api("stock", undefined, signal));
         if (["ADMIN", "KITCHEN", "OWNER"].includes(me.user.role))
           setPrintJobs((await api("print-jobs", undefined, signal)).jobs);
       } else {
+        clearCustomerData(false);
         setOrders([]);
         setNextOrderCursor(null);
         setCustomers([]);
         setCustomerSearch("");
       }
+      return me.user;
     } catch (error) {
-      if (error.name !== "AbortError") throw error;
+      if (error.name !== "AbortError") { setError(error.message); throw error; }
     } finally {
       if (refreshController.current === controller)
         refreshController.current = null;
     }
   }
   useEffect(() => {
-    refresh().catch((e) => setError(e.message));
+    refresh().catch((e) => {
+      setSessionFailure("Sesi belum dapat diperiksa. Silakan coba lagi.");
+    });
   }, []);
+  useEffect(() => {
+    if (user?.id)
+      window.dispatchEvent(
+        new CustomEvent("warkost:session-started", {
+          detail: { role: user.role },
+        }),
+      );
+  }, [user?.id, user?.role]);
+  useEffect(
+    () => () => {
+      if (messageTimer.current) clearTimeout(messageTimer.current);
+    },
+    [],
+  );
+  useEffect(() => {
+    if (!otpFlow || view !== "auth") return;
+    const timer = setInterval(() => setAuthClock(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [otpFlow, view]);
   useEffect(() => {
     if (!user) return;
     let running = false;
@@ -182,136 +482,1130 @@ export default function App() {
       if (document.visibilityState === "hidden" || running) return;
       running = true;
       try {
-        const [latestOrders, latestAlerts] = await Promise.all([
-          api("orders", undefined, controller.signal),
-          api("notifications", undefined, controller.signal),
-        ]);
-        setOrders((previous) => {
-          const fresh = new Set(latestOrders.orders.map((order) => order.id));
-          return [
-            ...latestOrders.orders,
-            ...previous.filter((order) => !fresh.has(order.id)),
-          ].sort((a, b) => b.id - a.id);
-        });
-        setNextOrderCursor((cursor) =>
-          cursor === null
-            ? null
-            : Math.min(cursor, latestOrders.nextCursor ?? cursor),
+        const latestAlerts = await api(
+          "notifications",
+          undefined,
+          controller.signal,
         );
+        if (user.role !== "MANAGER") {
+          const latestOrders = await api(
+            "orders",
+            undefined,
+            controller.signal,
+          );
+          setOrders((previous) => {
+            const fresh = new Set(latestOrders.orders.map((order) => order.id));
+            return [
+              ...latestOrders.orders,
+              ...previous.filter((order) => !fresh.has(order.id)),
+            ].sort((a, b) => b.id - a.id);
+          });
+          setNextOrderCursor((cursor) =>
+            cursor === null
+              ? null
+              : Math.min(cursor, latestOrders.nextCursor ?? cursor),
+          );
+        }
         setAlerts(latestAlerts);
+        setStoreStatus(await api("store-hours", undefined, controller.signal));
         if (["ADMIN", "OWNER"].includes(user.role))
           setDashboard(await api("dashboard", undefined, controller.signal));
         if (user.role === "CUSTOMER")
           setAccount(await api("account", undefined, controller.signal));
+        if (user.role === "CUSTOMER")
+          setMenu(await api("menu", undefined, controller.signal));
+        if (user.role === "MANAGER") {
+          setInventory(await api("inventory", undefined, controller.signal));
+          setStock(await api("stock", undefined, controller.signal));
+        }
+        if (["ADMIN", "KITCHEN"].includes(user.role))
+          setStock(await api("stock", undefined, controller.signal));
       } catch (e) {
         if (!controller.signal.aborted) setError(e.message);
       } finally {
         running = false;
       }
-    }, 20000);
+    }, 120000);
     return () => {
       clearInterval(timer);
       controller.abort();
       if (pollController.current === controller) pollController.current = null;
     };
   }, [user?.id, user?.role]);
-  async function run(fn) {
+  useEffect(() => {
+    const onSessionInvalidated = () => {
+      pollController.current?.abort();
+      refreshController.current?.abort();
+      if (realtimeRefreshTimer.current)
+        window.clearTimeout(realtimeRefreshTimer.current);
+      realtimeRefreshTimer.current = null;
+      realtimeRefreshGroups.current.clear();
+      setOverlay(null);
+      setChatTarget(null);
+      clearCustomerData();
+      setUser(null);
+      setView("auth");
+      setMode("login");
+      setOtpFlow(null);
+      setAuthError("Sesi Anda telah berakhir. Silakan masuk kembali.");
+      setError("Sesi Anda telah berakhir. Silakan masuk kembali.");
+    };
+    window.addEventListener(
+      "warkost:session-invalidated",
+      onSessionInvalidated,
+    );
+    return () =>
+      window.removeEventListener(
+        "warkost:session-invalidated",
+        onSessionInvalidated,
+      );
+  }, []);
+  useEffect(() => {
+    if (!user) return;
+    const flushRealtimeRefresh = async () => {
+      realtimeRefreshTimer.current = null;
+      const groups = new Set(realtimeRefreshGroups.current);
+      realtimeRefreshGroups.current.clear();
+      try {
+        const jobs = [];
+        if (groups.has("notifications"))
+          jobs.push(api("notifications").then(setAlerts));
+        if (groups.has("orders") && user.role !== "MANAGER")
+          jobs.push(
+            api("orders").then((latestOrders) => {
+              setOrders((previous) => {
+                const fresh = new Set(
+                  latestOrders.orders.map((order) => order.id),
+                );
+                return [
+                  ...latestOrders.orders,
+                  ...previous.filter((order) => !fresh.has(order.id)),
+                ].sort((a, b) => b.id - a.id);
+              });
+              setNextOrderCursor(latestOrders.nextCursor);
+              if (user.role === "ADMIN")
+                window.dispatchEvent(
+                  new CustomEvent("warkost:orders-refreshed", {
+                    detail: latestOrders,
+                  }),
+                );
+            }),
+          );
+        if (groups.has("dashboard") && user.role === "ADMIN")
+          jobs.push(api("dashboard").then(setDashboard));
+        if (groups.has("account") && user.role === "CUSTOMER")
+          jobs.push(api("account").then(setAccount));
+        if (groups.has("catalog")) {
+          if (user.role === "CUSTOMER") jobs.push(api("menu").then(setMenu));
+          if (user.role === "MANAGER")
+            jobs.push(api("inventory").then(setInventory));
+        }
+        if (
+          groups.has("stock") &&
+          ["ADMIN", "KITCHEN", "MANAGER"].includes(user.role)
+        )
+          jobs.push(api("stock").then(setStock));
+        if (
+          groups.has("promotions") &&
+          ["MANAGER", "OWNER"].includes(user.role)
+        )
+          jobs.push(
+            api("promotions").then((data) => setPromotions(data.promotions)),
+          );
+        if (groups.has("store-status"))
+          jobs.push(api("store-hours").then(setStoreStatus));
+        if (groups.has("printer") && ["ADMIN", "KITCHEN"].includes(user.role))
+          jobs.push(api("print-jobs").then((data) => setPrintJobs(data.jobs)));
+        await Promise.all(jobs);
+      } catch (realtimeError) {
+        setError(realtimeError.message);
+      }
+    };
+    const scheduleRefresh = (groups) => {
+      for (const group of groups) realtimeRefreshGroups.current.add(group);
+      if (!realtimeRefreshTimer.current)
+        realtimeRefreshTimer.current = window.setTimeout(
+          flushRealtimeRefresh,
+          180,
+        );
+    };
+    const onRealtime = (event) =>
+      scheduleRefresh(refreshGroupsForEvent(event.detail?.type));
+    const onRecovered = () =>
+      scheduleRefresh(recoveryRefreshGroupsForRole(user.role));
+    window.addEventListener("warkost:realtime", onRealtime);
+    window.addEventListener("warkost:realtime-recovered", onRecovered);
+    return () => {
+      window.removeEventListener("warkost:realtime", onRealtime);
+      window.removeEventListener("warkost:realtime-recovered", onRecovered);
+      if (realtimeRefreshTimer.current)
+        window.clearTimeout(realtimeRefreshTimer.current);
+      realtimeRefreshTimer.current = null;
+      realtimeRefreshGroups.current.clear();
+    };
+  }, [user?.id, user?.role]);
+  useEffect(() => {
+    if (!overlay) return;
+    const close = (event) => {
+      if (event.key === "Escape") setOverlay(null);
+    };
+    document.addEventListener("keydown", close);
+    return () => document.removeEventListener("keydown", close);
+  }, [overlay]);
+  async function run(fn, refreshAfter = true) {
     setError("");
+    if (messageTimer.current) {
+      clearTimeout(messageTimer.current);
+      messageTimer.current = null;
+    }
     setMessage("");
     setBusy(true);
     try {
       await fn();
-      await refresh();
+      if (refreshAfter) await refresh();
     } catch (e) {
       setError(e.message);
     } finally {
       setBusy(false);
     }
   }
-  function submitAuth(e) {
+  async function authApi(action, body) {
+    const controller = authAttempt.current;
+    if (!controller) throw new DOMException("Cancelled", "AbortError");
+    const result = await api(action, body, controller.signal);
+    if (controller.signal.aborted) throw new DOMException("Cancelled", "AbortError");
+    return result;
+  }
+  async function runAuth(fn) {
+    if (authAttempt.current) return;
+    const controller = new AbortController();
+    authAttempt.current = controller;
+    setAuthBusy(true);
+    setAuthError("");
+    try {
+      await fn();
+    } catch (failure) {
+      if (!controller.signal.aborted) setAuthError(
+        /JSON|Failed to fetch|NetworkError|fetch failed|Unexpected token/i.test(failure.message)
+          ? "Layanan akun belum dapat dihubungi. Silakan coba lagi."
+          : failure.message || "Proses akun gagal. Silakan coba lagi.");
+    } finally {
+      if (authAttempt.current === controller) {
+        authAttempt.current = null;
+        setAuthBusy(false);
+      }
+    }
+  }
+  useEffect(() => {
+    if (view === "auth") return;
+    authAttempt.current?.abort();
+    authAttempt.current = null;
+    setAuthBusy(false);
+    setAuthError("");
+    setOtpFlow(null);
+  }, [view]);
+  useEffect(() => () => { authAttempt.current?.abort(); refreshController.current?.abort(); }, []);
+  function clearCustomerData(clearCart = true) {
+    setAccount({ profile: null, addresses: [], loyalty: 0, transactions: [], vouchers: [], promotions: [], rewards: [] });
+    setAlerts({ notifications: [], unread: 0 });
+    setOrders([]);
+    setNextOrderCursor(null);
+    if (clearCart) { setCart({}); setItemNotes({}); }
+    setSelectedVoucherId(null);
+    setSelectedRewardId(null);
+  }
+  function submitAuth(e, action = mode) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    run(async () => {
-      const data = await api(mode, {
+    runAuth(async () => {
+      const data = await authApi(action, {
         name: form.get("name"),
+        identifier: form.get("identifier"),
         email: form.get("email"),
+        phone: form.get("phone"),
         password: form.get("password"),
+        passwordConfirmation: form.get("passwordConfirmation"),
+        birthDate: form.get("birthDate"),
+        consent: form.get("consent") === "on",
       });
+      if (action === "register") {
+        setOtpFlow({
+          purpose: "REGISTRATION",
+          challengeId: data.challengeId,
+          destination: data.destination,
+          resendAt: Date.now() + data.resendAfterSeconds * 1000,
+        });
+        setMode("registration-otp");
+        setAuthError("");
+        return;
+      }
+      clearCustomerData(false);
       setUser(data.user);
-      setView(data.user.role === "CUSTOMER" ? "menu" : "orders");
+      setView(
+        data.user.role === "CUSTOMER"
+          ? "menu"
+          : data.user.role === "MANAGER"
+            ? "manager-dashboard"
+            : "orders",
+      );
+      await refresh();
     });
   }
-  const count = Object.values(cart).reduce((s, n) => s + n, 0),
-    total = menu.products.reduce((s, p) => s + p.price * (cart[p.id] || 0), 0);
-  function step(id, n) {
-    setCart((old) => ({ ...old, [id]: Math.max(0, (old[id] || 0) + n) }));
+  function submitGuest(e) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    runAuth(async () => {
+      const data = await authApi("guest", { name: form.get("name") });
+      clearCustomerData(false);
+      setUser(data.user);
+      setView(count ? "cart" : "menu");
+    });
+  }
+  function submitForgotPassword(e) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    runAuth(async () => {
+      const data = await authApi("password-reset-request", {
+        identifier: form.get("identifier"),
+      });
+      setOtpFlow({
+        purpose: "PASSWORD_RESET",
+        challengeId: data.challengeId,
+        destination: data.destination,
+        resendAt: Date.now() + data.resendAfterSeconds * 1000,
+      });
+      setMode("password-reset-otp");
+      setAuthError("");
+    });
+  }
+  function submitOtp(e) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    runAuth(async () => {
+      const data = await authApi("otp-verify", {
+        challengeId: otpFlow?.challengeId,
+        purpose: otpFlow?.purpose,
+        code: form.get("code"),
+      });
+      if (otpFlow?.purpose === "REGISTRATION") {
+        if (data.user) {
+          setOtpFlow((current) => ({ ...current, completedUser: data.user }));
+          setMode("registration-success");
+        } else {
+          setOtpFlow(null);
+          setMode("login");
+          showTransientMessage("Akun sudah aktif. Silakan masuk.");
+        }
+        return;
+      }
+      setOtpFlow((current) => ({
+        ...current,
+        resetToken: data.resetToken,
+      }));
+      setMode("password-reset-new");
+    });
+  }
+  function submitNewPassword(e) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    runAuth(async () => {
+      const data = await authApi("password-reset", {
+        resetToken: otpFlow?.resetToken,
+        password: form.get("password"),
+        passwordConfirmation: form.get("passwordConfirmation"),
+      });
+      setOtpFlow(null);
+      setMode("password-reset-success");
+      setAuthError("");
+    });
+  }
+  function resendCurrentOtp() {
+    runAuth(async () => {
+      const data = await authApi("otp-resend", {
+        challengeId: otpFlow?.challengeId,
+        purpose: otpFlow?.purpose,
+      });
+      setOtpFlow((current) => ({
+        ...current,
+        challengeId: data.challengeId,
+        destination: data.destination,
+        resendAt: Date.now() + data.resendAfterSeconds * 1000,
+      }));
+      setAuthError("");
+    });
+  }
+  function continueAfterRegistration() {
+    return runAuth(async () => {
+      const restoredUser = await refresh();
+      if (!restoredUser) throw Error("Sesi akun belum tersedia. Silakan masuk kembali.");
+      setView("menu");
+      setOtpFlow(null);
+      setMode("login");
+    });
+  }
+  function togglePassword(field) {
+    setPasswordVisibility((current) => ({
+      ...current,
+      [field]: !current[field],
+    }));
+  }
+  function showTransientMessage(text, duration = 2500) {
+    if (messageTimer.current) clearTimeout(messageTimer.current);
+    setMessage(text);
+    messageTimer.current = setTimeout(() => {
+      setMessage((current) => (current === text ? "" : current));
+      messageTimer.current = null;
+    }, duration);
+  }
+  const otpResendRemaining = otpFlow
+    ? Math.max(0, Math.ceil((otpFlow.resendAt - authClock) / 1000))
+    : 0;
+  const count = menu.products.reduce((sum, product) => {
+      const quantity = Number(cart[product.id] || 0);
+      if (!quantity) return sum;
+      const { orderStepQuantity } = productQuantityRules(product);
+      return sum + quantity / orderStepQuantity;
+    }, 0),
+    total = menu.products.reduce(
+      (sum, product) =>
+        sum +
+        (cart[product.id] ? productLineTotal(product, cart[product.id]) : 0),
+      0,
+    );
+  const checkoutItems = menu.products
+    .filter((product) => cart[product.id] > 0)
+    .map((product) => ({
+      productId: product.id,
+      quantity: cart[product.id],
+      note: normalizeItemNote(itemNotes[product.id]),
+    }));
+  const checkoutItemsSignature = JSON.stringify(checkoutItems);
+  function step(product, direction) {
+    const { minimumOrderQuantity, orderStepQuantity } =
+      productQuantityRules(product);
+    setCart((current) => {
+      const currentQuantity = Number(current[product.id] || 0);
+      const delta =
+        direction > 0
+          ? currentQuantity
+            ? orderStepQuantity
+            : minimumOrderQuantity
+          : currentQuantity <= minimumOrderQuantity
+            ? -currentQuantity
+            : -orderStepQuantity;
+      return updateCartQuantity(current, product.id, delta);
+    });
+  }
+  function saveItemNote(id, value) {
+    setItemNotes((notes) => updateItemNote(notes, id, value));
+  }
+  function activateProductCard(event, product) {
+    if (event.target?.closest?.("button,a,input,textarea,select")) return;
+    if (role === "CUSTOMER") {
+      step(product, 1);
+      return;
+    }
+    setMode("login");
+    setView("auth");
+  }
+  function productCardKeyDown(event, product) {
+    if (!["Enter", " "].includes(event.key)) return;
+    if (event.target?.closest?.("button,a,input,textarea,select")) return;
+    event.preventDefault();
+    activateProductCard(event, product);
   }
   const role = user?.role;
+  const isGuest = Boolean(user?.isGuest);
+  useEffect(() => {
+    setItemNotes((notes) => {
+      let next = notes;
+      for (const id of Object.keys(notes))
+        if (!cart[id]) next = removeItemNote(next, id);
+      return next;
+    });
+    setNoteEditorId((id) => (id && !cart[id] ? null : id));
+  }, [cart]);
+  useEffect(() => {
+    if (role !== "ADMIN") return;
+    const resetAdminOrderView = () => {
+      setAdminOrderFilter("all");
+      setAdminOrderSearch("");
+    };
+    window.addEventListener(
+      "warkost:admin-order-filter-reset",
+      resetAdminOrderView,
+    );
+    const openAdminOrderContext = (event) => {
+      const orderId = Number(event.detail?.orderId || 0);
+      setView("orders");
+      setAdminOrderFilter("all");
+      setAdminOrderSearch(
+        orderId ? `WB${String(orderId).padStart(6, "0")}` : "",
+      );
+    };
+    window.addEventListener(
+      "warkost:open-admin-order-context",
+      openAdminOrderContext,
+    );
+    return () => {
+      window.removeEventListener(
+        "warkost:admin-order-filter-reset",
+        resetAdminOrderView,
+      );
+      window.removeEventListener(
+        "warkost:open-admin-order-context",
+        openAdminOrderContext,
+      );
+    };
+  }, [role]);
+  const filteredMenuProducts = menu.products.filter((product) => {
+    const categoryMatches =
+      !selectedCategory || product.category_id === selectedCategory;
+    const subcategoryMatches =
+      !selectedSubcategory || product.subcategory_id === selectedSubcategory;
+    const search = productSearch.trim().toLowerCase();
+    const subcategoryName =
+      menu.subcategories?.find((item) => item.id === product.subcategory_id)
+        ?.name || "";
+    const searchMatches =
+      !search ||
+      `${product.name} ${product.description || ""} ${subcategoryName}`
+        .toLowerCase()
+        .includes(search);
+    return categoryMatches && subcategoryMatches && searchMatches;
+  });
+  const catalog = catalogPresentation(menu, filteredMenuProducts, selectedCategory, selectedSubcategory);
+  const customerVisibleOrders =
+    orderFilter === "all"
+      ? orders
+      : orders.filter((order) => {
+          if (orderFilter === "process")
+            return !["DELIVERED", "CANCELLED"].includes(order.status);
+          if (orderFilter === "completed") return order.status === "DELIVERED";
+          if (orderFilter === "cancelled") return order.status === "CANCELLED";
+          return true;
+        });
+  const adminCounts = adminOrderCounts(orders);
+  const adminVisibleOrders = filterAdminOrders(
+    orders,
+    adminOrderFilter,
+    adminOrderSearch,
+  );
+  const visibleOrders =
+    role === "CUSTOMER"
+      ? customerVisibleOrders
+      : role === "ADMIN"
+        ? adminVisibleOrders
+        : orders;
+  const customerOrderCounts = {
+    all: orders.length,
+    process: orders.filter(
+      (order) => !["DELIVERED", "CANCELLED"].includes(order.status),
+    ).length,
+    completed: orders.filter((order) => order.status === "DELIVERED").length,
+    cancelled: orders.filter((order) => order.status === "CANCELLED").length,
+  };
+  const pickupAddress = account.addresses.find(
+    (address) => address.label === PICKUP_LABEL,
+  );
+  const deliveryAddresses = account.addresses.filter(
+    (address) => address.label !== PICKUP_LABEL,
+  );
+  const selectedCheckoutAddress =
+    fulfillmentMode === FULFILLMENT_PICKUP
+      ? pickupAddress
+      : deliveryAddresses.find(
+          (address) => String(address.id) === String(checkoutAddressId),
+        ) || deliveryAddresses[0];
+  const checkoutFinalTotal =
+    total -
+    Number(voucherQuote?.voucher_discount || 0) -
+    Number(loyaltyQuote?.loyalty_discount || 0) +
+    (deliveryQuote?.available ? Number(deliveryQuote.delivery_fee || 0) : 0);
+  const customerPromotions = [
+    ...(account.vouchers || []),
+    ...(account.promotions || []),
+  ];
+  const selectedVoucher = customerPromotions.find(
+    (voucher) => Number(voucher.id) === Number(selectedVoucherId),
+  );
+  const selectedVoucherMinimumOrder = Number(
+    selectedVoucher?.minimum_order || 0,
+  );
+  const selectedVoucherIsBirthday =
+    selectedVoucher?.voucher_category === "BIRTHDAY" ||
+    selectedVoucher?.promotion_family === "BIRTHDAY";
+  useEffect(() => {
+    if (
+      selectedPaymentMethod === "CASH" &&
+      selectedVoucherId &&
+      !selectedVoucherIsBirthday
+    ) {
+      setSelectedVoucherId(null);
+      setVoucherQuote(null);
+      setVoucherQuoteError(
+        "Voucher reguler tidak berlaku untuk pembayaran COD.",
+      );
+    }
+  }, [selectedPaymentMethod, selectedVoucherId, selectedVoucherIsBirthday]);
+  useEffect(() => {
+    if (
+      role !== "CUSTOMER" ||
+      view !== "cart" ||
+      !selectedCheckoutAddress?.id
+    ) {
+      setDeliveryQuote(null);
+      setDeliveryQuoteError("");
+      setDeliveryQuoteBusy(false);
+      return;
+    }
+    if (fulfillmentMode === FULFILLMENT_PICKUP) {
+      setDeliveryQuote({
+        available: true,
+        distance_km: 0,
+        delivery_fee: 0,
+        free_delivery: true,
+        message: "Ambil langsung di Warkost · tanpa ongkir.",
+      });
+      setDeliveryQuoteError("");
+      setDeliveryQuoteBusy(false);
+      return;
+    }
+    const controller = new AbortController();
+    setDeliveryQuote(null);
+    setDeliveryQuoteError("");
+    setDeliveryQuoteBusy(true);
+    api(
+      "delivery/quote",
+      { addressId: selectedCheckoutAddress.id },
+      controller.signal,
+    )
+      .then(setDeliveryQuote)
+      .catch((error) => {
+        if (error.name !== "AbortError") setDeliveryQuoteError(error.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setDeliveryQuoteBusy(false);
+      });
+    return () => controller.abort();
+  }, [role, view, selectedCheckoutAddress?.id, fulfillmentMode]);
+  useEffect(() => {
+    if (role !== "CUSTOMER" || view !== "cart" || !selectedVoucherId) {
+      setVoucherQuote(null);
+      setVoucherQuoteError("");
+      setVoucherQuoteBusy(false);
+      return;
+    }
+    if (selectedRewardId && !selectedVoucherIsBirthday) {
+      setVoucherQuote(null);
+      setVoucherQuoteError(
+        "Voucher tidak dapat digabung dengan Loyalty Reward.",
+      );
+      setVoucherQuoteBusy(false);
+      return;
+    }
+    if (!checkoutItems.length) {
+      setVoucherQuote(null);
+      setVoucherQuoteError("Tambahkan produk sebelum memakai voucher.");
+      setVoucherQuoteBusy(false);
+      return;
+    }
+    if (
+      !selectedVoucher ||
+      !["CLAIMED", "ELIGIBLE"].includes(selectedVoucher.state)
+    ) {
+      setVoucherQuote(null);
+      setVoucherQuoteError("Voucher belum siap digunakan.");
+      setVoucherQuoteBusy(false);
+      return;
+    }
+    if (total < selectedVoucherMinimumOrder) {
+      setVoucherQuote(null);
+      setVoucherQuoteError(
+        `Minimum belanja voucher adalah ${money(selectedVoucherMinimumOrder)}`,
+      );
+      setVoucherQuoteBusy(false);
+      return;
+    }
+    const controller = new AbortController();
+    setVoucherQuote(null);
+    setVoucherQuoteError("");
+    setVoucherQuoteBusy(true);
+    api(
+      "voucher-quote",
+      {
+        promotionId: selectedVoucherId,
+        paymentMethod: selectedPaymentMethod,
+        items: checkoutItems,
+      },
+      controller.signal,
+    )
+      .then(setVoucherQuote)
+      .catch((quoteError) => {
+        if (quoteError.name !== "AbortError")
+          setVoucherQuoteError(quoteError.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setVoucherQuoteBusy(false);
+      });
+    return () => controller.abort();
+  }, [
+    role,
+    view,
+    selectedVoucherId,
+    selectedRewardId,
+    selectedVoucher?.state,
+    selectedVoucherIsBirthday,
+    selectedVoucherMinimumOrder,
+    checkoutItems.length,
+    checkoutItemsSignature,
+    selectedPaymentMethod,
+    total,
+  ]);
+  useEffect(() => {
+    if (role !== "CUSTOMER" || view !== "cart" || !selectedRewardId) {
+      setLoyaltyQuote(null);
+      setLoyaltyQuoteError("");
+      setLoyaltyQuoteBusy(false);
+      return;
+    }
+    const controller = new AbortController();
+    setLoyaltyQuote(null);
+    setLoyaltyQuoteError("");
+    setLoyaltyQuoteBusy(true);
+    api(
+      "loyalty-quote",
+      { rewardRuleId: selectedRewardId, items: checkoutItems },
+      controller.signal,
+    )
+      .then(setLoyaltyQuote)
+      .catch((quoteError) => {
+        if (quoteError.name !== "AbortError")
+          setLoyaltyQuoteError(quoteError.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoyaltyQuoteBusy(false);
+      });
+    return () => controller.abort();
+  }, [role, view, selectedRewardId, checkoutItemsSignature]);
+  const focusedOrder = orders.find(
+    (order) => order.id === (focusedOrderId || lastCreatedOrderId),
+  );
+  const activeCustomerOrder = orders.find(
+    (order) => !["DELIVERED", "CANCELLED"].includes(order.status),
+  );
+  const supportOrder =
+    orders.find((order) => String(order.id) === String(supportOrderId)) ||
+    activeCustomerOrder;
+  const supportDriverAssigned = Boolean(supportOrder?.driver_id);
+  const supportDriverContactEnabled = Boolean(
+    supportDriverAssigned &&
+    ["ASSIGNED", "PICKED_UP", "ON_DELIVERY"].includes(supportOrder.status),
+  );
+  const filteredNotifications = alerts.notifications.filter(
+    (notification) =>
+      notificationFilter === "all" ||
+      notificationCategory(notification.message) === notificationFilter,
+  );
+  const customerBatchView =
+    role === "CUSTOMER" &&
+    ["cart", "orders", "order-success", "notifications"].includes(view);
+  function goToCustomerOrders(filter = "all") {
+    setOrderFilter(
+      filter === "tracking"
+        ? "process"
+        : filter === "history"
+          ? "completed"
+          : filter,
+    );
+    setOverlay(null);
+    setView("orders");
+  }
+  function openCustomerTracking(orderId) {
+    setFocusedOrderId(orderId);
+    setOverlay(null);
+    setView("order-success");
+  }
+  function openAccountSection(sectionId) {
+    setOverlay(null);
+    setView("account");
+    requestAnimationFrame(() =>
+      document
+        .getElementById(sectionId)
+        ?.scrollIntoView({ behavior: "smooth" }),
+    );
+  }
+  function openCustomerSupport(orderId = null, topic = null) {
+    if (orderId && ["admin", "chat-admin"].includes(topic)) {
+      setOverlay(null);
+      setChatTarget({ type: "CUSTOMER_ADMIN", orderId });
+      return;
+    }
+    if (orderId && ["driver", "delivery", "chat-driver"].includes(topic)) {
+      setOverlay(null);
+      setChatTarget({ type: "CUSTOMER_DRIVER", orderId });
+      return;
+    }
+    setSupportOrderId(orderId);
+    setSupportTopic(topic);
+    setOverlay("support");
+  }
+  function reorderItems(items) {
+    const additions = {};
+    for (const item of items || []) {
+      const product = menu.products.find(
+        (candidate) => candidate.name === item.name,
+      );
+      if (product)
+        additions[product.id] = (additions[product.id] || 0) + item.quantity;
+    }
+    if (!Object.keys(additions).length) {
+      setError("Menu dari pesanan ini sudah tidak tersedia.");
+      return;
+    }
+    setCart((current) => {
+      const next = { ...current };
+      for (const [id, quantity] of Object.entries(additions))
+        next[id] = (next[id] || 0) + quantity;
+      return next;
+    });
+    setView("menu");
+    setMessage("Menu dari pesanan sebelumnya sudah ditambahkan ke keranjang.");
+  }
+  function logout(destination) {
+    if (user?.role === "CUSTOMER" && !user.isGuest && destination !== "auth") {
+      setCustomerLogoutOpen(true);
+      return;
+    }
+    performLogout(destination);
+  }
+  function performLogout(destination) {
+    setOverlay(null);
+    run(async () => {
+      pollController.current?.abort();
+      refreshController.current?.abort();
+      await api("logout", {});
+      window.dispatchEvent(new CustomEvent("warkost:session-ended"));
+      clearCustomerData(destination !== "auth");
+      setCustomerLogoutOpen(false);
+      setOtpFlow(null);
+      setMode("login");
+      setUser(null);
+      setView(destination === "auth" ? "auth" : "menu");
+    }, false);
+  }
+  function useDeviceLocation(event) {
+    const form = event.currentTarget.form;
+    const latitudeField =
+      event.currentTarget.dataset.latitudeField || "latitude";
+    const longitudeField =
+      event.currentTarget.dataset.longitudeField || "longitude";
+    const latitudeInput = form?.elements.namedItem(latitudeField);
+    const longitudeInput = form?.elements.namedItem(longitudeField);
+    if (!latitudeInput || !longitudeInput) {
+      setError("Form titik lokasi tidak tersedia");
+      return;
+    }
+    if (!navigator.geolocation) {
+      setError("Lokasi perangkat tidak didukung browser ini");
+      return;
+    }
+    setError("");
+    setMessage("Meminta izin lokasi perangkat…");
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        latitudeInput.value = coords.latitude.toFixed(6);
+        longitudeInput.value = coords.longitude.toFixed(6);
+        setMessage("Titik lokasi berhasil diisi");
+      },
+      () => {
+        setMessage("");
+        setError(
+          "Lokasi belum dapat diambil. Izinkan akses lokasi lalu coba lagi.",
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }
+  async function selectFulfillmentMode(nextMode) {
+    if (nextMode === fulfillmentMode || pickupAddressBusy) return;
+    setError("");
+    setDeliveryQuote(null);
+    setDeliveryQuoteError("");
+    if (nextMode === FULFILLMENT_DELIVERY) {
+      setFulfillmentMode(FULFILLMENT_DELIVERY);
+      setCheckoutAddressId((current) => {
+        const currentIsDelivery = deliveryAddresses.some(
+          (address) => String(address.id) === String(current),
+        );
+        return currentIsDelivery
+          ? current
+          : String(deliveryAddresses[0]?.id || "");
+      });
+      return;
+    }
+    setPickupAddressBusy(true);
+    try {
+      const prepared = await api("pickup-address", {});
+      const refreshedAccount = await api("account");
+      setAccount(refreshedAccount);
+      setCheckoutAddressId(String(prepared.id));
+      setFulfillmentMode(FULFILLMENT_PICKUP);
+    } catch (pickupError) {
+      setFulfillmentMode(FULFILLMENT_DELIVERY);
+      setError(pickupError.message);
+    } finally {
+      setPickupAddressBusy(false);
+    }
+  }
+  async function saveQuickAddress(event) {
+    const form = event.currentTarget.form;
+    if (!form || quickAddressAttempt.current) return;
+    const fields = form.elements;
+    const label = String(
+      fields.namedItem("quickAddressLabel")?.value || "",
+    ).trim();
+    const detail = String(
+      fields.namedItem("quickAddressDetail")?.value || "",
+    ).trim();
+    if (label.length < 2 || detail.length < 10) {
+      setError("Lengkapi label dan alamat pengantaran dengan benar.");
+      return;
+    }
+    quickAddressAttempt.current = true;
+    setQuickAddressBusy(true);
+    setError("");
+    try {
+      const created = await api("address", {
+        label,
+        detail,
+        latitude: fields.namedItem("quickAddressLatitude")?.value,
+        longitude: fields.namedItem("quickAddressLongitude")?.value,
+        isDefault: false,
+      });
+      const refreshedAccount = await api("account");
+      setAccount(refreshedAccount);
+      setCheckoutAddressId(String(created.id));
+      setDeliveryQuote(null);
+      setDeliveryQuoteError("");
+      setQuickAddressOpen(false);
+      showTransientMessage(
+        isGuest
+          ? "Lokasi pengantaran siap digunakan."
+          : "Alamat berhasil ditambahkan.",
+      );
+    } catch (saveError) {
+      setError(saveError.message);
+    } finally {
+      quickAddressAttempt.current = false;
+      setQuickAddressBusy(false);
+    }
+  }
+  function openCustomerHelp() {
+    openCustomerSupport(null);
+  }
+  if (!sessionResolved)
+    return (
+      <header className="top" aria-busy="true" aria-label="Memuat sesi Warkost">
+        <Image
+          className="brand-logo"
+          src="/warkost-bahagia-logo-clean.png"
+          alt="Warkost Bahagia"
+          width={1672}
+          height={941}
+          priority
+        />
+        {sessionFailure && <div role="alert">{sessionFailure}<button type="button" onClick={() => { setSessionFailure(""); refresh().catch(() => setSessionFailure("Sesi belum dapat diperiksa. Silakan coba lagi.")); }}>Coba lagi</button></div>}
+      </header>
+    );
   return (
     <>
-      <header className="top">
-        <div className="brand">
+      <header
+        className={`top ${role === "ADMIN" ? "admin-ui-header" : ""} ${
+          role === "CUSTOMER" ? "customer-home-header customer-app-header" : ""
+        } ${!role ? "guest-customer-header" : ""} ${
+          !role && view === "auth" ? "auth-header" : ""
+        } ${role === "DRIVER" ? "driver-header" : ""}`}
+      >
+        <button
+          className="brand brand-button"
+          type="button"
+          aria-label="Buka menu utama"
+          onClick={() => {
+            if (!role || role === "CUSTOMER") {
+              setOverlay(null);
+              setView("menu");
+            }
+          }}
+        >
           <Image
             className="brand-logo"
-            src="/warkost-bahagia-logo-transparent.png"
+            src="/warkost-bahagia-logo-clean.png"
             alt="Warkost Bahagia"
             width={1672}
             height={941}
             priority
           />
-          <div>
+          <span className="brand-copy">
             <strong>{menu.brand}</strong>
-            <small>Pesanan hangat, sampai dengan aman.</small>
-          </div>
-        </div>
-        <nav>
+            <small>
+              {role === "DRIVER"
+                ? "DRIVER CENTER"
+                : "Pesanan hangat, sampai dengan aman."}
+            </small>
+          </span>
+        </button>
+        <nav
+          className={
+            role === "CUSTOMER"
+              ? "customer-desktop-nav"
+              : role === "ADMIN"
+                ? "admin-nav"
+                : ""
+          }
+          aria-label={
+            role === "CUSTOMER" ? "Navigasi pelanggan utama" : undefined
+          }
+        >
           {role === "CUSTOMER" ? (
             <>
-              <button onClick={() => setView("menu")}>Menu</button>
-              <button onClick={() => setView("orders")}>Pesanan</button>
-              <button onClick={() => setView("account")}>Akun</button>
+              <button
+                className={`home-nav-item ${overlay === "notifications" ? "active" : ""}`}
+                aria-label="Buka notifikasi"
+                onClick={() => setOverlay("notifications")}
+              >
+                <span className="home-nav-icon">
+                  <BellIcon />
+                  {alerts.unread > 0 && <span className="nav-alert-dot" />}
+                </span>
+                <span className="nav-label">Notifikasi</span>
+              </button>
+              <button
+                className={`home-nav-item ${overlay === "cart" || view === "cart" ? "active" : ""}`}
+                aria-label="Keranjang"
+                onClick={() => setOverlay("cart")}
+              >
+                <span className="home-nav-icon">
+                  <CartIcon />
+                  {count > 0 && (
+                    <span className="home-cart-count">{count}</span>
+                  )}
+                </span>
+                <span className="nav-label">Keranjang</span>
+              </button>
+              <button
+                className={`home-nav-item ${overlay === "account" || view === "account" ? "active" : ""}`}
+                aria-label="Akun"
+                onClick={() => setOverlay("account")}
+              >
+                <span className="home-nav-icon">
+                  <UserIcon />
+                </span>
+                <span className="nav-label">Akun</span>
+              </button>
+              <button
+                className="home-nav-item"
+                aria-label="Bantuan"
+                onClick={openCustomerHelp}
+              >
+                <span className="home-nav-icon">
+                  <HelpIcon />
+                </span>
+                <span className="nav-label">Bantuan</span>
+              </button>
             </>
           ) : role ? (
             <>
-              <button onClick={() => setView("orders")}>
+              <button
+                data-admin-nav={role === "ADMIN" ? "Operasional" : undefined}
+                data-kitchen-nav={role === "KITCHEN" ? "kitchen" : undefined}
+                aria-current={role === "KITCHEN" && view === "orders" ? "page" : undefined}
+                className={
+                  role === "ADMIN" && view === "orders"
+                    ? "admin-nav-active"
+                    : role === "KITCHEN" && view === "orders" ? "kitchen-nav-active" : undefined
+                }
+                onClick={() =>
+                  setView(role === "MANAGER" ? "manager-dashboard" : "orders")
+                }
+              >
+                {role === "KITCHEN" && <KitchenNavIcon name="kitchen" />}
+                {role === "ADMIN" && <AdminNavIcon name="home" />}
                 {role === "ADMIN"
                   ? "Operasional"
-                  : role === "KITCHEN"
-                    ? "Dapur"
-                    : role === "OWNER"
-                      ? "Dashboard"
-                      : "Tugas saya"}
+                  : role === "MANAGER"
+                    ? "Dashboard"
+                    : role === "KITCHEN"
+                      ? "Dapur"
+                      : role === "OWNER"
+                        ? "Dashboard"
+                        : "Tugas saya"}
               </button>
               {role === "ADMIN" && (
                 <>
-                  <button onClick={() => setView("products")}>Produk</button>
-                  <button onClick={() => setView("promotions")}>Promo</button>
-                  <button onClick={() => setView("drivers")}>Driver</button>
-                  <button onClick={() => setView("customers")}>
+                  <button
+                    data-admin-nav="Pelanggan"
+                    className={
+                      view === "customers" ? "admin-nav-active" : undefined
+                    }
+                    onClick={() => setView("customers")}
+                  >
+                    <AdminNavIcon name="users" />
                     Pelanggan
                   </button>
                   <button
-                    onClick={async () => {
-                      setView("reports");
-                      try {
-                        setReport(await api("report"));
-                      } catch (e) {
-                        setError(e.message);
-                      }
-                    }}
+                    data-admin-nav="Stok"
+                    className={
+                      view === "admin-stock" ? "admin-nav-active" : undefined
+                    }
+                    onClick={() => setView("admin-stock")}
                   >
-                    Laporan
+                    <AdminNavIcon name="box" />
+                    Stok
                   </button>
-                  <button onClick={() => setView("settings")}>
-                    Pengaturan
+                  <button
+                    data-admin-nav="Printer"
+                    className={
+                      view === "printing" ? "admin-nav-active" : undefined
+                    }
+                    onClick={() => setView("printing")}
+                  >
+                    <AdminNavIcon name="printer" />
+                    Printer
+                  </button>
+                </>
+              )}
+              {role === "MANAGER" && (
+                <>
+                  <button onClick={() => setView("products")}>
+                    Produk &amp; Menu
+                  </button>
+                  <button onClick={() => setView("subcategories")}>
+                    Subkategori
                   </button>
                   <button onClick={() => setView("stock")}>Stok</button>
-                  <button onClick={() => setView("printing")}>Printer</button>
+                  <button onClick={() => setView("promotions")}>Promo</button>
+                  <button onClick={() => setView("banners")}>Banner</button>
+                  <button onClick={() => setView("store-hours")}>
+                    Jam Operasional
+                  </button>
                 </>
               )}
               {role === "OWNER" && (
                 <>
+                  <button onClick={() => setView("customers")}>
+                    Pelanggan
+                  </button>
+                  <button onClick={() => setView("products")}>Produk</button>
+                  <button onClick={() => setView("promotions")}>Promo</button>
+                  <button onClick={() => setView("settings")}>
+                    Pengaturan
+                  </button>
+                  <button onClick={() => setView("loyalty-rules")}>
+                    Loyalty
+                  </button>
                   <button onClick={() => setView("stock")}>Stok</button>
+                  <button onClick={() => setView("staff")}>Staf</button>
                   <button onClick={() => setView("audit")}>Audit log</button>
                   <button onClick={() => setView("printing")}>Printer</button>
                   <button
@@ -329,87 +1623,199 @@ export default function App() {
                 </>
               )}
               {role === "KITCHEN" && (
-                <button onClick={() => setView("printing")}>Printer</button>
+                <>
+                  <button data-kitchen-nav="stock" className={view === "stock" ? "kitchen-nav-active" : undefined} aria-current={view === "stock" ? "page" : undefined} onClick={() => setView("stock")}><KitchenNavIcon name="stock" />Stok Makanan</button>
+                  <button data-kitchen-nav="printer" className={view === "printing" ? "kitchen-nav-active" : undefined} aria-current={view === "printing" ? "page" : undefined} onClick={() => setView("printing")}><KitchenNavIcon name="printer" />Printer</button>
+                </>
+              )}
+              {role === "DRIVER" && (
+                <button onClick={() => setView("account")}>Akun</button>
               )}
             </>
           ) : null}
-          {role && (
-            <button onClick={() => setView("notifications")}>
-              Notifikasi{alerts.unread > 0 ? ` · ${alerts.unread}` : ""}
+          {role && role !== "CUSTOMER" && (
+            <button
+              data-admin-nav={role === "ADMIN" ? "Notifikasi" : undefined}
+              data-kitchen-nav={role === "KITCHEN" ? "notification" : undefined}
+              className={role === "KITCHEN" ? "icon-nav-button kitchen-header-notification" : "icon-nav-button"}
+              aria-label="Buka notifikasi"
+              onClick={() => {
+                if (role === "CUSTOMER") setOverlay("notifications");
+                else if (!["ADMIN", "KITCHEN"].includes(role)) setView("notifications");
+              }}
+            >
+              {role === "KITCHEN" ? <KitchenNavIcon name="notification" /> : <BellIcon />}
+              <span>Notifikasi</span>
+              {alerts.unread > 0 && (
+                <span className="notification-count">{alerts.unread}</span>
+              )}
             </button>
           )}
-          {role ? (
+          {role && role !== "CUSTOMER" ? (
             <button
-              onClick={() =>
-                run(async () => {
-                  pollController.current?.abort();
-                  refreshController.current?.abort();
-                  await api("logout", {});
-                  setUser(null);
-                  setView("menu");
-                })
-              }
+              data-admin-nav={role === "ADMIN" ? "Keluar" : undefined}
+              data-kitchen-nav={role === "KITCHEN" ? "logout" : undefined}
+              className={role === "KITCHEN" ? "kitchen-header-logout" : undefined}
+              data-customer-logout={role === "CUSTOMER" ? "true" : undefined}
+              onClick={logout}
             >
+              {role === "KITCHEN" && <KitchenNavIcon name="logout" />}
+              {role === "ADMIN" && <AdminNavIcon name="logout" />}
               Keluar
             </button>
-          ) : (
-            <button onClick={() => setView("auth")}>Masuk</button>
-          )}
+          ) : !role ? (
+            <>
+              {view === "auth" && (
+                <>
+                  <button
+                    onClick={() => {
+                      setView("menu");
+                      requestAnimationFrame(() =>
+                        document
+                          .getElementById("menu-grid")
+                          ?.scrollIntoView({ behavior: "smooth" }),
+                      );
+                    }}
+                  >
+                    Menu
+                  </button>
+                  <button
+                    onClick={() => {
+                      setView("menu");
+                      requestAnimationFrame(() =>
+                        document
+                          .getElementById("customer-help")
+                          ?.scrollIntoView({ behavior: "smooth" }),
+                      );
+                    }}
+                  >
+                    Bantuan
+                  </button>
+                </>
+              )}
+              <button
+                className="guest-login-nav"
+                onClick={() => {
+                  setMode("login");
+                  setView("auth");
+                }}
+              >
+                Masuk
+              </button>
+            </>
+          ) : null}
         </nav>
       </header>
-      <main>
-        <div className="heading">
-          <div>
-            <span className="eyebrow">
-              {role === "ADMIN"
-                ? "PUSAT OPERASIONAL"
-                : role === "KITCHEN"
-                  ? "STASIUN DAPUR"
-                  : role === "OWNER"
-                    ? "KONTROL OWNER"
-                    : role === "DRIVER"
-                      ? "PENGANTARAN"
-                      : "DAPUR WARKOST"}
-            </span>
-            <h1>
-              {view === "notifications"
-                ? "Notifikasi"
-                : view === "promotions" && role === "ADMIN"
-                  ? "Kelola promo"
-                  : view === "customers" && role === "ADMIN"
-                    ? "Kelola pelanggan"
-                    : view === "reports" && role === "ADMIN"
-                      ? "Laporan harian"
-                      : view === "reports" && role === "OWNER"
-                        ? "Laporan harian"
-                        : view === "stock" && ["ADMIN", "OWNER"].includes(role)
-                          ? "Kontrol stok"
-                          : view === "audit" && role === "OWNER"
-                            ? "Audit aktivitas"
-                            : role === "KITCHEN"
-                              ? "Antrean makanan"
-                              : role === "OWNER"
-                                ? "Ringkasan usaha"
-                                : role === "ADMIN"
-                                  ? "Pantau pesanan hari ini"
-                                  : role === "DRIVER"
-                                    ? "Tugas pengantaran"
-                                    : view === "menu"
-                                      ? "Mau makan apa hari ini?"
-                                      : view === "orders"
-                                        ? "Pesanan saya"
-                                        : view === "account"
-                                          ? "Akun saya"
-                                          : "Selamat datang"}
-            </h1>
-          </div>
-          {role === "CUSTOMER" && view === "menu" && (
-            <button className="primary" onClick={() => setView("cart")}>
-              Keranjang · {count} · {money(total)}
-            </button>
+      <main
+        data-admin-view={role === "ADMIN" ? view : undefined}
+        data-kitchen-view={role === "KITCHEN" ? view : undefined}
+        data-admin-ui-owner={role === "ADMIN" ? "react" : undefined}
+        className={[
+          role === "ADMIN" ? "admin-ui-main" : "",
+          role === "CUSTOMER" ? "customer-app-main" : "",
+          (!role || role === "CUSTOMER") && view === "menu"
+            ? "customer-home-main"
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        {!((!role || role === "CUSTOMER") && view === "menu") &&
+          !(
+            role === "MANAGER" &&
+            [
+              "manager-dashboard",
+              "products",
+              "subcategories",
+              "stock",
+              "store-hours",
+            ].includes(view)
+          ) &&
+          role !== "KITCHEN" &&
+          !(role === "ADMIN" && ["admin-stock", "printing"].includes(view)) &&
+          !customerBatchView && (
+            <div
+              className={
+                role === "ADMIN" ? "heading admin-ui-heading" : "heading"
+              }
+            >
+              <div>
+                <span className="eyebrow">
+                  {role === "ADMIN"
+                    ? view === "customers"
+                      ? "PUSAT PELANGGAN"
+                      : view === "admin-stock"
+                        ? "PUSAT STOK ADMIN"
+                        : view === "printing"
+                          ? "PUSAT PRINTER"
+                          : "PUSAT OPERASIONAL"
+                    : role === "MANAGER"
+                      ? "MANAJEMEN KOMERSIAL"
+                      : role === "KITCHEN"
+                        ? "STASIUN DAPUR"
+                        : role === "OWNER"
+                          ? "KONTROL OWNER"
+                          : role === "DRIVER"
+                            ? "PENGANTARAN"
+                            : "DAPUR WARKOST"}
+                </span>
+                <h1>
+                  {view === "notifications"
+                    ? "Notifikasi"
+                    : view === "admin-stock" && role === "ADMIN"
+                      ? "Stok Minuman & Bahan Baku"
+                      : view === "promotions" &&
+                          ["MANAGER", "OWNER"].includes(role)
+                        ? "Kelola promo"
+                        : view === "customers" &&
+                            ["ADMIN", "OWNER"].includes(role)
+                          ? "Kelola pelanggan"
+                          : view === "reports" && role === "OWNER"
+                            ? "Laporan harian"
+                            : view === "stock" &&
+                                ["MANAGER", "OWNER", "KITCHEN"].includes(role)
+                              ? role === "KITCHEN"
+                                ? "Stok Makanan"
+                                : "Kontrol stok"
+                              : view === "staff" && role === "OWNER"
+                                ? "Kelola staf"
+                                : view === "audit" && role === "OWNER"
+                                  ? "Audit aktivitas"
+                                  : view === "loyalty-rules" && role === "OWNER"
+                                    ? "Aturan Loyalty Reward"
+                                    : role === "KITCHEN"
+                                      ? "Antrean makanan"
+                                      : role === "OWNER"
+                                        ? "Ringkasan usaha"
+                                        : role === "ADMIN"
+                                          ? "Pantau pesanan hari ini"
+                                          : role === "MANAGER"
+                                            ? "Kelola operasional komersial"
+                                            : role === "DRIVER"
+                                              ? "Tugas pengantaran"
+                                              : view === "menu"
+                                                ? "Mau makan apa hari ini?"
+                                                : view === "orders"
+                                                  ? "Pesanan saya"
+                                                  : view === "account"
+                                                    ? "Akun saya"
+                                                    : "Selamat datang"}
+                </h1>
+              </div>
+              {role === "ADMIN" && view === "orders" && (
+                <AdminCodLauncherButton inline />
+              )}
+              {role === "CUSTOMER" && view === "menu" && (
+                <button
+                  className="primary heading-cart-button"
+                  onClick={() => setOverlay("cart")}
+                >
+                  Keranjang · {count} · {money(total)}
+                </button>
+              )}
+            </div>
           )}
-        </div>
-        {error && (
+        {error && view !== "auth" && (
           <div role="alert" className="alert">
             {error}
           </div>
@@ -420,207 +1826,361 @@ export default function App() {
           </div>
         )}
         {!role && view === "auth" ? (
-          <section className="panel narrow">
-            <div className="tabs">
-              <button
-                className={mode === "login" ? "active" : ""}
-                onClick={() => setMode("login")}
-              >
-                Masuk
-              </button>
-              <button
-                className={mode === "register" ? "active" : ""}
-                onClick={() => setMode("register")}
-              >
-                Daftar pelanggan
-              </button>
-            </div>
-            <form onSubmit={submitAuth}>
-              {mode === "register" && (
-                <label>
-                  Nama
-                  <input name="name" required minLength="2" />
-                </label>
-              )}
-              <label>
-                Email
-                <input name="email" type="email" required />
-              </label>
-              <label>
-                Password
-                <input
-                  name="password"
-                  type="password"
-                  required
-                  minLength={mode === "register" ? 10 : 1}
-                />
-              </label>
-              <button className="primary" disabled={busy}>
-                {mode === "login" ? "Masuk" : "Buat akun"}
-              </button>
-            </form>
-          </section>
+          <CustomerAuth mode={mode} setMode={(next) => { if (!authAttempt.current) { setAuthError(""); setMode(next); } }}
+            otpFlow={otpFlow} setOtpFlow={setOtpFlow} passwordVisibility={passwordVisibility}
+            togglePassword={togglePassword} busy={authBusy} error={authError} setError={setAuthError}
+            otpResendRemaining={otpResendRemaining} submitAuth={submitAuth} submitGuest={submitGuest}
+            submitForgotPassword={submitForgotPassword} submitOtp={submitOtp} submitNewPassword={submitNewPassword}
+            resendCurrentOtp={resendCurrentOtp} continueAfterRegistration={continueAfterRegistration}
+            storyIcons={{food: <BowlIcon />, ticket: <TicketIcon />, truck: <TruckIcon />}} />
         ) : null}
         {(!role || role === "CUSTOMER") && view === "menu" && (
           <>
-            {menu.promotions?.length > 0 && (
-              <section className="promo-section" aria-label="Promo berlangsung">
-                <div className="promo-heading">
-                  <div>
-                    <span className="eyebrow">PROMO BERLANGSUNG</span>
-                    <h2>Lebih hemat, tetap nikmat.</h2>
+            <section className="customer-hero">
+              <div className="customer-hero-copy">
+                <span className="eyebrow">DAPUR WARKOST</span>
+                {storeStatus && (
+                  <div
+                    className={`customer-store-status ${storeStatus.isOpen ? "open" : "closed"}`}
+                    role="status"
+                  >
+                    <i />
+                    <span>
+                      {storeStatus.isOpen
+                        ? `Buka · ${storeStatus.openTime}–${storeStatus.closeTime}`
+                        : storeStatus.manualClosed
+                          ? `Tutup${storeStatus.closedReason ? ` · ${storeStatus.closedReason}` : ""}`
+                          : `Tutup · Buka kembali ${storeStatus.nextOpenTime || storeStatus.openTime}`}
+                    </span>
                   </div>
-                  <small>{menu.promotions.length} promo aktif</small>
+                )}
+                <h1>Mau makan apa hari ini?</h1>
+                <p className="hero-lead">Lebih hemat, tetap nikmat.</p>
+                <div className="hero-benefits" aria-label="Keunggulan layanan">
+                  <span>
+                    <TruckIcon />
+                    <strong>
+                      Gratis Ongkir
+                      <br />3 KM
+                    </strong>
+                  </span>
+                  <span>
+                    <FoodIcon />
+                    <strong>
+                      Menu Lezat
+                      <br />
+                      dan Fresh
+                    </strong>
+                  </span>
+                  <span>
+                    <ShieldIcon />
+                    <strong>
+                      Pesanan Aman
+                      <br />
+                      dan Terpercaya
+                    </strong>
+                  </span>
                 </div>
-                <div className="promo-grid">
-                  {menu.promotions.map((promo) => (
-                    <article className="promo-card" key={promo.id}>
-                      {promo.image_url ? (
-                        <Image
-                          className="promo-image"
-                          src={promo.image_url}
-                          alt=""
-                          width={720}
-                          height={360}
-                          unoptimized
-                        />
+              </div>
+              <CustomerBanner banners={menu.banners} />
+            </section>
+            <section className="customer-catalog" aria-labelledby="menu-title" data-customer-ui-owner="react">
+              <div className="catalog-tools">
+                <label className="menu-search">
+                  <SearchIcon />
+                  <span className="sr-only">Cari makanan atau minuman</span>
+                  <input
+                    type="search"
+                    value={productSearch}
+                    onChange={(event) => setProductSearch(event.target.value)}
+                    placeholder="Cari makanan, minuman, atau bahan baku..."
+                  />
+                </label>
+                <div className="filters" aria-label="Kategori produk">
+                  <button type="button" className={`catalog-all-filter ${!selectedCategory ? "active" : ""}`} aria-label="Tampilkan semua kategori" aria-pressed={!selectedCategory} onClick={() => { setSelectedCategory(0); setSelectedSubcategory(0); setProductSearch(""); }}><span className="catalog-filter-icon"><CatalogIcon name="all" /></span><span>Semua</span></button>
+                  {menu.categories.map((category) => (
+                    <button
+                      key={category.id}
+                      className={
+                        selectedCategory === category.id ? "active" : ""
+                      }
+                      onClick={() => {
+                        setSelectedCategory(category.id);
+                        setSelectedSubcategory(0);
+                      }}
+                    >
+                      {category.name.toLowerCase().includes("minum") ? (
+                        <DrinkIcon />
+                      ) : category.name.toLowerCase().includes("bahan") ? (
+                        <span className="material-category-icon"><CatalogIcon name="Bahan Baku" /></span>
                       ) : (
-                        <div className="promo-mark" aria-hidden="true">
-                          WB
-                        </div>
+                        <BowlIcon />
                       )}
-                      <div className="promo-copy">
-                        <span className="promo-badge">{promo.badge}</span>
-                        <h2>{promo.title}</h2>
-                        <p>{promo.description}</p>
-                        <small>
-                          {promoDate(promo.starts_at)}–
-                          {promoDate(promo.ends_at)}
-                        </small>
-                        <small>{promo.terms}</small>
+                      {category.name}
+                    </button>
+                  ))}
+                </div>
+                {!!menu.subcategories?.filter(
+                  (item) => item.category_id === selectedCategory,
+                ).length && (
+                  <div
+                    className="filters subcategory-filters"
+                    aria-label="Subkategori produk"
+                  >
+                    <button
+                      className={!selectedSubcategory ? "active" : ""}
+                      onClick={() => setSelectedSubcategory(0)}
+                    >
+                      Semua
+                    </button>
+                    {menu.subcategories
+                      .filter((item) => item.category_id === selectedCategory)
+                      .map((item) => (
                         <button
-                          className="primary"
-                          onClick={() =>
-                            document
-                              .getElementById("menu-grid")
-                              ?.scrollIntoView({ behavior: "smooth" })
+                          key={item.id}
+                          className={
+                            selectedSubcategory === item.id ? "active" : ""
                           }
+                          onClick={() => setSelectedSubcategory(item.id)}
                         >
-                          {promo.cta_label}
+                          {item.name}
                         </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+              <div className="catalog-heading"><div>
+                <span className="catalog-heading-kicker">{catalog.kicker}</span>
+                <h2 id="menu-title">{catalog.title}</h2><p>{catalog.description}</p>
+              </div></div>
+              <div className={`grid customer-products ${!selectedCategory ? "catalog-grouped-view" : ""}`} id="menu-grid">
+                {catalog.entries.map(({ product: p, index, categoryName, subcategoryName, categoryStart, subcategoryStart, categoryCount }) => {
+                  const badge = demoProductBadges[index];
+                  return (
+                    <Fragment key={p.id}>
+                    {categoryStart && <div className="catalog-group-category-heading customer-catalog-polish-node"><span className="catalog-group-category-icon"><CatalogIcon name={categoryName} /></span><div className="catalog-group-category-copy"><span className="catalog-group-kicker">KATEGORI</span><h3>{categoryName}</h3><p>{catalog.categoryCopy[categoryName] || "Pilihan produk Warkost Bahagia."}</p></div><span className="catalog-group-count">{categoryCount} menu</span></div>}
+                    {subcategoryStart && <div className="catalog-group-subcategory-heading customer-catalog-polish-node"><h4>{subcategoryName}</h4></div>}
+                    <article
+                      className={`product customer-product ${cart[p.id] ? "has-quantity" : ""} ${p.stock_unit === "GRAM" ? "weighted-product" : ""}`}
+                      key={p.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${p.name}. ${productPriceLabel(p, money)}. ${role === "CUSTOMER" ? "Ketuk untuk menambah ke keranjang" : "Ketuk untuk masuk dan memesan"}`}
+                      onClick={(event) => activateProductCard(event, p)}
+                      onKeyDown={(event) => productCardKeyDown(event, p)}
+                    >
+                      <div className="food-visual">
+                        <Image
+                          src={p.image_url || demoProductImage(p.name)}
+                          alt={p.name}
+                          fill
+                          sizes="(max-width: 620px) 50vw, (max-width: 850px) 50vw, 33vw"
+                          unoptimized={Boolean(p.image_url)}
+                        />
+                        {badge && (
+                          <span className={`product-badge ${badge[2]}`}>
+                            <b>{badge[0]}</b> {badge[1]}
+                          </span>
+                        )}
+                      </div>
+                      <div className="product-body">
+                        <small>
+                          {
+                            menu.categories.find((c) => c.id === p.category_id)
+                              ?.name
+                          }
+                        </small>
+                        {p.subcategory_id && (
+                          <small className="product-subcategory">
+                            {
+                              menu.subcategories?.find(
+                                (item) => item.id === p.subcategory_id,
+                              )?.name
+                            }
+                          </small>
+                        )}
+                        <h2>{p.name}</h2>
+                        <p>{p.description}</p>
+                        <div className="product-foot">
+                          <span className="product-price-stack">
+                            <strong>{money(p.price)}</strong>
+                            <small>
+                              Stok{" "}
+                              {formatStockQuantity(
+                                p.available_quantity,
+                                p.stock_unit,
+                              )}
+                            </small>
+                            {p.stock_unit === "GRAM" && (
+                              <small>
+                                Minimal{" "}
+                                {compactQuantity(p.minimum_order_quantity, p.stock_unit)}
+                              </small>
+                            )}
+                          </span>
+                          {role === "CUSTOMER" ? (
+                            <div
+                              className={`qty ${cart[p.id] ? "" : "is-empty"} ${p.stock_unit === "GRAM" ? "weighted-qty" : "piece-qty"}`}
+                              aria-live="polite"
+                            >
+                              {cart[p.id] ? (
+                                <>
+                                  <button
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      step(p, -1);
+                                    }}
+                                    aria-label={"Kurangi " + p.name}
+                                  >
+                                    −
+                                  </button>
+                                  <span aria-label={`Jumlah ${compactQuantity(cart[p.id], p.stock_unit)}`}>{compactQuantity(cart[p.id], p.stock_unit)}</span>
+                                  <small>
+                                    {p.stock_unit === "GRAM"
+                                      ? `+${compactStepQuantity(p.order_step_quantity, p.stock_unit)}`
+                                      : "+1"}
+                                  </small>
+                                </>
+                              ) : (
+                                <small>Pesan</small>
+                              )}
+                            </div>
+                          ) : (
+                            <button
+                              className="guest-product-cta"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setMode("login");
+                                setView("auth");
+                              }}
+                            >
+                              Pesan
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </article>
-                  ))}
+                    </Fragment>
+                  );
+                })}
+              </div>
+              {!filteredMenuProducts.length && (
+                <div className="menu-empty">
+                  <p>Menu yang kamu cari belum tersedia.</p>
+                  <button
+                    onClick={() => {
+                      setSelectedCategory(0);
+                      setSelectedSubcategory(0);
+                      setProductSearch("");
+                    }}
+                  >
+                    Tampilkan semua menu
+                  </button>
+                </div>
+              )}
+            </section>
+            {(!role || role === "CUSTOMER") && (
+              <section className="customer-help" id="customer-help">
+                <span className="help-illustration">
+                  <HelpIcon />
+                </span>
+                <div>
+                  <h2>Butuh bantuan?</h2>
+                  <p>
+                    Kami siap membantu pesanan, pembayaran, atau pertanyaan
+                    lainnya.
+                  </p>
+                </div>
+                <div className="help-actions">
+                  <a
+                    href={whatsappLink(
+                      settings.businessWhatsApp,
+                      "Halo Warkost Bahagia, saya butuh bantuan.",
+                    )}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ChatIcon />
+                    Chat
+                  </a>
+                  <a
+                    href={`tel:+${String(settings.businessWhatsApp).replace(/\D/g, "")}`}
+                  >
+                    <PhoneIcon />
+                    Telepon
+                  </a>
                 </div>
               </section>
             )}
-            <div className="filters">
-              <button
-                className={!selectedCategory ? "active" : ""}
-                onClick={() => setSelectedCategory(0)}
-              >
-                Semua
-              </button>
-              {menu.categories.map((c) => (
-                <button
-                  key={c.id}
-                  className={selectedCategory === c.id ? "active" : ""}
-                  onClick={() => setSelectedCategory(c.id)}
-                >
-                  {c.name}
-                </button>
-              ))}
-            </div>
-            <div className="grid" id="menu-grid">
-              {menu.products
-                .filter(
-                  (p) =>
-                    !selectedCategory || p.category_id === selectedCategory,
-                )
-                .map((p) => (
-                  <article className="product" key={p.id}>
-                    <div className="food-visual">
-                      {p.image_url ? (
-                        <img src={p.image_url} alt={p.name} />
-                      ) : (
-                        <span>✦</span>
-                      )}
-                    </div>
-                    <div className="product-body">
-                      <small>
-                        {
-                          menu.categories.find((c) => c.id === p.category_id)
-                            ?.name
-                        }
-                      </small>
-                      <h2>{p.name}</h2>
-                      <p>{p.description}</p>
-                      <div className="product-foot">
-                        <strong>{money(p.price)}</strong>
-                        {role === "CUSTOMER" ? (
-                          <div className="qty">
-                            <button
-                              onClick={() => step(p.id, -1)}
-                              aria-label={"Kurangi " + p.name}
-                            >
-                              −
-                            </button>
-                            <span>{cart[p.id] || 0}</span>
-                            <button
-                              onClick={() => step(p.id, 1)}
-                              aria-label={"Tambah " + p.name}
-                            >
-                              +
-                            </button>
-                          </div>
-                        ) : (
-                          <button onClick={() => setView("auth")}>
-                            Masuk untuk pesan
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </article>
-                ))}
-            </div>
-            {!menu.products.length && <p>Menu belum tersedia.</p>}
           </>
         )}
         {role === "CUSTOMER" && view === "cart" && (
-          <section className="panel">
-            <h2>Keranjang</h2>
-            {menu.products
-              .filter((p) => cart[p.id] > 0)
-              .map((p) => (
-                <div className="line" key={p.id}>
-                  <span>
-                    {p.name} · {cart[p.id]} × {money(p.price)}
-                  </span>
-                  <div className="qty">
-                    <button onClick={() => step(p.id, -1)}>−</button>
-                    <button onClick={() => step(p.id, 1)}>+</button>
-                  </div>
-                </div>
-              ))}
-            <div className="line">
-              <strong>Total</strong>
-              <strong>{money(total)}</strong>
+          <section
+            className="customer-checkout"
+            aria-labelledby="checkout-title"
+          >
+            <div className="customer-page-title checkout-title-block">
+              <button
+                className="back-link"
+                type="button"
+                onClick={() => setView("menu")}
+              >
+                <ArrowIcon /> Kembali ke menu
+              </button>
+              <h1 id="checkout-title">Checkout Pesanan</h1>
+              <p>
+                Lengkapi detail pesananmu. Total akhir dan ongkir tetap dihitung
+                aman oleh server.
+              </p>
             </div>
-            {count > 0 && (
+            {storeStatus?.isOpen === false && (
+              <div className="checkout-store-closed" role="alert">
+                <strong>Warkost sedang tutup</strong>
+                <span>
+                  {storeStatus.closedReason ||
+                    (storeStatus.nextOpenTime
+                      ? `Buka kembali pukul ${storeStatus.nextOpenTime} WIB.`
+                      : "Pesanan baru belum dapat dibuat.")}
+                </span>
+              </div>
+            )}
+            {!count ? (
+              <div className="panel empty-state checkout-empty">
+                <CartIcon />
+                <h2>Keranjangmu masih kosong</h2>
+                <p>Pilih menu favoritmu terlebih dahulu.</p>
+                <button className="primary" onClick={() => setView("menu")}>
+                  Pilih Menu
+                </button>
+              </div>
+            ) : (
               <form
+                className="checkout-form"
                 onSubmit={(e) => {
                   e.preventDefault();
+                  if (storeStatus?.isOpen !== true) {
+                    setError(
+                      "Warkost sedang tutup. Pesanan baru belum dapat dibuat.",
+                    );
+                    return;
+                  }
+                  if (!deliveryQuote?.available) {
+                    setError(
+                      deliveryQuote?.message ||
+                        deliveryQuoteError ||
+                        "Ongkir belum dapat diverifikasi.",
+                    );
+                    return;
+                  }
                   const f = new FormData(e.currentTarget);
                   run(async () => {
                     const payload = {
                       addressId: Number(f.get("address")),
-                      method: f.get("method"),
-                      items: menu.products
-                        .filter((p) => cart[p.id] > 0)
-                        .map((p) => ({
-                          productId: p.id,
-                          quantity: cart[p.id],
-                        })),
+                      fulfillmentType: fulfillmentMode,
+                      method: selectedPaymentMethod,
+                      promotionId: selectedVoucherId,
+                      loyaltyRewardId: selectedRewardId,
+                      items: checkoutItems,
                     };
                     const signature = JSON.stringify(payload);
                     if (checkoutAttempt.current?.signature !== signature)
@@ -633,237 +2193,1099 @@ export default function App() {
                       idempotencyKey: checkoutAttempt.current.key,
                     });
                     checkoutAttempt.current = null;
+                    setLastCreatedOrderId(result.id);
+                    setFocusedOrderId(result.id);
                     setCart({});
-                    setView("orders");
-                    setMessage(
-                      `Pesanan #${result.id} berhasil dibuat · ongkir ${money(result.deliveryFee)}${
-                        result.driverDelayNotice
-                          ? " · Mohon maaf, pesanan mungkin lebih lama karena semua driver sedang bertugas."
-                          : ""
-                      }`,
-                    );
+                    setItemNotes({});
+                    setNoteEditorId(null);
+                    setSelectedVoucherId(null);
+                    setVoucherQuote(null);
+                    setSelectedRewardId(null);
+                    setLoyaltyQuote(null);
+                    setView("order-success");
                   });
                 }}
               >
-                <label>
-                  Alamat pengantaran
-                  <select name="address" required>
-                    {account.addresses.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.label} · {a.detail}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {!account.addresses.length && (
-                  <p>Tambahkan alamat di halaman Akun terlebih dahulu.</p>
-                )}
-                <label>
-                  Metode pembayaran
-                  <select name="method">
-                    <option value="CASH">Tunai saat diterima</option>
-                    <option value="BANK_TRANSFER">
-                      Transfer bank · verifikasi admin
-                    </option>
-                  </select>
-                </label>
-                <button
-                  className="primary"
-                  disabled={busy || !account.addresses.length}
-                >
-                  Buat pesanan · {money(total)}
-                </button>
+                <div className="checkout-stack">
+                  <section
+                    className="checkout-card customer-fulfillment-card"
+                    data-mode={fulfillmentMode}
+                  >
+                    <div className="checkout-card-heading">
+                      <span className="section-icon">
+                        <LocationIcon />
+                      </span>
+                      <h2>Cara menerima pesanan</h2>
+                    </div>
+                    <p>
+                      Pilih ambil sendiri di Warkost atau kirim ke alamat kamu.
+                    </p>
+                    <div
+                      className="customer-fulfillment-options"
+                      role="group"
+                      aria-label="Cara menerima pesanan"
+                    >
+                      <button
+                        type="button"
+                        className={`customer-fulfillment-option ${fulfillmentMode === FULFILLMENT_PICKUP ? "is-active" : ""}`}
+                        aria-pressed={fulfillmentMode === FULFILLMENT_PICKUP}
+                        disabled={pickupAddressBusy}
+                        onClick={() =>
+                          void selectFulfillmentMode(FULFILLMENT_PICKUP)
+                        }
+                      >
+                        <strong>Ambil di tempat</strong>
+                        <span>
+                          Ambil langsung di Warkost. Tanpa ongkir dan tanpa
+                          alamat pengantaran.
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`customer-fulfillment-option ${fulfillmentMode === FULFILLMENT_DELIVERY ? "is-active" : ""}`}
+                        aria-pressed={fulfillmentMode === FULFILLMENT_DELIVERY}
+                        disabled={pickupAddressBusy}
+                        onClick={() =>
+                          void selectFulfillmentMode(FULFILLMENT_DELIVERY)
+                        }
+                      >
+                        <strong>Dikirim ke lokasi</strong>
+                        <span>
+                          Pilih alamat, hitung jarak, dan ongkir otomatis.
+                        </span>
+                      </button>
+                    </div>
+                    {fulfillmentMode === FULFILLMENT_PICKUP && (
+                      <div className="customer-pickup-note" role="status">
+                        Pesanan akan disiapkan untuk diambil langsung di
+                        Warkost. Ongkir Rp0.
+                      </div>
+                    )}
+                  </section>
+                  <section className="checkout-card cart-checkout-card">
+                    <div className="checkout-card-heading">
+                      <span className="section-icon">
+                        <CartIcon />
+                      </span>
+                      <h2>Keranjang Anda</h2>
+                      <button
+                        className="outline-action"
+                        type="button"
+                        onClick={() => setView("menu")}
+                      >
+                        + Tambah Menu
+                      </button>
+                    </div>
+                    <div className="checkout-items">
+                      {menu.products
+                        .filter((p) => cart[p.id] > 0)
+                        .map((p) => (
+                          <div className="checkout-item" key={p.id}>
+                            <Image
+                              src={p.image_url || demoProductImage(p.name)}
+                              alt=""
+                              width={86}
+                              height={68}
+                              unoptimized={Boolean(p.image_url)}
+                            />
+                            <div className="checkout-item-copy">
+                              <strong>{p.name}</strong>
+                              <small>
+                                {formatStockQuantity(cart[p.id], p.stock_unit)}{" "}
+                                × {productPriceLabel(p, money)}
+                              </small>
+                              {normalizeItemNote(itemNotes[p.id]) && (
+                                <small className="checkout-item-note">
+                                  Catatan: {normalizeItemNote(itemNotes[p.id])}
+                                </small>
+                              )}
+                              <button
+                                className="item-note-toggle"
+                                type="button"
+                                onClick={() =>
+                                  setNoteEditorId((current) =>
+                                    Number(current) === Number(p.id)
+                                      ? null
+                                      : p.id,
+                                  )
+                                }
+                              >
+                                {normalizeItemNote(itemNotes[p.id])
+                                  ? "Ubah catatan"
+                                  : "+ Tambah catatan"}
+                              </button>
+                              {Number(noteEditorId) === Number(p.id) && (
+                                <div className="item-note-editor">
+                                  <textarea
+                                    aria-label={`Catatan untuk ${p.name}`}
+                                    maxLength={MAX_ITEM_NOTE_LENGTH}
+                                    rows="2"
+                                    value={itemNotes[p.id] || ""}
+                                    placeholder="Contoh: pedas, tanpa timun"
+                                    onChange={(event) =>
+                                      setItemNotes((notes) => ({
+                                        ...notes,
+                                        [p.id]: event.target.value,
+                                      }))
+                                    }
+                                    onBlur={(event) =>
+                                      saveItemNote(p.id, event.target.value)
+                                    }
+                                  />
+                                  <div className="item-note-actions">
+                                    <small>
+                                      {(itemNotes[p.id] || "").length}/
+                                      {MAX_ITEM_NOTE_LENGTH}
+                                    </small>
+                                    {normalizeItemNote(itemNotes[p.id]) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setItemNotes((notes) =>
+                                            removeItemNote(notes, p.id),
+                                          );
+                                          setNoteEditorId(null);
+                                        }}
+                                      >
+                                        Hapus
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      className="primary"
+                                      onClick={() => {
+                                        saveItemNote(p.id, itemNotes[p.id]);
+                                        setNoteEditorId(null);
+                                      }}
+                                    >
+                                      Simpan catatan
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            <div
+                              className="qty checkout-qty"
+                              aria-label={`Jumlah ${p.name}`}
+                            >
+                              <button
+                                type="button"
+                                aria-label={`Kurangi ${p.name}`}
+                                onClick={() => step(p, -1)}
+                              >
+                                −
+                              </button>
+                              <span>
+                                {formatStockQuantity(cart[p.id], p.stock_unit)}
+                              </span>
+                              <button
+                                type="button"
+                                aria-label={`Tambah ${p.name}`}
+                                onClick={() => step(p, 1)}
+                              >
+                                +
+                              </button>
+                            </div>
+                            <strong className="checkout-item-total">
+                              {money(productLineTotal(p, cart[p.id]))}
+                            </strong>
+                          </div>
+                        ))}
+                    </div>
+                    <div className="checkout-subtotal">
+                      <span>Subtotal</span>
+                      <strong>{money(total)}</strong>
+                    </div>
+                  </section>
+
+                  {isGuest && (
+                    <section className="checkout-card guest-checkout-benefits">
+                      <div className="checkout-card-heading">
+                        <span className="section-icon">
+                          <UserIcon />
+                        </span>
+                        <h2>Checkout Guest</h2>
+                      </div>
+                      <p>
+                        Guest tetap mendapat benefit ongkir. Voucher, birthday
+                        voucher, serta earn/redeem loyalty hanya tersedia untuk
+                        member.
+                      </p>
+                    </section>
+                  )}
+
+                  {!isGuest && (
+                    <section className="checkout-card loyalty-checkout-card">
+                      <div className="checkout-card-heading">
+                        <span className="section-icon">
+                          <StarIcon />
+                        </span>
+                        <h2>Poin Loyalty</h2>
+                      </div>
+                      <div className="loyalty-summary">
+                        <StarIcon />
+                        <p>
+                          Poin Anda saat ini:{" "}
+                          <strong>{account.loyalty} poin</strong>
+                          <small>
+                            Kumpulkan poin dari setiap pembelian dan tukarkan
+                            sesuai reward yang tersedia.
+                          </small>
+                        </p>
+                      </div>
+                      <div className="voucher-list loyalty-reward-list">
+                        {(account.rewards || []).map((reward) => {
+                          const selected =
+                            Number(selectedRewardId) === reward.id;
+                          const unavailable =
+                            !reward.eligible_balance ||
+                            Boolean(
+                              selectedVoucherId && !selectedVoucherIsBirthday,
+                            );
+                          return (
+                            <article
+                              className={`voucher-option ${selected ? "selected" : ""}`}
+                              key={reward.id}
+                            >
+                              <StarIcon />
+                              <span>
+                                <strong>{reward.name}</strong>
+                                <small>
+                                  {reward.points_required} poin · minimum{" "}
+                                  {money(reward.minimum_order)}
+                                </small>
+                                <small>
+                                  {reward.reward_type === "PERCENT"
+                                    ? `${reward.reward_value}% diskon`
+                                    : `${money(reward.reward_value)} diskon`}
+                                  {reward.maximum_discount
+                                    ? ` · maks. ${money(reward.maximum_discount)}`
+                                    : ""}
+                                </small>
+                              </span>
+                              <button
+                                type="button"
+                                className={selected ? "primary" : ""}
+                                disabled={unavailable}
+                                title={
+                                  selectedVoucherId
+                                    ? "Tidak dapat digabung dengan voucher"
+                                    : reward.ineligible_reason || ""
+                                }
+                                onClick={() =>
+                                  setSelectedRewardId(
+                                    selected ? null : reward.id,
+                                  )
+                                }
+                              >
+                                {selected
+                                  ? "Dipilih"
+                                  : unavailable
+                                    ? reward.ineligible_reason ||
+                                      "Voucher dipilih"
+                                    : "Pakai"}
+                              </button>
+                            </article>
+                          );
+                        })}
+                      </div>
+                      {loyaltyQuoteBusy && (
+                        <p className="voucher-feedback">
+                          Memvalidasi Loyalty Reward…
+                        </p>
+                      )}
+                      {loyaltyQuoteError && (
+                        <p className="voucher-feedback error" role="alert">
+                          {loyaltyQuoteError}
+                        </p>
+                      )}
+                      {loyaltyQuote && (
+                        <p className="voucher-feedback success">
+                          Reward valid · {loyaltyQuote.points_redeemed} poin ·
+                          hemat {money(loyaltyQuote.loyalty_discount)}
+                        </p>
+                      )}
+                    </section>
+                  )}
+
+                  {!isGuest && (
+                    <section className="checkout-card voucher-checkout-card">
+                      <div className="checkout-card-heading">
+                        <span className="section-icon">
+                          <TicketIcon />
+                        </span>
+                        <h2>Voucher</h2>
+                      </div>
+                      <div className="voucher-list">
+                        {customerPromotions.map((voucher) => {
+                          const selected =
+                            Number(selectedVoucherId) === voucher.id;
+                          const voucherBirthday =
+                            voucher.voucher_category === "BIRTHDAY" ||
+                            voucher.promotion_family === "BIRTHDAY";
+                          const codBlocked =
+                            selectedPaymentMethod === "CASH" &&
+                            !voucherBirthday;
+                          const selectable =
+                            ["CLAIMED", "ELIGIBLE"].includes(voucher.state) &&
+                            !codBlocked;
+                          return (
+                            <article
+                              className={`voucher-option ${selected ? "selected" : ""}`}
+                              key={voucher.id}
+                            >
+                              <TicketIcon />
+                              <span>
+                                <strong>{voucher.title}</strong>
+                                <small>{voucher.terms}</small>
+                                <small>
+                                  Minimum {money(voucher.minimum_order)} ·{" "}
+                                  {(voucher.voucher_type ||
+                                    voucher.benefit_type) === "PERCENT"
+                                    ? `${voucher.discount_value}%`
+                                    : voucher.benefit_type === "FREE_ITEM"
+                                      ? "Gratis item"
+                                      : money(voucher.discount_value)}
+                                  {voucher.max_discount
+                                    ? ` · maks. ${money(voucher.max_discount)}`
+                                    : ""}
+                                </small>
+                              </span>
+                              {voucher.state === "AVAILABLE" ? (
+                                <button
+                                  type="button"
+                                  disabled={busy || Boolean(selectedRewardId)}
+                                  onClick={() =>
+                                    run(async () => {
+                                      await api("voucher-claim", {
+                                        promotionId: voucher.id,
+                                      });
+                                      showTransientMessage(
+                                        "Voucher berhasil diklaim.",
+                                      );
+                                    })
+                                  }
+                                >
+                                  Klaim
+                                </button>
+                              ) : selectable ? (
+                                <button
+                                  type="button"
+                                  disabled={Boolean(
+                                    selectedRewardId && !voucherBirthday,
+                                  )}
+                                  className={selected ? "primary" : ""}
+                                  onClick={() =>
+                                    setSelectedVoucherId(
+                                      selected ? null : voucher.id,
+                                    )
+                                  }
+                                >
+                                  {selected ? "Dipilih" : "Pakai"}
+                                </button>
+                              ) : voucher.state === "CLAIMED" && codBlocked ? (
+                                <span className="voucher-state">
+                                  Tidak berlaku untuk COD
+                                </span>
+                              ) : (
+                                <span className="voucher-state">
+                                  {voucher.state}
+                                </span>
+                              )}
+                            </article>
+                          );
+                        })}
+                        {!customerPromotions.length && (
+                          <div className="voucher-empty-state">
+                            <TicketIcon />
+                            <span>
+                              <strong>Belum ada voucher tersedia</strong>
+                              <small>
+                                Voucher aktif yang dapat diklaim akan tampil di
+                                sini.
+                              </small>
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      {voucherQuoteBusy && (
+                        <p className="voucher-feedback">Memvalidasi voucher…</p>
+                      )}
+                      {voucherQuoteError && (
+                        <p className="voucher-feedback error" role="alert">
+                          {voucherQuoteError}
+                        </p>
+                      )}
+                      {voucherQuote && (
+                        <p className="voucher-feedback success">
+                          Voucher valid · hemat{" "}
+                          {money(voucherQuote.voucher_discount)}
+                        </p>
+                      )}
+                    </section>
+                  )}
+
+                  {fulfillmentMode === FULFILLMENT_DELIVERY ? (
+                    <section className="checkout-card delivery-checkout-card">
+                      <div className="checkout-card-heading">
+                        <span className="section-icon">
+                          <LocationIcon />
+                        </span>
+                        <h2>Pengiriman</h2>
+                      </div>
+                      <label className="checkout-select-label">
+                        Alamat pengantaran
+                        <select
+                          name="address"
+                          required
+                          value={selectedCheckoutAddress?.id || ""}
+                          onChange={(event) => {
+                            setDeliveryQuote(null);
+                            setDeliveryQuoteError("");
+                            setCheckoutAddressId(event.target.value);
+                          }}
+                        >
+                          {deliveryAddresses.map((address) => (
+                            <option key={address.id} value={address.id}>
+                              {address.label} · {address.detail}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <div className="checkout-address-actions">
+                        <button
+                          type="button"
+                          className="quick-address-toggle"
+                          aria-expanded={quickAddressOpen}
+                          onClick={() => setQuickAddressOpen((open) => !open)}
+                        >
+                          {quickAddressOpen
+                            ? "Tutup form alamat"
+                            : "+ Tambah lokasi lain"}
+                        </button>
+                      </div>
+                      {quickAddressOpen && (
+                        <div
+                          className="checkout-quick-address"
+                          aria-label="Tambah lokasi pengantaran"
+                        >
+                          <div className="quick-address-heading">
+                            <LocationIcon />
+                            <span>
+                              <strong>Lokasi pengantaran baru</strong>
+                              <small>
+                                {isGuest
+                                  ? "Lokasi hanya dipakai untuk checkout guest ini."
+                                  : "Alamat disimpan ke akun dan langsung dipakai untuk checkout ini."}
+                              </small>
+                            </span>
+                          </div>
+                          <div className="quick-address-fields">
+                            <label>
+                              Label alamat
+                              <input
+                                name="quickAddressLabel"
+                                placeholder="Rumah / Kantor / Lainnya"
+                                minLength="2"
+                                disabled={quickAddressBusy}
+                              />
+                            </label>
+                            <label>
+                              Alamat lengkap
+                              <textarea
+                                name="quickAddressDetail"
+                                placeholder="Nama jalan, nomor, patokan, RT/RW"
+                                minLength="10"
+                                disabled={quickAddressBusy}
+                              />
+                            </label>
+                          </div>
+                          <div className="quick-address-location">
+                            <button
+                              type="button"
+                              className="location-button"
+                              data-latitude-field="quickAddressLatitude"
+                              data-longitude-field="quickAddressLongitude"
+                              onClick={useDeviceLocation}
+                              disabled={quickAddressBusy}
+                            >
+                              Gunakan lokasi perangkat
+                            </button>
+                            <input name="quickAddressLatitude" type="hidden" />
+                            <input name="quickAddressLongitude" type="hidden" />
+                            <small>
+                              Titik lokasi dipakai untuk kalkulasi ongkir. Input
+                              koordinat teknis tidak ditampilkan.
+                            </small>
+                          </div>
+                          <div className="quick-address-buttons">
+                            <button
+                              type="button"
+                              className="primary"
+                              disabled={quickAddressBusy}
+                              onClick={saveQuickAddress}
+                            >
+                              {quickAddressBusy
+                                ? "Menyimpan…"
+                                : isGuest
+                                  ? "Gunakan alamat"
+                                  : "Simpan dan gunakan alamat"}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={quickAddressBusy}
+                              onClick={() => setQuickAddressOpen(false)}
+                            >
+                              Batal
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {selectedCheckoutAddress ? (
+                        <div className="delivery-summary">
+                          <LocationIcon />
+                          <span>
+                            <strong>{selectedCheckoutAddress.label}</strong>
+                            <small>{selectedCheckoutAddress.detail}</small>
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="checkout-warning">
+                          Tambahkan lokasi pengantaran untuk melanjutkan
+                          checkout.
+                        </p>
+                      )}
+                      <div className="delivery-rules">
+                        <TruckIcon />
+                        <span>
+                          <strong>Jarak dan ongkir dihitung otomatis</strong>
+                          <small>
+                            Gratis hingga {deliveryQuote?.free_radius_km ?? 3}{" "}
+                            km. Di atasnya mengikuti konfigurasi pengiriman dan
+                            radius layanan maksimal{" "}
+                            {deliveryQuote?.max_radius_km ?? 10} km.
+                          </small>
+                        </span>
+                      </div>
+                      {deliveryQuoteBusy && (
+                        <div className="delivery-quote-state" role="status">
+                          Menghitung jarak dan ongkir…
+                        </div>
+                      )}
+                      {deliveryQuoteError && (
+                        <div
+                          className="delivery-quote-state unavailable"
+                          role="alert"
+                        >
+                          {deliveryQuoteError}
+                        </div>
+                      )}
+                      {deliveryQuote && (
+                        <div
+                          className={`delivery-quote-state ${deliveryQuote.available ? (deliveryQuote.free_delivery ? "free" : "paid") : "unavailable"}`}
+                          role={deliveryQuote.available ? "status" : "alert"}
+                        >
+                          <strong>
+                            {deliveryQuote.available
+                              ? `${Number(deliveryQuote.distance_km).toFixed(1)} km · ${deliveryQuote.free_delivery ? "GRATIS ONGKIR" : money(deliveryQuote.delivery_fee)}`
+                              : "Area belum terjangkau"}
+                          </strong>
+                          <span>{deliveryQuote.message}</span>
+                        </div>
+                      )}
+                    </section>
+                  ) : (
+                    <section className="checkout-card pickup-location-card">
+                      <input
+                        type="hidden"
+                        name="address"
+                        value={selectedCheckoutAddress?.id || ""}
+                      />
+                      <div className="checkout-card-heading">
+                        <span className="section-icon">
+                          <LocationIcon />
+                        </span>
+                        <h2>Lokasi Pengambilan</h2>
+                      </div>
+                      <div className="delivery-summary">
+                        <LocationIcon />
+                        <span>
+                          <strong>{PICKUP_LABEL}</strong>
+                          <small>Warkost Bahagia · Ambil di tempat</small>
+                        </span>
+                      </div>
+                      <div className="delivery-quote-state free" role="status">
+                        <strong>GRATIS · TANPA ONGKIR</strong>
+                        <span>Pesanan diambil langsung di Warkost.</span>
+                      </div>
+                    </section>
+                  )}
+
+                  <section className="checkout-card payment-method-card">
+                    <div className="checkout-card-heading">
+                      <span className="section-icon">
+                        <WalletIcon />
+                      </span>
+                      <h2>Metode Pembayaran</h2>
+                    </div>
+                    <div
+                      className="payment-method-options"
+                      role="radiogroup"
+                      aria-label="Metode pembayaran"
+                    >
+                      {[
+                        {
+                          value: "CASH",
+                          label: "COD",
+                          description:
+                            "Bayar tunai saat pesanan diterima. Voucher reguler tidak berlaku.",
+                        },
+                        {
+                          value: "QRIS",
+                          label: "QRIS",
+                          description:
+                            "Bayar non-tunai melalui QRIS dan nikmati benefit member yang eligible.",
+                        },
+                      ].filter((method) => method.value !== "QRIS" || storeStatus?.qrisAvailable === true).map((method) => (
+                        <label
+                          className={`payment-method-option ${selectedPaymentMethod === method.value ? "selected" : ""}`}
+                          key={method.value}
+                        >
+                          <input
+                            type="radio"
+                            name="method"
+                            value={method.value}
+                            checked={selectedPaymentMethod === method.value}
+                            onChange={() =>
+                              setSelectedPaymentMethod(method.value)
+                            }
+                          />
+                          <span className="payment-method-icon">
+                            <WalletIcon />
+                          </span>
+                          <span>
+                            <strong>{method.label}</strong>
+                            <small>{method.description}</small>
+                          </span>
+                          <span className="payment-method-check">
+                            <CheckIcon />
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </section>
+                </div>
+
+                <aside className="checkout-summary-card">
+                  <div className="checkout-card-heading">
+                    <span className="section-icon">
+                      <WalletIcon />
+                    </span>
+                    <h2>Rincian Pembayaran</h2>
+                  </div>
+                  <div className="payment-line">
+                    <span>Subtotal</span>
+                    <strong>{money(total)}</strong>
+                  </div>
+                  <div className="payment-line">
+                    <span>
+                      {fulfillmentMode === FULFILLMENT_PICKUP
+                        ? "Pengambilan"
+                        : "Ongkir"}
+                    </span>
+                    <strong
+                      className={
+                        deliveryQuote?.available ? "" : "pending-value"
+                      }
+                    >
+                      {fulfillmentMode === FULFILLMENT_PICKUP
+                        ? "GRATIS"
+                        : deliveryQuoteBusy
+                          ? "Menghitung…"
+                          : deliveryQuote?.available
+                            ? deliveryQuote.free_delivery
+                              ? "GRATIS"
+                              : money(deliveryQuote.delivery_fee)
+                            : deliveryQuote
+                              ? "Di luar jangkauan"
+                              : "Belum dihitung"}
+                    </strong>
+                  </div>
+                  <div className="payment-line">
+                    <span>Voucher</span>
+                    <strong>
+                      {voucherQuote?.voucher_discount
+                        ? `−${money(voucherQuote.voucher_discount)}`
+                        : money(0)}
+                    </strong>
+                  </div>
+                  <div className="payment-line">
+                    <span>Loyalty Reward</span>
+                    <strong>
+                      {loyaltyQuote?.loyalty_discount
+                        ? `−${money(loyaltyQuote.loyalty_discount)}`
+                        : money(0)}
+                    </strong>
+                  </div>
+                  <div className="payment-total">
+                    <span>Total akhir</span>
+                    <strong>
+                      {deliveryQuote?.available
+                        ? money(checkoutFinalTotal)
+                        : "—"}
+                    </strong>
+                  </div>
+                  <p className="server-calculation-note">
+                    {deliveryQuote?.message ||
+                      deliveryQuoteError ||
+                      "Total akhir ditampilkan setelah server memvalidasi alamat."}
+                  </p>
+                  <button
+                    className="primary checkout-submit"
+                    disabled={
+                      busy ||
+                      deliveryQuoteBusy ||
+                      voucherQuoteBusy ||
+                      loyaltyQuoteBusy ||
+                      storeStatus?.isOpen !== true ||
+                      Boolean(selectedVoucherId && !voucherQuote) ||
+                      Boolean(selectedRewardId && !loyaltyQuote) ||
+                      !selectedCheckoutAddress?.id ||
+                      !deliveryQuote?.available
+                    }
+                  >
+                    {busy
+                      ? "Membuat Pesanan…"
+                      : storeStatus?.isOpen !== true
+                        ? "Toko Sedang Tutup"
+                        : deliveryQuoteBusy
+                          ? "Menghitung Ongkir…"
+                          : deliveryQuote && !deliveryQuote.available
+                            ? "Alamat Di Luar Jangkauan"
+                            : "Buat Pesanan"}
+                    <ArrowIcon />
+                  </button>
+                  <div className="checkout-trust">
+                    <ShieldIcon />
+                    <span>
+                      Pesananmu diproses dengan aman menggunakan kalkulasi
+                      existing.
+                    </span>
+                  </div>
+                </aside>
               </form>
             )}
           </section>
         )}
+        {role === "CUSTOMER" && view === "order-success" && (
+          <CustomerTracking
+            order={focusedOrder}
+            justCreated={Boolean(
+              lastCreatedOrderId && focusedOrder?.id === lastCreatedOrderId,
+            )}
+            onBack={() => goToCustomerOrders("all")}
+            onSupport={openCustomerSupport}
+          />
+        )}
         {role === "CUSTOMER" && view === "account" && (
-          <div className="columns">
-            <section className="panel">
-              <h2>Alamat pengantaran</h2>
-              {account.addresses.map((a) => (
-                <div className="line" key={a.id}>
-                  <span>
-                    <strong>{a.label}</strong>
-                    <br />
-                    {a.detail}
-                  </span>
-                  <span className="actions">
-                    <button onClick={() => setEditingAddress(a.id)}>
-                      Ubah
-                    </button>
-                    <button
-                      disabled={busy}
-                      onClick={() =>
-                        run(() => api("address-remove", { id: a.id }))
-                      }
-                    >
-                      Hapus
-                    </button>
-                  </span>
-                </div>
-              ))}
-              <form
-                key={editingAddress || "new"}
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const f = new FormData(e.currentTarget);
-                  run(async () => {
-                    await api(editingAddress ? "address-replace" : "address", {
-                      ...(editingAddress ? { id: editingAddress } : {}),
-                      label: f.get("label"),
-                      detail: f.get("detail"),
-                      latitude: Number(f.get("latitude")),
-                      longitude: Number(f.get("longitude")),
+          <>
+            <section className="account-overview" aria-label="Menu akun">
+              <div>
+                <span className="eyebrow">AKUN PELANGGAN</span>
+                <h2>{user.name}</h2>
+                <p>Kelola pesanan, lokasi pengantaran, dan profilmu.</p>
+              </div>
+            </section>
+            <div className="columns account-columns">
+              <section className="panel" id="account-address">
+                <h2>Alamat pengantaran</h2>
+                {account.addresses.map((a) => (
+                  <div className="line" key={a.id}>
+                    <span>
+                      <strong>{a.label}</strong>{" "}
+                      {a.is_default === 1 && (
+                        <span className="badge">DEFAULT</span>
+                      )}
+                      <br />
+                      {a.detail}
+                    </span>
+                    <span className="actions">
+                      {a.is_default !== 1 && (
+                        <button
+                          disabled={busy}
+                          onClick={() =>
+                            run(() => api("address-default", { id: a.id }))
+                          }
+                        >
+                          Jadikan default
+                        </button>
+                      )}
+                      <button onClick={() => setEditingAddress(a.id)}>
+                        Ubah
+                      </button>
+                      <button
+                        disabled={busy}
+                        onClick={() =>
+                          run(() => api("address-remove", { id: a.id }))
+                        }
+                      >
+                        Hapus
+                      </button>
+                    </span>
+                  </div>
+                ))}
+                <form
+                  key={editingAddress || "new"}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const f = new FormData(e.currentTarget);
+                    run(async () => {
+                      await api(
+                        editingAddress ? "address-replace" : "address",
+                        {
+                          ...(editingAddress ? { id: editingAddress } : {}),
+                          label: f.get("label"),
+                          detail: f.get("detail"),
+                          latitude: f.get("latitude"),
+                          longitude: f.get("longitude"),
+                          isDefault: f.get("isDefault") === "on",
+                        },
+                      );
+                      setEditingAddress(null);
+                      e.target.reset();
                     });
-                    setEditingAddress(null);
-                    e.target.reset();
-                  });
-                }}
-              >
-                <h2>{editingAddress ? "Ubah alamat" : "Tambah alamat"}</h2>
-                <label>
-                  Label
-                  <input
-                    name="label"
-                    defaultValue={
-                      account.addresses.find((a) => a.id === editingAddress)
-                        ?.label || ""
-                    }
-                    placeholder="Rumah / Kantor"
-                    required
-                    minLength="2"
-                  />
-                </label>
-                <label>
-                  Alamat lengkap
-                  <textarea
-                    name="detail"
-                    defaultValue={
-                      account.addresses.find((a) => a.id === editingAddress)
-                        ?.detail || ""
-                    }
-                    minLength="10"
-                    required
-                  />
-                </label>
-                <div className="columns compact-columns">
+                  }}
+                >
+                  <h2>{editingAddress ? "Ubah alamat" : "Tambah alamat"}</h2>
                   <label>
-                    Latitude pin lokasi
+                    Label
                     <input
-                      name="latitude"
-                      type="number"
-                      step="any"
-                      min="-90"
-                      max="90"
+                      name="label"
                       defaultValue={
                         account.addresses.find((a) => a.id === editingAddress)
-                          ?.latitude ?? ""
+                          ?.label || ""
                       }
+                      placeholder="Rumah / Kantor"
                       required
+                      minLength="2"
                     />
                   </label>
                   <label>
-                    Longitude pin lokasi
-                    <input
-                      name="longitude"
-                      type="number"
-                      step="any"
-                      min="-180"
-                      max="180"
+                    Alamat lengkap
+                    <textarea
+                      name="detail"
                       defaultValue={
                         account.addresses.find((a) => a.id === editingAddress)
-                          ?.longitude ?? ""
+                          ?.detail || ""
                       }
+                      minLength="10"
                       required
                     />
                   </label>
-                </div>
-                <small>
-                  Ongkir dihitung server: gratis hingga 5 km, Rp2.500 per km
-                  berikutnya, maksimal 15 km.
-                </small>
-                <div className="actions">
-                  <button className="primary" disabled={busy}>
-                    Simpan alamat
-                  </button>
-                  {editingAddress && (
+                  <div className="location-card">
+                    <div className="location-card-heading">
+                      <LocationIcon />
+                      <div>
+                        <strong>Titik lokasi pengantaran</strong>
+                        <small>
+                          Dipakai hanya untuk menghitung jarak dan ongkir.
+                        </small>
+                      </div>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => setEditingAddress(null)}
+                      className="location-button"
+                      onClick={useDeviceLocation}
                     >
-                      Batal
+                      Gunakan lokasi perangkat
                     </button>
-                  )}
-                </div>
-              </form>
-            </section>
-            <section className="panel">
-              <h2>Profil</h2>
-              <p>
-                {user.name} · {user.email}
-              </p>
-              <form
-                key={user.name}
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const f = new FormData(e.currentTarget);
-                  run(async () => {
-                    const response = await api("profile", {
-                      name: f.get("name"),
-                      currentPassword: f.get("currentPassword"),
-                      newPassword: f.get("newPassword"),
+                    <input name="latitude" type="hidden" />
+                    <input name="longitude" type="hidden" />
+                    <label className="consent-field">
+                      <input
+                        name="isDefault"
+                        type="checkbox"
+                        defaultChecked={
+                          account.addresses.find((a) => a.id === editingAddress)
+                            ?.is_default === 1
+                        }
+                      />
+                      <span>Jadikan alamat default</span>
+                    </label>
+                    <small>
+                      Koordinat disimpan untuk ongkir, tetapi tidak ditampilkan
+                      sebagai input teknis. Jika lokasi perangkat tidak dipilih,
+                      titik lama dipertahankan; presisi pin peta akan dilengkapi
+                      pada integrasi Maps berikutnya.
+                    </small>
+                  </div>
+                  <div className="actions">
+                    <button className="primary" disabled={busy}>
+                      Simpan alamat
+                    </button>
+                    {editingAddress && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingAddress(null)}
+                      >
+                        Batal
+                      </button>
+                    )}
+                  </div>
+                </form>
+              </section>
+              <section className="panel" id="account-settings">
+                <h2>Pengaturan Akun</h2>
+                <p>Perbarui data profil dan password akunmu dengan aman.</p>
+                <form
+                  key={
+                    (account.profile?.email || user.email) +
+                    (account.profile?.birth_date || "")
+                  }
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const f = new FormData(e.currentTarget);
+                    run(async () => {
+                      const newPassword = String(f.get("newPassword") || "");
+                      if (newPassword)
+                        window.dispatchEvent(
+                          new CustomEvent("warkost:session-rotation-started"),
+                        );
+                      let response;
+                      try {
+                        response = await api("profile", {
+                          name: f.get("name"),
+                          email: f.get("email"),
+                          phone: f.get("phone"),
+                          birthDate: f.get("birthDate"),
+                          currentPassword: f.get("currentPassword"),
+                          newPassword,
+                        });
+                      } catch (profileError) {
+                        if (newPassword)
+                          window.dispatchEvent(
+                            new CustomEvent(
+                              "warkost:session-rotation-cancelled",
+                            ),
+                          );
+                        throw profileError;
+                      }
+                      setUser(response.user);
+                      if (response.sessionRotated)
+                        window.dispatchEvent(
+                          new CustomEvent("warkost:session-rotated"),
+                        );
+                      setMessage("Profil diperbarui");
+                      e.target.reset();
                     });
-                    setUser(response.user);
-                    setMessage("Profil diperbarui");
-                    e.target.reset();
-                  });
-                }}
-              >
-                <label>
-                  Nama
-                  <input
-                    name="name"
-                    defaultValue={user.name}
-                    required
-                    minLength="2"
-                  />
-                </label>
-                <label>
-                  Password saat ini (jika mengganti password)
-                  <input
-                    name="currentPassword"
-                    type="password"
-                    autoComplete="current-password"
-                  />
-                </label>
-                <label>
-                  Password baru (opsional, minimal 12 karakter)
-                  <input
-                    name="newPassword"
-                    type="password"
-                    autoComplete="new-password"
-                  />
-                </label>
-                <button className="primary" disabled={busy}>
-                  Simpan profil
-                </button>
-              </form>
-            </section>
-            <section className="panel">
-              <h2>Poin loyalitas</h2>
-              <div className="big-number">{account.loyalty} poin</div>
-              <p>Poin diberikan saat pesanan selesai dikirim.</p>
-              {account.transactions.map((t) => (
-                <div className="line" key={t.id}>
-                  <span>Pesanan #{t.order_id}</span>
-                  <strong>+{t.amount}</strong>
-                </div>
-              ))}
-            </section>
-          </div>
+                  }}
+                >
+                  <label>
+                    Nama
+                    <input
+                      name="name"
+                      defaultValue={account.profile?.name || user.name}
+                      required
+                      minLength="2"
+                    />
+                  </label>
+                  <label>
+                    Email
+                    <input
+                      name="email"
+                      type="email"
+                      defaultValue={account.profile?.email || user.email}
+                      required
+                    />
+                  </label>
+                  <label>
+                    Nomor HP
+                    <input
+                      name="phone"
+                      type="tel"
+                      defaultValue={account.profile?.phone || ""}
+                      required
+                    />
+                  </label>
+                  <label>
+                    Tanggal Lahir
+                    <input
+                      name="birthDate"
+                      type="date"
+                      defaultValue={account.profile?.birth_date || ""}
+                      required
+                    />
+                  </label>
+                  <label>
+                    Password saat ini (jika mengganti password)
+                    <input
+                      name="currentPassword"
+                      type="password"
+                      autoComplete="current-password"
+                    />
+                  </label>
+                  <label>
+                    Password baru (opsional, minimal 12 karakter)
+                    <input
+                      name="newPassword"
+                      type="password"
+                      autoComplete="new-password"
+                    />
+                  </label>
+                  <button className="primary" disabled={busy}>
+                    Simpan profil
+                  </button>
+                </form>
+              </section>
+              <section className="panel" id="account-loyalty">
+                <h2>Poin loyalitas</h2>
+                <div className="big-number">{account.loyalty} poin</div>
+                <p>
+                  Setiap kelipatan Rp10.000 nilai produk bersih menghasilkan 1
+                  poin setelah pesanan selesai.
+                </p>
+                {(account.rewards || []).map((reward) => (
+                  <div className="line" key={reward.id}>
+                    <span>
+                      <strong>{reward.name}</strong>
+                      <br />
+                      {reward.points_required} poin ·{" "}
+                      {reward.reward_type === "PERCENT"
+                        ? `${reward.reward_value}%`
+                        : money(reward.reward_value)}
+                    </span>
+                    <span className="badge">
+                      {reward.eligible_balance
+                        ? "TERSEDIA"
+                        : reward.ineligible_reason}
+                    </span>
+                  </div>
+                ))}
+                {account.transactions.map((t) => (
+                  <div className="line" key={t.id}>
+                    <span>
+                      Pesanan #{t.order_id} · {t.kind}
+                    </span>
+                    <strong>
+                      {t.amount > 0 ? "+" : ""}
+                      {t.amount}
+                    </strong>
+                  </div>
+                ))}
+              </section>
+            </div>
+          </>
         )}
-        {["ADMIN", "OWNER"].includes(role) && view === "reports" && (
+        {role === "DRIVER" && view === "account" && (
+          <DriverCommunicationPanel
+            user={user}
+            orders={orders}
+            onChat={(orderId) =>
+              setChatTarget({ type: "CUSTOMER_DRIVER", orderId })
+            }
+          />
+        )}
+        {role === "OWNER" && view === "reports" && (
           <section className="panel">
             <h2>Ringkasan operasional</h2>
             <p>
@@ -939,14 +3361,17 @@ export default function App() {
             )}
           </section>
         )}
-        {role === "ADMIN" && view === "settings" && (
+        {role === "OWNER" && view === "settings" && (
           <section className="panel narrow">
             <h2>Pengaturan café</h2>
             <form
               key={
                 settings.brandName +
                 settings.rupiahPerPoint +
-                settings.businessWhatsApp
+                settings.businessWhatsApp +
+                settings.deliveryFreeKm +
+                settings.deliveryFeePerKm +
+                settings.deliveryMaxKm
               }
               onSubmit={(e) => {
                 e.preventDefault();
@@ -954,10 +3379,13 @@ export default function App() {
                 run(() =>
                   api("settings", {
                     brandName: f.get("brandName"),
-                    rupiahPerPoint: Number(f.get("rupiahPerPoint")),
+                    rupiahPerPoint: 10000,
                     businessWhatsApp: f.get("businessWhatsApp"),
                     businessLatitude: Number(f.get("businessLatitude")),
                     businessLongitude: Number(f.get("businessLongitude")),
+                    deliveryFreeKm: Number(f.get("deliveryFreeKm")),
+                    deliveryFeePerKm: Number(f.get("deliveryFeePerKm")),
+                    deliveryMaxKm: Number(f.get("deliveryMaxKm")),
                     printerSimulation: f.get("printerSimulation") === "on",
                     adminPrinter: f.get("adminPrinter"),
                     kitchenPrinter: f.get("kitchenPrinter"),
@@ -975,13 +3403,12 @@ export default function App() {
                 />
               </label>
               <label>
-                Rupiah per 1 poin
+                Nilai produk per 1 poin (tetap)
                 <input
                   name="rupiahPerPoint"
                   type="number"
-                  min="1000"
-                  max="100000"
-                  defaultValue={settings.rupiahPerPoint}
+                  value="10000"
+                  readOnly
                   required
                 />
               </label>
@@ -1015,6 +3442,41 @@ export default function App() {
                   />
                 </label>
               </div>
+              <div className="columns compact-columns">
+                <label>
+                  Radius gratis (km)
+                  <input
+                    name="deliveryFreeKm"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    defaultValue={settings.deliveryFreeKm}
+                    required
+                  />
+                </label>
+                <label>
+                  Biaya per km tambahan
+                  <input
+                    name="deliveryFeePerKm"
+                    type="number"
+                    min="0"
+                    step="1"
+                    defaultValue={settings.deliveryFeePerKm}
+                    required
+                  />
+                </label>
+                <label>
+                  Radius maksimal (km)
+                  <input
+                    name="deliveryMaxKm"
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    defaultValue={settings.deliveryMaxKm}
+                    required
+                  />
+                </label>
+              </div>
               <label>
                 Profil printer Admin
                 <input
@@ -1040,8 +3502,9 @@ export default function App() {
                 Mode simulasi printer sampai hardware LAN terpasang
               </label>
               <p>
-                Aturan delivery terkunci: gratis 5 km · Rp2.500/km berikutnya ·
-                batas 15 km.
+                Ongkir setelah radius gratis dihitung per kilometer tambahan
+                yang mulai terpakai. Radius gratis tidak boleh melebihi radius
+                maksimal.
               </p>
               <button className="primary" disabled={busy}>
                 Simpan pengaturan
@@ -1049,39 +3512,73 @@ export default function App() {
             </form>
           </section>
         )}
-        {role === "ADMIN" && view === "drivers" && (
+        {role === "OWNER" && view === "staff" && (
           <section className="panel">
-            <h2>Kelola driver</h2>
+            <h2>Kelola staf</h2>
             <p>
-              Driver dengan pengantaran aktif harus menyelesaikan tugas sebelum
-              dinonaktifkan.
+              Owner dapat membuat Manager, Admin, dan Driver. Password lama
+              tidak pernah ditampilkan.
             </p>
-            {drivers.map((d) => (
-              <div className="line" key={d.id}>
+            {staff.map((member) => (
+              <div className="line" key={member.id}>
                 <span>
-                  <strong>{d.name}</strong> · {d.email} ·{" "}
-                  {d.phone || "Nomor belum diisi"} · {d.active_load}/5 tugas ·{" "}
-                  {d.active ? "Aktif" : "Nonaktif"}
+                  <strong>{member.name}</strong> · {member.role}
+                  <br />
+                  {member.email} · {member.phone || "Nomor belum diisi"} ·{" "}
+                  {member.active ? "Aktif" : "Nonaktif"}
                 </span>
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    run(() =>
-                      api("driver-active", { id: d.id, active: !d.active }),
-                    )
-                  }
-                >
-                  {d.active ? "Nonaktifkan" : "Aktifkan"}
-                </button>
+                {member.role === "DRIVER" ? (
+                  <button
+                    disabled={busy}
+                    onClick={() =>
+                      run(() =>
+                        api("driver-active", {
+                          id: member.id,
+                          active: !member.active,
+                        }),
+                      )
+                    }
+                  >
+                    {member.active ? "Nonaktifkan" : "Aktifkan"}
+                  </button>
+                ) : (
+                  <form
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      const formElement = event.currentTarget;
+                      const form = new FormData(formElement);
+                      run(async () => {
+                        await api("staff-password", {
+                          id: member.id,
+                          password: form.get("password"),
+                        });
+                        formElement.reset();
+                        setMessage(
+                          "Password staf diperbarui dan sesi lama dicabut",
+                        );
+                      });
+                    }}
+                  >
+                    <input
+                      name="password"
+                      type="password"
+                      minLength="14"
+                      placeholder="Password baru"
+                      required
+                    />
+                    <button disabled={busy}>Reset password</button>
+                  </form>
+                )}
               </div>
             ))}
-            <h2>Tambah driver</h2>
+            <h2>Tambah staf</h2>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 const f = new FormData(e.currentTarget);
                 run(async () => {
-                  await api("driver", {
+                  await api("staff", {
+                    role: f.get("role"),
                     name: f.get("name"),
                     email: f.get("email"),
                     password: f.get("password"),
@@ -1092,6 +3589,14 @@ export default function App() {
               }}
             >
               <label>
+                Role
+                <select name="role" required defaultValue="MANAGER">
+                  <option value="MANAGER">Manager</option>
+                  <option value="ADMIN">Admin</option>
+                  <option value="DRIVER">Driver</option>
+                </select>
+              </label>
+              <label>
                 Nama
                 <input name="name" minLength="2" required />
               </label>
@@ -1100,8 +3605,8 @@ export default function App() {
                 <input name="email" type="email" required />
               </label>
               <label>
-                Nomor WhatsApp
-                <input name="phone" placeholder="08xxxxxxxxxx" required />
+                Nomor WhatsApp (wajib untuk Driver)
+                <input name="phone" placeholder="08xxxxxxxxxx" />
               </label>
               <label>
                 Password awal (minimal 14 karakter)
@@ -1113,235 +3618,211 @@ export default function App() {
                 />
               </label>
               <button className="primary" disabled={busy}>
-                Buat akun driver
+                Buat akun staf
               </button>
             </form>
           </section>
+        )}
+        {role === "OWNER" && view === "customers" && (
+          <OwnerCustomersCenter />
         )}
         {role === "ADMIN" && view === "customers" && (
-          <section className="panel">
-            <h2>Daftar pelanggan</h2>
-            <p>Pesanan aktif harus diselesaikan sebelum akun dinonaktifkan.</p>
-            <form
-              onSubmit={async (event) => {
-                event.preventDefault();
-                const query = new FormData(event.currentTarget)
-                  .get("search")
-                  .toString()
-                  .trim();
-                setBusy(true);
-                setError("");
-                try {
-                  await loadCustomers(query);
-                  setCustomerSearch(query);
-                } catch (e) {
-                  setError(e.message);
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              <label>
-                Cari nama atau email
-                <input
-                  name="search"
-                  defaultValue={customerSearch}
-                  maxLength="80"
-                />
-              </label>
-              <button className="primary" disabled={busy}>
-                Cari pelanggan
-              </button>
-            </form>
-            {customers.map((customer) => (
-              <div className="line" key={customer.id}>
-                <span>
-                  <strong>{customer.name}</strong> · {customer.email}
-                  <br />
-                  {customer.active ? "Aktif" : "Nonaktif"} ·{" "}
-                  {customer.order_count} pesanan · {customer.points} poin
-                </span>
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    run(() =>
-                      api("customer-active", {
-                        id: customer.id,
-                        active: !customer.active,
-                      }),
-                    )
-                  }
-                >
-                  {customer.active ? "Nonaktifkan" : "Aktifkan"}
-                </button>
-              </div>
-            ))}
-            {!customers.length && <p>Belum ada pelanggan yang cocok.</p>}
-            {customerCursor && (
-              <button
-                className="refresh"
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true);
-                  setError("");
-                  try {
-                    await loadCustomers(customerSearch, customerCursor);
-                  } catch (e) {
-                    setError(e.message);
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-              >
-                Muat pelanggan lain
-              </button>
-            )}
-          </section>
+          <AdminCustomersEnhancer />
         )}
-        {role === "ADMIN" && view === "promotions" && (
+        {role === "MANAGER" && (
+          <ManagerControlCenter
+            view={view}
+            setView={setView}
+            api={api}
+            inventory={inventory}
+            stock={stock}
+            busy={busy}
+            run={run}
+            saveProduct={saveProductWithImage}
+            promotions={promotions}
+            banners={banners}
+            refresh={refresh}
+            logout={logout}
+          />
+        )}
+        {role === "OWNER" && view === "promotions" && (
           <section className="panel">
-            <h2>Promo customer</h2>
+            <h2>Promo customer · read only</h2>
             <p>
-              Promo hanya menjadi materi komunikasi. Harga checkout tidak
-              berubah otomatis dan tetap dihitung server-side.
+              Rule promo dikelola Manager dan divalidasi server pada checkout.
             </p>
             {promotions.map((promotion) => (
-              <PromotionEditor
-                key={promotion.id}
-                promotion={promotion}
+              <div className="line" key={promotion.id}>
+                <strong>{promotion.title}</strong>
+                <span className="badge">{promotion.status}</span>
+              </div>
+            ))}
+            {!promotions.length && <p>Belum ada promo tersimpan.</p>}
+          </section>
+        )}
+        {role === "OWNER" && view === "products" && (
+          <section className="panel">
+            <h2>Katalog produk · read only</h2>
+            <p>
+              Owner dapat memantau seluruh katalog. Pengelolaan harian dilakukan
+              Manager.
+            </p>
+            {inventory.products.map((product) => (
+              <div className="line" key={product.id}>
+                <span>
+                  <strong>{product.name}</strong>
+                  <br />
+                  {product.category_name} ·{" "}
+                  {product.subcategory_name || "Tanpa subkategori"}
+                </span>
+                <strong>{productPriceLabel(product, money)}</strong>
+              </div>
+            ))}
+          </section>
+        )}
+        {role === "OWNER" && view === "loyalty-rules" && (
+          <section className="panel">
+            <h2>Loyalty Reward</h2>
+            <p>
+              Atur reward penukaran poin. Perolehan poin tetap 1 poin per
+              kelipatan Rp10.000 nilai produk bersih.
+            </p>
+            {loyaltyRules.map((rule) => (
+              <LoyaltyRuleEditor
+                key={rule.id}
+                rule={rule}
                 busy={busy}
                 onSave={(body) =>
                   run(async () => {
-                    await api("promotion", body);
-                    setMessage("Promo diperbarui");
+                    await api("loyalty-reward", body);
+                    setMessage("Aturan Loyalty Reward diperbarui");
                   })
                 }
               />
             ))}
-            {!promotions.length && <p>Belum ada promo tersimpan.</p>}
-            <h2>Tambah promo</h2>
-            <PromotionEditor
+            {!loyaltyRules.length && <p>Belum ada Loyalty Reward.</p>}
+            <h2>Tambah reward</h2>
+            <LoyaltyRuleEditor
               busy={busy}
               onSave={(body) =>
                 run(async () => {
-                  await api("promotion", body);
-                  setMessage("Promo dibuat");
+                  await api("loyalty-reward", body);
+                  setMessage("Loyalty Reward dibuat");
                 })
               }
             />
           </section>
         )}
-        {role === "ADMIN" && view === "products" && (
+        {role === "OWNER" && view === "stock" && (
           <section className="panel">
-            <h2>Kelola kategori</h2>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const f = new FormData(e.currentTarget);
-                run(async () => {
-                  await api("category", { name: f.get("name") });
-                  e.target.reset();
-                });
-              }}
-            >
-              <label>
-                Nama kategori baru
-                <input name="name" required minLength="2" />
-              </label>
-              <button className="primary" disabled={busy}>
-                Tambah kategori
-              </button>
-            </form>
-            {inventory.categories.map((c) => (
-              <div className="line" key={c.id}>
-                <span>
-                  {c.name} · {c.active ? "Aktif" : "Nonaktif"}
-                </span>
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    run(() =>
-                      api("category", {
-                        id: c.id,
-                        name: c.name,
-                        active: !c.active,
-                      }),
-                    )
-                  }
-                >
-                  {c.active ? "Nonaktifkan" : "Aktifkan"}
-                </button>
-              </div>
-            ))}
-            <h2>Kelola produk</h2>
-            {inventory.products.map((p) => (
-              <ProductEditor
-                key={p.id}
-                product={p}
-                categories={inventory.categories}
-                busy={busy}
-                onSave={saveProductWithImage}
-              />
-            ))}
-            <h2>Tambah menu</h2>
-            <ProductEditor
-              categories={inventory.categories}
-              busy={busy}
-              onSave={saveProductWithImage}
-            />
-          </section>
-        )}
-        {["ADMIN", "OWNER"].includes(role) && view === "stock" && (
-          <section className="panel">
-            <h2>Stok produk</h2>
+            <h2>{role === "KITCHEN" ? "Stok Makanan" : "Stok produk"}</h2>
             <p>
-              Admin hanya dapat menambah stok. Pengurangan manual hanya dapat
-              dilakukan Owner dan selalu dicatat.
+              {role === "MANAGER"
+                ? "Manager dapat menyesuaikan stok. Semua perubahan dicatat pada ledger dan audit log."
+                : "Tampilan stok read-only sesuai tanggung jawab role."}
             </p>
-            {stock.products.map((product) => (
-              <form
-                className="stock-row"
-                key={product.id + ":" + product.stock_quantity}
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const form = new FormData(event.currentTarget);
-                  run(async () => {
-                    await api("stock", {
-                      productId: product.id,
-                      quantity: Number(form.get("quantity")),
-                      reason: form.get("reason"),
-                    });
-                    setMessage("Stok " + product.name + " diperbarui");
-                  });
-                }}
+            {role !== "KITCHEN" && (
+              <div
+                className="filters stock-category-filters"
+                aria-label="Filter kategori stok"
               >
-                <div>
-                  <strong>{product.name}</strong>
-                  <small className="notification-date">
-                    {product.prep_station === "KITCHEN" ? "Dapur" : "Kasir"}
-                    {" · "}stok {product.stock_quantity}
-                  </small>
-                </div>
-                <input
-                  name="quantity"
-                  type="number"
-                  min={role === "ADMIN" ? "1" : undefined}
-                  placeholder={role === "ADMIN" ? "+ jumlah" : "+ / − jumlah"}
-                  required
-                />
-                <input
-                  name="reason"
-                  minLength="3"
-                  maxLength="240"
-                  placeholder="Alasan perubahan"
-                  required
-                />
-                <button className="primary" disabled={busy}>
-                  Simpan
-                </button>
-              </form>
-            ))}
-            <h2>100 pergerakan terakhir</h2>
+                {["all", "Makanan", "Minuman", "Bahan Baku"].map((name) => (
+                  <button
+                    key={name}
+                    className={stockCategoryFilter === name ? "active" : ""}
+                    onClick={() => setStockCategoryFilter(name)}
+                  >
+                    {name === "all" ? "Semua" : name}
+                  </button>
+                ))}
+              </div>
+            )}
+            {role === "MANAGER" && (
+              <datalist id="stock-adjustment-reasons">
+                <option value="Restock supplier" />
+                <option value="Stock opname" />
+                <option value="Waste" />
+                <option value="Damaged" />
+                <option value="Correction" />
+                <option value="Other" />
+              </datalist>
+            )}
+            {stock.products
+              .filter(
+                (product) =>
+                  stockCategoryFilter === "all" ||
+                  product.category_name === stockCategoryFilter,
+              )
+              .map((product) => (
+                <form
+                  className={`stock-row ${role === "MANAGER" ? "" : "stock-row-readonly"}`}
+                  key={product.id + ":" + product.stock_quantity}
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const form = new FormData(event.currentTarget);
+                    run(async () => {
+                      await api("stock", {
+                        productId: product.id,
+                        quantity: Number(form.get("quantity")),
+                        reason: form.get("reason"),
+                      });
+                      setMessage("Stok " + product.name + " diperbarui");
+                    });
+                  }}
+                >
+                  <div>
+                    <strong>{product.name}</strong>
+                    <small className="notification-date">
+                      {product.category_name} ·{" "}
+                      {product.subcategory_name || "Umum"}
+                      {" · total "}
+                      {formatStockQuantity(
+                        product.stock_quantity,
+                        product.stock_unit,
+                      )}
+                      {" · reservasi "}
+                      {formatStockQuantity(
+                        product.reserved_quantity,
+                        product.stock_unit,
+                      )}
+                      {" · tersedia "}
+                      {formatStockQuantity(
+                        product.available_quantity,
+                        product.stock_unit,
+                      )}
+                      {" · "}
+                      {product.stock_status}
+                      {" · "}
+                      {product.active ? "Aktif" : "Nonaktif"}
+                    </small>
+                  </div>
+                  {role === "MANAGER" && (
+                    <>
+                      <input
+                        name="quantity"
+                        type="number"
+                        step={product.order_step_quantity || 1}
+                        placeholder={`+ / − ${product.stock_unit === "GRAM" ? "gram" : "jumlah"}`}
+                        required
+                      />
+                      <input
+                        name="reason"
+                        list="stock-adjustment-reasons"
+                        minLength="3"
+                        maxLength="240"
+                        placeholder="Alasan perubahan"
+                        required
+                      />
+                      <button className="primary" disabled={busy}>
+                        Simpan
+                      </button>
+                    </>
+                  )}
+                </form>
+              ))}
+            {["MANAGER", "OWNER"].includes(role) && (
+              <h2>100 pergerakan terakhir</h2>
+            )}
             {stock.movements.map((movement) => (
               <div className="line" key={movement.id}>
                 <span>
@@ -1351,9 +3832,15 @@ export default function App() {
                 </span>
                 <strong>
                   {movement.quantity_delta > 0 ? "+" : ""}
-                  {movement.quantity_delta}
+                  {formatStockQuantity(
+                    movement.quantity_delta,
+                    movement.stock_unit,
+                  )}
                   {" → "}
-                  {movement.balance_after}
+                  {formatStockQuantity(
+                    movement.balance_after,
+                    movement.stock_unit,
+                  )}
                 </strong>
               </div>
             ))}
@@ -1403,39 +3890,42 @@ export default function App() {
             )}
           </section>
         )}
-        {["ADMIN", "KITCHEN", "OWNER"].includes(role) &&
-          view === "printing" && (
-            <section className="panel">
-              <h2>Antrean cetak struk 80mm</h2>
-              <p>
-                Admin menerima seluruh item; Kitchen hanya menerima makanan.
-                Owner memiliki akses pantau saja.
-              </p>
-              {printJobs.map((job) => (
-                <div className="line" key={job.id}>
-                  <span>
-                    <strong>Pesanan #{job.order_id}</strong> · {job.station}
-                    <br />
-                    {job.status} · percobaan {job.attempts} · cetak ulang{" "}
-                    {job.reprint_count}
-                  </span>
-                  {role !== "OWNER" &&
-                    ["FAILED", "PRINTED", "REPRINTED"].includes(job.status) && (
-                      <button
-                        disabled={busy}
-                        onClick={() =>
-                          run(() => api("print-retry", { id: job.id }))
-                        }
-                      >
-                        Cetak ulang
-                      </button>
-                    )}
-                </div>
-              ))}
-              {!printJobs.length && <p>Belum ada print job.</p>}
-            </section>
-          )}
-        {role && view === "notifications" && (
+        {role === "ADMIN" && view === "admin-stock" && (
+          <AdminBeverageStockEnhancerV2 />
+        )}
+        {role === "ADMIN" && view === "printing" && <AdminPrinterView />}
+        {role === "OWNER" && view === "printing" && (
+          <section className="panel">
+            <h2>Antrean cetak struk 80mm</h2>
+            <p>
+              Admin menerima item Minuman/Bahan Baku; Kitchen hanya menerima
+              Makanan. Owner memiliki akses pantau saja.
+            </p>
+            {printJobs.map((job) => (
+              <div className="line" key={job.id}>
+                <span>
+                  <strong>Pesanan #{job.order_id}</strong> · {job.station}
+                  <br />
+                  {job.status} · percobaan {job.attempts} · cetak ulang{" "}
+                  {job.reprint_count}
+                </span>
+                {role !== "OWNER" &&
+                  ["FAILED", "PRINTED", "REPRINTED"].includes(job.status) && (
+                    <button
+                      disabled={busy}
+                      onClick={() =>
+                        run(() => api("print-retry", { id: job.id }))
+                      }
+                    >
+                      Cetak ulang
+                    </button>
+                  )}
+              </div>
+            ))}
+            {!printJobs.length && <p>Belum ada print job.</p>}
+          </section>
+        )}
+        {role && !["CUSTOMER", "KITCHEN"].includes(role) && view === "notifications" && (
           <section className="panel narrow">
             <h2>Kabar terbaru</h2>
             {alerts.notifications.length ? (
@@ -1462,17 +3952,68 @@ export default function App() {
             )}
           </section>
         )}
-        {role && view === "orders" && (
+        {role === "KITCHEN" && view === "orders" && <KitchenDashboardFast />}
+        {role === "KITCHEN" && view === "stock" && <KitchenStockCenter menuProducts={menu.products} />}
+        {role === "KITCHEN" && view === "printing" && <AdminPrinterView role="KITCHEN" />}
+        {role && role !== "KITCHEN" && view === "orders" && (
           <>
-            <button
-              className="refresh"
-              onClick={() => run(async () => {})}
-              disabled={busy}
-            >
-              Perbarui status
-            </button>
+            {role === "CUSTOMER" && (
+              <section className="customer-orders-heading">
+                <div className="customer-page-title">
+                  <span className="eyebrow">PESANAN WARKOST</span>
+                  <h1>Pesanan</h1>
+                  <p>Lihat dan pantau semua pesanan Anda.</p>
+                </div>
+                <button
+                  className="orders-refresh"
+                  onClick={() => run(async () => {})}
+                  disabled={busy}
+                >
+                  {busy ? "Memperbarui…" : "Perbarui status"}
+                </button>
+                <div
+                  className="customer-order-tabs"
+                  aria-label="Filter pesanan"
+                >
+                  {[
+                    ["all", "Semua"],
+                    ["process", "Dalam Proses"],
+                    ["completed", "Selesai"],
+                    ["cancelled", "Dibatalkan"],
+                  ].map(([key, label]) => (
+                    <button
+                      key={key}
+                      className={orderFilter === key ? "active" : ""}
+                      onClick={() => setOrderFilter(key)}
+                    >
+                      {label} <span>{customerOrderCounts[key]}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+            {role !== "CUSTOMER" && (
+              <button
+                className={
+                  role === "ADMIN" ? "refresh admin-refresh" : "refresh"
+                }
+                onClick={() => run(async () => {})}
+                disabled={busy}
+              >
+                {role === "ADMIN" && (
+                  <AdminIcon
+                    name="refresh"
+                    className="admin-svg-icon admin-refresh-icon"
+                  />
+                )}
+                Perbarui status
+              </button>
+            )}
+            {role === "ADMIN" && <AdminDailySummary dashboard={dashboard} />}
             {["ADMIN", "OWNER"].includes(role) && dashboard && (
-              <div className="stats">
+              <div
+                className={role === "ADMIN" ? "stats admin-kpi-grid" : "stats"}
+              >
                 {[
                   ["Order hari ini", dashboard.today.orders],
                   [
@@ -1512,16 +4053,36 @@ export default function App() {
                   ["Pelanggan", dashboard.customers],
                   ["Driver terdaftar", dashboard.drivers],
                   ["Aktivitas poin", dashboard.loyalty],
-                ].map(([label, value]) => (
+                ].map(([label, value], index) => (
                   <div className="stat" key={label}>
-                    <small>{label}</small>
+                    {role === "ADMIN" && (
+                      <AdminIcon
+                        name={ADMIN_KPI_ICONS[index]}
+                        className={`admin-svg-icon admin-kpi-icon admin-kpi-icon-${index + 1}`}
+                      />
+                    )}
+                    <small
+                      data-mobile-label={
+                        role === "ADMIN"
+                          ? ADMIN_KPI_MOBILE_LABELS[index]
+                          : undefined
+                      }
+                    >
+                      {label}
+                    </small>
                     <strong>{value}</strong>
                   </div>
                 ))}
               </div>
             )}
             {["ADMIN", "OWNER"].includes(role) && dashboard && (
-              <div className="stats payment-stats">
+              <div
+                className={
+                  role === "ADMIN"
+                    ? "stats payment-stats admin-payment-grid"
+                    : "stats payment-stats"
+                }
+              >
                 {["PENDING", "PAID", "FAILED", "EXPIRED"].map((status) => (
                   <div className="stat" key={status}>
                     <small>Pembayaran {status}</small>
@@ -1534,24 +4095,123 @@ export default function App() {
                 ))}
               </div>
             )}
-            <div className="order-list">
-              {orders.map((o) => (
+            {role === "ADMIN" && (
+              <section id="admin-order-tools" className="admin-order-tools">
+                <label className="admin-order-search">
+                  <span className="admin-svg-icon admin-search-icon">
+                    <SearchIcon />
+                  </span>
+                  <span className="sr-only">Cari pesanan</span>
+                  <input
+                    type="search"
+                    placeholder="Cari nomor pesanan, pelanggan, atau alamat..."
+                    value={adminOrderSearch}
+                    onChange={(event) =>
+                      setAdminOrderSearch(event.target.value)
+                    }
+                  />
+                </label>
+                <div
+                  className="admin-order-filters"
+                  aria-label="Filter operasional"
+                >
+                  {ADMIN_ORDER_FILTERS.map(({ key, label }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      data-filter={key}
+                      className={adminOrderFilter === key ? "active" : ""}
+                      aria-pressed={adminOrderFilter === key}
+                      onClick={() => setAdminOrderFilter(key)}
+                    >
+                      {label} ({adminCounts[key]})
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+            {role === "DRIVER" && (
+              <DriverTripControls
+                orders={visibleOrders}
+                busy={busy}
+                action={(route) =>
+                  run(async () => {
+                    const result = await api(route, {});
+                    setMessage(
+                      route === "claim-all-deliveries"
+                        ? `${result.count} pesanan berhasil diambil untuk trip ini`
+                        : `${result.count} pesanan berhasil di-pickup`,
+                    );
+                  })
+                }
+              />
+            )}
+            <div
+              className={
+                role === "CUSTOMER"
+                  ? "order-list customer-order-list"
+                  : role === "ADMIN"
+                    ? "order-list admin-order-list admin-order-list-v2"
+                    : "order-list"
+              }
+            >
+              {role === "DRIVER" &&
+                visibleOrders.some((order) => order.available_to_claim) && (
+                  <section className="panel">
+                    <h2>Pesanan siap diantar</h2>
+                    <p>
+                      Ambil pesanan yang tersedia. Maksimal 5 pengantaran aktif.
+                    </p>
+                  </section>
+                )}
+              {visibleOrders.map((o) => (
                 <Order
                   key={o.id}
                   order={o}
                   role={role}
-                  drivers={drivers}
                   busy={busy}
+                  onTrack={openCustomerTracking}
+                  onReorder={reorderItems}
+                  onSupport={openCustomerSupport}
+                  onChat={(type, orderId) => setChatTarget({ type, orderId })}
                   action={(route, body) =>
                     run(async () => {
                       await api(route, body);
+                      if (role === "DRIVER")
+                        window.dispatchEvent(
+                          new CustomEvent("warkost:cod-batch-updated"),
+                        );
                       setMessage("Pesanan #" + o.id + " diperbarui");
                     })
                   }
                 />
               ))}
             </div>
-            {!orders.length && <div className="panel">Belum ada pesanan.</div>}
+            {!visibleOrders.length && (
+              <div className="panel empty-state">
+                <ReceiptIcon />
+                <h2>
+                  {role === "ADMIN"
+                    ? adminOrderSearch.trim()
+                      ? "Pesanan tidak ditemukan"
+                      : adminOrderFilter === "all"
+                        ? "Belum ada pesanan"
+                        : `Tidak ada pesanan ${ADMIN_ORDER_FILTERS.find(({ key }) => key === adminOrderFilter)?.label.toLowerCase() || "pada filter ini"}`
+                    : orderFilter === "completed"
+                      ? "Belum ada pesanan selesai"
+                      : orderFilter === "process"
+                        ? "Tidak ada pesanan yang sedang berjalan"
+                        : orderFilter === "cancelled"
+                          ? "Belum ada pesanan dibatalkan"
+                          : "Belum ada pesanan"}
+                </h2>
+                <p>
+                  {role === "ADMIN"
+                    ? "Ubah filter atau pencarian untuk melihat pesanan lain."
+                    : "Pesananmu akan tampil di sini."}
+                </p>
+              </div>
+            )}
             {nextOrderCursor && (
               <button
                 className="refresh"
@@ -1582,16 +4242,1479 @@ export default function App() {
           </>
         )}
       </main>
+      {role === "CUSTOMER" && view === "menu" && count > 0 && (
+        <aside
+          className="floating-cart customer-floating-cart"
+          aria-label={`Ringkasan keranjang, ${count} item, total ${money(total)}`}
+        >
+          <button
+            type="button"
+            className="floating-cart-icon"
+            aria-label="Buka keranjang"
+            onClick={() => setOverlay("cart")}
+          >
+            <CartIcon />
+            <span aria-hidden="true">{count}</span>
+          </button>
+          <span className="floating-cart-divider" aria-hidden="true" />
+          <span className="floating-cart-summary">
+            <small>{count} item di keranjang</small>
+            <strong>{money(total)}</strong>
+          </span>
+          <span className="floating-cart-status">
+            <span aria-hidden="true" />
+            Siap dipesan
+          </span>
+          <button
+            type="button"
+            className="floating-cart-cta"
+            aria-label="Lihat keranjang"
+            onClick={() => setOverlay("cart")}
+          >
+            Lihat
+            <ArrowIcon />
+          </button>
+        </aside>
+      )}
+      {role === "CUSTOMER" && (
+        <nav className="mobile-customer-nav" aria-label="Navigasi pelanggan">
+          <button
+            className={view === "menu" && !overlay ? "active" : ""}
+            aria-label="Menu"
+            onClick={() => {
+              setOverlay(null);
+              setView("menu");
+            }}
+          >
+            <span className="mobile-nav-icon">
+              <FoodIcon />
+            </span>
+            Menu
+          </button>
+          <button
+            className={overlay === "cart" ? "active" : ""}
+            aria-label="Keranjang"
+            onClick={() => setOverlay("cart")}
+          >
+            <span className="mobile-nav-icon">
+              <CartIcon />
+              {count > 0 && <span className="mobile-nav-count">{count}</span>}
+            </span>
+            Keranjang
+          </button>
+          <button
+            className={
+              overlay === "account" || view === "account" ? "active" : ""
+            }
+            aria-label="Akun"
+            onClick={() => setOverlay("account")}
+          >
+            <span className="mobile-nav-icon">
+              <UserIcon />
+            </span>
+            Akun
+          </button>
+        </nav>
+      )}
+      {role === "CUSTOMER" && overlay && (
+        <div
+          className="sheet-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setOverlay(null);
+          }}
+        >
+          <section
+            className={`quick-sheet ${overlay === "notifications" ? "notification-sheet" : ""} ${overlay === "support" ? "support-sheet" : ""}`}
+            role="dialog"
+            aria-modal="true"
+            aria-label={
+              overlay === "cart"
+                ? "Ringkasan keranjang"
+                : overlay === "notifications"
+                  ? "Notifikasi terbaru"
+                  : overlay === "support"
+                    ? "Bantuan Warkost"
+                    : "Menu akun"
+            }
+          >
+            <div className="sheet-handle" aria-hidden="true" />
+            <div className="sheet-heading">
+              <div>
+                <span className="eyebrow">
+                  {overlay === "notifications"
+                    ? "INFORMASI TERBARU"
+                    : overlay === "support"
+                      ? "BANTUAN WARKOST"
+                      : "AKSES CEPAT"}
+                </span>
+                <h2>
+                  {overlay === "cart"
+                    ? "Keranjangmu"
+                    : overlay === "notifications"
+                      ? "Notifikasi"
+                      : overlay === "support"
+                        ? "Bantuan Warkost"
+                        : "Akun saya"}
+                </h2>
+                {overlay === "notifications" && (
+                  <p>
+                    Informasi terbaru seputar pesanan, promo, dan akun Anda.
+                  </p>
+                )}
+                {overlay === "support" && (
+                  <p>Bantuan internal dengan konteks pesananmu.</p>
+                )}
+              </div>
+              <button
+                className="sheet-close"
+                aria-label="Tutup"
+                onClick={() => setOverlay(null)}
+              >
+                ×
+              </button>
+            </div>
+            {overlay === "cart" && (
+              <div className="quick-cart-content">
+                {menu.products
+                  .filter((product) => cart[product.id] > 0)
+                  .map((product) => (
+                    <div className="quick-cart-row" key={product.id}>
+                      <Image
+                        src={
+                          product.image_url || demoProductImage(product.name)
+                        }
+                        alt=""
+                        width={62}
+                        height={62}
+                        unoptimized={Boolean(product.image_url)}
+                      />
+                      <span>
+                        <strong>{product.name}</strong>
+                        <small>
+                          {formatStockQuantity(
+                            cart[product.id],
+                            product.stock_unit,
+                          )}{" "}
+                          × {productPriceLabel(product, money)}
+                        </small>
+                        {normalizeItemNote(itemNotes[product.id]) && (
+                          <small className="quick-cart-note">
+                            Catatan: {normalizeItemNote(itemNotes[product.id])}
+                          </small>
+                        )}
+                      </span>
+                      <div className="qty compact-qty">
+                        <button
+                          aria-label={`Kurangi ${product.name} dari keranjang`}
+                          onClick={() => step(product, -1)}
+                        >
+                          −
+                        </button>
+                        <button
+                          aria-label={`Tambah ${product.name} dari keranjang`}
+                          onClick={() => step(product, 1)}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                {!count && <p>Keranjangmu masih kosong.</p>}
+                <div className="sheet-total">
+                  <span>Total sementara</span>
+                  <strong>{money(total)}</strong>
+                </div>
+                <button
+                  className="primary sheet-primary"
+                  disabled={!count}
+                  onClick={() => {
+                    setOverlay(null);
+                    setView("cart");
+                  }}
+                >
+                  Lanjut ke checkout
+                </button>
+              </div>
+            )}
+            {overlay === "notifications" && (
+              <div className="notification-center">
+                <div
+                  className="notification-filters"
+                  aria-label="Filter notifikasi"
+                >
+                  {[
+                    ["all", "Semua"],
+                    ["order", "Pesanan"],
+                    ["promo", "Promo"],
+                    ["system", "Sistem"],
+                  ].map(([key, label]) => {
+                    const amount =
+                      key === "all"
+                        ? alerts.notifications.length
+                        : alerts.notifications.filter(
+                            (notification) =>
+                              notificationCategory(notification.message) ===
+                              key,
+                          ).length;
+                    return (
+                      <button
+                        key={key}
+                        className={notificationFilter === key ? "active" : ""}
+                        onClick={() => setNotificationFilter(key)}
+                      >
+                        {label} <span>{amount}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="notification-list">
+                  {filteredNotifications.map((notification) => {
+                    const category = notificationCategory(notification.message);
+                    return (
+                      <article
+                        className={
+                          notification.read_at
+                            ? "notification-item"
+                            : "notification-item unread"
+                        }
+                        key={notification.id}
+                      >
+                        <span className={`notification-icon ${category}`}>
+                          {category === "order" ? (
+                            <ReceiptIcon />
+                          ) : category === "promo" ? (
+                            <TicketIcon />
+                          ) : (
+                            <BellIcon />
+                          )}
+                        </span>
+                        <span className="notification-copy">
+                          <strong>
+                            {notificationTitle(notification.message)}
+                          </strong>
+                          <span>{notification.message}</span>
+                        </span>
+                        <span className="notification-meta">
+                          <small>
+                            {formatDateTime(notification.created_at)}
+                          </small>
+                          {!notification.read_at && (
+                            <span
+                              className="unread-dot"
+                              aria-label="Belum dibaca"
+                            />
+                          )}
+                          {!notification.read_at && (
+                            <button
+                              disabled={busy}
+                              onClick={() =>
+                                run(() =>
+                                  api("notification-read", {
+                                    id: notification.id,
+                                  }),
+                                )
+                              }
+                            >
+                              Tandai dibaca
+                            </button>
+                          )}
+                        </span>
+                      </article>
+                    );
+                  })}
+                </div>
+                {!filteredNotifications.length && (
+                  <div className="notification-empty">
+                    <BellIcon />
+                    <h3>Belum ada notifikasi</h3>
+                    <p>Informasi terbaru akan tampil di sini.</p>
+                  </div>
+                )}
+              </div>
+            )}
+            {overlay === "support" && (
+              <div className="customer-support-content">
+                {supportOrder ? (
+                  <section
+                    className="support-order-context"
+                    aria-label="Konteks pesanan"
+                  >
+                    <span className="section-icon">
+                      <ReceiptIcon />
+                    </span>
+                    <div>
+                      <small>PESANAN TERHUBUNG</small>
+                      <strong>
+                        WB{String(supportOrder.id).padStart(6, "0")}
+                      </strong>
+                      <span>
+                        {orderStatusMeta(supportOrder.status).label} ·{" "}
+                        {money(supportOrder.total)}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => openCustomerTracking(supportOrder.id)}
+                    >
+                      Lihat status
+                    </button>
+                  </section>
+                ) : (
+                  <div className="support-intro">
+                    <span className="section-icon">
+                      <HelpIcon />
+                    </span>
+                    <div>
+                      <strong>Ada yang bisa kami bantu?</strong>
+                      <span>
+                        Pilih bantuan agar tim Warkost memahami kebutuhanmu.
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {supportOrder && (
+                  <section
+                    className="support-communication-actions"
+                    aria-label="Komunikasi pesanan"
+                  >
+                    <button
+                      type="button"
+                      className="support-communication-card primary-chat"
+                      onClick={() =>
+                        openCustomerSupport(supportOrder.id, "chat-admin")
+                      }
+                    >
+                      <ChatIcon />
+                      <span>
+                        <strong>Chat dengan Admin</strong>
+                        <small>
+                          Tanyakan status pesanan, pembayaran, atau bantuan
+                          lainnya.
+                        </small>
+                      </span>
+                      <ArrowIcon />
+                    </button>
+                    <button
+                      type="button"
+                      className="support-communication-card"
+                      disabled={!supportDriverContactEnabled}
+                      onClick={() =>
+                        openCustomerSupport(supportOrder.id, "chat-driver")
+                      }
+                    >
+                      <TruckIcon />
+                      <span>
+                        <strong>Chat dengan Driver</strong>
+                        <small>
+                          {supportDriverContactEnabled
+                            ? "Koordinasikan lokasi dan pengantaran dengan driver."
+                            : supportDriverAssigned
+                              ? "Chat aktif saat fase pengantaran berlangsung."
+                              : "Driver belum ditugaskan."}
+                        </small>
+                      </span>
+                      <ArrowIcon />
+                    </button>
+                  </section>
+                )}
+                {!supportTopic ? (
+                  <>
+                    <div className="support-topics" aria-label="Topik bantuan">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          supportOrder
+                            ? openCustomerTracking(supportOrder.id)
+                            : goToCustomerOrders("all")
+                        }
+                      >
+                        <ReceiptIcon />
+                        <span>
+                          <strong>Pesanan</strong>
+                          <small>Cek proses dan estimasi pesanan</small>
+                        </span>
+                        <ArrowIcon />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSupportTopic("payment")}
+                      >
+                        <WalletIcon />
+                        <span>
+                          <strong>Pembayaran</strong>
+                          <small>Bantuan pembayaran atau tagihan</small>
+                        </span>
+                        <ArrowIcon />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSupportTopic("delivery")}
+                      >
+                        <TruckIcon />
+                        <span>
+                          <strong>Pengiriman &amp; Ongkir</strong>
+                          <small>
+                            Alamat, ongkir, keterlambatan, atau driver
+                          </small>
+                        </span>
+                        <ArrowIcon />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSupportTopic("voucher")}
+                      >
+                        <TicketIcon />
+                        <span>
+                          <strong>Voucher &amp; Poin</strong>
+                          <small>Klaim, penggunaan, dan saldo loyalty</small>
+                        </span>
+                        <ArrowIcon />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSupportTopic("account")}
+                      >
+                        <UserIcon />
+                        <span>
+                          <strong>Akun &amp; Alamat</strong>
+                          <small>Profil, password, dan alamat tersimpan</small>
+                        </span>
+                        <ArrowIcon />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSupportTopic("faq")}
+                      >
+                        <HelpIcon />
+                        <span>
+                          <strong>FAQ</strong>
+                          <small>Jawaban cepat pertanyaan umum</small>
+                        </span>
+                        <ArrowIcon />
+                      </button>
+                    </div>
+                    <button
+                      className="primary support-admin-action"
+                      type="button"
+                      disabled={!supportOrder}
+                      onClick={() =>
+                        supportOrder &&
+                        openCustomerSupport(supportOrder.id, "chat-admin")
+                      }
+                    >
+                      <ChatIcon /> Chat dengan Admin
+                    </button>
+                  </>
+                ) : (
+                  <section
+                    className="support-topic-detail"
+                    aria-label={
+                      supportTopic === "payment"
+                        ? "Bantuan pembayaran"
+                        : supportTopic === "delivery"
+                          ? "Bantuan pengantaran"
+                          : supportTopic === "driver"
+                            ? "Customer dan Driver"
+                            : supportTopic === "voucher"
+                              ? "Bantuan voucher dan poin"
+                              : supportTopic === "account"
+                                ? "Bantuan akun dan alamat"
+                                : supportTopic === "faq"
+                                  ? "FAQ"
+                                  : "Bantuan Admin"
+                    }
+                  >
+                    <button
+                      className="support-back"
+                      type="button"
+                      onClick={() => setSupportTopic(null)}
+                    >
+                      <ArrowIcon /> Kembali ke topik bantuan
+                    </button>
+                    {supportTopic === "payment" && (
+                      <>
+                        <div className="support-detail-heading">
+                          <WalletIcon />
+                          <div>
+                            <strong>Bantuan pembayaran</strong>
+                            <span>
+                              Informasi pembayaran dari data pesanan yang
+                              tersedia.
+                            </span>
+                          </div>
+                        </div>
+                        {supportOrder ? (
+                          <div className="support-fact-list">
+                            <div>
+                              <span>Nomor pesanan</span>
+                              <strong>
+                                WB{String(supportOrder.id).padStart(6, "0")}
+                              </strong>
+                            </div>
+                            <div>
+                              <span>Status pembayaran</span>
+                              <strong>
+                                {supportOrder.payment_status ||
+                                  "Belum tersedia"}
+                              </strong>
+                            </div>
+                            <div>
+                              <span>Total</span>
+                              <strong>{money(supportOrder.total)}</strong>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="support-empty-copy">
+                            Belum ada pesanan aktif. Buka daftar Pesanan untuk
+                            memilih transaksi yang memerlukan bantuan.
+                          </p>
+                        )}
+                        <button
+                          className="button-link support-wide-action"
+                          type="button"
+                          onClick={() => goToCustomerOrders("all")}
+                        >
+                          <ReceiptIcon /> Buka Pesanan
+                        </button>
+                      </>
+                    )}
+                    {supportTopic === "delivery" && (
+                      <>
+                        <div className="support-detail-heading">
+                          <TruckIcon />
+                          <div>
+                            <strong>Bantuan pengantaran</strong>
+                            <span>
+                              Status driver mengikuti data pengantaran pesanan.
+                            </span>
+                          </div>
+                        </div>
+                        {supportOrder ? (
+                          <div className="support-fact-list">
+                            <div>
+                              <span>Nomor pesanan</span>
+                              <strong>
+                                WB{String(supportOrder.id).padStart(6, "0")}
+                              </strong>
+                            </div>
+                            <div>
+                              <span>Status pesanan</span>
+                              <strong>
+                                {orderStatusMeta(supportOrder.status).label}
+                              </strong>
+                            </div>
+                            <div>
+                              <span>Driver</span>
+                              <strong>
+                                {supportDriverAssigned
+                                  ? "Sudah ditugaskan"
+                                  : "Belum ditugaskan"}
+                              </strong>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="support-empty-copy">
+                            Belum ada pesanan aktif untuk bantuan pengantaran.
+                          </p>
+                        )}
+                        <button
+                          className="primary support-wide-action"
+                          type="button"
+                          disabled={!supportDriverContactEnabled}
+                          onClick={() =>
+                            supportOrder &&
+                            openCustomerSupport(supportOrder.id, "chat-driver")
+                          }
+                        >
+                          <ChatIcon /> Chat dengan Driver
+                        </button>
+                        {!supportDriverContactEnabled && (
+                          <small className="support-disabled-note">
+                            {supportDriverAssigned
+                              ? "Driver belum memulai fase pengantaran yang dapat dihubungi."
+                              : "Driver belum ditugaskan untuk pesanan ini."}
+                          </small>
+                        )}
+                      </>
+                    )}
+                    {supportTopic === "driver" && (
+                      <>
+                        <div className="support-detail-heading">
+                          <ChatIcon />
+                          <div>
+                            <strong>Customer ↔ Driver</strong>
+                            <span>
+                              Konteks pengantaran terhubung ke pesanan aktif.
+                            </span>
+                          </div>
+                        </div>
+                        <div className="support-fact-list">
+                          <div>
+                            <span>Nomor pesanan</span>
+                            <strong>
+                              WB{String(supportOrder.id).padStart(6, "0")}
+                            </strong>
+                          </div>
+                          <div>
+                            <span>Status</span>
+                            <strong>
+                              {orderStatusMeta(supportOrder.status).label}
+                            </strong>
+                          </div>
+                          <div>
+                            <span>Alamat</span>
+                            <strong>
+                              {supportOrder.address_label ||
+                                "Alamat pengantaran"}
+                            </strong>
+                          </div>
+                        </div>
+                        <p className="support-empty-copy">
+                          Gunakan jalur ini hanya untuk koordinasi pengantaran
+                          pesanan dengan driver yang ditugaskan.
+                        </p>
+                      </>
+                    )}
+                    {supportTopic === "voucher" && (
+                      <>
+                        <div className="support-detail-heading">
+                          <TicketIcon />
+                          <div>
+                            <strong>Voucher &amp; Poin</strong>
+                            <span>
+                              Voucher dan loyalty mengikuti kelayakan akun dan
+                              pesananmu.
+                            </span>
+                          </div>
+                        </div>
+                        <p className="support-empty-copy">
+                          Buka Voucher &amp; Loyalty dari Akun untuk melihat
+                          voucher yang diklaim, saldo poin, dan reward yang
+                          tersedia.
+                        </p>
+                        <button
+                          className="button-link support-wide-action"
+                          type="button"
+                          onClick={() => openAccountSection("account-loyalty")}
+                        >
+                          <TicketIcon /> Buka Voucher &amp; Loyalty
+                        </button>
+                      </>
+                    )}
+                    {supportTopic === "account" && (
+                      <>
+                        <div className="support-detail-heading">
+                          <UserIcon />
+                          <div>
+                            <strong>Akun &amp; Alamat</strong>
+                            <span>
+                              Kelola profil, password, dan alamat tersimpan.
+                            </span>
+                          </div>
+                        </div>
+                        <p className="support-empty-copy">
+                          Data akun hanya dapat diakses oleh sesi pelanggan yang
+                          sedang login. Koordinat alamat tidak ditampilkan
+                          sebagai input teknis.
+                        </p>
+                        <button
+                          className="button-link support-wide-action"
+                          type="button"
+                          onClick={() => openAccountSection("account-settings")}
+                        >
+                          <UserIcon /> Buka Pengaturan Akun
+                        </button>
+                      </>
+                    )}
+                    {supportTopic === "faq" && (
+                      <>
+                        <div className="support-detail-heading">
+                          <HelpIcon />
+                          <div>
+                            <strong>FAQ</strong>
+                            <span>Informasi umum layanan Warkost.</span>
+                          </div>
+                        </div>
+                        <div className="support-fact-list">
+                          <div>
+                            <span>Kapan ongkir gratis?</span>
+                            <strong>Hingga radius 3 km</strong>
+                          </div>
+                          <div>
+                            <span>Bisakah voucher dan poin digabung?</span>
+                            <strong>Tidak pada versi saat ini</strong>
+                          </div>
+                          <div>
+                            <span>Kapan driver dapat dihubungi?</span>
+                            <strong>Saat sudah ditugaskan dan mengantar</strong>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    {supportTopic === "admin" && (
+                      <>
+                        <div className="support-detail-heading">
+                          <ChatIcon />
+                          <div>
+                            <strong>Customer Support Admin</strong>
+                            <span>
+                              Bantuan internal Warkost dengan konteks pesanan.
+                            </span>
+                          </div>
+                        </div>
+                        {supportOrder ? (
+                          <div className="support-fact-list">
+                            <div>
+                              <span>Nomor pesanan</span>
+                              <strong>
+                                WB{String(supportOrder.id).padStart(6, "0")}
+                              </strong>
+                            </div>
+                            <div>
+                              <span>Status pesanan</span>
+                              <strong>
+                                {orderStatusMeta(supportOrder.status).label}
+                              </strong>
+                            </div>
+                            <div>
+                              <span>Status pembayaran</span>
+                              <strong>
+                                {supportOrder.payment_status ||
+                                  "Belum tersedia"}
+                              </strong>
+                            </div>
+                            <div>
+                              <span>Total</span>
+                              <strong>{money(supportOrder.total)}</strong>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="support-empty-copy">
+                            Sampaikan kebutuhan umum melalui pusat bantuan.
+                            Pilih pesanan terlebih dahulu bila bantuan terkait
+                            transaksi tertentu.
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </section>
+                )}
+                <div className="support-fallback">
+                  <strong>Kontak umum</strong>
+                  <p>
+                    Untuk kebutuhan umum di luar pesanan, WhatsApp tetap
+                    tersedia sebagai fallback.
+                  </p>
+                  <a
+                    className="button-link"
+                    href={whatsappLink(
+                      settings.businessWhatsApp,
+                      "Halo Warkost Bahagia, saya membutuhkan bantuan umum.",
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ChatIcon /> WhatsApp umum
+                  </a>
+                </div>
+              </div>
+            )}
+            {overlay === "account" && (
+              <div className="quick-account-menu">
+                {isGuest ? (
+                  <>
+                    <div className="guest-account-prompt">
+                      <UserIcon />
+                      <span>
+                        <strong>Kamu sedang checkout sebagai Guest</strong>
+                        <small>
+                          Masuk atau daftar untuk voucher, loyalty, alamat
+                          tersimpan, dan riwayat akun.
+                        </small>
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => logout("auth")}
+                    >
+                      <UserIcon />
+                      <span>Masuk / Daftar Member</span>
+                    </button>
+                    <button className="danger-text" data-customer-logout={role === "CUSTOMER" ? "true" : undefined}
+              onClick={logout}>
+                      <LogoutIcon />
+                      <span>Akhiri sesi Guest</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => goToCustomerOrders("all")}>
+                      <ReceiptIcon />
+                      <span>Pesanan Aktif</span>
+                    </button>
+                    <button onClick={() => goToCustomerOrders("history")}>
+                      <HistoryIcon />
+                      <span>Riwayat</span>
+                    </button>
+                    <button onClick={() => goToCustomerOrders("tracking")}>
+                      <LocationIcon />
+                      <span>Tracking</span>
+                    </button>
+                    <button
+                      onClick={() => openAccountSection("account-loyalty")}
+                    >
+                      <TicketIcon />
+                      <span>Voucher &amp; Loyalty</span>
+                    </button>
+                    <button
+                      onClick={() => openAccountSection("account-address")}
+                    >
+                      <LocationIcon />
+                      <span>Alamat</span>
+                    </button>
+                    <button
+                      onClick={() => openAccountSection("account-settings")}
+                    >
+                      <UserIcon />
+                      <span>Pengaturan Akun</span>
+                    </button>
+                    <button onClick={openCustomerHelp}>
+                      <HelpIcon />
+                      <span>Bantuan</span>
+                    </button>
+                    <button className="danger-text" data-customer-logout={role === "CUSTOMER" ? "true" : undefined}
+              onClick={logout}>
+                      <LogoutIcon />
+                      <span>Keluar</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+      {chatTarget && ["CUSTOMER", "DRIVER"].includes(role) && (
+        <ConversationChat
+          target={chatTarget}
+          viewerRole={role}
+          onClose={() => setChatTarget(null)}
+        />
+      )}
+      {role === "DRIVER" && (
+        <nav className="driver-mobile-nav" aria-label="Navigasi Driver mobile">
+          <button onClick={() => setView("orders")}>Tugas</button>
+          <button
+            onClick={() =>
+              window.dispatchEvent(new CustomEvent("warkost:open-cod-batch"))
+            }
+          >
+            COD
+          </button>
+          <button onClick={() => setView("notifications")}>Notifikasi</button>
+          <button onClick={() => setView("account")}>Akun</button>
+          <button data-customer-logout={role === "CUSTOMER" ? "true" : undefined}
+              onClick={logout}>Keluar</button>
+        </nav>
+      )}
+      {role === "KITCHEN" && <>
+        <KitchenWorkspace view={view} userId={user.id} />
+        <KitchenHeaderActions key={`kitchen-header-${view}`} userId={user.id} updateAlerts={setAlerts} />
+      </>}
+      {(!role || role === "CUSTOMER") && view !== "auth" && <><CustomerHelpRoutingRuntime /><CustomerGeneralSupportRuntime /></>}
+      {role === "CUSTOMER" && <><CustomerLocationLauncher /><CustomerLocationPickerUx /><CustomerAccountAddressLocationFirst /><CustomerQrisOnlyRuntime /><CustomerLoyaltyPickerRuntime /></>}
+      {role === "ADMIN" && <AdminUiRuntime view={view} orders={orders} />}
+      {customerLogoutOpen && role === "CUSTOMER" && <CustomerLogoutDialog busy={busy} error={error} onCancel={() => setCustomerLogoutOpen(false)} onConfirm={() => performLogout("menu")} />}
       <footer>
         Warkost Bahagia · Dibuat untuk operasional yang lebih rapi
       </footer>
     </>
   );
 }
-function Order({ order: o, role, drivers, busy, action }) {
-  const [driver, setDriver] = useState("");
+
+function AdminUiRuntime({ view, orders }) {
+  return (
+    <>
+      <AdminWorkspaceLifecycle view={view} orders={orders} />
+      <AdminNotificationPopover key={`admin-notifications-${view}`} />
+      {view === "orders" && <AdminOrderModalEnhancer />}
+      {view === "customers" && <AdminCustomerService />}
+    </>
+  );
+}
+function AdminNavIcon({ name }) {
+  const paths = {
+    home: (
+      <>
+        <path d="M3 11 12 4l9 7" />
+        <path d="M5 10v10h14V10M9 20v-6h6v6" />
+      </>
+    ),
+    users: (
+      <>
+        <circle cx="9" cy="8" r="3.5" />
+        <path d="M3 20a6 6 0 0 1 12 0M16 5.5a3 3 0 0 1 0 5.8M17 15a5 5 0 0 1 4 5" />
+      </>
+    ),
+    box: (
+      <>
+        <path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z" />
+        <path d="m4.5 7.5 7.5 4 7.5-4M12 11.5V21" />
+      </>
+    ),
+    printer: (
+      <>
+        <path d="M7 8V3h10v5" />
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a3 3 0 0 1 3-3h14a3 3 0 0 1 3 3v5a2 2 0 0 1-2 2h-2" />
+        <path d="M7 14h10v7H7zM18 11h.01" />
+      </>
+    ),
+    logout: (
+      <>
+        <path d="M10 5H5v14h5M14 8l4 4-4 4M9 12h9" />
+      </>
+    ),
+  };
+  return (
+    <SvgIcon className="admin-svg-icon admin-nav-icon">{paths[name]}</SvgIcon>
+  );
+}
+function SvgIcon({ children, className = "ui-icon" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
+}
+function BellIcon() {
+  return (
+    <SvgIcon>
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+      <path d="M10 21h4" />
+    </SvgIcon>
+  );
+}
+function CartIcon() {
+  return (
+    <SvgIcon>
+      <path d="M3 4h2l2.4 10.4a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 1.9-1.4L21 8H6" />
+      <circle cx="10" cy="20" r="1" />
+      <circle cx="18" cy="20" r="1" />
+    </SvgIcon>
+  );
+}
+function UserIcon() {
+  return (
+    <SvgIcon>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
+    </SvgIcon>
+  );
+}
+function HelpIcon() {
+  return (
+    <SvgIcon>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.7 9a2.5 2.5 0 1 1 3.7 2.2c-.9.5-1.4 1-1.4 2.1" />
+      <path d="M12 17h.01" />
+    </SvgIcon>
+  );
+}
+function SearchIcon() {
+  return (
+    <SvgIcon>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-4-4" />
+    </SvgIcon>
+  );
+}
+function ArrowIcon() {
+  return (
+    <SvgIcon>
+      <path d="m9 18 6-6-6-6" />
+    </SvgIcon>
+  );
+}
+function TruckIcon() {
+  return (
+    <SvgIcon>
+      <path d="M3 6h10v10H3zM13 10h4l3 3v3h-7z" />
+      <circle cx="7" cy="18" r="2" />
+      <circle cx="17" cy="18" r="2" />
+    </SvgIcon>
+  );
+}
+function FoodIcon() {
+  return (
+    <SvgIcon>
+      <path d="M6 3v8M3 3v5c0 2 1 3 3 3s3-1 3-3V3M6 11v10" />
+      <path d="M15 3v18M15 3c4 1 5 5 5 8h-5" />
+    </SvgIcon>
+  );
+}
+function BowlIcon() {
+  return (
+    <SvgIcon>
+      <path d="M4 11h16a8 8 0 0 1-16 0ZM7 19h10" />
+      <path d="M8 7c0-2 2-2 2-4M13 7c0-2 2-2 2-4" />
+    </SvgIcon>
+  );
+}
+function DrinkIcon() {
+  return (
+    <SvgIcon>
+      <path d="M7 8h10l-1 13H8L7 8ZM9 4h8M15 4l-2 5" />
+    </SvgIcon>
+  );
+}
+function ShieldIcon() {
+  return (
+    <SvgIcon>
+      <path d="M12 3 5 6v5c0 5 3 8 7 10 4-2 7-5 7-10V6l-7-3Z" />
+      <path d="m9 12 2 2 4-4" />
+    </SvgIcon>
+  );
+}
+function ChatIcon() {
+  return (
+    <SvgIcon>
+      <path d="M21 12a8 8 0 0 1-9 8 9 9 0 0 1-4-1l-5 2 2-5a8 8 0 1 1 16-4Z" />
+      <path d="M8 12h.01M12 12h.01M16 12h.01" />
+    </SvgIcon>
+  );
+}
+function PhoneIcon() {
+  return (
+    <SvgIcon>
+      <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2.1Z" />
+    </SvgIcon>
+  );
+}
+function ReceiptIcon() {
+  return (
+    <SvgIcon>
+      <path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" />
+      <path d="M9 8h6M9 12h6" />
+    </SvgIcon>
+  );
+}
+function HistoryIcon() {
+  return (
+    <SvgIcon>
+      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+      <path d="M3 3v5h5M12 7v5l3 2" />
+    </SvgIcon>
+  );
+}
+function LocationIcon() {
+  return (
+    <SvgIcon>
+      <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </SvgIcon>
+  );
+}
+function LogoutIcon() {
+  return (
+    <SvgIcon>
+      <path d="M10 17l5-5-5-5M15 12H3M21 19V5a2 2 0 0 0-2-2h-6" />
+    </SvgIcon>
+  );
+}
+function StarIcon() {
+  return (
+    <SvgIcon>
+      <path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z" />
+    </SvgIcon>
+  );
+}
+function TicketIcon() {
+  return (
+    <SvgIcon>
+      <path d="M3 7a2 2 0 0 0 0 4v6h18v-6a2 2 0 0 0 0-4V5H3v2Z" />
+      <path d="M13 5v12M8 9h.01M8 13h.01" />
+    </SvgIcon>
+  );
+}
+function WalletIcon() {
+  return (
+    <SvgIcon>
+      <path d="M4 6h15a2 2 0 0 1 2 2v10H4a2 2 0 0 1-2-2V6a3 3 0 0 1 3-3h13" />
+      <path d="M16 11h5v4h-5a2 2 0 0 1 0-4Z" />
+    </SvgIcon>
+  );
+}
+function CheckIcon() {
+  return (
+    <SvgIcon>
+      <path d="m5 12 4 4L19 6" />
+    </SvgIcon>
+  );
+}
+function OrderProgress({
+  status,
+  compact = false,
+  fulfillmentType = FULFILLMENT_DELIVERY,
+}) {
+  const activeStage =
+    fulfillmentType === FULFILLMENT_PICKUP
+      ? pickupOrderStage(status)
+      : orderStage(status);
+  const stages =
+    fulfillmentType === FULFILLMENT_PICKUP ? PICKUP_ORDER_STAGES : ORDER_STAGES;
+  if (status === "CANCELLED") return null;
+  return (
+    <div
+      className={`order-progress ${compact ? "compact" : ""}`}
+      aria-label={`Progress pesanan: ${orderStatusMeta(status, fulfillmentType).label}`}
+    >
+      {stages.map((stage, index) => (
+        <div
+          className={`progress-step ${index <= activeStage ? "complete" : ""} ${index === activeStage ? "current" : ""}`}
+          key={stage.key}
+        >
+          <span>{index < activeStage ? <CheckIcon /> : index + 1}</span>
+          <small>{stage.label}</small>
+        </div>
+      ))}
+    </div>
+  );
+}
+function CustomerTracking({ order, justCreated, onBack, onSupport }) {
   const [details, setDetails] = useState(null);
   const [detailError, setDetailError] = useState("");
+  const [payment, setPayment] = useState(null);
+  const [paymentError, setPaymentError] = useState("");
+  const [clock, setClock] = useState(Date.now());
+  useEffect(() => {
+    if (!order?.id) return;
+    let active = true;
+    api("order-items?id=" + order.id)
+      .then((result) => active && setDetails(result))
+      .catch((error) => active && setDetailError(error.message));
+    return () => {
+      active = false;
+    };
+  }, [order?.id]);
+  useEffect(() => {
+    if (!order?.id || order.method !== "QRIS") return;
+    setPayment({
+      order_id: order.id,
+      method: order.method,
+      status: order.payment_status,
+      amount: order.payment_amount,
+      provider_reference: order.provider_reference,
+      transaction_reference: order.transaction_reference,
+      qr_payload: order.qr_payload,
+      payment_url: order.payment_url,
+      expires_at: order.payment_expires_at,
+    });
+  }, [order]);
+  useEffect(() => {
+    if (order?.method !== "QRIS" || payment?.status !== "PENDING") return;
+    let active = true;
+    const refreshPayment = () =>
+      api("payment-status?orderId=" + order.id)
+        .then((result) => active && setPayment(result))
+        .catch((error) => active && setPaymentError(error.message));
+    const onRealtime = (event) => {
+      if (
+        ["PAYMENT_STATUS_CHANGED", "PAYMENT_PAID"].includes(
+          event.detail?.type,
+        ) &&
+        Number(event.detail?.payload?.orderId) === Number(order.id)
+      )
+        refreshPayment();
+    };
+    window.addEventListener("warkost:realtime", onRealtime);
+    const poll = setInterval(refreshPayment, 120000);
+    const tick = setInterval(() => setClock(Date.now()), 1000);
+    return () => {
+      active = false;
+      clearInterval(poll);
+      clearInterval(tick);
+      window.removeEventListener("warkost:realtime", onRealtime);
+    };
+  }, [order?.id, order?.method, payment?.status]);
+  if (!order)
+    return (
+      <section className="tracking-loading panel" aria-live="polite">
+        <h2>Memuat status pesanan…</h2>
+        <p>Data pesanan sedang disinkronkan.</p>
+      </section>
+    );
+  const pickup = order.fulfillment_type === FULFILLMENT_PICKUP;
+  const status = orderStatusMeta(order.status, order.fulfillment_type);
+  const paymentExpiry = payment?.expires_at
+    ? new Date(String(payment.expires_at).replace(" ", "T") + "Z").getTime()
+    : 0;
+  const paymentSeconds = Math.max(
+    0,
+    Math.floor((paymentExpiry - clock) / 1000),
+  );
+  const paymentCountdown = `${String(Math.floor(paymentSeconds / 60)).padStart(2, "0")}:${String(paymentSeconds % 60).padStart(2, "0")}`;
+  return (
+    <section className="customer-tracking" aria-labelledby="tracking-title">
+      <div className="customer-page-title tracking-page-title">
+        <button className="back-link" type="button" onClick={onBack}>
+          <ArrowIcon /> Kembali ke Pesanan
+        </button>
+        <h1 id="tracking-title">
+          {justCreated ? "Pesanan Berhasil Dibuat!" : "Lacak Pesanan"}
+        </h1>
+        <p>
+          {justCreated
+            ? "Terima kasih sudah memesan di Warkost Bahagia."
+            : "Pantau progres pesananmu secara real time."}
+        </p>
+      </div>
+      <div className="tracking-layout">
+        <div className="tracking-main">
+          {justCreated && (
+            <section className="success-order-banner" role="status">
+              <span>
+                <CheckIcon />
+              </span>
+              <div>
+                <strong>Pesanan #{order.id} berhasil dibuat</strong>
+                <small>
+                  {pickup
+                    ? "Pesanan sedang diproses untuk diambil di Warkost."
+                    : "Pesanan sedang diproses dan akan segera diantar."}
+                </small>
+              </div>
+            </section>
+          )}
+          <section className="tracking-card tracking-order-number">
+            <span className="section-icon">
+              <ReceiptIcon />
+            </span>
+            <div>
+              <small>Nomor Pesanan</small>
+              <strong>WB{String(order.id).padStart(6, "0")}</strong>
+            </div>
+            <time>{formatDateTime(order.created_at)}</time>
+          </section>
+          <section className="tracking-card delivery-status-card">
+            <div className="tracking-card-heading">
+              <span className="section-icon">
+                <TruckIcon />
+              </span>
+              <div>
+                <small>
+                  {pickup ? "Status Pesanan" : "Status Pengantaran"}
+                </small>
+                <h2>{orderHeadline(order.status, order.fulfillment_type)}</h2>
+              </div>
+              <span className={`order-status-pill ${status.tone}`}>
+                {status.label}
+              </span>
+            </div>
+            <OrderProgress
+              status={order.status}
+              fulfillmentType={order.fulfillment_type}
+            />
+            {!pickup && order.driver_delay_notice === 1 && (
+              <div className="driver-delay-notice">
+                <strong>Driver sedang mengantar pesanan lain</strong>
+                <span>
+                  Pesananmu tetap diproses. Waktu pengantaran mungkin sedikit
+                  lebih lama dari biasanya.
+                </span>
+              </div>
+            )}
+            <div className="contact-actions">
+              <button
+                className="primary"
+                type="button"
+                onClick={() => onSupport(order.id, "admin")}
+              >
+                <ChatIcon /> Hubungi Admin
+              </button>
+              {!pickup &&
+              order.driver_id &&
+              ["ASSIGNED", "PICKED_UP", "ON_DELIVERY"].includes(
+                order.status,
+              ) ? (
+                <button
+                  className="button-link"
+                  type="button"
+                  onClick={() => onSupport(order.id, "chat-driver")}
+                >
+                  <ChatIcon /> Chat dengan Driver
+                </button>
+              ) : !pickup ? (
+                <button type="button" disabled>
+                  <PhoneIcon /> Hubungi Driver{" "}
+                  <small>
+                    {order.driver_id
+                      ? "Belum memasuki fase pengantaran"
+                      : "Driver belum ditugaskan"}
+                  </small>
+                </button>
+              ) : null}
+            </div>
+          </section>
+          <section className="tracking-card tracking-info-card">
+            <div className="tracking-card-heading">
+              <span className="section-icon">
+                <LocationIcon />
+              </span>
+              <div>
+                <small>
+                  {pickup ? "Lokasi Pengambilan" : "Alamat Pengiriman"}
+                </small>
+                <h2>{order.address_label || "Alamat"}</h2>
+              </div>
+            </div>
+            <p>{order.address}</p>
+            <small>
+              {pickup
+                ? "Ambil langsung di Warkost · tanpa Driver"
+                : `${(Number(order.distance_meters) / 1000).toFixed(1)} km dari Warkost`}
+            </small>
+          </section>
+          <section className="tracking-card tracking-info-card">
+            <div className="tracking-card-heading">
+              <span className="section-icon">
+                <WalletIcon />
+              </span>
+              <div>
+                <small>Metode Pembayaran</small>
+                <h2>{paymentMethodLabel(order.method)}</h2>
+              </div>
+            </div>
+            <span
+              className={`payment-status ${String(payment?.status || order.payment_status || "").toLowerCase()}`}
+            >
+              {paymentStatusLabel(payment?.status || order.payment_status)}
+            </span>
+            {order.method === "QRIS" && payment && (
+              <div className="qris-payment-panel">
+                <div>
+                  <span>Total tepat</span>
+                  <strong>{money(payment.amount)}</strong>
+                </div>
+                {payment.status === "PENDING" && (
+                  <div>
+                    <span>Sisa waktu</span>
+                    <strong>{paymentCountdown}</strong>
+                  </div>
+                )}
+                {payment.qr_payload && payment.status === "PENDING" && (
+                  <code>{payment.qr_payload}</code>
+                )}
+                {payment.payment_url && payment.status === "PENDING" && (
+                  <a
+                    className="button-link"
+                    href={payment.payment_url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Buka halaman pembayaran
+                  </a>
+                )}
+                <p>
+                  {payment.status === "PAID"
+                    ? "Pembayaran berhasil diverifikasi."
+                    : payment.status === "FAILED"
+                      ? "Pembayaran gagal. Silakan buat pesanan baru untuk mencoba kembali."
+                      : payment.status === "EXPIRED"
+                        ? "Pembayaran kedaluwarsa. Silakan buat pesanan baru untuk mencoba kembali."
+                        : "Menunggu konfirmasi aman dari provider pembayaran."}
+                </p>
+                {payment.status === "PENDING" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentError("");
+                      api("payment-status?orderId=" + order.id)
+                        .then(setPayment)
+                        .catch((error) => setPaymentError(error.message));
+                    }}
+                  >
+                    Periksa status pembayaran
+                  </button>
+                )}
+                {paymentError && <small role="alert">{paymentError}</small>}
+              </div>
+            )}
+          </section>
+        </div>
+        <aside className="tracking-card tracking-summary">
+          <div className="checkout-card-heading">
+            <span className="section-icon">
+              <CartIcon />
+            </span>
+            <h2>Ringkasan Pesanan</h2>
+          </div>
+          {details?.items.map((item, index) => (
+            <div className="tracking-item" key={`${item.name}-${index}`}>
+              <Image
+                src={demoProductImage(item.name)}
+                alt=""
+                width={72}
+                height={56}
+              />
+              <span>
+                <strong>{item.name}</strong>
+                <small>
+                  {orderItemQuantityLabel(item)} × {orderItemPriceLabel(item)}
+                </small>
+              </span>
+              <strong>{money(orderItemTotal(item))}</strong>
+            </div>
+          ))}
+          {!details && !detailError && <p>Memuat detail menu…</p>}
+          {detailError && <p role="alert">{detailError}</p>}
+          <div className="tracking-totals">
+            <div>
+              <span>Subtotal</span>
+              <strong>{money(order.subtotal)}</strong>
+            </div>
+            <div>
+              <span>Ongkir</span>
+              <strong>{money(order.delivery_fee)}</strong>
+            </div>
+            <div className="grand-total">
+              <span>Total Pembayaran</span>
+              <strong>{money(order.total)}</strong>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  );
+}
+function Order({
+  order: o,
+  role,
+  busy,
+  action,
+  onTrack,
+  onReorder,
+  onSupport,
+  onChat,
+}) {
+  const [details, setDetails] = useState(null);
+  const [detailError, setDetailError] = useState("");
+  const [expanded, setExpanded] = useState(false);
+  let promotionSnapshot = null;
+  try {
+    promotionSnapshot = o.promotion_snapshot
+      ? typeof o.promotion_snapshot === "string"
+        ? JSON.parse(o.promotion_snapshot)
+        : o.promotion_snapshot
+      : null;
+  } catch {}
   const adminNext = {
     PENDING: "CONFIRMED",
   };
@@ -1600,8 +5723,152 @@ function Order({ order: o, role, drivers, busy, action }) {
     PICKED_UP: "ON_DELIVERY",
     ON_DELIVERY: "DELIVERED",
   };
+  useEffect(() => {
+    if (role !== "CUSTOMER") return;
+    let active = true;
+    api("order-items?id=" + o.id)
+      .then((result) => active && setDetails(result))
+      .catch((error) => active && setDetailError(error.message));
+    return () => {
+      active = false;
+    };
+  }, [o.id, role]);
+  if (role === "CUSTOMER") {
+    const pickup = o.fulfillment_type === FULFILLMENT_PICKUP;
+    const status = orderStatusMeta(o.status, o.fulfillment_type);
+    const active = !["DELIVERED", "CANCELLED"].includes(o.status);
+    return (
+      <article className="panel order customer-order-card">
+        <span className="badge sr-only">{o.status.replaceAll("_", " ")}</span>
+        <div className="customer-order-meta">
+          <span className={`order-status-pill ${status.tone}`}>
+            {status.label}
+          </span>
+          <time>{formatDateTime(o.created_at)}</time>
+          <strong>
+            #{o.id} · WB{String(o.id).padStart(6, "0")}
+          </strong>
+        </div>
+        <div className="customer-order-content">
+          <div className="order-item-preview">
+            {(details?.items || []).slice(0, 3).map((item, index) => (
+              <Image
+                key={`${item.name}-${index}`}
+                src={demoProductImage(item.name)}
+                alt=""
+                width={86}
+                height={70}
+              />
+            ))}
+            {!details && (
+              <span className="order-preview-placeholder">
+                <CartIcon />
+              </span>
+            )}
+            {details && (
+              <small>
+                {details.items.reduce((sum, item) => sum + item.quantity, 0)}{" "}
+                menu
+              </small>
+            )}
+          </div>
+          <div className="order-summary-copy">
+            {pickup && (
+              <span className="pickup-order-badge">Ambil di tempat</span>
+            )}
+            <h2>{orderHeadline(o.status, o.fulfillment_type)}</h2>
+            <p>
+              {active
+                ? "Pantau perkembangan pesananmu di bawah ini."
+                : o.status === "DELIVERED"
+                  ? "Terima kasih sudah memesan di Warkost Bahagia."
+                  : "Pesanan ini tidak dilanjutkan."}
+            </p>
+            <strong>{money(o.total)}</strong>
+          </div>
+          <OrderProgress
+            status={o.status}
+            compact
+            fulfillmentType={o.fulfillment_type}
+          />
+        </div>
+        {!pickup && o.driver_delay_notice === 1 && (
+          <div className="driver-delay-notice compact">
+            <strong>Driver sedang mengantar pesanan lain</strong>
+            <span>
+              Pesananmu tetap diproses. Waktu pengantaran mungkin sedikit lebih
+              lama dari biasanya.
+            </span>
+          </div>
+        )}
+        <div className="customer-order-actions">
+          <button
+            aria-label="Lihat item & riwayat"
+            onClick={() => setExpanded((current) => !current)}
+          >
+            {expanded ? "Tutup Detail" : "Lihat Detail"}
+          </button>
+          {active && (
+            <button className="primary" onClick={() => onTrack?.(o.id)}>
+              {pickup ? <ReceiptIcon /> : <TruckIcon />}{" "}
+              {pickup ? "Lihat Status" : "Lacak Pesanan"}
+            </button>
+          )}
+          {o.status === "DELIVERED" && (
+            <button
+              className="primary"
+              disabled={!details}
+              onClick={() => onReorder?.(details?.items)}
+            >
+              <HistoryIcon /> Pesan Lagi
+            </button>
+          )}
+        </div>
+        {detailError && <p role="alert">{detailError}</p>}
+        {expanded && details && (
+          <div className="order-details customer-order-details">
+            {details.items.map((item, index) => (
+              <div className="line" key={`${item.name}-${index}`}>
+                <span>
+                  {orderItemQuantityLabel(item)} × {item.name}
+                </span>
+                <strong>{money(orderItemTotal(item))}</strong>
+              </div>
+            ))}
+            <small>Riwayat status</small>
+            {details.events.map((event, index) => (
+              <p key={index}>
+                {formatDateTime(event.created_at)} ·{" "}
+                {event.next_status.replaceAll("_", " ")}
+              </p>
+            ))}
+            <button
+              className="button-link order-support-action"
+              type="button"
+              onClick={() => onSupport?.(o.id, "admin")}
+            >
+              <ChatIcon /> Hubungi Admin
+            </button>
+          </div>
+        )}
+      </article>
+    );
+  }
   return (
-    <article className="panel order">
+    <article
+      className={
+        role === "ADMIN"
+          ? "panel order admin-order-card admin-order-card-v2"
+          : "panel order"
+      }
+      data-order-status={role === "ADMIN" ? o.status : undefined}
+      data-order-group={
+        role === "ADMIN" ? adminStatusGroup(o.status) : undefined
+      }
+      data-payment-status={role === "ADMIN" ? o.payment_status : undefined}
+      data-payment-method={role === "ADMIN" ? o.method : undefined}
+      data-payment-status-v2={role === "ADMIN" ? o.payment_status : undefined}
+    >
       <div className="order-head">
         <div>
           <small>
@@ -1611,89 +5878,123 @@ function Order({ order: o, role, drivers, busy, action }) {
         </div>
         <span className="badge">{o.status.replaceAll("_", " ")}</span>
       </div>
+      {o.fulfillment_type === FULFILLMENT_PICKUP && (
+        <span className="pickup-order-badge">Ambil di tempat</span>
+      )}
       <p>{o.address || ""}</p>
       <div className="line">
         <strong>{money(o.total)}</strong>
         <span>{o.payment_status || ""}</span>
       </div>
-      {role === "CUSTOMER" && (
-        <div className="order-details">
-          <small>
-            Subtotal {money(o.subtotal)} · Ongkir {money(o.delivery_fee)} ·{" "}
-            {(Number(o.distance_meters) / 1000).toFixed(1)} km
-          </small>
-          {o.driver_delay_notice === 1 && (
-            <p>
-              Mohon maaf, pesanan dapat lebih lama karena driver sedang
-              bertugas.
-            </p>
-          )}
-          <div className="actions">
-            {o.admin_whatsapp && (
-              <a
-                className="button-link"
-                href={whatsappLink(
-                  o.admin_whatsapp,
-                  `Halo Admin Warkost, saya perlu bantuan untuk pesanan #${o.id}.`,
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Chat Admin via WhatsApp
-              </a>
-            )}
-            {o.driver_whatsapp && (
-              <a
-                className="button-link"
-                href={whatsappLink(
-                  o.driver_whatsapp,
-                  `Halo Driver Warkost, saya ingin membantu konfirmasi lokasi pesanan #${o.id}.`,
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Chat Driver untuk lokasi
-              </a>
-            )}
-          </div>
+      {o.method === "CASH" && o.status === "DELIVERED" && (
+        <div className="order-details cod-settlement-status">
+          <strong>Setoran COD</strong>
+          <span>
+            {o.settlement_status === "AWAITING_COD_SETTLEMENT"
+              ? "Menunggu setoran tunai driver"
+              : o.settlement_status === "SUBMITTED"
+                ? `Menunggu verifikasi Admin · ${money(o.cash_amount)}`
+                : o.settlement_status === "NEEDS_REVIEW"
+                  ? `Perlu diperbaiki · selisih ${money(Math.abs(Number(o.discrepancy_amount || 0)))}`
+                  : o.settlement_status === "VERIFIED"
+                    ? "Setoran tunai terverifikasi"
+                    : "Menunggu data setoran"}
+          </span>
         </div>
       )}
+      {role === "ADMIN" && <AdminOrderCardEnhancer order={o} />}
       {(o.kitchen_status || o.cashier_status) && (
         <div className="station-statuses">
           {o.kitchen_status && (
             <span className="badge">Dapur · {o.kitchen_status}</span>
           )}
           {o.cashier_status && (
-            <span className="badge">Kasir · {o.cashier_status}</span>
+            <span className="badge">Admin minuman · {o.cashier_status}</span>
           )}
         </div>
       )}
-      <button
-        onClick={() => {
-          if (details) {
-            setDetails(null);
-            return;
-          }
-          api("order-items?id=" + o.id)
-            .then(setDetails)
-            .catch((e) => setDetailError(e.message));
-        }}
-      >
-        {details ? "Tutup detail" : "Lihat item & riwayat"}
-      </button>
+      {!(role === "DRIVER" && o.available_to_claim) && (
+        <button
+          className={role === "ADMIN" ? "admin-card-detail-button" : undefined} data-admin-order-detail={role === "ADMIN" ? "react" : undefined}
+          onClick={() => {
+            if (role === "ADMIN") {
+              window.dispatchEvent(new CustomEvent("warkost:open-admin-order", { detail: { orderId: o.id } }));
+              return;
+            }
+            if (details) {
+              setDetails(null);
+              return;
+            }
+            api("order-items?id=" + o.id)
+              .then(setDetails)
+              .catch((e) => setDetailError(e.message));
+          }}
+        >
+          {details
+            ? "Tutup detail"
+            : role === "ADMIN"
+              ? "Lihat detail"
+              : "Lihat item & riwayat"}
+        </button>
+      )}
       {detailError && <p role="alert">{detailError}</p>}
       {details && (
         <div className="order-details">
           {details.items.map((item, i) => (
             <div className="line" key={i}>
               <span>
-                {item.quantity} × {item.name}
+                {orderItemQuantityLabel(item)} × {item.name}
                 {item.prep_station &&
-                  ` · ${item.prep_station === "KITCHEN" ? "Dapur" : "Kasir"}`}
+                  ` · ${item.prep_station === "KITCHEN" ? "Dapur" : "Admin"}`}
+                {item.is_promotion_gift === 1 && " · HADIAH PROMO"}
+                {item.note && (
+                  <small className="order-item-note">
+                    Catatan: {item.note}
+                  </small>
+                )}
               </span>
-              <strong>{money(item.quantity * item.price)}</strong>
+              <strong>{money(orderItemTotal(item))}</strong>
             </div>
           ))}
+          {promotionSnapshot && (
+            <div className="order-promotion-breakdown">
+              <small>PROMO</small>
+              <strong>{promotionSnapshot.name || "Promo Warkost"}</strong>
+              <span>{promotionSnapshot.family?.replaceAll("_", " ")}</span>
+              {promotionSnapshot.gift ? (
+                <span>
+                  Gratis {promotionSnapshot.gift.quantity} ×{" "}
+                  {promotionSnapshot.gift.name}
+                </span>
+              ) : (
+                <span>
+                  Diskon {money(o.promotion_discount || o.voucher_discount)}
+                </span>
+              )}
+            </div>
+          )}
+          {["ADMIN", "OWNER"].includes(role) && (
+            <div className="order-financial-breakdown">
+              <span>
+                Subtotal <strong>{money(o.subtotal)}</strong>
+              </span>
+              <span>
+                Promotion Discount{" "}
+                <strong>
+                  −{money(o.promotion_discount || o.voucher_discount)}
+                </strong>
+              </span>
+              <span>
+                Loyalty <strong>−{money(o.loyalty_discount)}</strong>
+              </span>
+              <span>
+                Delivery <strong>{money(o.delivery_fee)}</strong>
+              </span>
+              <span>
+                Final Total <strong>{money(o.total)}</strong>
+              </span>
+            </div>
+          )}
           <small>Riwayat status</small>
           {details.events.map((event, i) => (
             <p key={i}>
@@ -1706,7 +6007,7 @@ function Order({ order: o, role, drivers, busy, action }) {
         <div className="actions">
           {adminNext[o.status] && (
             <button
-              className="primary"
+              className="primary admin-action-confirm"
               disabled={busy}
               onClick={() =>
                 action("status", { orderId: o.id, status: adminNext[o.status] })
@@ -1717,7 +6018,7 @@ function Order({ order: o, role, drivers, busy, action }) {
           )}
           {role === "ADMIN" && o.cashier_status === "QUEUED" && (
             <button
-              className="primary"
+              className="primary admin-action-prepare"
               disabled={busy}
               onClick={() =>
                 action("station-status", { orderId: o.id, status: "PREPARING" })
@@ -1728,7 +6029,7 @@ function Order({ order: o, role, drivers, busy, action }) {
           )}
           {role === "ADMIN" && o.cashier_status === "PREPARING" && (
             <button
-              className="primary"
+              className="primary admin-action-ready"
               disabled={busy}
               onClick={() =>
                 action("station-status", { orderId: o.id, status: "READY" })
@@ -1737,56 +6038,60 @@ function Order({ order: o, role, drivers, busy, action }) {
               Minuman siap
             </button>
           )}
-          {o.status === "READY" && (
-            <>
-              <select
-                value={driver}
-                onChange={(e) => setDriver(e.target.value)}
-              >
-                <option value="">Pilih driver</option>
-                {drivers
-                  .filter((d) => d.active && Number(d.active_load) < 5)
-                  .map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name} · {d.active_load}/5
-                    </option>
-                  ))}
-              </select>
+          {role === "ADMIN" &&
+            o.method === "BANK_TRANSFER" &&
+            ["UNPAID", "PENDING"].includes(o.payment_status) && (
+              <>
+                <button
+                  onClick={() =>
+                    action("payment", { orderId: o.id, status: "PAID" })
+                  }
+                  disabled={busy}
+                >
+                  Tandai lunas
+                </button>
+                <button
+                  onClick={() =>
+                    action("payment", { orderId: o.id, status: "FAILED" })
+                  }
+                  disabled={busy}
+                >
+                  Tandai gagal
+                </button>
+              </>
+            )}
+          {role === "ADMIN" &&
+            o.method === "CASH" &&
+            o.status === "DELIVERED" &&
+            o.settlement_status === "SUBMITTED" && (
               <button
                 className="primary"
-                disabled={!driver || busy}
-                onClick={() =>
-                  action("status", {
-                    orderId: o.id,
-                    status: "ASSIGNED",
-                    driverId: Number(driver),
-                  })
-                }
-              >
-                Tugaskan driver
-              </button>
-            </>
-          )}
-          {["UNPAID", "PENDING"].includes(o.payment_status) && (
-            <>
-              <button
-                onClick={() =>
-                  action("payment", { orderId: o.id, status: "PAID" })
-                }
                 disabled={busy}
-              >
-                Tandai lunas
-              </button>
-              <button
                 onClick={() =>
-                  action("payment", { orderId: o.id, status: "FAILED" })
+                  action("cod-settlement-verify", { orderId: o.id })
                 }
-                disabled={busy}
               >
-                Tandai gagal
+                Verifikasi setoran COD
               </button>
-            </>
-          )}
+            )}
+          {["ADMIN", "OWNER"].includes(role) &&
+            o.fulfillment_type === FULFILLMENT_PICKUP &&
+            o.status === "READY" && (
+              <button
+                className="primary pickup-complete-button"
+                disabled={
+                  busy || o.method !== "QRIS" || o.payment_status !== "PAID"
+                }
+                title={
+                  o.payment_status === "PAID"
+                    ? "Konfirmasi pesanan sudah diterima customer"
+                    : "Pembayaran QRIS belum terverifikasi"
+                }
+                onClick={() => action("pickup-complete", { orderId: o.id })}
+              >
+                Pesanan Sudah Diambil
+              </button>
+            )}
         </div>
       )}
       {role === "KITCHEN" &&
@@ -1836,7 +6141,321 @@ function Order({ order: o, role, drivers, busy, action }) {
           )}
         </div>
       )}
+      {role === "DRIVER" &&
+        ["ASSIGNED", "PICKED_UP", "ON_DELIVERY"].includes(o.status) && (
+          <section
+            className="driver-customer-communication"
+            aria-label="Komunikasi Customer"
+          >
+            <small>KOMUNIKASI CUSTOMER</small>
+            <div>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => onChat?.("CUSTOMER_DRIVER", o.id)}
+              >
+                <ChatIcon /> Chat Customer
+              </button>
+              {customerWhatsAppUrl(o.customer_phone, o.id) ? (
+                <a
+                  className="driver-whatsapp-action"
+                  href={customerWhatsAppUrl(o.customer_phone, o.id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <PhoneIcon /> Hubungi WhatsApp
+                </a>
+              ) : (
+                <button type="button" disabled>
+                  <PhoneIcon /> Nomor customer belum tersedia
+                </button>
+              )}
+            </div>
+          </section>
+        )}
+      {role === "DRIVER" && Boolean(o.available_to_claim) && (
+        <div className="actions">
+          <button
+            className="primary"
+            disabled={busy}
+            onClick={() => action("claim-delivery", { orderId: o.id })}
+          >
+            Ambil Pesanan
+          </button>
+        </div>
+      )}
     </article>
+  );
+}
+
+function DriverCommunicationPanel({ user, orders, onChat }) {
+  const activeOrders = orders.filter((order) =>
+    ["ASSIGNED", "PICKED_UP", "ON_DELIVERY"].includes(order.status),
+  );
+  return (
+    <section className="driver-account-page">
+      <header>
+        <span>AKUN DRIVER</span>
+        <h1>{user?.name || "Driver Warkost"}</h1>
+        <p>Kelola komunikasi pengantaran untuk tugas aktif Anda.</p>
+      </header>
+      <section className="panel driver-account-communication">
+        <div>
+          <small>KOMUNIKASI PENGANTARAN</small>
+          <h2>Customer dalam tugas aktif</h2>
+        </div>
+        {activeOrders.length ? (
+          <div className="driver-contact-list">
+            {activeOrders.map((order) => {
+              const whatsapp = customerWhatsAppUrl(
+                order.customer_phone,
+                order.id,
+              );
+              return (
+                <article key={order.id}>
+                  <div>
+                    <strong>{order.customer_name || "Customer Warkost"}</strong>
+                    <span>
+                      WB{String(order.id).padStart(6, "0")} ·{" "}
+                      {orderStatusMeta(order.status).label}
+                    </span>
+                  </div>
+                  <div className="driver-contact-actions">
+                    <button type="button" onClick={() => onChat(order.id)}>
+                      <ChatIcon /> Chat Customer
+                    </button>
+                    {whatsapp ? (
+                      <a
+                        href={whatsapp}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <PhoneIcon /> Hubungi WhatsApp
+                      </a>
+                    ) : (
+                      <button type="button" disabled>
+                        Nomor customer belum tersedia
+                      </button>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="driver-contact-empty">
+            Tidak ada customer yang perlu dihubungi saat ini.
+          </p>
+        )}
+      </section>
+    </section>
+  );
+}
+
+function DriverTripControls({ orders, busy, action }) {
+  const [codBatch, setCodBatch] = useState(null);
+  const active = orders.filter((order) =>
+    ["ASSIGNED", "PICKED_UP", "ON_DELIVERY"].includes(order.status),
+  );
+  const ready = orders.filter((order) => Boolean(order.available_to_claim));
+  const assigned = active.filter((order) => order.status === "ASSIGNED");
+  const pickedUp = active.filter((order) => order.status === "PICKED_UP");
+  const codOutstanding = orders.filter(
+    (order) =>
+      order.method === "CASH" &&
+      order.status === "DELIVERED" &&
+      order.settlement_status !== "VERIFIED",
+  );
+  const codAmount = codOutstanding.reduce(
+    (sum, order) =>
+      sum +
+      Number(order.expected_amount ?? order.payment_amount ?? order.total ?? 0),
+    0,
+  );
+  useEffect(() => {
+    let active = true;
+    const load = () =>
+      api("cod-batch-driver")
+        .then((result) => active && setCodBatch(result))
+        .catch(() => active && setCodBatch(null));
+    load();
+    window.addEventListener("warkost:cod-batch-updated", load);
+    return () => {
+      active = false;
+      window.removeEventListener("warkost:cod-batch-updated", load);
+    };
+  }, []);
+  const serverCodCount = codBatch?.eligible_orders?.length;
+  const serverCodAmount = codBatch?.eligible_expected_amount;
+  return (
+    <section
+      className="panel driver-trip-workspace"
+      aria-label="Kontrol trip Driver"
+    >
+      <div className="driver-trip-heading">
+        <div>
+          <small>TRIP PENGANTARAN</small>
+          <h2>Kelola pesanan satu perjalanan</h2>
+          <p>
+            Ambil dan pickup bersama, lalu selesaikan setiap alamat satu per
+            satu.
+          </p>
+        </div>
+        <span>Maksimal 5 pesanan aktif</span>
+      </div>
+      <div className="driver-trip-stats">
+        <div>
+          <small>Tugas aktif</small>
+          <strong>{active.length} / 5</strong>
+        </div>
+        <div>
+          <small>Siap diambil</small>
+          <strong>{ready.length}</strong>
+        </div>
+        <div>
+          <small>Sudah di-pickup</small>
+          <strong>{pickedUp.length}</strong>
+        </div>
+        <div>
+          <small>COD belum setor</small>
+          <strong>{money(serverCodAmount ?? codAmount)}</strong>
+        </div>
+      </div>
+      <div className="actions driver-trip-actions">
+        {ready.length > 0 && (
+          <button
+            className="primary"
+            disabled={busy}
+            onClick={() => action("claim-all-deliveries")}
+          >
+            Ambil Semua Pesanan
+          </button>
+        )}
+        {assigned.length > 0 && (
+          <button
+            className="primary"
+            disabled={busy}
+            onClick={() => action("pickup-all-deliveries")}
+          >
+            Pickup Semua
+          </button>
+        )}
+        <button
+          disabled={busy}
+          onClick={() =>
+            window.dispatchEvent(new CustomEvent("warkost:open-cod-batch"))
+          }
+        >
+          Setoran COD
+          {(serverCodCount ?? codOutstanding.length)
+            ? ` (${serverCodCount ?? codOutstanding.length})`
+            : ""}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function LoyaltyRuleEditor({ rule, busy, onSave }) {
+  return (
+    <form
+      className="promo-editor"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const form = new FormData(event.currentTarget);
+        onSave({
+          ...(rule ? { id: rule.id } : {}),
+          name: form.get("name"),
+          pointsRequired: Number(form.get("pointsRequired")),
+          rewardType: form.get("rewardType"),
+          rewardValue: Number(form.get("rewardValue")),
+          minimumOrder: Number(form.get("minimumOrder")),
+          maximumDiscount: form.get("maximumDiscount"),
+          active: form.get("active") === "on",
+        });
+      }}
+    >
+      {rule && (
+        <div className="line">
+          <strong>{rule.name}</strong>
+          <span className="badge">{rule.active ? "ACTIVE" : "INACTIVE"}</span>
+        </div>
+      )}
+      <label>
+        Nama reward
+        <input
+          name="name"
+          minLength="2"
+          maxLength="100"
+          defaultValue={rule?.name || ""}
+          required
+        />
+      </label>
+      <div className="columns compact-columns">
+        <label>
+          Poin dibutuhkan
+          <input
+            name="pointsRequired"
+            type="number"
+            min="1"
+            defaultValue={rule?.points_required || 1}
+            required
+          />
+        </label>
+        <label>
+          Tipe reward
+          <select
+            name="rewardType"
+            defaultValue={rule?.reward_type || "PERCENT"}
+          >
+            <option value="PERCENT">Persen</option>
+            <option value="FIXED">Nominal tetap</option>
+          </select>
+        </label>
+      </div>
+      <div className="columns compact-columns">
+        <label>
+          Nilai reward
+          <input
+            name="rewardValue"
+            type="number"
+            min="1"
+            defaultValue={rule?.reward_value || 1}
+            required
+          />
+        </label>
+        <label>
+          Minimum belanja
+          <input
+            name="minimumOrder"
+            type="number"
+            min="0"
+            defaultValue={rule?.minimum_order || 0}
+            required
+          />
+        </label>
+      </div>
+      <label>
+        Maksimum diskon (opsional)
+        <input
+          name="maximumDiscount"
+          type="number"
+          min="0"
+          defaultValue={rule?.maximum_discount ?? ""}
+        />
+      </label>
+      <label className="checkbox">
+        <input
+          name="active"
+          type="checkbox"
+          defaultChecked={rule ? rule.active : true}
+        />
+        Aktifkan reward
+      </label>
+      <button className="primary" disabled={busy}>
+        {rule ? "Simpan reward" : "Buat reward"}
+      </button>
+    </form>
   );
 }
 
@@ -1859,6 +6478,11 @@ function PromotionEditor({ promotion, busy, onSave }) {
           startsAt: new Date(form.get("startsAt")).toISOString(),
           endsAt: new Date(form.get("endsAt")).toISOString(),
           active: form.get("active") === "on",
+          voucherType: form.get("voucherType") || null,
+          discountValue: Number(form.get("discountValue") || 0),
+          minimumOrder: Number(form.get("minimumOrder") || 0),
+          maxDiscount: form.get("maxDiscount"),
+          quota: form.get("quota"),
         });
       }}
     >
@@ -1950,6 +6574,57 @@ function PromotionEditor({ promotion, busy, onSave }) {
           />
         </label>
       </div>
+      <div className="columns compact-columns">
+        <label>
+          Tipe voucher (opsional)
+          <select
+            name="voucherType"
+            defaultValue={promotion?.voucher_type || ""}
+          >
+            <option value="">Campaign tanpa voucher</option>
+            <option value="PERCENT">Persen</option>
+            <option value="FIXED">Nominal tetap</option>
+          </select>
+        </label>
+        <label>
+          Nilai diskon
+          <input
+            name="discountValue"
+            type="number"
+            min="0"
+            defaultValue={promotion?.discount_value || 0}
+          />
+        </label>
+      </div>
+      <div className="columns compact-columns">
+        <label>
+          Minimum belanja
+          <input
+            name="minimumOrder"
+            type="number"
+            min="0"
+            defaultValue={promotion?.minimum_order || 0}
+          />
+        </label>
+        <label>
+          Maksimum diskon (opsional)
+          <input
+            name="maxDiscount"
+            type="number"
+            min="0"
+            defaultValue={promotion?.max_discount ?? ""}
+          />
+        </label>
+      </div>
+      <label>
+        Kuota penggunaan global (opsional)
+        <input
+          name="quota"
+          type="number"
+          min="0"
+          defaultValue={promotion?.quota ?? ""}
+        />
+      </label>
       <label className="checkbox">
         <input
           name="active"
@@ -1965,7 +6640,19 @@ function PromotionEditor({ promotion, busy, onSave }) {
   );
 }
 
-function ProductEditor({ product: p, categories, busy, onSave }) {
+function ProductEditor({
+  product: p,
+  categories,
+  subcategories,
+  busy,
+  onSave,
+}) {
+  const [categoryId, setCategoryId] = useState(
+    Number(p?.category_id || categories[0]?.id || 0),
+  );
+  const categorySubcategories = subcategories.filter(
+    (subcategory) => Number(subcategory.category_id) === categoryId,
+  );
   return (
     <form
       className="product-editor"
@@ -1980,8 +6667,15 @@ function ProductEditor({ product: p, categories, busy, onSave }) {
             description: f.get("description"),
             price: Number(f.get("price")),
             categoryId: Number(f.get("categoryId")),
+            subcategoryId: f.get("subcategoryId")
+              ? Number(f.get("subcategoryId"))
+              : null,
             imageUrl: f.get("imageUrl"),
-            prepStation: f.get("prepStation"),
+            stockUnit: f.get("stockUnit"),
+            priceUnitQuantity: Number(f.get("priceUnitQuantity")),
+            minimumOrderQuantity: Number(f.get("minimumOrderQuantity")),
+            orderStepQuantity: Number(f.get("orderStepQuantity")),
+            lowStockThreshold: Number(f.get("lowStockThreshold")),
             active: f.get("active") === "on",
           },
           f.get("image"),
@@ -2015,7 +6709,8 @@ function ProductEditor({ product: p, categories, busy, onSave }) {
         Kategori
         <select
           name="categoryId"
-          defaultValue={p?.category_id || categories[0]?.id}
+          value={categoryId}
+          onChange={(event) => setCategoryId(Number(event.target.value))}
         >
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
@@ -2025,12 +6720,72 @@ function ProductEditor({ product: p, categories, busy, onSave }) {
         </select>
       </label>
       <label>
-        Stasiun persiapan
-        <select name="prepStation" defaultValue={p?.prep_station || "KITCHEN"}>
-          <option value="KITCHEN">Dapur · makanan</option>
-          <option value="CASHIER">Kasir · minuman</option>
+        Subkategori
+        <select name="subcategoryId" defaultValue={p?.subcategory_id || ""}>
+          <option value="">Tanpa subkategori</option>
+          {categorySubcategories.map((subcategory) => (
+            <option key={subcategory.id} value={subcategory.id}>
+              {subcategory.name}
+            </option>
+          ))}
         </select>
       </label>
+      <p className="editor-routing-note">
+        Fulfillment:{" "}
+        {categories.find((category) => Number(category.id) === categoryId)
+          ?.name === "Makanan"
+          ? "Kitchen"
+          : "Admin"}
+      </p>
+      <div className="form-grid">
+        <label>
+          Satuan stok
+          <select name="stockUnit" defaultValue={p?.stock_unit || "PCS"}>
+            <option value="PCS">PCS</option>
+            <option value="GRAM">GRAM</option>
+          </select>
+        </label>
+        <label>
+          Harga berlaku per kuantitas
+          <input
+            name="priceUnitQuantity"
+            type="number"
+            min="1"
+            defaultValue={p?.price_unit_quantity || 1}
+            required
+          />
+        </label>
+        <label>
+          Minimum order
+          <input
+            name="minimumOrderQuantity"
+            type="number"
+            min="1"
+            defaultValue={p?.minimum_order_quantity || 1}
+            required
+          />
+        </label>
+        <label>
+          Kelipatan order
+          <input
+            name="orderStepQuantity"
+            type="number"
+            min="1"
+            defaultValue={p?.order_step_quantity || 1}
+            required
+          />
+        </label>
+        <label>
+          Batas stok menipis
+          <input
+            name="lowStockThreshold"
+            type="number"
+            min="0"
+            defaultValue={p?.low_stock_threshold ?? 5}
+            required
+          />
+        </label>
+      </div>
       <label>
         URL gambar HTTPS atau unggahan (opsional)
         <input

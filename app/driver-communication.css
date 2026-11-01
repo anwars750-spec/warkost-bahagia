@@ -1,0 +1,412 @@
+.driver-header .brand-logo {
+  width: 100px;
+  height: auto;
+  aspect-ratio: 1672 / 941;
+  object-fit: contain;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.driver-header .brand-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.driver-header .brand-copy small {
+  margin: 0;
+  color: #8a4d32;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+}
+
+.driver-customer-communication {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 13px;
+  border-top: 1px solid #eadfd4;
+}
+
+.driver-customer-communication > small,
+.driver-account-communication > div:first-child > small {
+  color: #915234;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+}
+
+.driver-customer-communication > div,
+.driver-contact-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.driver-customer-communication button,
+.driver-customer-communication a,
+.driver-contact-actions button,
+.driver-contact-actions a {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 12px;
+  border: 1px solid #dccbc0;
+  border-radius: 10px;
+  color: #563326;
+  background: #fffaf4;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.driver-customer-communication .ui-icon,
+.driver-contact-actions .ui-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.driver-customer-communication .driver-whatsapp-action,
+.driver-contact-actions a {
+  border-color: #b9dcc8;
+  color: #17643d;
+  background: #edf8f1;
+}
+
+.driver-customer-communication button:disabled,
+.driver-contact-actions button:disabled {
+  color: #837873;
+  background: #f0ece9;
+}
+
+.driver-account-page {
+  display: grid;
+  gap: 18px;
+}
+
+.driver-account-page > header span {
+  color: #955238;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.driver-account-page > header h1 {
+  margin: 5px 0;
+}
+
+.driver-account-page > header p,
+.driver-account-communication h2 {
+  margin: 0;
+}
+
+.driver-account-communication {
+  display: grid;
+  gap: 15px;
+}
+
+.driver-contact-list {
+  display: grid;
+  gap: 9px;
+}
+
+.driver-contact-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid #eadfd4;
+  border-radius: 13px;
+  background: #fffdf9;
+}
+
+.driver-contact-list article > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.driver-contact-list article span,
+.driver-contact-empty {
+  color: #776a63;
+  font-size: 12px;
+}
+
+.driver-mobile-nav {
+  display: none;
+}
+
+@media (max-width: 620px) {
+  body:has(.driver-header) {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+
+  .driver-header {
+    min-height: 72px;
+    padding: 9px 12px;
+    flex-flow: row nowrap;
+    gap: 8px;
+  }
+
+  .driver-header .brand {
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .driver-header .brand-logo {
+    width: 76px;
+    max-width: 23vw;
+  }
+
+  .driver-header .brand-copy strong {
+    overflow: hidden;
+    max-width: 145px;
+    font-size: 14px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .driver-header .brand-copy small {
+    max-width: none;
+    overflow: visible;
+    font-size: 9px;
+    text-overflow: clip;
+  }
+
+  .driver-header nav {
+    width: auto;
+    margin-left: auto;
+  }
+
+  .driver-header nav > button:not(.icon-nav-button) {
+    display: none;
+  }
+
+  .driver-header .icon-nav-button {
+    width: 42px;
+    height: 42px;
+    justify-content: center;
+    padding: 0;
+    border-radius: 50%;
+    background: #fff;
+  }
+
+  .driver-header .icon-nav-button > span:not(.notification-count) {
+    display: none;
+  }
+
+  .driver-header + main {
+    padding-bottom: 96px;
+  }
+
+  .driver-customer-communication > div,
+  .driver-contact-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .driver-customer-communication button,
+  .driver-customer-communication a,
+  .driver-contact-actions button,
+  .driver-contact-actions a {
+    min-width: 0;
+    padding: 9px 7px;
+    text-align: center;
+  }
+
+  .driver-contact-list article {
+    display: grid;
+  }
+
+  .driver-mobile-nav {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 90;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 2px;
+    padding: 7px 6px calc(7px + env(safe-area-inset-bottom));
+    border-top: 1px solid #e5d8ce;
+    background: rgba(255, 252, 248, 0.98);
+    box-shadow: 0 -8px 24px rgba(68, 40, 27, 0.09);
+  }
+
+  .driver-mobile-nav button {
+    min-width: 0;
+    padding: 8px 2px;
+    color: #5e4033;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+}
+/* ===== Driver Communication Modern Row ===== */
+.driver-v2-order-communication {
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid #ead8c9;
+  border-radius: 18px;
+  background: #fffaf6;
+}
+
+.driver-v2-order-communication-headline {
+  margin-bottom: 12px;
+}
+
+.driver-v2-order-communication-headline span {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #b55428;
+  text-transform: uppercase;
+}
+
+.driver-v2-order-communication-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.driver-v2-contact-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  min-height: 58px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  font: inherit;
+  overflow: hidden;
+  text-decoration: none;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  box-shadow: 0 6px 18px rgba(82, 48, 26, 0.06);
+}
+
+.driver-v2-contact-cta:hover {
+  transform: translateY(-1px);
+}
+
+.driver-v2-contact-cta-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.driver-v2-contact-cta-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.driver-v2-contact-cta-copy strong {
+  display: block;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Chat */
+.driver-v2-contact-cta--chat {
+  background: linear-gradient(180deg, #fff7ef 0%, #ffefe2 100%);
+  border-color: #f3c9a9;
+  color: #9b431d;
+}
+
+.driver-v2-contact-cta--chat .driver-v2-contact-cta-icon {
+  background: #ffffff;
+  color: #bf5a2d;
+  border: 1px solid #f2d2bc;
+}
+
+/* WhatsApp */
+.driver-v2-contact-cta--whatsapp {
+  background: linear-gradient(180deg, #effcf4 0%, #def6e8 100%);
+  border-color: #bfe3ca;
+  color: #176443;
+}
+
+.driver-v2-contact-cta--whatsapp .driver-v2-contact-cta-icon {
+  background: #ffffff;
+  color: #188a52;
+  border: 1px solid #cfe8d7;
+}
+
+/* Disabled */
+.driver-v2-contact-cta--disabled {
+  background: #f4f1ec;
+  border-color: #e6ddd2;
+  color: #9e8f83;
+  box-shadow: none;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.driver-v2-contact-cta--disabled .driver-v2-contact-cta-icon {
+  background: #fbf8f4;
+  color: #a9998b;
+  border: 1px solid #e7ddd3;
+}
+
+/* Mobile polish */
+@media (max-width: 760px) {
+  .driver-v2-order-communication {
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .driver-v2-order-communication-headline {
+    margin-bottom: 10px;
+  }
+
+  .driver-v2-order-communication-headline span {
+    font-size: 10px;
+  }
+
+  .driver-v2-order-communication-row {
+    gap: 8px;
+  }
+
+  .driver-v2-contact-cta {
+    min-height: 54px;
+    padding: 10px 10px;
+    border-radius: 14px;
+  }
+
+  .driver-v2-contact-cta-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+
+  .driver-v2-contact-cta-copy strong {
+    font-size: 13px;
+  }
+
+}
+
+@media (max-width: 380px) {
+  .driver-v2-contact-cta {
+    padding: 9px 9px;
+    gap: 8px;
+  }
+
+  .driver-v2-contact-cta-copy strong {
+    font-size: 12px;
+  }
+
+}

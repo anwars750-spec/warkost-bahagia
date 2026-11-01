@@ -1,0 +1,448 @@
+.osc-modal:not(.compact){
+  width:min(760px,calc(100vw - 36px))!important;
+  max-height:calc(100dvh - 28px)!important;
+  overflow:hidden!important;
+  border-radius:24px!important;
+  background:#fffaf6!important;
+  box-shadow:0 34px 90px rgba(45,28,18,.34)!important;
+}
+
+.osc-modal:not(.compact)>header{
+  position:relative!important;
+  display:flex!important;
+  align-items:flex-start!important;
+  gap:14px!important;
+  padding:20px 78px 12px 22px!important;
+  border-bottom:1px solid #efe3d9!important;
+}
+
+.osc-modal:not(.compact)>header::before{
+  content:"♙";
+  display:grid;
+  place-items:center;
+  width:42px;
+  height:42px;
+  flex:0 0 42px;
+  border-radius:50%;
+  background:#f7e8dc;
+  color:#8a4a2b;
+  font-size:20px;
+  line-height:1;
+  box-shadow:inset 0 0 0 1px rgba(138,74,43,.08);
+}
+
+.osc-modal:not(.compact)>header>div{
+  min-width:0;
+  flex:1 1 auto;
+}
+
+.osc-modal:not(.compact)>header span{
+  display:block!important;
+  margin:0 0 4px!important;
+  color:#985a38!important;
+  font-size:9px!important;
+  font-weight:900!important;
+  letter-spacing:.17em!important;
+}
+
+.osc-modal:not(.compact)>header h2{
+  margin:0!important;
+  color:#2f211a!important;
+  font-size:26px!important;
+  line-height:1.08!important;
+  letter-spacing:-.025em!important;
+}
+
+.osc-modal:not(.compact)>header p{
+  margin:5px 0 0!important;
+  max-width:520px;
+  color:#806f64!important;
+  font-size:11px!important;
+  line-height:1.4!important;
+}
+
+/* Close button: CSS-drawn X prevents font-baseline misalignment. */
+.osc-modal>header>button[aria-label="Tutup"]{
+  position:absolute!important;
+  top:20px!important;
+  right:22px!important;
+  width:42px!important;
+  height:42px!important;
+  min-width:42px!important;
+  min-height:42px!important;
+  margin:0!important;
+  padding:0!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  border:1px solid #e3d2c5!important;
+  border-radius:14px!important;
+  background:#fffdfb!important;
+  color:transparent!important;
+  font-size:0!important;
+  line-height:0!important;
+  text-indent:-9999px!important;
+  overflow:hidden!important;
+  box-sizing:border-box!important;
+  box-shadow:0 4px 12px rgba(70,44,29,.045)!important;
+  transform:none!important;
+  cursor:pointer!important;
+  transition:background .16s ease,border-color .16s ease,box-shadow .16s ease!important;
+}
+
+.osc-modal>header>button[aria-label="Tutup"]::before,
+.osc-modal>header>button[aria-label="Tutup"]::after{
+  content:""!important;
+  position:absolute!important;
+  top:50%!important;
+  left:50%!important;
+  width:17px!important;
+  height:2px!important;
+  border:0!important;
+  border-radius:999px!important;
+  background:#5c3d2e!important;
+  transform-origin:center!important;
+  pointer-events:none!important;
+}
+
+.osc-modal>header>button[aria-label="Tutup"]::before{
+  transform:translate(-50%,-50%) rotate(45deg)!important;
+}
+
+.osc-modal>header>button[aria-label="Tutup"]::after{
+  transform:translate(-50%,-50%) rotate(-45deg)!important;
+}
+
+.osc-modal>header>button[aria-label="Tutup"]:hover:not(:disabled){
+  background:#fff4eb!important;
+  border-color:#d3b49f!important;
+  box-shadow:0 6px 16px rgba(105,58,32,.08)!important;
+  transform:none!important;
+}
+
+.osc-modal>header>button[aria-label="Tutup"]:focus-visible{
+  outline:3px solid rgba(138,68,36,.16)!important;
+  outline-offset:3px!important;
+}
+
+.osc-modal:not(.compact) form{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:11px 16px!important;
+  margin:0!important;
+  padding:16px 20px 18px!important;
+  border:0!important;
+  border-radius:0!important;
+  background:#fffaf6!important;
+  box-shadow:none!important;
+  overflow:hidden!important;
+}
+
+.osc-modal:not(.compact) form::before{
+  content:"INFORMASI AKUN";
+  grid-column:1/-1;
+  display:block;
+  margin:0 0 -2px;
+  color:#9b684b;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.15em;
+}
+
+.osc-modal:not(.compact) form>label{
+  gap:5px!important;
+  font-size:11px!important;
+  line-height:1.25!important;
+}
+
+.osc-modal:not(.compact) form>label:nth-of-type(1),
+.osc-modal:not(.compact) form>label:nth-of-type(2){
+  grid-column:1/-1!important;
+}
+
+.osc-modal:not(.compact) input,
+.osc-modal:not(.compact) select{
+  height:42px!important;
+  min-height:42px!important;
+  padding:0 13px!important;
+  border:1px solid #ddcabd!important;
+  border-radius:11px!important;
+  background:#fff!important;
+  color:#342820!important;
+  font-size:12px!important;
+  font-weight:650!important;
+  outline:none!important;
+  box-shadow:0 1px 2px rgba(68,43,27,.025)!important;
+  transition:border-color .15s ease,box-shadow .15s ease,background .15s ease!important;
+}
+
+.osc-modal:not(.compact) input:focus,
+.osc-modal:not(.compact) select:focus{
+  border-color:#a66c4b!important;
+  background:#fffefc!important;
+  box-shadow:0 0 0 3px rgba(139,72,39,.10)!important;
+}
+
+.osc-modal:not(.compact) .osc-form-grid{
+  position:relative;
+  grid-column:1/-1!important;
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:11px 16px!important;
+  margin-top:4px;
+  padding-top:21px;
+  border-top:1px solid #eee0d5;
+}
+
+.osc-modal:not(.compact) .osc-form-grid::before{
+  content:"KEAMANAN AKUN";
+  position:absolute;
+  top:7px;
+  left:0;
+  color:#9b684b;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.15em;
+}
+
+.osc-modal:not(.compact) .osc-form-note{
+  grid-column:1/-1!important;
+  margin:0!important;
+  padding:9px 11px!important;
+  border:1px solid #eee1d6!important;
+  border-radius:10px!important;
+  background:#f9f4ef!important;
+  color:#7d6e64!important;
+  font-size:9px!important;
+  line-height:1.35!important;
+}
+
+.osc-modal:not(.compact) .osc-modal-actions{
+  grid-column:1/-1!important;
+  display:flex!important;
+  justify-content:flex-end!important;
+  align-items:center!important;
+  gap:9px!important;
+  margin:2px -20px -18px!important;
+  padding:12px 20px 0!important;
+  border-top:1px solid #eee0d5!important;
+  background:#fff7f1!important;
+}
+
+.osc-modal:not(.compact) .osc-modal-actions button{
+  min-height:40px!important;
+  height:40px!important;
+  min-width:92px!important;
+  padding:0 16px!important;
+  border-radius:10px!important;
+  font-size:11px!important;
+  font-weight:850!important;
+  transition:background .15s ease,border-color .15s ease,box-shadow .15s ease,transform .15s ease!important;
+}
+
+.osc-modal:not(.compact) .osc-modal-actions button:hover:not(:disabled){
+  transform:translateY(-1px)!important;
+  background:#fff4eb!important;
+  border-color:#d1b49f!important;
+}
+
+.osc-modal:not(.compact) .osc-modal-actions button.primary,
+.osc-modal:not(.compact) .osc-modal-actions button.primary:hover:not(:disabled),
+.osc-modal:not(.compact) .osc-modal-actions button.primary:focus-visible{
+  min-width:142px!important;
+  border-color:#743a20!important;
+  background:linear-gradient(180deg,#8d4827 0%,#74381e 100%)!important;
+  color:#fff!important;
+  box-shadow:0 8px 18px rgba(116,55,29,.15)!important;
+}
+
+.osc-modal:not(.compact) .osc-modal-actions button.primary:hover:not(:disabled){
+  background:linear-gradient(180deg,#995031 0%,#804020 100%)!important;
+  box-shadow:0 10px 20px rgba(116,55,29,.21)!important;
+}
+
+@media(max-height:720px) and (min-width:601px){
+  .osc-modal:not(.compact)>header{
+    padding-top:14px!important;
+    padding-bottom:9px!important;
+  }
+
+  .osc-modal:not(.compact)>header::before{
+    width:36px;
+    height:36px;
+    flex-basis:36px;
+    font-size:18px;
+  }
+
+  .osc-modal:not(.compact)>header h2{
+    font-size:22px!important;
+  }
+
+  .osc-modal:not(.compact)>header p{
+    margin-top:3px!important;
+    font-size:10px!important;
+  }
+
+  .osc-modal:not(.compact) form{
+    gap:8px 14px!important;
+    padding-top:12px!important;
+  }
+
+  .osc-modal:not(.compact) input,
+  .osc-modal:not(.compact) select{
+    height:38px!important;
+    min-height:38px!important;
+  }
+
+  .osc-modal:not(.compact) .osc-form-grid{
+    gap:8px 14px!important;
+  }
+}
+
+@media(max-width:600px){
+  .osc-modal-backdrop{
+    padding:0!important;
+    align-items:stretch!important;
+  }
+
+  .osc-modal:not(.compact){
+    width:100vw!important;
+    height:100dvh!important;
+    max-width:none!important;
+    max-height:100dvh!important;
+    border:0!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+    overflow:hidden!important;
+  }
+
+  .osc-modal:not(.compact)>header{
+    min-height:74px;
+    padding:12px 62px 9px 14px!important;
+    gap:9px!important;
+  }
+
+  .osc-modal:not(.compact)>header::before{
+    width:34px;
+    height:34px;
+    flex-basis:34px;
+    font-size:17px;
+  }
+
+  .osc-modal:not(.compact)>header span{
+    margin-bottom:2px!important;
+    font-size:7px!important;
+  }
+
+  .osc-modal:not(.compact)>header h2{
+    font-size:19px!important;
+  }
+
+  .osc-modal:not(.compact)>header p{
+    margin-top:2px!important;
+    font-size:8px!important;
+  }
+
+  .osc-modal>header>button[aria-label="Tutup"]{
+    top:13px!important;
+    right:14px!important;
+    width:36px!important;
+    height:36px!important;
+    min-width:36px!important;
+    min-height:36px!important;
+    border-radius:11px!important;
+  }
+
+  .osc-modal>header>button[aria-label="Tutup"]::before,
+  .osc-modal>header>button[aria-label="Tutup"]::after{
+    width:15px!important;
+    height:1.8px!important;
+  }
+
+  .osc-modal:not(.compact) form{
+    grid-template-columns:1fr!important;
+    gap:7px!important;
+    padding:10px 14px 12px!important;
+  }
+
+  .osc-modal:not(.compact) form::before{
+    font-size:7px;
+  }
+
+  .osc-modal:not(.compact) form>label,
+  .osc-modal:not(.compact) form>label:nth-of-type(1),
+  .osc-modal:not(.compact) form>label:nth-of-type(2){
+    grid-column:1!important;
+    gap:3px!important;
+    font-size:9px!important;
+  }
+
+  .osc-modal:not(.compact) input,
+  .osc-modal:not(.compact) select{
+    height:36px!important;
+    min-height:36px!important;
+    padding:0 10px!important;
+    font-size:10px!important;
+  }
+
+  .osc-modal:not(.compact) .osc-form-grid{
+    grid-column:1!important;
+    grid-template-columns:1fr!important;
+    gap:7px!important;
+    margin-top:1px;
+    padding-top:17px;
+  }
+
+  .osc-modal:not(.compact) .osc-form-grid::before{
+    top:5px;
+    font-size:7px;
+  }
+
+  .osc-modal:not(.compact) .osc-form-note{
+    grid-column:1!important;
+    padding:7px 9px!important;
+    font-size:8px!important;
+  }
+
+  .osc-modal:not(.compact) .osc-modal-actions{
+    grid-column:1!important;
+    margin:1px -14px -12px!important;
+    padding:9px 14px 10px!important;
+    gap:8px!important;
+  }
+
+  .osc-modal:not(.compact) .osc-modal-actions button{
+    flex:1 1 0!important;
+    min-width:0!important;
+    height:38px!important;
+    min-height:38px!important;
+    padding:0 10px!important;
+    font-size:10px!important;
+  }
+
+  .osc-modal:not(.compact) .osc-modal-actions button.primary{
+    min-width:0!important;
+  }
+}
+
+@media(max-width:460px) and (max-height:760px){
+  .osc-modal:not(.compact)>header p,
+  .osc-modal:not(.compact) .osc-form-note{
+    display:none!important;
+  }
+
+  .osc-modal:not(.compact)>header{
+    min-height:62px;
+    padding-top:9px!important;
+    padding-bottom:6px!important;
+  }
+
+  .osc-modal:not(.compact) form{
+    gap:5px!important;
+    padding-top:7px!important;
+  }
+
+  .osc-modal:not(.compact) .osc-form-grid{
+    gap:5px!important;
+  }
+}

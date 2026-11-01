@@ -1,0 +1,164 @@
+/* Manager Subcategory — final polish
+ * Visual-only refinements after desktop/mobile UAT.
+ */
+
+/* Keep page title aligned with the rest of Manager Control Center. */
+.manager-subcategory-polished .manager-page-title h1 {
+  font-size: clamp(2.15rem, 3.1vw, 3.15rem) !important;
+  line-height: 1.04 !important;
+  letter-spacing: -0.038em !important;
+}
+
+.manager-subcategory-polished .manager-page-title {
+  margin-bottom: 16px !important;
+}
+
+/* Compact KPI strip so the structure list remains the visual priority. */
+.manager-subcategory-polished .manager-subcategory-summary {
+  gap: 10px !important;
+  margin-bottom: 14px !important;
+}
+
+.manager-subcategory-polished .manager-subcategory-stat {
+  min-height: 94px !important;
+  padding: 14px 16px !important;
+  gap: 12px !important;
+  border-radius: 18px !important;
+}
+
+.manager-subcategory-polished .manager-subcategory-stat-icon {
+  width: 42px !important;
+  height: 42px !important;
+  flex-basis: 42px !important;
+  border-radius: 14px !important;
+  font-size: 1.12rem !important;
+}
+
+.manager-subcategory-polished .manager-subcategory-stat strong {
+  font-size: 1.42rem !important;
+}
+
+.manager-subcategory-polished .manager-subcategory-stat b {
+  font-size: 0.79rem !important;
+}
+
+.manager-subcategory-polished .manager-subcategory-stat small {
+  font-size: 0.66rem !important;
+}
+
+/* Distinguish parent categories softly for faster scanning. */
+.manager-subcategory-polished .manager-subcategory-row[data-category="Makanan"] .manager-subcategory-category {
+  background: #fff0df !important;
+  color: #aa4d17 !important;
+  border: 1px solid #f2dcc8;
+}
+
+.manager-subcategory-polished .manager-subcategory-row[data-category="Minuman"] .manager-subcategory-category {
+  background: #eaf5f5 !important;
+  color: #2e6c70 !important;
+  border: 1px solid #d5e9e9;
+}
+
+.manager-subcategory-polished .manager-subcategory-row[data-category="Bahan Baku"] .manager-subcategory-category {
+  background: #f2ebe4 !important;
+  color: #74503a !important;
+  border: 1px solid #e5d8cc;
+}
+
+.manager-subcategory-polished .manager-subcategory-category {
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.42);
+}
+
+/* Desktop editor remains accessible while reviewing a long list. */
+@media (min-width: 981px) {
+  .manager-subcategory-polished .manager-subcategory-form-polished {
+    position: sticky !important;
+    top: 94px !important;
+    max-height: calc(100vh - 112px);
+    overflow-y: auto !important;
+    scrollbar-width: thin;
+    scrollbar-color: #d7c2b6 transparent;
+  }
+
+  .manager-subcategory-polished .manager-subcategory-form-polished::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .manager-subcategory-polished .manager-subcategory-form-polished::-webkit-scrollbar-thumb {
+    background: #d7c2b6;
+    border-radius: 999px;
+  }
+}
+
+/* Slightly stronger list hierarchy without adding visual noise. */
+.manager-subcategory-polished .manager-subcategory-list-heading {
+  padding-top: 16px !important;
+  padding-bottom: 16px !important;
+}
+
+.manager-subcategory-polished .manager-subcategory-row {
+  min-height: 76px;
+}
+
+.manager-subcategory-polished .manager-subcategory-main > strong {
+  letter-spacing: -0.012em;
+}
+
+/* Mobile finishing pass: keep cards breathable and clear the fixed nav. */
+@media (max-width: 760px) {
+  .manager-subcategory-polished {
+    padding-bottom: calc(112px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .manager-subcategory-polished .manager-page-title h1 {
+    font-size: 1.72rem !important;
+    line-height: 1.08 !important;
+    letter-spacing: -0.03em !important;
+  }
+
+  .manager-subcategory-polished .manager-subcategory-summary {
+    gap: 8px !important;
+  }
+
+  .manager-subcategory-polished .manager-subcategory-stat {
+    min-height: 82px !important;
+    padding: 11px !important;
+    gap: 9px !important;
+    border-radius: 15px !important;
+  }
+
+  .manager-subcategory-polished .manager-subcategory-stat-icon {
+    width: 34px !important;
+    height: 34px !important;
+    flex-basis: 34px !important;
+    border-radius: 11px !important;
+    font-size: 0.92rem !important;
+  }
+
+  .manager-subcategory-polished .manager-subcategory-stat strong {
+    font-size: 1.16rem !important;
+  }
+
+  .manager-subcategory-polished .manager-subcategory-stat b {
+    font-size: 0.68rem !important;
+    line-height: 1.18;
+  }
+
+  .manager-subcategory-polished .manager-subcategory-stat small {
+    font-size: 0.57rem !important;
+    line-height: 1.3;
+  }
+
+  .manager-subcategory-polished .manager-subcategory-row {
+    min-height: 0;
+    padding: 13px !important;
+  }
+
+  .manager-subcategory-polished .manager-subcategory-actions button {
+    min-height: 36px !important;
+  }
+
+  .manager-subcategory-polished .manager-subcategory-list {
+    margin-bottom: 18px;
+  }
+}

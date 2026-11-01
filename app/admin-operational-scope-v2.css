@@ -1,0 +1,31 @@
+/* Admin Operational Scope V2
+   Admin stays focused on execution. Sales analytics remain in Manager. */
+
+/* Daily sales summary belongs to Manager, not Admin Operations. */
+.admin-operations-view #admin-daily-summary {
+  display: none !important;
+}
+
+/* Revenue analytics belongs to Manager. Keep operational order/payment KPIs only. */
+.admin-operations-view .admin-kpi-grid > .stat:nth-child(2) {
+  display: none !important;
+}
+
+/* Reflow the remaining 9 operational cards into a balanced desktop grid. */
+@media (min-width: 1180px) {
+  .admin-operations-view .admin-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 760px) and (max-width: 1179px) {
+  .admin-operations-view .admin-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 759px) {
+  .admin-operations-view .admin-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

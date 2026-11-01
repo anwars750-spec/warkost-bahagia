@@ -1,0 +1,389 @@
+/* Final polish for Admin > Customer Detail modal.
+   UI only. Does not change customer permissions or backend behavior. */
+
+.admin-customer-modal-overlay {
+  padding: 28px;
+  background: rgba(31, 20, 15, .64);
+  backdrop-filter: blur(12px) saturate(.9);
+}
+
+.admin-customer-modal {
+  width: min(880px, calc(100vw - 56px));
+  max-height: min(84vh, 780px);
+  border: 1px solid rgba(104, 68, 50, .16);
+  border-radius: 24px;
+  background: #fbf9f7;
+  box-shadow:
+    0 36px 110px rgba(35, 19, 13, .34),
+    0 2px 8px rgba(35, 19, 13, .08);
+}
+
+.admin-customer-modal > header {
+  grid-template-columns: 52px minmax(0, 1fr) 42px;
+  gap: 13px;
+  min-height: 92px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #ede3dc;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(193, 111, 69, .08), transparent 30%),
+    #fff;
+}
+
+.admin-customer-modal-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  color: #743723;
+  background: linear-gradient(145deg, #fff0e6, #f1d7c7);
+  box-shadow: inset 0 0 0 1px rgba(126, 69, 43, .06);
+  font-size: 16px;
+}
+
+.admin-customer-modal header small {
+  color: #9a4d30;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+
+.admin-customer-modal header h3 {
+  margin-top: 4px;
+  color: #281610;
+  font-size: 21px;
+  line-height: 1.08;
+  letter-spacing: -.03em;
+}
+
+.admin-customer-modal header p {
+  margin-top: 5px;
+  color: #85766e;
+  font-size: 9px;
+}
+
+/* Precise close control — drawn with CSS instead of the × font glyph. */
+.admin-customer-modal header > button[data-customer-modal-close] {
+  position: relative;
+  display: block;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid #dfd2c9;
+  border-radius: 13px;
+  color: transparent;
+  background: #fffaf6;
+  box-shadow: 0 3px 10px rgba(72, 43, 30, .04);
+  font-size: 0;
+  line-height: 0;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, transform .16s ease, box-shadow .16s ease;
+}
+
+.admin-customer-modal header > button[data-customer-modal-close]::before,
+.admin-customer-modal header > button[data-customer-modal-close]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 15px;
+  height: 1.7px;
+  border-radius: 999px;
+  background: #6f392a;
+  transform-origin: center;
+}
+
+.admin-customer-modal header > button[data-customer-modal-close]::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.admin-customer-modal header > button[data-customer-modal-close]::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.admin-customer-modal header > button[data-customer-modal-close]:hover {
+  border-color: #cdaea0;
+  background: #f8eee8;
+  box-shadow: 0 5px 14px rgba(72, 43, 30, .08);
+  transform: translateY(-1px);
+}
+
+.admin-customer-modal header > button[data-customer-modal-close]:focus-visible {
+  outline: 3px solid rgba(139, 70, 45, .16);
+  outline-offset: 2px;
+}
+
+.admin-customer-modal-body {
+  max-height: calc(min(84vh, 780px) - 92px);
+  padding: 18px;
+  scrollbar-width: thin;
+  scrollbar-color: #cdbeb4 transparent;
+}
+
+.admin-customer-profile-summary {
+  gap: 10px;
+}
+
+.admin-customer-profile-summary article {
+  min-height: 76px;
+  padding: 13px 14px;
+  border-color: #e7dbd2;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #fff, #fdfaf8);
+  box-shadow: 0 5px 18px rgba(62, 37, 26, .025);
+}
+
+.admin-customer-profile-summary span {
+  color: #8f8078;
+  font-size: 8px;
+  font-weight: 680;
+}
+
+.admin-customer-profile-summary strong {
+  margin-top: 8px;
+  color: #352119;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.admin-customer-profile-summary strong.good,
+.admin-customer-profile-summary strong.bad {
+  display: inline-flex;
+  width: fit-content;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 9px;
+  letter-spacing: .02em;
+}
+
+.admin-customer-profile-summary strong.good {
+  color: #177347;
+  background: #e8f6ee;
+}
+
+.admin-customer-profile-summary strong.bad {
+  color: #9d3c34;
+  background: #fdecea;
+}
+
+.admin-customer-modal-panel {
+  margin-top: 14px;
+  border-color: #e6dad1;
+  border-radius: 16px;
+  box-shadow: 0 6px 22px rgba(62, 37, 26, .025);
+}
+
+.admin-customer-modal-panel-head {
+  min-height: 66px;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, #fff, #fffcfa);
+}
+
+.admin-customer-modal-panel-head h4 {
+  margin-top: 4px;
+  font-size: 14px;
+  letter-spacing: -.015em;
+}
+
+.admin-customer-modal-panel-head > span {
+  padding: 6px 9px;
+  background: #f5efeb;
+  font-size: 8px;
+}
+
+.admin-customer-recent-orders {
+  padding: 0 16px;
+}
+
+.admin-customer-order-row {
+  min-height: 66px;
+}
+
+.admin-customer-order-row > div:first-child strong,
+.admin-customer-order-total strong {
+  font-size: 11px;
+}
+
+.admin-customer-order-status {
+  padding: 6px 8px;
+  font-size: 8px;
+}
+
+.admin-customer-modal-empty {
+  position: relative;
+  display: grid;
+  min-height: 148px;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  padding: 64px 16px 22px;
+  color: transparent;
+  font-size: 0;
+}
+
+.admin-customer-modal-empty::before {
+  content: "";
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  background-color: #f5e8df;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23854932' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 2h12v20l-3-2-3 2-3-2-3 2V2Z'/%3E%3Cpath d='M9 7h6M9 11h6M9 15h4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 18px;
+  transform: translateX(-50%);
+}
+
+.admin-customer-modal-empty::after {
+  content: "Belum ada pesanan\A Riwayat transaksi pelanggan akan tampil di sini.";
+  color: #4d382f;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.7;
+  text-align: center;
+  white-space: pre-line;
+}
+
+.admin-customer-modal-footer-note {
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 14px;
+  border-color: #e3d5ca;
+  border-radius: 15px;
+  background: linear-gradient(135deg, #fff9f5, #fffdfb);
+}
+
+.admin-customer-modal-footer-note > span {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+}
+
+.admin-customer-modal-footer-note strong {
+  font-size: 11px;
+}
+
+.admin-customer-modal-footer-note p {
+  margin-top: 5px;
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.admin-customer-modal-footer-note button {
+  min-width: 154px;
+  min-height: 40px;
+  padding: 9px 14px;
+  border: 1px solid #713522;
+  border-radius: 11px;
+  color: #fff;
+  background: #7b3524;
+  box-shadow: 0 5px 14px rgba(123, 53, 36, .12);
+  font-size: 9px;
+  font-weight: 820;
+  transition: transform .16s ease, background .16s ease, box-shadow .16s ease;
+}
+
+.admin-customer-modal-footer-note button:hover {
+  background: #682c1e;
+  box-shadow: 0 7px 18px rgba(123, 53, 36, .18);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 760px) {
+  .admin-customer-modal-overlay {
+    padding: 0;
+  }
+
+  .admin-customer-modal {
+    width: 100%;
+    max-height: 94vh;
+    border-radius: 22px 22px 0 0;
+  }
+
+  .admin-customer-modal > header {
+    grid-template-columns: 46px minmax(0, 1fr) 40px;
+    min-height: 82px;
+    padding: 14px 14px;
+  }
+
+  .admin-customer-modal-avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    font-size: 14px;
+  }
+
+  .admin-customer-modal header h3 {
+    font-size: 18px;
+  }
+
+  .admin-customer-modal header > button[data-customer-modal-close] {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+
+  .admin-customer-modal-body {
+    max-height: calc(94vh - 82px);
+    padding: 12px;
+  }
+
+  .admin-customer-profile-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .admin-customer-profile-summary article {
+    min-height: 68px;
+    padding: 10px;
+  }
+
+  .admin-customer-profile-summary strong {
+    font-size: 12px;
+  }
+
+  .admin-customer-modal-footer-note {
+    grid-template-columns: 38px minmax(0, 1fr);
+    padding: 12px;
+  }
+
+  .admin-customer-modal-footer-note > span {
+    width: 38px;
+    height: 38px;
+  }
+
+  .admin-customer-modal-footer-note button {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-customer-modal > header {
+    grid-template-columns: 42px minmax(0, 1fr) 38px;
+    gap: 9px;
+  }
+
+  .admin-customer-modal-avatar {
+    width: 42px;
+    height: 42px;
+  }
+
+  .admin-customer-modal header h3 {
+    font-size: 16px;
+  }
+
+  .admin-customer-modal header p {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-customer-modal header > button[data-customer-modal-close] {
+    width: 38px;
+    height: 38px;
+  }
+}

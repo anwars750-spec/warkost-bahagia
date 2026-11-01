@@ -1,0 +1,48 @@
+@import "./owner-operational-health-close-precision.css";
+@import "./owner-stock-mobile-final.css";
+@import "./owner-dashboard-mobile-stability.css";
+@import "./owner-refresh-icon-precision.css";
+
+/* Owner Settings must behave like a dedicated Owner module, not append below Dashboard. */
+body.owner-settings-center-active #owner-dashboard-v3-host,
+body.owner-settings-center-active .owner-dashboard-v3 {
+  display: none !important;
+}
+
+body.owner-settings-center-active main > .heading {
+  display: none !important;
+}
+
+body.owner-settings-center-active #owner-settings-center-host {
+  display: block !important;
+  width: 100%;
+  margin-top: 0;
+}
+
+/* Owner does not need to manage raw coordinates manually.
+   Keep the inputs mounted for GPS/map synchronization and save logic,
+   but remove the technical latitude/longitude controls from the UI. */
+body.owner-settings-center-active
+  .owner-settings-inline-v2
+  [data-owner-settings-section="location"]
+  > .osc-fields.two {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+body.owner-settings-center-active main {
+  scroll-padding-top: 104px;
+}
+
+@media (max-width: 680px) {
+  body.owner-settings-center-active main {
+    scroll-padding-top: 86px;
+  }
+}

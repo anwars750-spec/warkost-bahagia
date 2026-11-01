@@ -1,0 +1,908 @@
+.store-hours-panel {
+  --soh-ink: #2f1e17;
+  --soh-muted: #76665b;
+  --soh-soft: #fffaf4;
+  --soh-line: #eadccd;
+  --soh-accent: #a44325;
+  --soh-accent-dark: #75301f;
+  --soh-accent-soft: #fff0e7;
+  --soh-green: #238653;
+  --soh-green-soft: #ebf8ef;
+  --soh-red: #a84a3f;
+  --soh-red-soft: #fff0ed;
+  width: min(100%, 1040px);
+  margin: 0 auto 30px;
+  overflow: hidden;
+  border: 1px solid rgba(150, 101, 68, 0.16);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 92% 4%, rgba(226, 164, 108, 0.13), transparent 15rem),
+    linear-gradient(180deg, #fffdf9 0%, #fffaf4 100%);
+  box-shadow:
+    0 24px 60px rgba(67, 39, 24, 0.09),
+    0 2px 8px rgba(67, 39, 24, 0.04);
+  color: var(--soh-ink);
+}
+
+.store-hours-icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+}
+
+.store-hours-head {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 310px);
+  align-items: center;
+  gap: 28px;
+  padding: clamp(24px, 3.4vw, 38px);
+  border-bottom: 1px solid rgba(150, 101, 68, 0.12);
+}
+
+.store-hours-head::after {
+  content: "";
+  position: absolute;
+  right: 28px;
+  bottom: -20px;
+  width: 118px;
+  height: 54px;
+  pointer-events: none;
+  opacity: 0.5;
+  background:
+    radial-gradient(circle at 22% 65%, rgba(164, 67, 37, 0.12) 0 7px, transparent 8px),
+    radial-gradient(circle at 48% 46%, rgba(201, 130, 73, 0.12) 0 10px, transparent 11px),
+    radial-gradient(circle at 76% 66%, rgba(164, 67, 37, 0.09) 0 6px, transparent 7px);
+}
+
+.store-hours-head-copy {
+  min-width: 0;
+}
+
+.store-hours-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #a4512e;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.17em;
+}
+
+.store-hours-eyebrow::before {
+  content: "";
+  width: 24px;
+  height: 2px;
+  border-radius: 999px;
+  background: #c2633c;
+}
+
+.store-hours-head h2 {
+  margin: 8px 0 7px;
+  color: #291a15;
+  font-size: clamp(1.75rem, 3.2vw, 2.45rem);
+  line-height: 1.08;
+  letter-spacing: -0.045em;
+}
+
+.store-hours-head p {
+  max-width: 620px;
+  margin: 0;
+  color: var(--soh-muted);
+  font-size: 0.94rem;
+  line-height: 1.6;
+}
+
+.store-hours-effective {
+  position: relative;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 17px 18px;
+  overflow: hidden;
+  border: 1px solid rgba(115, 87, 65, 0.12);
+  border-radius: 21px;
+  background: linear-gradient(140deg, #f9f2e8, #fffdf8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.store-hours-effective.open {
+  border-color: rgba(35, 134, 83, 0.16);
+  background: linear-gradient(140deg, #eaf8ef, #f8fdf9);
+}
+
+.store-hours-effective.closed {
+  border-color: rgba(168, 74, 63, 0.15);
+  background: linear-gradient(140deg, #fff0ed, #fff9f7);
+}
+
+.store-hours-effective-icon {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border-radius: 18px;
+  color: #a04b2c;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 8px 22px rgba(107, 66, 42, 0.08);
+}
+
+.store-hours-effective.open .store-hours-effective-icon {
+  color: var(--soh-green);
+}
+
+.store-hours-effective.closed .store-hours-effective-icon {
+  color: var(--soh-red);
+}
+
+.store-hours-effective-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.store-hours-status-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.store-hours-status-line i,
+.customer-store-status i {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 9px;
+  border-radius: 50%;
+  background: var(--soh-red);
+  box-shadow: 0 0 0 5px rgba(168, 74, 63, 0.1);
+}
+
+.store-hours-effective.open .store-hours-status-line i,
+.customer-store-status.open i {
+  background: var(--soh-green);
+  box-shadow: 0 0 0 5px rgba(35, 134, 83, 0.11);
+}
+
+.store-hours-effective small {
+  color: #77685e;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.store-hours-effective strong {
+  margin-top: 1px;
+  color: #3a261d;
+  font-size: 1.18rem;
+  line-height: 1.2;
+  letter-spacing: 0.035em;
+}
+
+.store-hours-effective.open strong {
+  color: #157544;
+}
+
+.store-hours-effective.closed strong {
+  color: #963f35;
+}
+
+.store-hours-form {
+  display: grid;
+  gap: 16px;
+  padding: clamp(18px, 3vw, 30px);
+}
+
+.store-hours-section {
+  display: grid;
+  gap: 20px;
+  padding: clamp(18px, 2.5vw, 25px);
+  border: 1px solid var(--soh-line);
+  border-radius: 21px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 10px 28px rgba(70, 45, 27, 0.035);
+}
+
+.store-hours-section-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.store-hours-section-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--soh-accent);
+  background: var(--soh-accent-soft);
+}
+
+.store-hours-section-icon .store-hours-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.store-hours-section-head h3 {
+  margin: 0;
+  color: #342018;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.store-hours-section-head p {
+  margin: 3px 0 0;
+  color: var(--soh-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.store-hours-panel fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.store-hours-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.store-hours-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.store-hours-toggle label {
+  position: relative;
+  display: grid;
+  grid-template-columns: 18px 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 98px;
+  padding: 16px;
+  overflow: hidden;
+  border: 1px solid #e2d5c7;
+  border-radius: 17px;
+  background: #fffdfb;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.store-hours-toggle label:hover {
+  border-color: #c9977c;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(92, 55, 33, 0.06);
+}
+
+.store-hours-toggle label.active.open {
+  border-color: #b55835;
+  background: linear-gradient(140deg, #fff1e8, #fffaf5);
+  box-shadow: 0 0 0 2px rgba(181, 88, 53, 0.07);
+}
+
+.store-hours-toggle label.active.closed {
+  border-color: #bd655b;
+  background: linear-gradient(140deg, #fff0ed, #fffafa);
+  box-shadow: 0 0 0 2px rgba(168, 74, 63, 0.065);
+}
+
+.store-hours-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.store-hours-radio-mark {
+  display: grid;
+  width: 17px;
+  height: 17px;
+  place-items: center;
+  border: 1.5px solid #c7b6aa;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.store-hours-toggle label.active .store-hours-radio-mark {
+  border: 5px solid var(--soh-accent);
+}
+
+.store-hours-toggle label.active.closed .store-hours-radio-mark {
+  border-color: var(--soh-red);
+}
+
+.store-hours-option-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 13px;
+}
+
+.store-hours-option-icon.open {
+  color: #a84424;
+  background: #fde4d5;
+}
+
+.store-hours-option-icon.closed {
+  color: #9b4036;
+  background: #ffe3df;
+}
+
+.store-hours-option-icon .store-hours-icon {
+  width: 21px;
+  height: 21px;
+}
+
+.store-hours-option-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.store-hours-option-copy strong {
+  color: #38231b;
+  font-size: 0.88rem;
+  line-height: 1.3;
+}
+
+.store-hours-option-copy small {
+  color: #806e62;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.store-hours-times {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.store-hours-times > label,
+.store-hours-reason {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.store-hours-field-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.store-hours-field-label > span:last-child {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.store-hours-field-label strong {
+  color: #39251c;
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+
+.store-hours-field-label small {
+  color: #8a786c;
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.store-hours-time-icon,
+.store-hours-reason-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  place-items: center;
+  border-radius: 10px;
+}
+
+.store-hours-time-icon.open {
+  color: #d98a22;
+  background: #fff6df;
+}
+
+.store-hours-time-icon.closed {
+  color: #ac684d;
+  background: #fbece6;
+}
+
+.store-hours-reason-icon {
+  color: #9c4629;
+  background: #f9e9df;
+}
+
+.store-hours-time-icon .store-hours-icon,
+.store-hours-reason-icon .store-hours-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.store-hours-times input,
+.store-hours-reason textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #dccdbf;
+  border-radius: 13px;
+  background: #fff;
+  color: #302019;
+  font: inherit;
+  outline: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.store-hours-times input {
+  min-height: 50px;
+  padding: 11px 13px;
+  font-size: 0.87rem;
+  font-weight: 720;
+}
+
+.store-hours-reason {
+  position: relative;
+}
+
+.store-hours-reason textarea {
+  min-height: 88px;
+  padding: 13px 54px 20px 13px;
+  resize: vertical;
+  font-size: 0.83rem;
+  line-height: 1.5;
+}
+
+.store-hours-times input:focus,
+.store-hours-reason textarea:focus {
+  border-color: #b75a37;
+  box-shadow: 0 0 0 3px rgba(183, 90, 55, 0.09);
+  background: #fffdfa;
+}
+
+.store-hours-times input:disabled,
+.store-hours-reason textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  background: #f8f3ed;
+}
+
+.store-hours-char-count {
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  color: #9a897e;
+  font-size: 0.65rem;
+  font-weight: 650;
+}
+
+.store-hours-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 12px 14px;
+  border: 1px solid #bfdaf1;
+  border-radius: 13px;
+  background: linear-gradient(140deg, #edf7ff, #f7fbff);
+  color: #245f91;
+}
+
+.store-hours-info > .store-hours-icon {
+  width: 19px;
+  height: 19px;
+  margin-top: 1px;
+}
+
+.store-hours-info > div {
+  display: grid;
+  gap: 2px;
+}
+
+.store-hours-info strong {
+  font-size: 0.75rem;
+}
+
+.store-hours-info span {
+  color: #44749a;
+  font-size: 0.69rem;
+  line-height: 1.45;
+}
+
+.store-hours-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid #e6d8c8;
+  border-radius: 16px;
+  background: #fffaf4;
+}
+
+.store-hours-summary > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 13px 16px;
+}
+
+.store-hours-summary > div + div {
+  border-left: 1px solid #eadfd3;
+}
+
+.store-hours-summary span {
+  color: #a2603a;
+  font-size: 0.61rem;
+  font-weight: 850;
+  letter-spacing: 0.11em;
+}
+
+.store-hours-summary strong {
+  overflow-wrap: anywhere;
+  color: #463024;
+  font-size: 0.79rem;
+  line-height: 1.35;
+}
+
+.store-hours-feedback {
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.store-hours-feedback.error {
+  border: 1px solid #efc1ba;
+  background: #fff0ed;
+  color: #8c382f;
+}
+
+.store-hours-feedback.success {
+  border: 1px solid #bfdfca;
+  background: #edf8f1;
+  color: #246c47;
+}
+
+.store-hours-actionbar {
+  position: sticky;
+  bottom: 14px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 13px 14px 13px 17px;
+  border: 1px solid rgba(190, 153, 124, 0.3);
+  border-radius: 16px;
+  background: rgba(255, 251, 246, 0.94);
+  box-shadow: 0 14px 32px rgba(70, 43, 27, 0.11);
+  backdrop-filter: blur(14px);
+}
+
+.store-hours-save-state {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.store-hours-save-state span {
+  color: #4b3429;
+  font-size: 0.73rem;
+  font-weight: 800;
+}
+
+.store-hours-save-state small {
+  color: #8b796d;
+  font-size: 0.64rem;
+  line-height: 1.35;
+}
+
+.store-hours-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 0 0 auto;
+}
+
+.store-hours-actions button {
+  min-height: 42px;
+  padding: 10px 15px;
+  border-radius: 11px;
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+.store-hours-actions .primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 166px;
+  border-color: #9d3f23;
+  background: linear-gradient(135deg, #a94727, #7f301f);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(127, 48, 31, 0.18);
+}
+
+.store-hours-actions .primary:hover:not(:disabled) {
+  border-color: #7c2f1f;
+  background: linear-gradient(135deg, #b44f2d, #8a3421);
+  transform: translateY(-1px);
+}
+
+.store-hours-actions .primary .store-hours-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.customer-store-status {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin: 8px 0 10px;
+  padding: 9px 13px;
+  border: 1px solid rgba(104, 69, 38, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.9);
+  color: #4c3322;
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+.customer-store-status.closed {
+  background: #fff2ef;
+  color: #7b352e;
+}
+
+.checkout-store-closed {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border: 1px solid #e3b4ac;
+  border-radius: 14px;
+  background: #fff2ef;
+  color: #71342d;
+}
+
+.checkout-store-closed strong,
+.checkout-store-closed span {
+  display: block;
+}
+
+@media (max-width: 820px) {
+  .store-hours-panel {
+    border-radius: 22px;
+  }
+
+  .store-hours-head {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .store-hours-effective {
+    grid-template-columns: 50px minmax(0, 1fr);
+    width: 100%;
+  }
+
+  .store-hours-effective-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 15px;
+  }
+
+  .store-hours-toggle {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .store-hours-panel {
+    width: 100%;
+    margin-bottom: 22px;
+    border-radius: 18px;
+    box-shadow: 0 14px 34px rgba(67, 39, 24, 0.07);
+  }
+
+  .store-hours-head {
+    padding: 20px 16px 17px;
+  }
+
+  .store-hours-head h2 {
+    margin-top: 6px;
+    font-size: 1.62rem;
+  }
+
+  .store-hours-head p {
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+
+  .store-hours-eyebrow {
+    font-size: 0.6rem;
+    letter-spacing: 0.13em;
+  }
+
+  .store-hours-effective {
+    padding: 13px 14px;
+    border-radius: 16px;
+  }
+
+  .store-hours-effective strong {
+    font-size: 1.05rem;
+  }
+
+  .store-hours-form {
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .store-hours-section {
+    gap: 16px;
+    padding: 15px;
+    border-radius: 16px;
+  }
+
+  .store-hours-section-head {
+    gap: 9px;
+  }
+
+  .store-hours-section-icon {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+  }
+
+  .store-hours-section-head h3 {
+    font-size: 0.92rem;
+  }
+
+  .store-hours-section-head p {
+    font-size: 0.7rem;
+  }
+
+  .store-hours-toggle {
+    gap: 8px;
+  }
+
+  .store-hours-toggle label {
+    grid-template-columns: 17px 39px minmax(0, 1fr);
+    gap: 10px;
+    min-height: 84px;
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .store-hours-option-icon {
+    width: 39px;
+    height: 39px;
+  }
+
+  .store-hours-option-copy strong {
+    font-size: 0.8rem;
+  }
+
+  .store-hours-option-copy small {
+    font-size: 0.66rem;
+  }
+
+  .store-hours-times {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .store-hours-field-label {
+    align-items: flex-start;
+    gap: 7px;
+  }
+
+  .store-hours-time-icon {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+  }
+
+  .store-hours-field-label strong {
+    font-size: 0.72rem;
+  }
+
+  .store-hours-field-label small {
+    display: none;
+  }
+
+  .store-hours-times input {
+    min-height: 45px;
+    padding: 9px;
+    font-size: 0.76rem;
+  }
+
+  .store-hours-info {
+    padding: 10px 11px;
+  }
+
+  .store-hours-info strong {
+    font-size: 0.7rem;
+  }
+
+  .store-hours-info span {
+    font-size: 0.63rem;
+  }
+
+  .store-hours-reason textarea {
+    min-height: 82px;
+    font-size: 0.74rem;
+  }
+
+  .store-hours-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .store-hours-summary > div {
+    padding: 10px 12px;
+  }
+
+  .store-hours-summary > div + div {
+    border-top: 1px solid #eadfd3;
+    border-left: 0;
+  }
+
+  .store-hours-actionbar {
+    bottom: 8px;
+    display: grid;
+    gap: 10px;
+    padding: 11px;
+    border-radius: 14px;
+  }
+
+  .store-hours-save-state {
+    padding: 0 2px;
+  }
+
+  .store-hours-save-state small {
+    display: none;
+  }
+
+  .store-hours-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: 8px;
+  }
+
+  .store-hours-actions button,
+  .store-hours-actions .primary {
+    width: 100%;
+    min-width: 0;
+    min-height: 43px;
+    padding: 9px 10px;
+    font-size: 0.68rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .store-hours-times {
+    grid-template-columns: 1fr;
+  }
+
+  .store-hours-actions {
+    grid-template-columns: 1fr;
+  }
+}

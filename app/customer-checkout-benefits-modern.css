@@ -1,0 +1,57 @@
+/*
+ * Customer checkout benefit facade.
+ *
+ * Loyalty/voucher state and actions still come from the React checkout markup,
+ * while their runtime converts the option lists into modal pickers. Once the
+ * modern runtime is present, hide the redundant legacy card heading and keep
+ * only the compact modern summary/action visible in the checkout flow.
+ */
+
+.loyalty-checkout-card:has(.warkost-loyalty-picker-trigger),
+.voucher-checkout-card:has(.warkost-voucher-picker-summary) {
+  padding: 16px !important;
+  border-color: rgba(120, 86, 62, 0.13) !important;
+  border-radius: 18px !important;
+  background: linear-gradient(145deg, #fffdf9, #fffaf5) !important;
+  box-shadow: 0 9px 24px rgba(70, 44, 31, 0.055) !important;
+}
+
+.loyalty-checkout-card:has(.warkost-loyalty-picker-trigger)
+  > .checkout-card-heading,
+.voucher-checkout-card:has(.warkost-voucher-picker-summary)
+  > .checkout-card-heading {
+  display: none !important;
+}
+
+.loyalty-checkout-card:has(.warkost-loyalty-picker-trigger) .loyalty-summary {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.voucher-checkout-card:has(.warkost-voucher-picker-summary)
+  .warkost-voucher-picker-summary {
+  margin-top: 0 !important;
+  border: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+/* Legacy option rows are internal state/control scaffolding only. The runtime
+ * exposes them through the modern popup picker when the user asks to choose. */
+.loyalty-checkout-card:not(.is-loyalty-picker-open)
+  .loyalty-reward-list.warkost-loyalty-picker-list,
+.voucher-checkout-card:not(.is-voucher-picker-open)
+  .voucher-list.warkost-voucher-picker-list {
+  display: none !important;
+}
+
+@media (max-width: 620px) {
+  .loyalty-checkout-card:has(.warkost-loyalty-picker-trigger),
+  .voucher-checkout-card:has(.warkost-voucher-picker-summary) {
+    padding: 14px !important;
+    border-radius: 16px !important;
+  }
+}

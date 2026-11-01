@@ -1,0 +1,427 @@
+/* Admin cash control — simple operator shift + COD custody. */
+.admin-cash-nav {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-cash-nav-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.admin-cash-nav-badge {
+  display: inline-grid;
+  min-width: 18px;
+  height: 18px;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  color: #fff;
+  background: #b14f2c;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.admin-cash-nav-badge[hidden] {
+  display: none;
+}
+
+.admin-cash-control-open .admin-nav > .admin-nav-active:not([data-admin-nav="Setoran"]) {
+  color: #3f2b24 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.admin-cash-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10040;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(35, 22, 17, 0.5);
+  backdrop-filter: blur(8px);
+}
+
+.admin-cash-panel {
+  width: min(960px, 96vw);
+  max-height: min(860px, 92vh);
+  overflow: auto;
+  border: 1px solid #eadfd4;
+  border-radius: 24px;
+  background: #fffdfb;
+  box-shadow: 0 32px 90px rgba(48, 27, 19, 0.2);
+}
+
+.admin-cash-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 26px 28px 22px;
+  border-bottom: 1px solid #efe5dc;
+}
+
+.admin-cash-header small,
+.admin-cash-copy > span,
+.admin-cash-shiftbar small,
+.admin-cash-section-title small {
+  color: #a05b3f;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+}
+
+.admin-cash-header h2,
+.admin-cash-copy h3,
+.admin-cash-section-title h3 {
+  margin: 4px 0 0;
+  color: #2d1a14;
+}
+
+.admin-cash-header h2 {
+  font-size: 26px;
+}
+
+.admin-cash-header p,
+.admin-cash-copy p {
+  margin: 6px 0 0;
+  color: #746861;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.admin-cash-header > button {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #e5d8cc;
+  border-radius: 12px;
+  color: #634035;
+  background: #fff;
+  font-size: 22px;
+}
+
+.admin-cash-feedback {
+  margin: 18px 28px 0;
+  padding: 11px 13px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-cash-feedback.error {
+  color: #9c312d;
+  background: #fff0ee;
+}
+
+.admin-cash-feedback.success {
+  color: #1d7643;
+  background: #edf9f1;
+}
+
+.admin-cash-loading,
+.admin-cash-empty {
+  padding: 28px;
+  color: #766a62;
+  text-align: center;
+  font-size: 13px;
+}
+
+.admin-cash-setup,
+.admin-cash-start {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.72fr);
+  gap: 30px;
+  padding: 30px 28px 34px;
+}
+
+.admin-cash-copy {
+  padding: 14px 4px;
+}
+
+.admin-cash-copy h3 {
+  font-size: 23px;
+}
+
+.admin-cash-setup form,
+.admin-cash-start form,
+.admin-cash-form {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid #eee3d9;
+  border-radius: 18px;
+  background: #fffaf6;
+}
+
+.admin-cash-panel label {
+  display: grid;
+  gap: 7px;
+  color: #59463e;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.admin-cash-panel input,
+.admin-cash-panel select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #e1d4c8;
+  border-radius: 11px;
+  outline: none;
+  color: #2f1e18;
+  background: #fff;
+}
+
+.admin-cash-panel input:focus,
+.admin-cash-panel select:focus {
+  border-color: #b56e50;
+  box-shadow: 0 0 0 3px rgba(181, 110, 80, 0.12);
+}
+
+.admin-cash-primary {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 12px;
+  color: #fff;
+  background: linear-gradient(135deg, #7c3524, #5d2117);
+  box-shadow: 0 10px 22px rgba(93, 33, 23, 0.16);
+  font-size: 12px;
+  font-weight: 820;
+}
+
+.admin-cash-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.admin-cash-active {
+  padding: 24px 28px 32px;
+}
+
+.admin-cash-shiftbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid #e9ded2;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fffaf5, #fffdfb);
+}
+
+.admin-cash-shiftbar > div {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-cash-shiftbar strong {
+  color: #2b1914;
+  font-size: 18px;
+}
+
+.admin-cash-shiftbar span:not(.admin-cash-live) {
+  color: #7a6c64;
+  font-size: 11px;
+}
+
+.admin-cash-live {
+  padding: 7px 10px;
+  border-radius: 999px;
+  color: #1b7742;
+  background: #e9f8ee;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.admin-cash-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.admin-cash-kpis article {
+  display: grid;
+  gap: 4px;
+  min-height: 100px;
+  padding: 16px;
+  border: 1px solid #eee4da;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.admin-cash-kpis article > span {
+  color: #74645d;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.admin-cash-kpis article > strong {
+  color: #271711;
+  font-size: 22px;
+}
+
+.admin-cash-kpis article > small {
+  color: #8d7f77;
+  font-size: 10px;
+}
+
+.admin-cash-kpis article.has-issue {
+  border-color: #efc6c0;
+  background: #fff7f6;
+}
+
+.admin-cash-rule {
+  display: grid;
+  gap: 3px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 13px;
+  color: #664638;
+  background: #fbf2ea;
+  font-size: 11px;
+}
+
+.admin-cash-rule strong {
+  font-size: 11px;
+}
+
+.admin-cash-receive {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+.admin-cash-receive em {
+  display: inline-grid;
+  min-width: 20px;
+  height: 20px;
+  place-items: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  color: #672719;
+  background: #fff0e7;
+  font-size: 10px;
+  font-style: normal;
+}
+
+.admin-cash-history {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid #eee5dd;
+}
+
+.admin-cash-section-title {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-cash-section-title h3 {
+  font-size: 17px;
+}
+
+.admin-cash-section-title > strong {
+  color: #2f1b14;
+  font-size: 18px;
+}
+
+.admin-cash-receipt-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.admin-cash-receipt-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border: 1px solid #eee5dd;
+  border-radius: 13px;
+  background: #fff;
+}
+
+.admin-cash-receipt-list article > div {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-cash-receipt-list article > div:last-child {
+  text-align: right;
+}
+
+.admin-cash-receipt-list strong {
+  color: #2d1b15;
+  font-size: 12px;
+}
+
+.admin-cash-receipt-list small {
+  color: #8a7b73;
+  font-size: 10px;
+}
+
+.admin-cash-receipt-list small.overage {
+  color: #1b7c45;
+  font-weight: 800;
+}
+
+/* Overage is valid: visually separate from shortage/error. */
+.cod-batch-amount-grid article.is-overage {
+  border-color: #cfe9d8 !important;
+  background: #f1fbf4 !important;
+}
+
+.cod-batch-amount-grid article.is-overage strong,
+.cod-batch-amount-grid article.is-overage small,
+.cod-batch-list small.overage {
+  color: #197845 !important;
+}
+
+@media (max-width: 760px) {
+  .admin-cash-overlay {
+    align-items: end;
+    padding: 0;
+  }
+
+  .admin-cash-panel {
+    width: 100%;
+    max-height: 94vh;
+    border-radius: 22px 22px 0 0;
+  }
+
+  .admin-cash-header,
+  .admin-cash-active,
+  .admin-cash-setup,
+  .admin-cash-start {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .admin-cash-setup,
+  .admin-cash-start {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .admin-cash-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-cash-kpis article {
+    min-height: 82px;
+  }
+}

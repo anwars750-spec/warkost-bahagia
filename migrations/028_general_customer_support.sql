@@ -1,0 +1,2 @@
+ALTER TABLE conversations
+  MODIFY COLUMN order_id BIGINT UNSIGNED NULL;
