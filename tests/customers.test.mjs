@@ -9,7 +9,7 @@ process.env.DATABASE_PATH = path.join(
 );
 process.env.SESSION_SECRET = "customer-test-secret-longer-than-32-characters";
 const { db } = await import("../lib/db.mjs");
-const { listCustomers, setCustomerActive } =
+const { listCustomers, listOwnerCustomers, setCustomerActive } =
   await import("../lib/customers.mjs");
 const { createOrder, changeStatus } = await import("../lib/domain.mjs");
 const { issueSession, currentUser, hashPassword } =
@@ -32,6 +32,10 @@ for (const role of ["OWNER", "MANAGER", "KITCHEN", "DRIVER"])
   database
     .prepare("INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,?)")
     .run(role, role.toLowerCase() + "@customer.test", "x", role);
+const guestId = Number(
+  insert.run("Guest Checkout", "checkout-1@guest.warkost.invalid", "x")
+    .lastInsertRowid,
+);
 database.prepare("INSERT INTO categories(name) VALUES('Menu')").run();
 database
   .prepare(
@@ -72,6 +76,20 @@ test("admin dapat mencari tanpa membocorkan password dan role lain ditolak", asy
   assert.equal(second.customers.length, 2);
   assert.equal(second.nextCursor, null);
   assert.ok(second.customers.every((entry) => entry.id < first.nextCursor));
+});
+
+test("guest checkout tidak masuk database member Admin atau Owner", async () => {
+  const adminList = await listCustomers(admin, "Guest Checkout");
+  assert.equal(adminList.customers.length, 0);
+
+  const ownerList = await listOwnerCustomers(owner, { query: "Guest Checkout" });
+  assert.equal(ownerList.customers.length, 0);
+  assert.equal(ownerList.summary.total, 52);
+
+  await assert.rejects(
+    setCustomerActive(owner, guestId, false),
+    (error) => error.status === 404,
+  );
 });
 
 test("hanya Owner dapat mengubah status aktif customer dan sesi dicabut", async () => {
