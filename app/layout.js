@@ -141,6 +141,7 @@ import ManagerNotificationPopover from "./ManagerNotificationPopover";
 import ManagerNotificationOutsideClose from "./ManagerNotificationOutsideClose";
 import RealtimeOperationsRuntime from "./RealtimeOperationsRuntime";
 import PreparingEtaRuntime from "./PreparingEtaRuntime";
+import AdminEtaExtensionRuntime from "./AdminEtaExtensionRuntime";
 import DeliveryHistoryRuntime from "./DeliveryHistoryRuntime";
 import MobileForegroundAlertBoost from "./MobileForegroundAlertBoost";
 import CustomerQrisRuntime from "./CustomerQrisRuntime";
@@ -158,6 +159,7 @@ export default function RootLayout({ children }) {
         <CustomerQrisRuntime />
         <RealtimeOperationsRuntime />
         <PreparingEtaRuntime />
+        <AdminEtaExtensionRuntime />
         <DeliveryHistoryRuntime />
         <MobileForegroundAlertBoost />
         <DriverRuntimeBootstrap />
