@@ -1,3 +1,4 @@
+import "./push-notifications.css";
 import "./style.css";
 import "./admin-ui.css";
 import "./admin-icons.css";

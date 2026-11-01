@@ -1,5 +1,6 @@
 "use client";
 import Image from "next/image";
+import PushNotificationSettings from "./PushNotificationSettings";
 import CustomerHelpRoutingRuntime from "./CustomerHelpRoutingRuntime";
 import CustomerGeneralSupportRuntime from "./CustomerGeneralSupportRuntime";
 import CustomerLocationLauncher from "./CustomerLocationLauncher";
@@ -1706,6 +1707,7 @@ export default function App() {
           ) : null}
         </nav>
       </header>
+      <PushNotificationSettings user={user} onOpen={() => { setOverlay(null); setView("orders"); }} />
       <main
         data-admin-view={role === "ADMIN" ? view : undefined}
         data-kitchen-view={role === "KITCHEN" ? view : undefined}

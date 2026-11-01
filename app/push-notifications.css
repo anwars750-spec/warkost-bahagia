@@ -1,0 +1,31 @@
+.push-settings {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  max-width: 1180px;
+  margin: 0.6rem auto;
+  padding: 0.65rem 1rem;
+  border: 1px solid #dae8dd;
+  border-radius: 12px;
+  background: #f5faf6;
+  font-size: 0.85rem;
+}
+.push-settings p {
+  margin: 0.2rem 0;
+}
+.push-settings button {
+  margin-left: auto;
+  white-space: normal;
+}
+.push-settings [role="status"] {
+  flex-basis: 100%;
+}
+@media (max-width: 600px) {
+  .push-settings {
+    margin: 0.5rem 0.75rem;
+  }
+  .push-settings button {
+    margin-left: 0;
+  }
+}

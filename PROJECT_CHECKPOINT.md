@@ -1,5 +1,20 @@
 # Warkost Bahagia â€” Project Checkpoint
 
+## Push Notification V1 - 2026-11-01
+
+Status: **IMPLEMENTED / LOCALLY VERIFIED / CONTROL CENTER REVIEW REQUIRED**. No new Product Owner UAT PASS claim.
+
+- Branch: `work/push-notification-v1`, isolated worktree; fetched base `22d816cc8c372a9ab9222e491985ecf090a8786e` from the stable branch. [Final Operations P0 checkpoint](FINAL_OPERATIONS_P0_UAT_2026-11-01.md) remains accepted; Driver proof, QRIS PAID/QR visibility, Admin ETA +5 and migration 034 implementation are unchanged.
+- Audit reused existing notifications database and authoritative action/SSE dispatcher. No prior manifest, service worker, PushManager/VAPID, subscription storage or browser-push preference existed. Existing audio/device preferences remain unchanged.
+- Adds standard service worker push/click handlers, manifest/brand icons, explicit user-gesture enable/disable UI, secure /api/push lifecycle and receipt authorization, server-only VAPID and pinned web-push 3.6.7. Nothing prompts or subscribes on first load.
+- Migration **035_web_push_v1.sql** adds push_subscriptions and semantic push_deliveries claims, with SQLite compatibility/schema verification. Canonical endpoint uniqueness/ownership, session binding, role authorization, CSRF/JSON/rate limiting and browser-provider endpoint allowlisting protect persistence and delivery.
+- Customer: received/confirmed/preparing/pickup-ready/delivery-started/completed/QRIS PAID. Admin: new order and QRIS PAID. Kitchen: confirmed food work only. Driver: available/assigned delivery. Manager/Owner push deferred; their SSE/in-app behavior remains.
+- Push is queued after committed action/SSE publication, with four tasks/500 queued events, bounded provider timeout/TTL, persistent deduplication and safe 404/410 disabling. Provider failure cannot roll back order/payment or suppress SSE. Checkout provenance comes from committed result, not ignored request fields. No raw subscription/key/provider error logging.
+- Worker validates the current bound session before displaying; logout/expiry/account switching cannot show another account's queued payload. Click stays same-origin and opens the existing role orders area. No offline/auth/API caching or SSE replacement.
+- Final full unit suite **587/587 PASS**; focused push/SSE safety **39/39 PASS**. Browser **66 unique PASS**: combined 64/64 plus actual root-scope worker installation 2/2. Final production build **PASS / 35/35 static pages**; 12 client artifacts pass private-VAPID isolation inspection. Native disposable MySQL: **35 migrations/schema PASS**, duplicate subscription one row, **20 concurrent claims -> 1 accepted**, unsubscribe PASS.
+- Real provider-to-OS delivery/iOS device behavior are not claimed verified. Three optional server variables (WEB_PUSH_VAPID_PUBLIC_KEY, WEB_PUSH_VAPID_PRIVATE_KEY, WEB_PUSH_CONTACT) remain unprovisioned in staging; blank config safely leaves push unavailable. Test key pairs were process-only. Persistent retries/retention automation are deferred; queue is best-effort, not a durable outbox.
+- No branch push, merge, staging/production deployment, production-secret or MySQL durability action. Await Control Center review before publication/staging release/UAT. Full 14-part handoff, deployment instructions and exact PO checklist: [PUSH_NOTIFICATION_V1.md](PUSH_NOTIFICATION_V1.md).
+
 ## Auth Path Hardening V1 - 2026-10-30
 
 Status: **IMPLEMENTED / VERIFIED LOCALLY; STAGING TIMINGS AND PRODUCT OWNER UAT REQUIRED**.
