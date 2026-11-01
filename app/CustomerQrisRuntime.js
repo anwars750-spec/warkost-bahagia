@@ -215,7 +215,11 @@ export default function CustomerQrisRuntime() {
               const result = await response.json();
               if (!response.ok)
                 throw new Error(result.error || "Pembayaran demo gagal");
-              button.textContent = "Pembayaran berhasil ✓";
+
+              // Payment sudah terverifikasi. QR tidak boleh tetap terlihat setelah PAID.
+              // Biarkan code tetap ditandai processed sampai React mengganti state payment,
+              // sehingga MutationObserver tidak merender QR lama kembali.
+              container.remove();
               window.dispatchEvent(
                 new CustomEvent("warkost:qris-demo-paid", {
                   detail: { orderId, payment: result.payment || null },
@@ -237,7 +241,23 @@ export default function CustomerQrisRuntime() {
       code.insertAdjacentElement("afterend", container);
     };
 
+    const removeStaleRuntimeViews = () => {
+      document
+        .querySelectorAll(`.qris-payment-panel > .${RUNTIME_CLASS}`)
+        .forEach((container) => {
+          const panel = container.parentElement;
+          const pendingCode = panel?.querySelector(
+            ':scope > code[data-qris-runtime-processed="true"]',
+          );
+          if (!pendingCode) container.remove();
+        });
+    };
+
     const scan = () => {
+      // React hanya merender payload QR saat payment PENDING. Jika payment berubah
+      // menjadi PAID, code tersebut hilang; runtime QR yang kita sisipkan harus
+      // ikut dibersihkan supaya tidak tertinggal sebagai DOM di luar React.
+      removeStaleRuntimeViews();
       document
         .querySelectorAll(
           '.qris-payment-panel > code:not([data-qris-runtime-processed="true"])',
