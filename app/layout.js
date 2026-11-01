@@ -49,6 +49,7 @@ import "./customer-quantity-unit-final.css";
 import "./customer-location-picker-ux.css";
 import "./customer-location-picker-warkost-polish.css";
 import "./customer-banner-carousel.css";
+import "./customer-checkout-benefits-modern.css";
 import "./manager-control-center.css";
 import "./manager-dashboard-ui-polish.css";
 import "./manager-mobile-nav-single-row.css";
@@ -142,6 +143,7 @@ import RealtimeOperationsRuntime from "./RealtimeOperationsRuntime";
 import PreparingEtaRuntime from "./PreparingEtaRuntime";
 import DeliveryHistoryRuntime from "./DeliveryHistoryRuntime";
 import MobileForegroundAlertBoost from "./MobileForegroundAlertBoost";
+import CustomerQrisRuntime from "./CustomerQrisRuntime";
 
 export const metadata = {
   title: "Warkost Bahagia",
@@ -153,6 +155,7 @@ export default function RootLayout({ children }) {
     <html lang="id">
       <body>
         {children}
+        <CustomerQrisRuntime />
         <RealtimeOperationsRuntime />
         <PreparingEtaRuntime />
         <DeliveryHistoryRuntime />
