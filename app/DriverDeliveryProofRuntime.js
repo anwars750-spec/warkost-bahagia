@@ -17,6 +17,14 @@ function proofTarget(orderIdValue) {
   return { orderId, code: `WB${String(orderId).padStart(6, "0")}` };
 }
 
+async function responsePayload(response) {
+  const contentType = String(response.headers.get("content-type") || "");
+  if (contentType.includes("application/json"))
+    return response.json().catch(() => ({}));
+  const text = await response.text().catch(() => "");
+  return { error: text && text.length < 240 ? text : "" };
+}
+
 export default function DriverDeliveryProofRuntime() {
   const [target, setTarget] = useState(null);
   const [file, setFile] = useState(null);
@@ -106,9 +114,14 @@ export default function DriverDeliveryProofRuntime() {
         body: form,
         credentials: "same-origin",
       });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok)
-        throw new Error(data.error || "Gagal menyimpan bukti pengantaran");
+      const data = await responsePayload(response);
+      if (!response.ok) {
+        if (response.status === 413)
+          throw new Error(
+            "Foto ditolak server karena ukuran request terlalu besar. Pilih foto maksimal 8 MB lalu coba lagi.",
+          );
+        throw new Error(data.error || `Gagal menyimpan bukti pengantaran (HTTP ${response.status})`);
+      }
       window.dispatchEvent(
         new CustomEvent("warkost:delivery-proof-completed", {
           detail: { orderId: target.orderId },
