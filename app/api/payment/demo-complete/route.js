@@ -24,8 +24,11 @@ const out = (data, status = 200) =>
     headers: { "Cache-Control": "no-store" },
   });
 
+const DEMO_DEPLOYMENTS = new Set(["demo", "staging", "test"]);
+
 function requireDemoSimulation() {
-  if (process.env.DEPLOYMENT_ENV !== "demo")
+  const deployment = String(process.env.DEPLOYMENT_ENV || "").toLowerCase();
+  if (!DEMO_DEPLOYMENTS.has(deployment))
     throw new DomainError("Endpoint tidak ditemukan", 404);
   const configuration = paymentProviderConfiguration();
   if (
