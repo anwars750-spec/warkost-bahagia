@@ -1,10 +1,11 @@
 import { test, expect } from "@playwright/test";
 test.use({ trace: "off", video: "off", screenshot: "off" });
-async function setup(page, { deny = false, fail = false } = {}) {
+
+async function setup(page, { deny = false, fail = false, granted = false } = {}) {
   await page.addInitScript(
-    ({ deny }) => {
+    ({ deny, granted }) => {
       const state = (window.pushFixture = {
-        permission: "default",
+        permission: granted ? "granted" : "default",
         requests: 0,
         registers: 0,
         subscribes: 0,
@@ -68,7 +69,7 @@ async function setup(page, { deny = false, fail = false } = {}) {
         },
       });
     },
-    { deny },
+    { deny, granted },
   );
   await page.route("**/api/push", async (route) => {
     const body = route.request().postDataJSON();
@@ -93,10 +94,7 @@ async function setup(page, { deny = false, fail = false } = {}) {
     headers: { Origin: origin },
   });
   expect(result.status()).toBe(200);
-  // Use the genuine token under the existing local HTTP-only browser bridge.
-  const cookie = result
-    .headers()
-    ["set-cookie"]?.match(/wb_session=([^;]+)/)?.[1];
+  const cookie = result.headers()["set-cookie"]?.match(/wb_session=([^;]+)/)?.[1];
   expect(Boolean(cookie)).toBe(true);
   await page.context().addCookies([
     {
@@ -109,24 +107,37 @@ async function setup(page, { deny = false, fail = false } = {}) {
     },
   ]);
   await page.goto("/");
-  await expect(
-    page.getByRole("button", { name: "Aktifkan Notifikasi", exact: true }),
-  ).toBeVisible();
 }
-test("permission is requested only by explicit click; enable and unsubscribe update visible state", async ({
+
+async function openAccount(page) {
+  await page.getByRole("button", { name: "Akun", exact: true }).first().click();
+  await expect(page.locator(".quick-account-menu")).toBeVisible();
+}
+
+test("first visit shows a compact Warkost prompt but browser permission waits for explicit click", async ({
   page,
 }) => {
   await setup(page);
+  await expect(
+    page.getByRole("dialog", { name: "Aktifkan notifikasi Warkost" }),
+  ).toBeVisible();
   expect(await page.evaluate(() => window.pushFixture.requests)).toBe(0);
   expect(await page.evaluate(() => window.pushFixture.registers)).toBe(0);
   await page
-    .getByRole("button", { name: "Aktifkan Notifikasi", exact: true })
+    .getByRole("dialog", { name: "Aktifkan notifikasi Warkost" })
+    .getByRole("button", { name: "Aktifkan", exact: true })
     .click();
+  await expect(
+    page.getByRole("dialog", { name: "Aktifkan notifikasi Warkost" }),
+  ).toHaveCount(0);
+  expect(await page.evaluate(() => window.pushFixture.requests)).toBe(1);
+  expect(await page.evaluate(() => window.pushFixture.subscribes)).toBe(1);
+  expect(await page.locator(".push-settings").count()).toBe(0);
+
+  await openAccount(page);
   await expect(
     page.getByRole("button", { name: "Nonaktifkan Notifikasi", exact: true }),
   ).toBeVisible();
-  expect(await page.evaluate(() => window.pushFixture.requests)).toBe(1);
-  expect(await page.evaluate(() => window.pushFixture.subscribes)).toBe(1);
   await page
     .getByRole("button", { name: "Nonaktifkan Notifikasi", exact: true })
     .click();
@@ -135,36 +146,80 @@ test("permission is requested only by explicit click; enable and unsubscribe upd
   ).toBeVisible();
   expect(await page.evaluate(() => window.pushFixture.unsubscribes)).toBe(1);
 });
-test("denied permission is clear and never prompts repeatedly", async ({
+
+test("permission already granted silently restores push without another browser prompt", async ({
+  page,
+}) => {
+  await setup(page, { granted: true });
+  await expect(
+    page.getByRole("dialog", { name: "Aktifkan notifikasi Warkost" }),
+  ).toHaveCount(0);
+  await expect
+    .poll(() => page.evaluate(() => window.pushFixture.subscribes))
+    .toBe(1);
+  expect(await page.evaluate(() => window.pushFixture.requests)).toBe(0);
+  await openAccount(page);
+  await expect(
+    page.getByRole("button", { name: "Nonaktifkan Notifikasi", exact: true }),
+  ).toBeVisible();
+});
+
+test("choosing Nanti dismisses the Warkost prompt without asking browser permission", async ({
+  page,
+}) => {
+  await setup(page);
+  await page
+    .getByRole("dialog", { name: "Aktifkan notifikasi Warkost" })
+    .getByRole("button", { name: "Nanti", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "Aktifkan notifikasi Warkost" }),
+  ).toHaveCount(0);
+  expect(await page.evaluate(() => window.pushFixture.requests)).toBe(0);
+  expect(await page.evaluate(() => window.pushFixture.subscribes)).toBe(0);
+});
+
+test("denied permission is not repeatedly requested and guidance moves to account settings", async ({
   page,
 }) => {
   await setup(page, { deny: true });
-  for (let i = 0; i < 2; i++)
-    await page
-      .getByRole("button", { name: "Aktifkan Notifikasi", exact: true })
-      .click();
+  await page
+    .getByRole("dialog", { name: "Aktifkan notifikasi Warkost" })
+    .getByRole("button", { name: "Aktifkan", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "Aktifkan notifikasi Warkost" }),
+  ).toHaveCount(0);
+  expect(await page.evaluate(() => window.pushFixture.requests)).toBe(1);
+  expect(await page.evaluate(() => window.pushFixture.subscribes)).toBe(0);
+  await openAccount(page);
   await expect(
     page.getByRole("status").filter({ hasText: "Izin notifikasi diblokir" }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Aktifkan Notifikasi", exact: true }),
+  ).toHaveCount(0);
   expect(await page.evaluate(() => window.pushFixture.requests)).toBe(1);
-  expect(await page.evaluate(() => window.pushFixture.subscribes)).toBe(0);
 });
+
 test("backend failure cannot claim active push and browser subscription is released", async ({
   page,
 }) => {
   await setup(page, { fail: true });
   await page
-    .getByRole("button", { name: "Aktifkan Notifikasi", exact: true })
+    .getByRole("dialog", { name: "Aktifkan notifikasi Warkost" })
+    .getByRole("button", { name: "Aktifkan", exact: true })
     .click();
   await expect(
     page
       .getByRole("status")
       .filter({ hasText: "Notifikasi belum dapat diaktifkan" }),
   ).toBeVisible();
+  expect(await page.evaluate(() => window.pushFixture.unsubscribes)).toBe(1);
+  await openAccount(page);
   await expect(
     page.getByRole("button", { name: "Nonaktifkan Notifikasi", exact: true }),
   ).toHaveCount(0);
-  expect(await page.evaluate(() => window.pushFixture.unsubscribes)).toBe(1);
 });
 
 test("actual service worker activates with root scope and no notification permission request", async ({
