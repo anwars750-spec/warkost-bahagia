@@ -1,31 +1,144 @@
-.push-settings {
+.push-permission-prompt {
+  position: fixed;
+  z-index: 1400;
+  top: 88px;
+  right: 18px;
+  width: min(360px, calc(100vw - 28px));
+  padding: 16px;
+  border: 1px solid rgba(91, 62, 46, 0.16);
+  border-radius: 18px;
+  background: #fffdf9;
+  box-shadow: 0 18px 48px rgba(64, 37, 24, 0.18);
+  color: #2f1c15;
+}
+
+.push-permission-prompt strong {
+  display: block;
+  padding-right: 24px;
+  font-size: 1rem;
+}
+
+.push-permission-prompt p {
+  margin: 6px 0 0;
+  color: #6f5a4f;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.push-permission-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 10px;
+  border-radius: 12px;
+  background: #f7eee5;
+  font-size: 1.15rem;
+}
+
+.push-permission-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #78645a;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.push-permission-close:hover {
+  background: #f7eee5;
+}
+
+.push-permission-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.push-permission-actions button {
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid #d8c6b8;
+  border-radius: 10px;
+  background: #fff;
+  color: #3a241b;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.push-permission-actions button:first-child {
+  border-color: #7e3f22;
+  background: #7e3f22;
+  color: #fff;
+}
+
+.push-permission-actions button:disabled,
+.push-account-setting button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.push-permission-prompt [role="status"] {
+  margin-top: 10px;
+  color: #8a3c2b;
+}
+
+.push-account-setting {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 12px 10px 4px;
+  border-top: 1px solid rgba(91, 62, 46, 0.12);
+}
+
+.push-account-setting > div {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 0.6rem 1rem;
-  max-width: 1180px;
-  margin: 0.6rem auto;
-  padding: 0.65rem 1rem;
-  border: 1px solid #dae8dd;
-  border-radius: 12px;
-  background: #f5faf6;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.push-account-setting strong {
   font-size: 0.85rem;
 }
-.push-settings p {
-  margin: 0.2rem 0;
+
+.push-account-setting small {
+  color: #6f5a4f;
+  font-size: 0.76rem;
+  white-space: nowrap;
 }
-.push-settings button {
-  margin-left: auto;
-  white-space: normal;
+
+.push-account-setting button {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid #d8c6b8;
+  border-radius: 10px;
+  background: #fff;
+  color: #3a241b;
+  font-weight: 700;
+  cursor: pointer;
 }
-.push-settings [role="status"] {
-  flex-basis: 100%;
+
+.push-account-setting p {
+  margin: 0;
+  color: #6f5a4f;
+  font-size: 0.76rem;
+  line-height: 1.4;
 }
+
 @media (max-width: 600px) {
-  .push-settings {
-    margin: 0.5rem 0.75rem;
-  }
-  .push-settings button {
-    margin-left: 0;
+  .push-permission-prompt {
+    top: auto;
+    right: 12px;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    width: calc(100vw - 24px);
+    border-radius: 16px;
   }
 }
