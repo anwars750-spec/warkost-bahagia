@@ -170,7 +170,7 @@ test("choosing Nanti dismisses the Warkost prompt without asking browser permiss
   await setup(page);
   await page
     .getByRole("dialog", { name: "Aktifkan notifikasi Warkost" })
-    .getByRole("button", { name: "Nanti", exact: true })
+    .getByText("Nanti", { exact: true })
     .click();
   await expect(
     page.getByRole("dialog", { name: "Aktifkan notifikasi Warkost" }),
