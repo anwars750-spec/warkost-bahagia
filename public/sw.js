@@ -6,6 +6,12 @@ self.addEventListener("activate", (event) =>
   event.waitUntil(self.clients.claim()),
 );
 function safeTarget(data) {
+  if (data?.eventType === "CHAT_MESSAGE") {
+    const conversationId = Number(data.conversationId);
+    return Number.isSafeInteger(conversationId) && conversationId > 0
+      ? `/?conversationId=${conversationId}`
+      : "/";
+  }
   const id = Number(data?.orderId);
   return Number.isSafeInteger(id) && id > 0 ? `/?pushOrder=${id}` : "/";
 }
@@ -35,9 +41,15 @@ self.addEventListener("push", (event) => {
       await self.registration.showNotification("Warkost Bahagia", {
         body: data.body.slice(0, 180),
         icon: "/push-icon-192.png",
-        tag: `warkost:${data.eventType}:${data.orderId}`,
+        tag:
+          data.eventType === "CHAT_MESSAGE"
+            ? `warkost:CHAT_MESSAGE:${data.conversationId}:${data.messageId}`
+            : `warkost:${data.eventType}:${data.orderId}`,
         data: {
           orderId: data.orderId,
+          eventType: data.eventType,
+          conversationId: data.conversationId,
+          messageId: data.messageId,
           deliveryKey: data.deliveryKey,
           url: safeTarget(data),
         },

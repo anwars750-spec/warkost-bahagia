@@ -1,5 +1,17 @@
 # Warkost Bahagia â€” Project Checkpoint
 
+## Push Notification V1 — Chat Web Push fix — 2026-11-02
+
+Status: **IMPLEMENTED / LOCALLY VERIFIED / CONTROL CENTER REVIEW REQUIRED**. No new Product Owner UAT PASS claim.
+
+- Branch `work/push-notification-v1`; starting checkpoint `6c96761c11dc308c8c450e852a8ed060c56b310d`.
+- Actual committed chat-message results now feed the existing post-SSE push queue. Persisted message/conversation membership determines recipients; sender, unrelated users, revoked/expired sessions and reassigned former Drivers are excluded. Chat-open/chat-status do not push.
+- Chat dedup uses subscription + conversation + server message ID in the existing delivery ledger. No schema or VAPID/environment changes; existing order push/SSE/sound behavior retained.
+- Worker keeps session/ownership checks and same-origin navigation. Chat click enters `/?conversationId=<id>`; automatic chat-panel opening is a documented limitation.
+- Full unit **598/598 PASS**; focused push/chat/SSE/communications **62/62 PASS**; existing Push UX desktop/mobile **12/12 PASS**; production build **35/35 PASS**; private-key bundle isolation **12 artifacts PASS**.
+- Authorized deliverable includes commit and push of this fix to the same branch. No merge, staging/production deployment or new real-device/PO UAT PASS claim. Detailed scope, commands and limitations: [PUSH_CHAT_WEB_PUSH_FIX.md](PUSH_CHAT_WEB_PUSH_FIX.md).
+
+
 ## Push Notification V1 - 2026-11-01
 
 Status: **IMPLEMENTED / LOCALLY VERIFIED / CONTROL CENTER REVIEW REQUIRED**. No new Product Owner UAT PASS claim.

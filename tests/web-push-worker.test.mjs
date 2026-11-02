@@ -110,3 +110,37 @@ test("private VAPID configuration has no client import/path; service worker neve
   assert.match(client, /Notification\.requestPermission/);
   assert.match(client, /action: "unsubscribe"/);
 });
+
+test("chat push uses unique message tag, safe conversation entry and session validation on display/click", async () => {
+  const chat = {
+    ...payload,
+    eventType: "CHAT_MESSAGE",
+    orderId: undefined,
+    conversationId: 23,
+    messageId: 87,
+    body: "Pesan baru dari Warkost.",
+  };
+  const w = worker();
+  await w.trigger("push", { data: { json: () => chat } });
+  assert.equal(w.shown[0].tag, "warkost:CHAT_MESSAGE:23:87");
+  assert.equal(w.shown[0].data.url, "/?conversationId=23");
+  await w.trigger("notificationclick", {
+    notification: { data: w.shown[0].data, close() {} },
+  });
+  assert.equal(w.opened[0], "https://warkost.test/?conversationId=23");
+  const revoked = worker({ allowed: false });
+  await revoked.trigger("push", { data: { json: () => chat } });
+  assert.equal(revoked.shown.length, 0);
+  await revoked.trigger("notificationclick", {
+    notification: { data: chat, close() {} },
+  });
+  assert.equal(revoked.opened[0], "https://warkost.test/");
+  const malformed = worker();
+  await malformed.trigger("notificationclick", {
+    notification: {
+      data: { ...chat, conversationId: "https://evil.test" },
+      close() {},
+    },
+  });
+  assert.equal(malformed.opened[0], "https://warkost.test/");
+});

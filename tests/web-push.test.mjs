@@ -37,6 +37,8 @@ const { publishActionRealtime, subscribeRealtime } =
   await import("../lib/realtime.mjs");
 const { createOrder, changeStatus } = await import("../lib/domain.mjs");
 const { processTrustedProviderEvent } = await import("../lib/payments.mjs");
+const { openConversation, sendConversationMessage, updateConversationStatus } =
+  await import("../lib/communications.mjs");
 const { LOCAL_QRIS_PROVIDER } = await import("../lib/payment-provider.mjs");
 const users = {},
   tokens = {};
@@ -48,6 +50,9 @@ for (const [i, role] of [
   "MANAGER",
   "OWNER",
   "CUSTOMER",
+  "ADMIN",
+  "DRIVER",
+  "ADMIN",
 ].entries()) {
   const id = i + 1;
   await store.run(
@@ -443,6 +448,291 @@ test("expired provider subscription disabled; transient failure cannot break alr
     (await store.get("SELECT COUNT(*) n FROM orders WHERE id=?", order.id)).n,
     1,
   );
+});
+async function chatFixture(type = "CUSTOMER_ADMIN") {
+  await clear();
+  await store.run("UPDATE users SET active=1 WHERE id=10");
+  const subs = await enrolled([1, 2, 3, 4, 7, 8, 9, 10]);
+  await store.run("UPDATE users SET active=0 WHERE id=10");
+  let orderId;
+  if (type === "CUSTOMER_DRIVER") {
+    const order = await created();
+    orderId = order.id;
+    await store.run("UPDATE orders SET status='ASSIGNED' WHERE id=?", orderId);
+    await store.run(
+      "INSERT INTO deliveries(order_id,driver_id) VALUES(?,?)",
+      orderId,
+      4,
+    );
+  }
+  const conversation = await openConversation(users[1], { type, orderId });
+  await store.run(
+    "UPDATE conversations SET status='OPEN' WHERE id=?",
+    conversation.id,
+  );
+  return { subs, conversation };
+}
+async function sendChat(sender, conversation, body = {}) {
+  const result = await sendConversationMessage(sender, {
+    conversationId: conversation.id,
+    message: "Private message must never be in push",
+  });
+  await publishActionRealtime(
+    "chat-message",
+    sender,
+    { conversationId: conversation.id, ...body },
+    result,
+  );
+  await drainPushWork();
+  return result;
+}
+for (const [type, senderId, recipientIds] of [
+  ["CUSTOMER_ADMIN", 1, [2, 8]],
+  ["CUSTOMER_ADMIN", 2, [1]],
+  ["CUSTOMER_DRIVER", 1, [4]],
+  ["CUSTOMER_DRIVER", 4, [1]],
+])
+  test(`${type} sender ${senderId}: only active conversation recipients, never sender or outsiders`, async () => {
+    const { subs, conversation } = await chatFixture(type);
+    const foreground = [];
+    const stop = subscribeRealtime(users[recipientIds[0]], (event) =>
+      foreground.push(event),
+    );
+    const result = await sendChat(users[senderId], conversation, {
+      recipientUserId: 7,
+      senderId: 7,
+      messageId: 999999,
+    });
+    stop();
+    assert.deepEqual(
+      sends.map((item) => item.endpoint).sort(),
+      recipientIds.map((id) => subs[id].endpoint).sort(),
+    );
+    assert.equal(
+      sends.some((item) => item.endpoint === subs[senderId].endpoint),
+      false,
+    );
+    assert.equal(
+      foreground.filter(
+        (event) => event.type === "CONVERSATION_CHANGED" && event.audible,
+      ).length,
+      1,
+    );
+    for (const item of sends) {
+      assert.equal(item.payload.eventType, "CHAT_MESSAGE");
+      assert.equal(item.payload.messageId, result.message.id);
+      assert.equal(item.payload.conversationId, conversation.id);
+      assert.equal(item.payload.orderId, undefined);
+      assert.equal(
+        item.payload.body,
+        recipientIds[0] === 1
+          ? "Pesan baru dari Warkost."
+          : "Pesan baru dari pelanggan.",
+      );
+      assert.doesNotMatch(
+        JSON.stringify(item.payload),
+        /Private message|senderId|customer_name/,
+      );
+    }
+    const receipt = sends[0].payload.deliveryKey;
+    assert.equal(
+      (
+        await (
+          await getPush(
+            request(recipientIds[0], null, {}, "?delivery=" + receipt),
+          )
+        ).json()
+      ).allowed,
+      true,
+    );
+    assert.equal(
+      (
+        await (
+          await getPush(request(senderId, null, {}, "?delivery=" + receipt))
+        ).json()
+      ).allowed,
+      false,
+    );
+  });
+test("chat-open and chat-status never push even when a prior message exists", async () => {
+  const { conversation } = await chatFixture();
+  const result = await sendConversationMessage(users[1], {
+    conversationId: conversation.id,
+    message: "Existing",
+  });
+  await publishActionRealtime(
+    "chat-open",
+    users[1],
+    { conversationId: conversation.id },
+    result.conversation,
+  );
+  const updated = await updateConversationStatus(
+    users[2],
+    conversation.id,
+    "CLOSED",
+  );
+  await publishActionRealtime(
+    "chat-status",
+    users[2],
+    { conversationId: conversation.id },
+    updated,
+  );
+  await drainPushWork();
+  assert.equal(sends.length, 0);
+});
+test("chat stable persisted message ID deduplicates repeated publication and concurrent events; next message still pushes", async () => {
+  const { conversation } = await chatFixture();
+  const result = await sendChat(users[1], conversation);
+  const event = {
+    type: "CONVERSATION_CHANGED",
+    actionable: true,
+    payload: {
+      conversationId: conversation.id,
+      messageId: result.message.id,
+      senderId: 1,
+      senderRole: "CUSTOMER",
+    },
+  };
+  await Promise.all(Array.from({ length: 10 }, () => dispatchPushEvent(event)));
+  await publishActionRealtime("chat-message", users[1], {}, result);
+  await publishActionRealtime(
+    "chat-message",
+    users[1],
+    {},
+    { ...result, replayed: true },
+  );
+  await dispatchPushEvent({ ...event, replayed: true });
+  await drainPushWork();
+  assert.equal(sends.length, 2);
+  await sendChat(users[1], conversation);
+  assert.equal(sends.length, 4);
+  assert.equal(new Set(sends.map((item) => item.payload.deliveryKey)).size, 4);
+});
+test("chat push requires server result and persisted matching sender/conversation; client metadata cannot retarget", async () => {
+  const { conversation } = await chatFixture();
+  const result = await sendConversationMessage(users[1], {
+    conversationId: conversation.id,
+    message: "Existing",
+  });
+  const event = {
+    type: "CONVERSATION_CHANGED",
+    actionable: true,
+    payload: {
+      conversationId: conversation.id,
+      messageId: result.message.id,
+      senderId: 1,
+      senderRole: "CUSTOMER",
+    },
+  };
+  for (const change of [
+    { conversationId: 99999 },
+    { messageId: 99999 },
+    { senderId: 7 },
+    { senderRole: "ADMIN" },
+    { messageId: 0 },
+  ])
+    await dispatchPushEvent({
+      ...event,
+      payload: { ...event.payload, ...change },
+    });
+  await dispatchPushEvent({ ...event, actionable: false });
+  await publishActionRealtime(
+    "chat-message",
+    users[1],
+    { conversationId: conversation.id, messageId: result.message.id },
+    {},
+  );
+  await drainPushWork();
+  assert.equal(sends.length, 0);
+  await publishActionRealtime(
+    "chat-message",
+    users[1],
+    { conversationId: conversation.id, recipientUserId: 7, messageId: 99999 },
+    result,
+  );
+  await drainPushWork();
+  assert.equal(sends.length, 2);
+});
+test("chat excludes revoked/expired recipient sessions and disabled subscriptions", async () => {
+  const { conversation } = await chatFixture();
+  await store.run(
+    "UPDATE sessions SET revoked_at=CURRENT_TIMESTAMP WHERE user_id=2",
+  );
+  await store.run("UPDATE sessions SET expires_at=0 WHERE user_id=8");
+  await sendChat(users[1], conversation);
+  assert.equal(sends.length, 0);
+  // Restore fixture sessions for subsequent cases, without touching live data.
+  tokens[2] = await issueSession(users[2]);
+  tokens[8] = await issueSession(users[8]);
+  await clear();
+  await enrolled([2]);
+  await store.run(
+    "UPDATE push_subscriptions SET disabled_at=CURRENT_TIMESTAMP",
+  );
+  await sendChat(users[1], conversation);
+  assert.equal(sends.length, 0);
+});
+test("chat to former Driver excluded after delivery reassignment", async () => {
+  const { conversation } = await chatFixture("CUSTOMER_DRIVER");
+  const result = await sendConversationMessage(users[1], {
+    conversationId: conversation.id,
+    message: "Saved before reassignment",
+  });
+  await store.run(
+    "UPDATE deliveries SET driver_id=9 WHERE order_id=?",
+    conversation.order.id,
+  );
+  await publishActionRealtime(
+    "chat-message",
+    users[1],
+    { conversationId: conversation.id },
+    result,
+  );
+  await drainPushWork();
+  assert.equal(sends.length, 0);
+});
+test("chat provider failure preserves persisted message, in-app notification and realtime sound", async () => {
+  const { conversation } = await chatFixture();
+  const foreground = [];
+  const stop = subscribeRealtime(users[2], (event) => foreground.push(event));
+  const before = (
+    await store.get("SELECT COUNT(*) n FROM notifications WHERE user_id=2")
+  ).n;
+  webpush.sendNotification = async () => {
+    throw { statusCode: 503, endpoint: "private" };
+  };
+  try {
+    const result = await sendChat(users[1], conversation);
+    assert.ok(
+      await store.get(
+        "SELECT id FROM conversation_messages WHERE id=?",
+        result.message.id,
+      ),
+    );
+    assert.equal(
+      (await store.get("SELECT COUNT(*) n FROM notifications WHERE user_id=2"))
+        .n,
+      before + 1,
+    );
+    assert.equal(
+      foreground.some(
+        (event) => event.type === "CONVERSATION_CHANGED" && event.audible,
+      ),
+      true,
+    );
+    assert.equal(
+      (
+        await store.get(
+          "SELECT COUNT(*) n FROM push_deliveries WHERE status='FAILED'",
+        )
+      ).n,
+      2,
+    );
+  } finally {
+    stop();
+    webpush.sendNotification = async (sub, payload) =>
+      sends.push({ endpoint: sub.endpoint, payload: JSON.parse(payload) });
+  }
 });
 test("revoked, expired and inactive sessions never receive push; Manager/Owner remain deferred", async () => {
   await clear();
