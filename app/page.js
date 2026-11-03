@@ -1841,7 +1841,7 @@ export default function App() {
             <section className="customer-hero">
               <div className="customer-hero-copy">
                 <span className="eyebrow">DAPUR WARKOST</span>
-                {storeStatus && (
+                {storeStatus?.isOpen === false && (
                   <div
                     className={`customer-store-status ${storeStatus.isOpen ? "open" : "closed"}`}
                     role="status"
@@ -3261,17 +3261,6 @@ export default function App() {
                         ? "TERSEDIA"
                         : reward.ineligible_reason}
                     </span>
-                  </div>
-                ))}
-                {account.transactions.map((t) => (
-                  <div className="line" key={t.id}>
-                    <span>
-                      Pesanan #{t.order_id} · {t.kind}
-                    </span>
-                    <strong>
-                      {t.amount > 0 ? "+" : ""}
-                      {t.amount}
-                    </strong>
                   </div>
                 ))}
               </section>
