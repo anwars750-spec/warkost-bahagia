@@ -13,6 +13,7 @@ import CustomerBanner from "./CustomerBanner";
 import CustomerLogoutDialog from "./CustomerLogoutDialog";
 import { catalogPresentation, compactQuantity, compactStepQuantity } from "./customer-catalog.mjs";
 import { CatalogIcon } from "./CustomerCatalogIcons";
+import { productBadgePresentation } from "../lib/product-badges.mjs";
 import KitchenWorkspace, { KitchenNavIcon } from "./KitchenWorkspace";
 import KitchenDashboardFast from "./KitchenDashboardFast";
 import KitchenStockCenter from "./KitchenStockCenter";
@@ -104,11 +105,7 @@ const demoProductImage = (name) => {
   if (normalized.includes("biji kopi")) return "/demo/bahan-baku-kopi.svg";
   return "/demo/promo-warkost.webp";
 };
-const demoProductBadges = [
-  ["★", "Best Seller", "best-seller"],
-  ["●", "Populer", "popular"],
-  ["♛", "Rekomendasi", "recommended"],
-];
+
 const ORDER_STAGES = [
   { key: "received", label: "Diterima" },
   { key: "preparing", label: "Diproses" },
@@ -1969,7 +1966,7 @@ export default function App() {
               </div></div>
               <div className={`grid customer-products ${!selectedCategory ? "catalog-grouped-view" : ""}`} id="menu-grid">
                 {catalog.entries.map(({ product: p, index, categoryName, subcategoryName, categoryStart, subcategoryStart, categoryCount }) => {
-                  const badge = demoProductBadges[index];
+                  const badge = productBadgePresentation(p.badge_type);
                   const outOfStock = !isProductOrderable(p);
                   const canIncrease = canIncreaseProductQuantity(p, cart[p.id] || 0);
                   return (
@@ -1997,8 +1994,8 @@ export default function App() {
                         {outOfStock ? (
                           <span className="customer-stock-out-badge">Habis</span>
                         ) : badge && (
-                          <span className={`product-badge ${badge[2]}`}>
-                            <b>{badge[0]}</b> {badge[1]}
+                          <span className={`product-badge ${badge.className}`}>
+                            <b>{badge.icon}</b> {badge.label}
                           </span>
                         )}
                       </div>
