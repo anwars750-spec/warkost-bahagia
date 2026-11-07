@@ -2189,6 +2189,10 @@ export default function App() {
                     );
                     return;
                   }
+                  if (unavailableCartProducts.length > 0) {
+                    setError("Stok produk tidak mencukupi. Periksa isi keranjang.");
+                    return;
+                  }
                   if (!deliveryQuote?.available) {
                     setError(
                       deliveryQuote?.message ||
@@ -2407,6 +2411,7 @@ export default function App() {
                                 type="button"
                                 aria-label={`Tambah ${p.name}`}
                                 onClick={() => step(p, 1)}
+                                disabled={!canIncreaseProductQuantity(p, cart[p.id])}
                               >
                                 +
                               </button>
@@ -2417,6 +2422,13 @@ export default function App() {
                           </div>
                         ))}
                     </div>
+                    {unavailableCartProducts.length > 0 && (
+                      <p className="checkout-stock-warning" role="alert">
+                        Stok tidak mencukupi untuk{" "}
+                        {unavailableCartProducts.map((product) => product.name).join(", ")}.
+                        Kurangi atau hapus item tersebut sebelum melanjutkan.
+                      </p>
+                    )}
                     <div className="checkout-subtotal">
                       <span>Subtotal</span>
                       <strong>{money(total)}</strong>
@@ -2972,6 +2984,8 @@ export default function App() {
                       deliveryQuoteBusy ||
                       voucherQuoteBusy ||
                       loyaltyQuoteBusy ||
+                      unavailableCartProducts.length > 0 ||
+                      checkoutItems.length === 0 ||
                       storeStatus?.isOpen !== true ||
                       Boolean(selectedVoucherId && !voucherQuote) ||
                       Boolean(selectedRewardId && !loyaltyQuote) ||
@@ -2981,6 +2995,8 @@ export default function App() {
                   >
                     {busy
                       ? "Membuat Pesanan…"
+                      : unavailableCartProducts.length > 0
+                        ? "Stok Tidak Mencukupi"
                       : storeStatus?.isOpen !== true
                         ? "Toko Sedang Tutup"
                         : deliveryQuoteBusy
