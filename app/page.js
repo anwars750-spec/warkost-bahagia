@@ -4443,6 +4443,7 @@ export default function App() {
                         <button
                           aria-label={`Tambah ${product.name} dari keranjang`}
                           onClick={() => step(product, 1)}
+                          disabled={!canIncreaseProductQuantity(product, cart[product.id])}
                         >
                           +
                         </button>
