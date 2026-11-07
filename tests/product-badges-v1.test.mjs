@@ -76,4 +76,6 @@ test("customer tidak lagi menerima badge demo yang ditentukan berdasarkan index"
   assert.match(page, /badge\.label/);
   assert.match(form, /name="badgeType"/);
   assert.match(form, /badgeType: form\.get\("badgeType"\) \|\| null/);
+  assert.match(page, /let saved = false;/);
+  assert.match(form, /if \(succeeded\) setEditing\(null\)/);
 });
