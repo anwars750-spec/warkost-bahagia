@@ -676,9 +676,10 @@ export default function ManagerProductsHierarchy({
             subcategories={inventory.subcategories || []}
             busy={busy}
             onCancel={() => setEditing(null)}
-            onSave={(body, file) =>
-              saveProduct(body, file).then?.(() => setEditing(null))
-            }
+            onSave={async (body, file) => {
+              const succeeded = await saveProduct(body, file);
+              if (succeeded) setEditing(null);
+            }}
           />
         )}
       </div>
