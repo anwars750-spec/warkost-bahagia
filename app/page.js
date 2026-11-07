@@ -55,6 +55,9 @@ import {
   MAX_ITEM_NOTE_LENGTH,
   normalizeItemNote,
   removeItemNote,
+  isProductOrderable,
+  canIncreaseProductQuantity,
+  isCartQuantityAvailable,
   updateCartQuantity,
   updateItemNote,
 } from "../lib/customer-cart.mjs";
@@ -881,11 +884,18 @@ export default function App() {
       note: normalizeItemNote(itemNotes[product.id]),
     }));
   const checkoutItemsSignature = JSON.stringify(checkoutItems);
+  const unavailableCartProducts = menu.products.filter(
+    (product) =>
+      Number(cart[product.id] || 0) > 0 &&
+      !isCartQuantityAvailable(product, cart[product.id]),
+  );
   function step(product, direction) {
     const { minimumOrderQuantity, orderStepQuantity } =
       productQuantityRules(product);
     setCart((current) => {
       const currentQuantity = Number(current[product.id] || 0);
+      if (direction > 0 && !canIncreaseProductQuantity(product, currentQuantity))
+        return current;
       const delta =
         direction > 0
           ? currentQuantity
@@ -901,6 +911,7 @@ export default function App() {
     setItemNotes((notes) => updateItemNote(notes, id, value));
   }
   function activateProductCard(event, product) {
+    if (!isProductOrderable(product)) return;
     if (event.target?.closest?.("button,a,input,textarea,select")) return;
     if (role === "CUSTOMER") {
       step(product, 1);
@@ -910,6 +921,7 @@ export default function App() {
     setView("auth");
   }
   function productCardKeyDown(event, product) {
+    if (!isProductOrderable(product)) return;
     if (!["Enter", " "].includes(event.key)) return;
     if (event.target?.closest?.("button,a,input,textarea,select")) return;
     event.preventDefault();
@@ -1958,16 +1970,19 @@ export default function App() {
               <div className={`grid customer-products ${!selectedCategory ? "catalog-grouped-view" : ""}`} id="menu-grid">
                 {catalog.entries.map(({ product: p, index, categoryName, subcategoryName, categoryStart, subcategoryStart, categoryCount }) => {
                   const badge = demoProductBadges[index];
+                  const outOfStock = !isProductOrderable(p);
+                  const canIncrease = canIncreaseProductQuantity(p, cart[p.id] || 0);
                   return (
                     <Fragment key={p.id}>
                     {categoryStart && <div className="catalog-group-category-heading customer-catalog-polish-node"><span className="catalog-group-category-icon"><CatalogIcon name={categoryName} /></span><div className="catalog-group-category-copy"><span className="catalog-group-kicker">KATEGORI</span><h3>{categoryName}</h3><p>{catalog.categoryCopy[categoryName] || "Pilihan produk Warkost Bahagia."}</p></div><span className="catalog-group-count">{categoryCount} menu</span></div>}
                     {subcategoryStart && <div className="catalog-group-subcategory-heading customer-catalog-polish-node"><h4>{subcategoryName}</h4></div>}
                     <article
-                      className={`product customer-product ${cart[p.id] ? "has-quantity" : ""} ${p.stock_unit === "GRAM" ? "weighted-product" : ""}`}
+                      className={`product customer-product ${cart[p.id] ? "has-quantity" : ""} ${p.stock_unit === "GRAM" ? "weighted-product" : ""} ${outOfStock ? "is-out-of-stock" : ""}`}
                       key={p.id}
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`${p.name}. ${productPriceLabel(p, money)}. ${role === "CUSTOMER" ? "Ketuk untuk menambah ke keranjang" : "Ketuk untuk masuk dan memesan"}`}
+                      role={outOfStock ? undefined : "button"}
+                      tabIndex={outOfStock ? -1 : 0}
+                      aria-disabled={outOfStock || undefined}
+                      aria-label={`${p.name}. ${productPriceLabel(p, money)}. ${outOfStock ? "Stok habis" : role === "CUSTOMER" ? "Ketuk untuk menambah ke keranjang" : "Ketuk untuk masuk dan memesan"}`}
                       onClick={(event) => activateProductCard(event, p)}
                       onKeyDown={(event) => productCardKeyDown(event, p)}
                     >
@@ -1979,7 +1994,9 @@ export default function App() {
                           sizes="(max-width: 620px) 50vw, (max-width: 850px) 50vw, 33vw"
                           unoptimized={Boolean(p.image_url)}
                         />
-                        {badge && (
+                        {outOfStock ? (
+                          <span className="customer-stock-out-badge">Habis</span>
+                        ) : badge && (
                           <span className={`product-badge ${badge[2]}`}>
                             <b>{badge[0]}</b> {badge[1]}
                           </span>
@@ -2006,12 +2023,12 @@ export default function App() {
                         <div className="product-foot">
                           <span className="product-price-stack">
                             <strong>{money(p.price)}</strong>
-                            <small>
-                              Stok{" "}
-                              {formatStockQuantity(
-                                p.available_quantity,
-                                p.stock_unit,
-                              )}
+                            <small className={outOfStock ? "customer-stock-out-text" : ""}>
+                              {Number(p.unlimited_stock) === 1
+                                ? "Stok tanpa batas"
+                                : outOfStock
+                                  ? "Stok habis"
+                                  : `Stok ${formatStockQuantity(p.available_quantity, p.stock_unit)}`}
                             </small>
                             {p.stock_unit === "GRAM" && (
                               <small>
@@ -2020,7 +2037,11 @@ export default function App() {
                               </small>
                             )}
                           </span>
-                          {role === "CUSTOMER" ? (
+                          {outOfStock ? (
+                            <span className="customer-stock-out-cta" aria-disabled="true">
+                              Habis
+                            </span>
+                          ) : role === "CUSTOMER" ? (
                             <div
                               className={`qty ${cart[p.id] ? "" : "is-empty"} ${p.stock_unit === "GRAM" ? "weighted-qty" : "piece-qty"}`}
                               aria-live="polite"
@@ -2038,9 +2059,11 @@ export default function App() {
                                   </button>
                                   <span aria-label={`Jumlah ${compactQuantity(cart[p.id], p.stock_unit)}`}>{compactQuantity(cart[p.id], p.stock_unit)}</span>
                                   <small>
-                                    {p.stock_unit === "GRAM"
-                                      ? `+${compactStepQuantity(p.order_step_quantity, p.stock_unit)}`
-                                      : "+1"}
+                                    {!canIncrease
+                                      ? "Maks"
+                                      : p.stock_unit === "GRAM"
+                                        ? `+${compactStepQuantity(p.order_step_quantity, p.stock_unit)}`
+                                        : "+1"}
                                   </small>
                                 </>
                               ) : (
