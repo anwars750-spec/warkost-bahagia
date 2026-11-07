@@ -37,6 +37,7 @@ test("opsi badge hanya satu label per produk dan menolak nilai tidak dikenal", (
   assert.equal(normalizeProductBadgeType(""), null);
   assert.equal(normalizeProductBadgeType(null), null);
   assert.throws(() => normalizeProductBadgeType("ADMIN"), /tidak valid/);
+  assert.throws(() => normalizeProductBadgeType("toString"), /tidak valid/);
   assert.equal(productBadgePresentation("FAVORITE").label, "Favorit");
   assert.equal(productBadgePresentation("BEST_SELLER").label, "Best Seller");
   assert.equal(productBadgePresentation(null), null);
