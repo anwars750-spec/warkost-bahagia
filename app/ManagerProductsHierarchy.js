@@ -6,6 +6,7 @@ import {
   productPriceLabel,
 } from "../lib/product-units.mjs";
 import styles from "./ManagerProductsHierarchy.module.css";
+import { PRODUCT_BADGE_OPTIONS, productBadgePresentation } from "../lib/product-badges.mjs";
 
 const money = (value) => "Rp" + Number(value || 0).toLocaleString("id-ID");
 const isActive = (row) => row?.active === true || Number(row?.active) === 1;
@@ -65,6 +66,7 @@ function ProductForm({
             orderStepQuantity: Number(form.get("orderStepQuantity")),
             lowStockThreshold: Number(form.get("lowStockThreshold")),
             unlimitedStock: form.get("unlimitedStock") === "on",
+            badgeType: form.get("badgeType") || null,
             active: form.get("active") === "on",
           },
           form.get("image"),
@@ -141,6 +143,18 @@ function ProductForm({
             maxLength="500"
             defaultValue={product?.description || ""}
           />
+        </label>
+
+        <label className="wide">
+          Penanda Produk
+          <select name="badgeType" defaultValue={product?.badge_type || ""} aria-label="Penanda produk">
+            {PRODUCT_BADGE_OPTIONS.map((option) => (
+              <option key={option.value || "none"} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <small>Opsional. Satu penanda per produk; muncul di kartu menu Customer dan bisa diubah kapan saja.</small>
         </label>
 
         <label>
@@ -594,6 +608,9 @@ export default function ManagerProductsHierarchy({
                                           <strong>{row.name}</strong>
                                           <small>
                                             #{String(row.id).padStart(4, "0")}
+                                            {productBadgePresentation(row.badge_type) && (
+                                              <> · {productBadgePresentation(row.badge_type).label}</>
+                                            )}
                                           </small>
                                         </span>
                                       </td>
