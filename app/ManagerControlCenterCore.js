@@ -1007,19 +1007,24 @@ function Products({
 
 function Subcategories({ inventory, busy, mutate }) {
   const [editing, setEditing] = useState(null);
-  const submit = (event) => {
+  const isActive = (value) => value === true || Number(value) === 1;
+  const submit = async (event) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    mutate("subcategory", {
+    // Capture the element before awaiting; currentTarget is unavailable
+    // after React finishes handling the submit event.
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const succeeded = await mutate("subcategory", {
       ...(editing ? { id: editing.id } : {}),
       categoryId: Number(form.get("categoryId")),
       name: form.get("name"),
       sortOrder: Number(form.get("sortOrder")),
-      active: editing ? Boolean(editing.active) : true,
-    }).then(() => {
-      setEditing(null);
-      event.currentTarget?.reset?.();
+      active: editing ? isActive(editing.active) : true,
     });
+    // Preserve the form on an API error; clear only after a successful create.
+    if (!succeeded) return;
+    if (editing) setEditing(null);
+    else formElement.reset();
   };
   return (
     <div className="manager-subcategory-page">
@@ -1042,7 +1047,7 @@ function Subcategories({ inventory, busy, mutate }) {
                 <strong>{row.name}</strong>
                 <small>
                   {row.category_name} · urutan {row.sort_order} ·{" "}
-                  {row.active ? "Aktif" : "Nonaktif"}
+                  {isActive(row.active) ? "Aktif" : "Nonaktif"}
                 </small>
               </div>
               <div>
@@ -1055,11 +1060,11 @@ function Subcategories({ inventory, busy, mutate }) {
                       categoryId: row.category_id,
                       name: row.name,
                       sortOrder: row.sort_order,
-                      active: !row.active,
+                      active: !isActive(row.active),
                     })
                   }
                 >
-                  {row.active ? "Nonaktifkan" : "Aktifkan"}
+                  {isActive(row.active) ? "Nonaktifkan" : "Aktifkan"}
                 </button>
               </div>
             </div>
