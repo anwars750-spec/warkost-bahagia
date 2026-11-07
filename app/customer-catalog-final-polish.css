@@ -335,3 +335,81 @@
     letter-spacing: -0.02em;
   }
 }
+
+
+/* Sold-out Customer cards: readable but clearly unavailable.
+ * Keep disabled styling in CSS; server-side checkout remains authoritative. */
+.customer-catalog .customer-product.is-out-of-stock {
+  border-color: #d4d7db !important;
+  background: #f1f2f3 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.customer-catalog .customer-product.is-out-of-stock .food-visual,
+.customer-catalog .customer-product.is-out-of-stock .product-body {
+  background: #f1f2f3 !important;
+}
+
+.customer-catalog .customer-product.is-out-of-stock .food-visual img {
+  filter: grayscale(100%) !important;
+  opacity: 0.43 !important;
+  transform: none !important;
+}
+
+.customer-catalog .customer-product.is-out-of-stock .product-body h2,
+.customer-catalog .customer-product.is-out-of-stock .product-body p,
+.customer-catalog .customer-product.is-out-of-stock .product-price-stack > strong {
+  color: #858b91 !important;
+}
+
+.customer-catalog .customer-product.is-out-of-stock .food-visual {
+  position: relative;
+}
+
+.customer-catalog .customer-stock-out-badge {
+  position: absolute;
+  z-index: 3;
+  top: 12px;
+  left: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #62676c;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.customer-catalog .customer-product .customer-stock-out-text {
+  color: #8c5151 !important;
+  font-weight: 700;
+}
+
+.customer-catalog .customer-stock-out-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid #cbd0d4;
+  background: #e1e3e5;
+  color: #6c7177;
+  font-size: 0.73rem;
+  font-weight: 800;
+  cursor: not-allowed;
+}
+
+.checkout-stock-warning {
+  margin: 12px 0;
+  padding: 12px 14px;
+  background: #fff2e8;
+  color: #8d352a;
+  border: 1px solid #efc5b7;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 650;
+  line-height: 1.5;
+}
