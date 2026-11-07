@@ -413,3 +413,10 @@
   font-weight: 650;
   line-height: 1.5;
 }
+
+/* Badge ini hanya muncul jika dipilih Manager pada Product Master. */
+.customer-catalog .customer-product .product-badge.favorite {
+  background: #f9dfea;
+  color: #9b2755;
+  border: 1px solid #eab3ca;
+}
