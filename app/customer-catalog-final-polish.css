@@ -347,14 +347,12 @@
   transform: none !important;
 }
 
-.customer-catalog .customer-product.is-out-of-stock .food-visual,
 .customer-catalog .customer-product.is-out-of-stock .product-body {
   background: #f1f2f3 !important;
 }
 
 .customer-catalog .customer-product.is-out-of-stock .food-visual img {
-  filter: grayscale(100%) !important;
-  opacity: 0.43 !important;
+  filter: grayscale(25%) !important;
   transform: none !important;
 }
 
@@ -373,6 +371,8 @@
   z-index: 3;
   top: 12px;
   left: 12px;
+  width: auto;
+  height: auto;
   padding: 6px 12px;
   border-radius: 999px;
   background: #62676c;

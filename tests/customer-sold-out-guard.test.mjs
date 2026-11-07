@@ -90,5 +90,4 @@ test("Customer UI tidak mengizinkan kartu habis dan checkout stok lama", () => {
   assert.match(page, /unavailableCartProducts\.length > 0/);
   assert.match(page, /disabled=\{!canIncreaseProductQuantity\(p, cart\[p\.id\]\)\}/);
   assert.match(css, /\.customer-product\.is-out-of-stock/);
-  assert.match(css, /grayscale\(100%\)/);
 });
