@@ -346,8 +346,9 @@ export default function App() {
     );
     setCustomerCursor(page.nextCursor);
   }
-  function saveProductWithImage(body, file) {
-    return run(async () => {
+  async function saveProductWithImage(body, file) {
+    let saved = false;
+    await run(async () => {
       if (file?.size > 0) {
         const form = new FormData();
         form.append("image", file);
@@ -361,7 +362,9 @@ export default function App() {
         body.imageUrl = result.url;
       }
       await api("product", body);
+      saved = true;
     });
+    return saved;
   }
   async function refresh() {
     refreshController.current?.abort();
