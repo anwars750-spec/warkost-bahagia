@@ -29,7 +29,7 @@ try {
   store = await import("../lib/store.mjs");
   await store.run(
     `INSERT INTO geo_credit_reservations(endpoint,credits,user_id,ip_hash,attempt_id,reserved_ms,finished_ms,outcome)
-    VALUES('autocomplete',1199,999,'fixture',?,UNIX_TIMESTAMP()*1000-3000,UNIX_TIMESTAMP()*1000-3000,'SUCCESS')`,
+    VALUES('autocomplete',1197,999,'fixture',?,UNIX_TIMESTAMP()*1000-3000,UNIX_TIMESTAMP()*1000-3000,'SUCCESS')`,
     randomUUID(),
   );
   const child = `
@@ -37,10 +37,11 @@ try {
     import { reserveGeoCredit, settleGeoCredit } from "./lib/geo-credit-brake.mjs";
     import { close } from "./lib/store.mjs";
     const count = Number(process.argv[1]);
+    const leavePending = process.argv[2] === "pending";
     const results = await Promise.all(Array.from({length:count}, async () => {
       try {
         const id = await reserveGeoCredit({ endpoint:"autocomplete", userId:1, ipHash:"fixture", attemptId:randomUUID() });
-        await settleGeoCredit(id,true);
+        if (!leavePending) await settleGeoCredit(id,true);
         return "allowed";
       } catch(error) {
         if (!["CONSERVATION","DAILY_LIMIT"].includes(error.code)) throw error;
@@ -50,14 +51,20 @@ try {
     console.log(JSON.stringify(results));
     await close();
   `;
-  async function processRequests(count) {
+  async function processRequests(count, mode = "settle") {
     const { stdout } = await execute(
       process.execPath,
-      ["--input-type=module", "-e", child, String(count)],
+      ["--input-type=module", "-e", child, String(count), mode],
       { env, timeout: 30_000, windowsHide: true },
     );
     return JSON.parse(stdout);
   }
+  // Exit a worker without settling its reservations, then simulate time
+  // passing independently of process startup latency.
+  assert.deepEqual(await processRequests(2, "pending"), ["allowed", "allowed"]);
+  await store.run(
+    "UPDATE geo_credit_reservations SET reserved_ms=reserved_ms-2000 WHERE finished_ms IS NULL",
+  );
   const results = (
     await Promise.all([processRequests(50), processRequests(50)])
   ).flat();
@@ -65,6 +72,7 @@ try {
   assert.equal(results.filter((value) => value === "allowed").length, 1);
   const { geoUsage } = await import("../lib/geo-credit-brake.mjs");
   assert.equal((await geoUsage()).estimatedCredits.reserved, 1200);
+  assert.equal((await geoUsage()).pending, 2);
   assert.deepEqual(await processRequests(1), ["CONSERVATION"]);
   await store.run(
     `INSERT INTO geo_credit_reservations(endpoint,credits,user_id,ip_hash,attempt_id,reserved_ms,finished_ms,outcome)
@@ -74,7 +82,7 @@ try {
   assert.deepEqual(await processRequests(1), ["DAILY_LIMIT"]);
   assert.equal((await geoUsage()).estimatedCredits.reserved, 1500);
   console.log(
-    "Native MySQL PASS: 100 reservations across two processes, restart persistence, conservation and 1500-credit hard stop.",
+    "Native MySQL PASS: crash reservations aged out of the rate window, 100 reservations across two processes, both pending credits retained at the 1500-credit hard stop.",
   );
 } finally {
   if (store) await store.close();

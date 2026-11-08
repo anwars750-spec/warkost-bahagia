@@ -19,10 +19,17 @@ const store = await import("../lib/store.mjs");
 const { issueSession } = await import("../lib/auth.mjs");
 const { createAutocompleteHandler, getOwnerGeoUsage } =
   await import("../lib/geo-location-api.mjs");
-const { reserveGeoCredit, geoUsage, trustedIpHash } =
+const { reserveGeoCredit, settleGeoCredit, geoUsage, trustedIpHash } =
   await import("../lib/geo-credit-brake.mjs");
 const { createOrder, previewDelivery } = await import("../lib/domain.mjs");
 const { db } = await import("../lib/db.mjs");
+// Use a fixed database clock for the exact rolling-window boundaries and
+// concurrent requests. Auth and payment keep their normal fixture clocks.
+let geoNow = Math.floor(Date.now() / 1000) * 1000;
+db().function("unixepoch", (mode) => {
+  assert.equal(mode, "subsec");
+  return geoNow / 1000;
+});
 const user = { id: 1, role: "CUSTOMER" };
 const owner = { id: 2, role: "OWNER" };
 const cookies = {};
@@ -41,7 +48,10 @@ test.after(() => {
   db().close();
   rmSync(directory, { recursive: true, force: true });
 });
-test.beforeEach(() => store.run("DELETE FROM geo_credit_reservations"));
+test.beforeEach(async () => {
+  geoNow = Math.floor(Date.now() / 1000) * 1000;
+  await store.run("DELETE FROM geo_credit_reservations");
+});
 
 const enabled = {
   ...process.env,
@@ -71,11 +81,8 @@ function request({ account = user, headers = {}, json = body } = {}) {
 const empty = () => Response.json({ results: [] });
 const mock = (transport = empty, env = enabled) =>
   createAutocompleteHandler({ env, transport });
-async function age(milliseconds = 2000) {
-  await store.run(
-    "UPDATE geo_credit_reservations SET finished_ms=finished_ms-? WHERE finished_ms IS NOT NULL",
-    milliseconds,
-  );
+function advanceGeoClock(milliseconds = 2000) {
+  geoNow += milliseconds;
 }
 async function seed(total, ageMs = 2000) {
   const now = Number(
@@ -117,6 +124,24 @@ test("default OFF, missing key, missing trusted ingress and unwired production h
     ).status,
     503,
   );
+  assert.equal((await geoUsage()).estimatedCredits.reserved, 0);
+});
+
+test("alternate forwarded headers do not replace the trusted ingress IP", async () => {
+  const api = mock(() => assert.fail("transport must not be called"));
+  for (const value of ["", "192.0.2.10:443", "192.0.2.10, 192.0.2.11"]) {
+    const response = await api(
+      request({
+        headers: {
+          "x-warkost-client-ip": value,
+          "x-forwarded-for": "192.0.2.15",
+          "x-real-ip": "192.0.2.16",
+          forwarded: "for=192.0.2.17",
+        },
+      }),
+    );
+    assert.equal(response.status, 503);
+  }
   assert.equal((await geoUsage()).estimatedCredits.reserved, 0);
 });
 
@@ -210,7 +235,7 @@ test("provider 429/5xx, timeout and malformed response count as separate reserva
       await response.text(),
       /fake-provider-key|Jalan Merdeka/,
     );
-    await age();
+    advanceGeoClock();
   }
   const usage = await geoUsage();
   assert.equal(usage.estimatedCredits.reserved, 4);
@@ -226,7 +251,7 @@ test("five-request attempt, fresh UUIDs and changing IP cannot bypass per-custom
         .status,
       200,
     );
-    await age();
+    advanceGeoClock();
   }
   let response = await api(request());
   assert.equal((await response.json()).code, "ATTEMPT_LIMIT");
@@ -246,7 +271,7 @@ test("five-request attempt, fresh UUIDs and changing IP cannot bypass per-custom
       ).status,
       200,
     );
-    await age();
+    advanceGeoClock();
   }
   response = await api(request({ json: { ...body, attemptId: randomUUID() } }));
   assert.equal((await response.json()).code, "SEARCH_LIMIT");
@@ -268,57 +293,28 @@ test("IPv4-mapped IP normalizes and a shared ingress IP is limited across accoun
       ipHash,
       attemptId: randomUUID(),
     });
-    await store.run(
-      "UPDATE geo_credit_reservations SET finished_ms=reserved_ms-2000 WHERE id=?",
-      id,
-    );
+    await settleGeoCredit(id, true);
+    advanceGeoClock();
   }
   assert.equal((await (await mock()(request())).json()).code, "SEARCH_LIMIT");
 });
 
 test("shared rolling second admits at most two across 100 simultaneous requests", async () => {
   let calls = 0;
-  let refusals = 0;
-  const provider = Promise.withResolvers();
-  const limited = Promise.withResolvers();
-  const api = mock(async () => {
+  const api = mock(() => {
     calls++;
-    await provider.promise;
     return empty();
   });
-  const pending = Array.from({ length: 100 }, async (_, index) => {
-    const response = await api(
-      request({ json: { ...body, query: `Jalan ${index}` } }),
-    );
-    if (response.status === 429 && ++refusals === 98) limited.resolve();
-    return response;
-  });
-  let timer;
-  try {
-    await Promise.race([
-      limited.promise,
-      new Promise((_, reject) => {
-        timer = setTimeout(
-          () =>
-            reject(
-              new Error(
-                "98 requests should be rate limited before the provider releases",
-              ),
-            ),
-          5000,
-        );
-      }),
-    ]);
-  } finally {
-    clearTimeout(timer);
-    provider.resolve();
-  }
-  const responses = await Promise.all(pending);
-  assert.equal(calls, 2);
-  assert.equal(
-    responses.filter((response) => response.status === 200).length,
-    2,
+  const responses = await Promise.all(
+    Array.from({ length: 100 }, (_, index) =>
+      api(request({ json: { ...body, query: `Jalan ${index}` } })),
+    ),
   );
+  assert.equal(calls, 2);
+  const refused = responses.filter((response) => response.status === 429);
+  assert.equal(refused.length, 98);
+  for (const response of refused)
+    assert.equal((await response.json()).code, "RATE_LIMIT");
   assert.equal((await geoUsage()).estimatedCredits.reserved, 2);
 });
 
@@ -349,23 +345,87 @@ test("50/80/100 thresholds, unknown endpoints and rolling window fail closed", a
     await assert.rejects(reserveGeoCredit({ endpoint }), {
       code: "UNAVAILABLE",
     });
-  await age(86_400_000);
+  advanceGeoClock(86_400_000);
   assert.equal((await mock()(request())).status, 200);
 });
 
-test("pending reservations survive long delays and unavailable accounting stops transport", async () => {
-  const api = mock(() => assert.fail("transport must not be called"));
-  for (let i = 0; i < 2; i++) {
-    await reserveGeoCredit({
-      endpoint: "autocomplete",
-      userId: 99,
-      ipHash: "fixture",
-      attemptId: attempt,
-    });
-  }
-  await store.run("UPDATE geo_credit_reservations SET reserved_ms=1");
+test("two crash reservations stop the current second but age out of the rate window only", async () => {
+  const context = {
+    endpoint: "autocomplete",
+    userId: 99,
+    ipHash: "fixture",
+    attemptId: attempt,
+  };
+  const first = await reserveGeoCredit(context);
+  const second = await reserveGeoCredit(context);
+  const api = mock();
   assert.equal((await (await api(request())).json()).code, "RATE_LIMIT");
-  assert.equal((await geoUsage()).estimatedCredits.reserved, 2);
+  advanceGeoClock(999);
+  assert.equal((await (await api(request())).json()).code, "RATE_LIMIT");
+  advanceGeoClock(1);
+  assert.equal((await api(request())).status, 200);
+
+  const after = await geoUsage();
+  assert.equal(after.pending, 2);
+  assert.equal(after.estimatedCredits.reserved, 3);
+  assert.equal(after.estimatedCredits.completed, 1);
+  advanceGeoClock(3 * 86_400_000);
+  // A new reservation triggers pruning of old completed rows only.
+  assert.equal((await mock()(request())).status, 200);
+  assert.deepEqual(
+    (
+      await store.all(
+        "SELECT id, credits, finished_ms, outcome FROM geo_credit_reservations WHERE finished_ms IS NULL ORDER BY id",
+      )
+    ).map((row) => ({ ...row })),
+    [first, second].map((id) => ({
+      id,
+      credits: 1,
+      finished_ms: null,
+      outcome: null,
+    })),
+  );
+  assert.equal((await geoUsage()).estimatedCredits.reserved, 3);
+});
+
+test("old crash reservations still count toward the 1500-credit hard cap", async () => {
+  const context = {
+    endpoint: "autocomplete",
+    userId: 99,
+    ipHash: "fixture",
+    attemptId: attempt,
+  };
+  await reserveGeoCredit(context);
+  await reserveGeoCredit(context);
+  advanceGeoClock(3 * 86_400_000);
+  await seed(1498);
+  const api = mock(() => assert.fail("transport must not be called"));
+  assert.equal((await (await api(request())).json()).code, "DAILY_LIMIT");
+  const usage = await geoUsage();
+  assert.equal(usage.pending, 2);
+  assert.equal(usage.estimatedCredits.reserved, 1500);
+});
+
+test("recent completion still occupies a slot after the reservation has aged", async () => {
+  const context = {
+    endpoint: "autocomplete",
+    userId: 99,
+    ipHash: "fixture",
+    attemptId: attempt,
+  };
+  const first = await reserveGeoCredit(context);
+  const second = await reserveGeoCredit(context);
+  advanceGeoClock(1000);
+  await settleGeoCredit(first, true);
+  await settleGeoCredit(second, false);
+  const api = mock();
+  assert.equal((await (await api(request())).json()).code, "RATE_LIMIT");
+  advanceGeoClock(1000);
+  assert.equal((await api(request())).status, 200);
+});
+
+test("unavailable accounting stops transport", async () => {
+  const api = mock(() => assert.fail("transport must not be called"));
   await store.run("DELETE FROM geo_credit_lock WHERE id=1");
   try {
     assert.equal((await api(request())).status, 503);
@@ -382,6 +442,8 @@ test("read-only Owner metrics exclude request details, quote stays local and val
   ).json();
   assert.deepEqual(result.alerts, [50, 80, 100]);
   assert.equal(result.externalEnabled, false);
+  assert.equal(result.switchEnabled, false);
+  assert.equal(result.transportConfigured, false);
   assert.doesNotMatch(
     JSON.stringify(result),
     /fake-provider-key|ip_hash|attempt_id/,
