@@ -1,4 +1,4 @@
-import { defineConfig } from "@playwright/test";
+import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/uat",
@@ -27,5 +27,14 @@ export default defineConfig({
         hasTouch: true,
       },
     },
+    ...(process.env.WARKOST_UAT_IOS === "1"
+      ? [
+          {
+            name: "iphone-webkit",
+            testMatch: "customer-location-fallback.spec.mjs",
+            use: { ...devices["iPhone 13"], browserName: "webkit" },
+          },
+        ]
+      : []),
   ],
 });

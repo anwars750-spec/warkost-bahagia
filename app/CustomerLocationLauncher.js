@@ -300,7 +300,7 @@ export default function CustomerLocationLauncher() {
             <span class="wloc-account-step-number">1</span>
             <span>
               <strong>Pilih titik lokasi pengantaran</strong>
-              <small>Cari alamat/tempat atau gunakan GPS agar driver menuju titik yang benar.</small>
+              <small>Pilih titik di peta atau gunakan GPS agar pengemudi menuju titik yang benar.</small>
             </span>
           </div>
           <div class="wloc-account-point-summary">

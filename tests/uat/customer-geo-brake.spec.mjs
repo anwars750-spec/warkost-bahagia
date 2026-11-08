@@ -34,7 +34,10 @@ test("location picker debounces rapid edits, rejects stale responses and opens n
         .fulfill({ json: { suggestions: items(query) } })
         .catch(() => {});
     }
-    if (url.pathname === "/api/location/preview")
+    if (
+      url.pathname === "/api/location/preview" &&
+      route.request().method() === "POST"
+    )
       previews.push(route.request().postDataJSON());
     return route.continue();
   });
@@ -99,11 +102,9 @@ test("location picker debounces rapid edits, rejects stale responses and opens n
   await expect(
     dialog.getByRole("button", { name: "GUNAKAN LOKASI INI" }),
   ).toBeEnabled();
-  await dialog
-    .getByRole("button", { name: "Periksa / ubah titik lokasi" })
-    .click();
   await expect(
-    dialog.getByRole("spinbutton", { name: "Latitude" }),
+    dialog.getByRole("region", { name: "Peta interaktif Sukabumi" }),
   ).toBeVisible();
+  await expect(dialog.getByRole("spinbutton")).toHaveCount(0);
   expect(external).toEqual([]);
 });

@@ -3036,10 +3036,9 @@ export default function App() {
                       <span>Jadikan alamat default</span>
                     </label>
                     <small>
-                      Koordinat disimpan untuk ongkir, tetapi tidak ditampilkan
-                      sebagai input teknis. Jika lokasi perangkat tidak dipilih,
-                      titik lama dipertahankan; presisi pin peta akan dilengkapi
-                      pada integrasi Maps berikutnya.
+                      Gunakan pin peta atau lokasi perangkat untuk memperbarui
+                      titik pengantaran. Jika tidak diubah, titik lama tetap
+                      dipakai.
                     </small>
                   </div>
                   <div className="actions">
@@ -5036,6 +5035,8 @@ export default function App() {
       {role === "CUSTOMER" && <><CustomerLocationLauncher /><CustomerLocationPickerUx
         key={user.id}
         savedAddresses={deliveryAddresses}
+        accountAddress={editingAddressRecord}
+        checkoutAddress={selectedCheckoutAddress}
         onSelectSavedAddress={selectSavedLocation}
         onSaveCheckoutAddress={saveQuickAddress}
       /><CustomerAccountAddressLocationFirst /><CustomerQrisOnlyRuntime /><CustomerLoyaltyPickerRuntime /></>}

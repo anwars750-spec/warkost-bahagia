@@ -22,13 +22,14 @@ test("customer location UX keeps the locked search to confirmation flow", () => 
 
 test("customer location UX keeps saved and manual fallbacks", () => {
   assert.match(component, /ALAMAT TERSIMPAN/);
-  assert.match(component, /Masukkan alamat secara manual/);
-  assert.match(component, /Alamat manual/);
+  assert.match(component, /Isi detail alamat/);
+  assert.match(component, /Alamat lengkap/);
 });
 
-test("manual coordinates are available only after choosing to adjust the point", () => {
-  assert.match(component, /Periksa \/ ubah titik lokasi/);
-  assert.match(component, /\{adjustPoint && \(/);
+test("pin motion cancels the previous quote and coordinates stay internal", () => {
+  assert.match(component, /!pointKey \|\| moving/);
+  assert.match(component, /window\.clearTimeout\(timer\);\s+controller\.abort\(\)/);
+  assert.doesNotMatch(component, /<input[^>]+(?:latitude|longitude)/i);
 });
 
 test("out of range presentation replaces the final location CTA", () => {
@@ -40,7 +41,7 @@ test("out of range presentation replaces the final location CTA", () => {
 
 test("provider failure copy stays customer friendly", () => {
   assert.match(component, /Pencarian lokasi belum tersedia/);
-  assert.match(component, /alamat secara manual/i);
+  assert.match(component, /pilih titik di peta/i);
   assert.doesNotMatch(component, /quota exceeded/i);
   assert.doesNotMatch(component, /API key/i);
 });

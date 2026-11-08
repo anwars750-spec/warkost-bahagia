@@ -1,0 +1,64 @@
+.wloc-map-picker {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.wloc-map-picker > p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #5c473c;
+}
+.wloc-leaflet-map {
+  height: clamp(190px, 29dvh, 270px);
+  overflow: hidden;
+  isolation: isolate;
+  z-index: 0;
+  border: 1px solid #d5c7b6;
+  border-radius: 15px;
+  background: #f4efe0;
+}
+.wloc-leaflet-map[data-map-state="loading"] {
+  opacity: 0.58;
+}
+.wloc-map-picker > .wloc-secondary,
+.wloc-map-picker .wloc-alert .wloc-secondary {
+  justify-self: start;
+  padding: 8px 14px;
+  min-height: 38px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.wloc-map-place-label {
+  width: max-content;
+  pointer-events: none;
+  font-size: 10px;
+  font-weight: 700;
+  color: #5e5243;
+  text-shadow:
+    0 0 3px #fffdf6,
+    0 0 3px #fffdf6;
+}
+.wloc-map-place-label > span {
+  display: block;
+  transform: translate(-50%, -50%);
+}
+.wloc-delivery-pin > span {
+  display: block;
+  width: 29px;
+  height: 29px;
+  margin: 5px auto 0;
+  border: 3px solid #fff;
+  border-radius: 50% 50% 50% 4px;
+  background: #883a2c;
+  box-shadow: 0 2px 6px #42302470;
+  transform: rotate(-45deg);
+}
+.wloc-delivery-pin > span::after {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 8px;
+  margin: 7px auto;
+  border-radius: 50%;
+  background: #fff5e4;
+}

@@ -13,6 +13,7 @@ const css = await readFile(
 );
 
 const customerPage = await readFile(new URL("../app/page.js", import.meta.url), "utf8");
+const pinMap = await readFile(new URL("../app/CustomerPinMap.js", import.meta.url), "utf8");
 
 test("location picker is scoped inside the authenticated Customer boundary", () => {
   assert.match(customerPage, /CustomerLocationPickerUx/);
@@ -31,7 +32,7 @@ test("location search uses minimum query and debounce contract", () => {
 test("location picker keeps current, saved and manual fallbacks", () => {
   assert.match(component, /Gunakan lokasi saat ini/);
   assert.match(component, /ALAMAT TERSIMPAN/);
-  assert.match(component, /Masukkan alamat secara manual/);
+  assert.match(component, /Isi detail alamat/);
 });
 
 test("GPS fails gracefully outside a secure context", () => {
@@ -50,9 +51,13 @@ test("location confirmation exposes delivery UX contract", () => {
   assert.match(component, /Di luar jangkauan pengantaran Warkost/);
 });
 
-test("picker does not load external tiles and preserves manual coordinate editing", () => {
-  assert.doesNotMatch(component, /<iframe|NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY|tileLayer/);
-  assert.match(component, /Periksa \/ ubah titik lokasi/);
+test("picker chooses a draggable point from the local basemap", () => {
+  assert.match(component, /<CustomerPinMap\b/);
+  assert.doesNotMatch(component, /<input[^>]+(?:latitude|longitude)/i);
+  assert.match(pinMap, /draggable: true/);
+  assert.match(pinMap, /pin\.on\("dragend"/);
+  assert.match(pinMap, /\/maps\/sukabumi-delivery-v1\.geojson/);
+  assert.doesNotMatch(pinMap, /tileLayer/);
 });
 
 test("location picker styles remain mobile first", () => {

@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
+    "leaflet": "1.9.4",
     "mysql2": "^3.24.4",
     "next": "16.4.3",
     "qrcode": "^1.5.4",
