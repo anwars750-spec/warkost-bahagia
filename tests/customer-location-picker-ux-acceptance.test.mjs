@@ -24,8 +24,6 @@ test("customer location UX keeps saved and manual fallbacks", () => {
   assert.match(component, /ALAMAT TERSIMPAN/);
   assert.match(component, /Masukkan alamat secara manual/);
   assert.match(component, /Alamat manual/);
-  assert.match(component, /quickAddressLabel/);
-  assert.match(component, /quickAddressDetail/);
 });
 
 test("manual coordinates are available only after choosing to adjust the point", () => {

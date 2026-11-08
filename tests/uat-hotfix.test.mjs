@@ -315,28 +315,13 @@ test("checkout quick address menyimpan, memilih, dan memicu ulang quote tanpa me
     path.join(projectRoot, "app", "page.js"),
     "utf8",
   ) + fs.readFileSync(path.join(projectRoot, "app", "CustomerAuth.js"), "utf8");
-  const style = fs.readFileSync(
-    path.join(projectRoot, "app", "style.css"),
-    "utf8",
-  );
   const handler = page.slice(
     page.indexOf("async function saveQuickAddress"),
     page.indexOf("function openCustomerHelp"),
   );
   assert.match(page, /\+ Tambah lokasi lain/);
-  assert.match(page, /aria-label="Tambah lokasi pengantaran"/);
-  assert.match(page, /name="quickAddressLabel"/);
-  assert.match(page, /name="quickAddressDetail"/);
-  assert.match(page, /name="quickAddressLatitude" type="hidden"/);
-  assert.match(page, /name="quickAddressLongitude" type="hidden"/);
-  assert.doesNotMatch(
-    page,
-    /quickAddress(?:Latitude|Longitude)" type="number"/,
-  );
-  assert.match(
-    handler,
-    /if \(!form \|\| quickAddressAttempt\.current\) return/,
-  );
+  assert.match(page, /onSaveCheckoutAddress=\{saveQuickAddress\}/);
+  assert.match(handler, /if \(quickAddressAttempt\.current\) return/);
   assert.match(handler, /await api\("address",/);
   assert.match(handler, /isDefault:\s*false/);
   assert.match(handler, /await api\("account"\)/);
@@ -352,14 +337,6 @@ test("checkout quick address menyimpan, memilih, dan memicu ulang quote tanpa me
   assert.match(
     page,
     /api\([\s\S]*?"delivery\/quote",[\s\S]*?addressId:\s*selectedCheckoutAddress\.id/,
-  );
-  assert.match(
-    style,
-    /\.checkout-quick-address\s*{[\s\S]*?border-radius:\s*15px/,
-  );
-  assert.match(
-    style,
-    /@media \(max-width:\s*620px\)[\s\S]*?\.quick-address-fields\s*{[\s\S]*?grid-template-columns:\s*1fr/,
   );
 });
 

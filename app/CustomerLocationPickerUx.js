@@ -2,8 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  normalizeLocationQuery, SEARCH_DEBOUNCE_MS, SEARCH_MAX_LENGTH,
-  SEARCH_RESULT_LIMIT, validLocationQuery,
+  normalizeLocationQuery,
+  SEARCH_DEBOUNCE_MS,
+  SEARCH_MAX_LENGTH,
+  SEARCH_RESULT_LIMIT,
+  validLocationQuery,
 } from "../lib/location-search.mjs";
 const ACCOUNT_PICKER_EVENT = "warkost:location-picker-open";
 
@@ -48,7 +51,11 @@ async function readJson(response) {
   return data;
 }
 
-export default function CustomerLocationPickerUx() {
+export default function CustomerLocationPickerUx({
+  savedAddresses,
+  onSelectSavedAddress,
+  onSaveCheckoutAddress,
+}) {
   const [open, setOpen] = useState(false);
   const [screen, setScreen] = useState("search");
   const [query, setQuery] = useState("");
@@ -57,7 +64,6 @@ export default function CustomerLocationPickerUx() {
   const [searchCode, setSearchCode] = useState("");
   const [attemptId, setAttemptId] = useState("");
   const [searchError, setSearchError] = useState("");
-  const [savedAddresses, setSavedAddresses] = useState([]);
   const [selected, setSelected] = useState(null);
   const [adjustPoint, setAdjustPoint] = useState(false);
   const [pointDraft, setPointDraft] = useState({ latitude: "", longitude: "" });
@@ -71,15 +77,20 @@ export default function CustomerLocationPickerUx() {
   const [manualAddress, setManualAddress] = useState("");
   const [locationBusy, setLocationBusy] = useState(false);
   const [locationError, setLocationError] = useState("");
+  const [saving, setSaving] = useState(false);
   const gpsRequest = useRef(0);
-  const sourceRef = useRef("checkout");
+  const pickerContext = useRef(null);
+  const savingRef = useRef(false);
+  const backButton = useRef(null);
 
   const normalizedQuery = normalizeLocationQuery(query);
   const validQuery = validLocationQuery(normalizedQuery);
   const latitude = selected?.latitude;
   const longitude = selected?.longitude;
-  const pointKey = Number.isFinite(latitude) && Number.isFinite(longitude)
-    ? `${latitude},${longitude}` : null;
+  const pointKey =
+    Number.isFinite(latitude) && Number.isFinite(longitude)
+      ? `${latitude},${longitude}`
+      : null;
   const currentQuote = quote?.pointKey === pointKey ? quote : null;
 
   const effectiveLabel =
@@ -95,26 +106,6 @@ export default function CustomerLocationPickerUx() {
     setSearchCode("");
     setSearchError("");
     setResults([]);
-  }
-
-  function readSavedAddressesFromCheckout() {
-    const select = document.querySelector('select[name="address"]');
-    if (!select) {
-      setSavedAddresses([]);
-      return;
-    }
-    const rows = Array.from(select.options)
-      .filter((option) => option.value)
-      .map((option) => {
-        const text = String(option.textContent || "").trim();
-        const [name, ...addressParts] = text.split("·");
-        return {
-          id: option.value,
-          name: String(name || "Alamat").trim(),
-          address: addressParts.join("·").trim(),
-        };
-      });
-    setSavedAddresses(rows);
   }
 
   function resetPicker() {
@@ -137,46 +128,37 @@ export default function CustomerLocationPickerUx() {
     setLocationBusy(false);
     setLocationError("");
     startSession();
-    readSavedAddressesFromCheckout();
   }
 
   useEffect(() => {
-    function openPicker(source) {
-      sourceRef.current = source;
+    function openPicker(event) {
+      const context = event.detail;
+      if (
+        savingRef.current ||
+        !["account", "checkout"].includes(context?.source)
+      )
+        return;
+      gpsRequest.current++;
+      pickerContext.current = context;
       resetPicker();
       setOpen(true);
     }
 
-    function handleQuickAddressClick(event) {
-      const trigger = event.target.closest?.(".quick-address-toggle");
-      if (!trigger) return;
-      window.setTimeout(() => openPicker("checkout"), 0);
-    }
-
-    function handleAccountPickerOpen(event) {
-      if (event?.detail?.source !== "account") return;
-      window.setTimeout(() => openPicker("account"), 0);
-    }
-
-    document.addEventListener("click", handleQuickAddressClick, true);
-    window.addEventListener(ACCOUNT_PICKER_EVENT, handleAccountPickerOpen);
-    return () => {
-      document.removeEventListener("click", handleQuickAddressClick, true);
-      window.removeEventListener(ACCOUNT_PICKER_EVENT, handleAccountPickerOpen);
-    };
+    window.addEventListener(ACCOUNT_PICKER_EVENT, openPicker);
+    return () => window.removeEventListener(ACCOUNT_PICKER_EVENT, openPicker);
   }, []);
 
   useEffect(() => {
     if (!open) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    backButton.current?.focus();
     function handleEscape(event) {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape" && !savingRef.current) setOpen(false);
     }
     window.addEventListener("keydown", handleEscape);
     return () => {
       document.body.style.overflow = previousOverflow;
-      document.body.classList.remove("wloc-account-mode");
       gpsRequest.current++;
       window.removeEventListener("keydown", handleEscape);
     };
@@ -208,10 +190,16 @@ export default function CustomerLocationPickerUx() {
           setSearchError(data.error || "Pencarian lokasi belum tersedia.");
           return;
         }
-        setResults(Array.isArray(data.suggestions) ? data.suggestions.slice(0, SEARCH_RESULT_LIMIT) : []);
+        setResults(
+          Array.isArray(data.suggestions)
+            ? data.suggestions.slice(0, SEARCH_RESULT_LIMIT)
+            : [],
+        );
       } catch {
         if (!controller.signal.aborted)
-          setSearchError("Pencarian lokasi belum tersedia. Gunakan alamat tersimpan atau tentukan titik secara manual.");
+          setSearchError(
+            "Pencarian lokasi belum tersedia. Gunakan alamat tersimpan atau tentukan titik secara manual.",
+          );
       } finally {
         if (!controller.signal.aborted) setSearchBusy(false);
       }
@@ -242,7 +230,9 @@ export default function CustomerLocationPickerUx() {
         if (!controller.signal.aborted) setQuote({ ...data, pointKey });
       } catch {
         if (!controller.signal.aborted)
-          setQuoteError("Pratinjau ongkir belum tersedia. Periksa titik lokasi lalu coba lagi.");
+          setQuoteError(
+            "Pratinjau ongkir belum tersedia. Periksa titik lokasi lalu coba lagi.",
+          );
       } finally {
         if (!controller.signal.aborted) setQuoteBusy(false);
       }
@@ -254,8 +244,13 @@ export default function CustomerLocationPickerUx() {
   }, [open, screen, pointKey, latitude, longitude]);
 
   function chooseSuggestion(suggestion) {
-    if (!Number.isFinite(suggestion.latitude) || !Number.isFinite(suggestion.longitude)) return;
+    if (
+      !Number.isFinite(suggestion.latitude) ||
+      !Number.isFinite(suggestion.longitude)
+    )
+      return;
     gpsRequest.current++;
+    setLocationBusy(false);
     setSelected(suggestion);
     setManualMode(false);
     setAdjustPoint(false);
@@ -264,35 +259,46 @@ export default function CustomerLocationPickerUx() {
   }
 
   function editPoint() {
-    setPointDraft({ latitude: selected?.latitude ?? "", longitude: selected?.longitude ?? "" });
+    setPointDraft({
+      latitude: selected?.latitude ?? "",
+      longitude: selected?.longitude ?? "",
+    });
     setAdjustPoint(true);
   }
 
   function applyPoint() {
     const nextLatitude = Number(pointDraft.latitude);
     const nextLongitude = Number(pointDraft.longitude);
-    if (String(pointDraft.latitude).trim() === "" || String(pointDraft.longitude).trim() === "" ||
-        !Number.isFinite(nextLatitude) || !Number.isFinite(nextLongitude) ||
-        Math.abs(nextLatitude) > 90 || Math.abs(nextLongitude) > 180) {
+    if (
+      String(pointDraft.latitude).trim() === "" ||
+      String(pointDraft.longitude).trim() === "" ||
+      !Number.isFinite(nextLatitude) ||
+      !Number.isFinite(nextLongitude) ||
+      Math.abs(nextLatitude) > 90 ||
+      Math.abs(nextLongitude) > 180
+    ) {
       setQuoteError("Masukkan latitude dan longitude yang valid.");
       return;
     }
     setQuoteError("");
-    setSelected({ ...selected, latitude: nextLatitude, longitude: nextLongitude });
+    setSelected({
+      ...selected,
+      latitude: nextLatitude,
+      longitude: nextLongitude,
+    });
     setAdjustPoint(false);
   }
 
   function chooseSavedAddress(address) {
-    const select = document.querySelector('select[name="address"]');
-    if (!select) return;
-    select.value = address.id;
-    select.dispatchEvent(new Event("change", { bubbles: true }));
+    onSelectSavedAddress(address.id, pickerContext.current?.source);
     setOpen(false);
   }
 
   function beginManualAddress() {
     gpsRequest.current++;
-    setAdjustPoint(false);
+    setLocationBusy(false);
+    setAdjustPoint(true);
+    setPointDraft({ latitude: "", longitude: "" });
     setManualMode(true);
     setSelected({
       placeId: "",
@@ -312,15 +318,15 @@ export default function CustomerLocationPickerUx() {
     if (!window.isSecureContext) {
       setLocationBusy(false);
       setLocationError(
-        "GPS memerlukan koneksi aman (HTTPS). Gunakan pencarian alamat atau buka Warkost melalui HTTPS.",
+        "GPS memerlukan koneksi aman (HTTPS). Pilih alamat tersimpan atau masukkan titik secara manual.",
       );
       return;
     }
     const geolocation = window.navigator?.geolocation;
-    if (!geolocation) {
+    if (typeof geolocation?.getCurrentPosition !== "function") {
       setLocationBusy(false);
       setLocationError(
-        "GPS tidak tersedia di perangkat ini. Gunakan pencarian alamat untuk memilih titik pengantaran.",
+        "GPS tidak tersedia di perangkat ini. Pilih alamat tersimpan atau masukkan titik secara manual.",
       );
       return;
     }
@@ -348,160 +354,215 @@ export default function CustomerLocationPickerUx() {
         setLocationBusy(false);
         setLocationError(
           error?.code === 1
-            ? "Izin lokasi ditolak. Izinkan akses lokasi di browser atau gunakan pencarian alamat."
-            : "Lokasi perangkat tidak dapat ditemukan. Coba lagi atau gunakan pencarian alamat.",
+            ? "Izin lokasi ditolak. Izinkan akses lokasi di browser atau masukkan titik secara manual."
+            : error?.code === 3
+              ? "Waktu pencarian GPS habis. Coba lagi atau masukkan titik secara manual."
+              : "Lokasi perangkat tidak dapat ditemukan. Periksa layanan lokasi perangkat atau masukkan titik secara manual.",
         );
       },
       { enableHighAccuracy: true, timeout: 10000 },
     );
   }
 
-  function applyToExistingCheckout() {
-    if (currentQuote?.available !== true || adjustPoint) return;
-    const baseAddress = manualMode ? manualAddress : selected?.address;
-    const finalDetail = joinAddress(baseAddress, detail);
-    const latitude = selected?.latitude;
-    const longitude = selected?.longitude;
-
-    if (
-      latitude === null ||
-      latitude === undefined ||
-      latitude === "" ||
-      longitude === null ||
-      longitude === undefined ||
-      longitude === "" ||
-      !Number.isFinite(Number(latitude)) ||
-      !Number.isFinite(Number(longitude))
-    ) {
-      setQuoteError(
-        "Pilih titik lokasi terlebih dahulu. Gunakan pencarian alamat atau lokasi perangkat agar titik pengantaran dapat dihitung.",
-      );
+  async function applyLocation() {
+    if (currentQuote?.available !== true || adjustPoint || savingRef.current)
       return;
-    }
-    if (!effectiveLabel || effectiveLabel.length < 2 || finalDetail.length < 10) {
+    const finalDetail = joinAddress(
+      manualMode ? manualAddress : selected?.address,
+      detail,
+    );
+    if (effectiveLabel.length < 2 || finalDetail.length < 10) {
       setQuoteError("Lengkapi label dan detail alamat sebelum melanjutkan.");
       return;
     }
 
-    const quickForm =
-      sourceRef.current === "account"
-        ? document.querySelector(".wloc-account-bridge-form")
-        : document.querySelector(
-            ".checkout-quick-address:not(.wloc-account-bridge-form)",
+    const address = {
+      label: effectiveLabel,
+      detail: finalDetail,
+      latitude,
+      longitude,
+    };
+    savingRef.current = true;
+    setSaving(true);
+    setQuoteError("");
+    try {
+      if (pickerContext.current?.source === "account") {
+        const applyAddress = pickerContext.current.applyAddress;
+        if (!applyAddress)
+          throw new Error(
+            "Form alamat belum siap. Buka kembali pemilih lokasi dari Akun.",
           );
-    if (!quickForm) {
+        applyAddress(address);
+      } else {
+        await onSaveCheckoutAddress(address);
+      }
+      setOpen(false);
+    } catch (error) {
       setQuoteError(
-        "Form alamat checkout belum siap. Tutup pemilih lokasi lalu coba lagi.",
+        error.message || "Alamat belum dapat digunakan. Coba lagi.",
       );
-      return;
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
-
-    const labelField = quickForm.querySelector('[name="quickAddressLabel"]');
-    const detailField = quickForm.querySelector('[name="quickAddressDetail"]');
-    const latField = quickForm.querySelector('[name="quickAddressLatitude"]');
-    const lngField = quickForm.querySelector('[name="quickAddressLongitude"]');
-    const saveButton = quickForm.querySelector(".quick-address-buttons .primary");
-
-    if (labelField) labelField.value = effectiveLabel;
-    if (detailField) detailField.value = finalDetail;
-    if (latField) latField.value = latitude;
-    if (lngField) lngField.value = longitude;
-
-    saveButton?.click();
-    window.setTimeout(() => setOpen(false), 50);
   }
 
   if (!open) return null;
 
   return (
-    <div className="wloc-shell" role="dialog" aria-modal="true" aria-label="Pilih lokasi pengantaran">
+    <div
+      className="wloc-shell"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Pilih lokasi pengantaran"
+    >
       <div className="wloc-sheet">
         <header className="wloc-header">
           <button
             type="button"
             className="wloc-back"
+            ref={backButton}
+            disabled={saving}
             aria-label={screen === "confirm" ? "Kembali ke pencarian" : "Tutup"}
-            onClick={() => (screen === "confirm" ? setScreen("search") : setOpen(false))}
+            onClick={() =>
+              screen === "confirm" ? setScreen("search") : setOpen(false)
+            }
           >
             ←
           </button>
           <div>
-            <strong>{screen === "confirm" ? "Konfirmasi lokasi" : "Pilih lokasi"}</strong>
+            <strong>
+              {screen === "confirm" ? "Konfirmasi lokasi" : "Pilih lokasi"}
+            </strong>
             <small>Warkost Bahagia</small>
           </div>
         </header>
 
         {screen === "search" ? (
-          <main className="wloc-body">
-            <div className="wloc-search-box">
-              <span aria-hidden="true">⌕</span>
-              <input
-                autoFocus
-                value={query}
-                maxLength={SEARCH_MAX_LENGTH}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Cari alamat, gedung, atau tempat..."
-                aria-label="Cari lokasi pengantaran"
-              />
-              {query && (
-                <button type="button" aria-label="Hapus pencarian" onClick={() => setQuery("")}>×</button>
+          <>
+            <main className="wloc-body">
+              <div className="wloc-search-box">
+                <span aria-hidden="true">⌕</span>
+                <input
+                  value={query}
+                  maxLength={SEARCH_MAX_LENGTH}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Cari alamat, gedung, atau tempat..."
+                  aria-label="Cari lokasi pengantaran"
+                />
+                {query && (
+                  <button
+                    type="button"
+                    aria-label="Hapus pencarian"
+                    onClick={() => setQuery("")}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="button"
+                className="wloc-current"
+                onClick={useCurrentLocation}
+                disabled={locationBusy}
+              >
+                <span className="wloc-current-icon" aria-hidden="true">
+                  ◎
+                </span>
+                <span>
+                  <strong>
+                    {locationBusy
+                      ? "Mencari lokasimu..."
+                      : "Gunakan lokasi saat ini"}
+                  </strong>
+                  <small>
+                    Gunakan GPS perangkat untuk menentukan titik pengantaran.
+                  </small>
+                </span>
+                <span aria-hidden="true">›</span>
+              </button>
+
+              {locationError && (
+                <p className="wloc-alert" role="status">
+                  {locationError}
+                </p>
               )}
-            </div>
 
-            <button
-              type="button"
-              className="wloc-current"
-              onClick={useCurrentLocation}
-              disabled={locationBusy}
-            >
-              <span className="wloc-current-icon" aria-hidden="true">◎</span>
-              <span>
-                <strong>{locationBusy ? "Mencari lokasimu..." : "Gunakan lokasi saat ini"}</strong>
-                <small>Gunakan GPS perangkat untuk menentukan titik pengantaran.</small>
-              </span>
-              <span aria-hidden="true">›</span>
-            </button>
-
-            {locationError && <p className="wloc-alert">{locationError}</p>}
-
-            {(validQuery || attemptExhausted) ? (
-              <section className="wloc-section">
-                <div className="wloc-section-title">
-                  <span>HASIL PENCARIAN</span>
-                  {searchBusy && <small>Mencari…</small>}
-                </div>
-                {searchError && <p className="wloc-alert" role="status">{searchError}</p>}
-                {attemptExhausted && (
-                  <button type="button" className="wloc-manual" onClick={startSession}>Mulai pencarian baru</button>
-                )}
-                {!searchBusy && !searchError && results.length === 0 && (
-                  <div className="wloc-empty">
-                    <strong>Belum ada lokasi yang cocok</strong>
-                    <span>Coba nama tempat, jalan, gedung, atau area yang lebih spesifik.</span>
+              {(validQuery || attemptExhausted) && (
+                <section className="wloc-section">
+                  <div className="wloc-section-title">
+                    <span>HASIL PENCARIAN</span>
+                    {searchBusy && <small>Mencari…</small>}
                   </div>
-                )}
-                <div className="wloc-results">
-                  {results.slice(0, SEARCH_RESULT_LIMIT).map((item) => (
+                  {searchError && (
+                    <p className="wloc-alert" role="status">
+                      {searchError}
+                    </p>
+                  )}
+                  {attemptExhausted && (
                     <button
                       type="button"
-                      key={item.placeId}
-                      className="wloc-result"
-                      onClick={() => chooseSuggestion(item)}
+                      className="wloc-manual"
+                      onClick={startSession}
                     >
-                      <span className="wloc-pin" aria-hidden="true">●</span>
-                      <span>
-                        <strong>{item.name}</strong>
-                        <small>{item.address}</small>
-                      </span>
-                      <span aria-hidden="true">›</span>
+                      Mulai pencarian baru
                     </button>
-                  ))}
-                </div>
-                {results.length > 0 && <small>Pencarian oleh <a href="https://www.geoapify.com/" target="_blank" rel="noreferrer">Geoapify</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a></small>}
-              </section>
-            ) : (
+                  )}
+                  {!searchBusy && !searchError && results.length === 0 && (
+                    <div className="wloc-empty">
+                      <strong>Belum ada lokasi yang cocok</strong>
+                      <span>
+                        Coba nama tempat, jalan, gedung, atau area yang lebih
+                        spesifik.
+                      </span>
+                    </div>
+                  )}
+                  <div className="wloc-results">
+                    {results.slice(0, SEARCH_RESULT_LIMIT).map((item) => (
+                      <button
+                        type="button"
+                        key={item.placeId}
+                        className="wloc-result"
+                        onClick={() => chooseSuggestion(item)}
+                      >
+                        <span className="wloc-pin" aria-hidden="true">
+                          ●
+                        </span>
+                        <span>
+                          <strong>{item.name}</strong>
+                          <small>{item.address}</small>
+                        </span>
+                        <span aria-hidden="true">›</span>
+                      </button>
+                    ))}
+                  </div>
+                  {results.length > 0 && (
+                    <small>
+                      Pencarian oleh{" "}
+                      <a
+                        href="https://www.geoapify.com/"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Geoapify
+                      </a>{" "}
+                      ·{" "}
+                      <a
+                        href="https://www.openstreetmap.org/copyright"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        © OpenStreetMap contributors
+                      </a>
+                    </small>
+                  )}
+                </section>
+              )}
               <section className="wloc-section">
-                <div className="wloc-section-title"><span>ALAMAT TERSIMPAN</span></div>
+                <div className="wloc-section-title">
+                  <span>ALAMAT TERSIMPAN</span>
+                </div>
                 {savedAddresses.length ? (
                   <div className="wloc-results">
                     {savedAddresses.map((address) => (
@@ -512,11 +573,13 @@ export default function CustomerLocationPickerUx() {
                         onClick={() => chooseSavedAddress(address)}
                       >
                         <span className="wloc-saved-icon" aria-hidden="true">
-                          {address.name.toLowerCase().includes("kantor") ? "▣" : "⌂"}
+                          {address.label.toLowerCase().includes("kantor")
+                            ? "▣"
+                            : "⌂"}
                         </span>
                         <span>
-                          <strong>{address.name}</strong>
-                          <small>{address.address || "Alamat tersimpan"}</small>
+                          <strong>{address.label}</strong>
+                          <small>{address.detail}</small>
                         </span>
                         <span aria-hidden="true">›</span>
                       </button>
@@ -525,48 +588,90 @@ export default function CustomerLocationPickerUx() {
                 ) : (
                   <div className="wloc-empty">
                     <strong>Belum ada alamat tersimpan</strong>
-                    <span>Tambahkan alamat agar checkout berikutnya lebih cepat.</span>
+                    <span>
+                      Tambahkan alamat agar checkout berikutnya lebih cepat.
+                    </span>
                   </div>
                 )}
               </section>
-            )}
 
-            <button type="button" className="wloc-manual" onClick={beginManualAddress}>
-              Masukkan alamat secara manual
-            </button>
-
-            {searchCode && (
-              <p className="wloc-footnote">
-                Pencarian otomatis tidak menghalangi checkout. Alamat manual dan alamat tersimpan tetap tersedia.
-              </p>
-            )}
-          </main>
+              {searchCode && (
+                <p className="wloc-footnote">
+                  Pencarian otomatis tidak menghalangi checkout. Alamat manual
+                  dan alamat tersimpan tetap tersedia.
+                </p>
+              )}
+            </main>
+            <footer className="wloc-search-actions">
+              <button
+                type="button"
+                className="wloc-manual"
+                onClick={beginManualAddress}
+              >
+                Masukkan alamat secara manual
+              </button>
+            </footer>
+          </>
         ) : (
           <main className="wloc-body wloc-confirm">
             <section className="wloc-place-card" aria-label="Titik lokasi">
-              <button type="button" className="wloc-secondary" onClick={editPoint}>
-                {pointKey ? "Periksa / ubah titik lokasi" : "Masukkan titik lokasi"}
+              <button
+                type="button"
+                className="wloc-secondary"
+                onClick={editPoint}
+              >
+                {pointKey
+                  ? "Periksa / ubah titik lokasi"
+                  : "Masukkan titik lokasi"}
               </button>
               {adjustPoint && (
                 <div>
                   {["latitude", "longitude"].map((field) => (
                     <label key={field} className="wloc-field">
-                      <span>{field === "latitude" ? "Latitude" : "Longitude"}</span>
-                      <input type="number" step="any" value={pointDraft[field]}
-                        onChange={(event) => setPointDraft({ ...pointDraft, [field]: event.target.value })} />
+                      <span>
+                        {field === "latitude" ? "Latitude" : "Longitude"}
+                      </span>
+                      <input
+                        type="number"
+                        step="any"
+                        value={pointDraft[field]}
+                        onChange={(event) =>
+                          setPointDraft({
+                            ...pointDraft,
+                            [field]: event.target.value,
+                          })
+                        }
+                      />
                     </label>
                   ))}
-                  <button type="button" className="wloc-secondary" onClick={applyPoint}>Terapkan titik</button>
+                  <button
+                    type="button"
+                    className="wloc-secondary"
+                    onClick={applyPoint}
+                  >
+                    Terapkan titik
+                  </button>
                 </div>
               )}
             </section>
 
             <section className="wloc-place-card">
               <div className="wloc-place-title">
-                <span className="wloc-pin" aria-hidden="true">●</span>
+                <span className="wloc-pin" aria-hidden="true">
+                  ●
+                </span>
                 <div>
-                  <strong>{manualMode ? "Alamat pengantaran" : selected?.name || "Lokasi pilihan"}</strong>
-                  {!manualMode && <small>{selected?.address || "Lengkapi detail pengantaran di bawah."}</small>}
+                  <strong>
+                    {manualMode
+                      ? "Alamat pengantaran"
+                      : selected?.name || "Lokasi pilihan"}
+                  </strong>
+                  {!manualMode && (
+                    <small>
+                      {selected?.address ||
+                        "Lengkapi detail pengantaran di bawah."}
+                    </small>
+                  )}
                 </div>
               </div>
 
@@ -585,7 +690,9 @@ export default function CustomerLocationPickerUx() {
               <div className="wloc-quote-grid">
                 <div>
                   <span>Jarak dari Warkost</span>
-                  <strong>{quoteBusy ? "Menghitung…" : formatDistance(distanceKm)}</strong>
+                  <strong>
+                    {quoteBusy ? "Menghitung…" : formatDistance(distanceKm)}
+                  </strong>
                 </div>
                 <div>
                   <span>Ongkir</span>
@@ -649,17 +756,30 @@ export default function CustomerLocationPickerUx() {
 
             <div className="wloc-confirm-actions">
               {outOfRange ? (
-                <button type="button" className="wloc-secondary" onClick={() => setScreen("search")}>
+                <button
+                  type="button"
+                  className="wloc-secondary"
+                  onClick={() => setScreen("search")}
+                >
                   Cari lokasi lain
                 </button>
               ) : (
                 <button
                   type="button"
                   className="wloc-primary"
-                  onClick={applyToExistingCheckout}
-                  disabled={quoteBusy || adjustPoint || currentQuote?.available !== true}
+                  onClick={applyLocation}
+                  disabled={
+                    saving ||
+                    quoteBusy ||
+                    adjustPoint ||
+                    currentQuote?.available !== true
+                  }
                 >
-                  {quoteBusy ? "Menghitung ongkir…" : "GUNAKAN LOKASI INI"}
+                  {saving
+                    ? "Menyimpan…"
+                    : quoteBusy
+                      ? "Menghitung ongkir…"
+                      : "GUNAKAN LOKASI INI"}
                 </button>
               )}
             </div>

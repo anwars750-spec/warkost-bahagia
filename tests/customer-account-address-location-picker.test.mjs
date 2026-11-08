@@ -12,7 +12,6 @@ test("account address settings reuse the location picker without layout-id coupl
   assert.match(launcher, /\["label", "detail", "latitude", "longitude"\]/);
   assert.match(launcher, /Pilih titik lokasi/);
   assert.match(launcher, /wloc-account-picker-trigger/);
-  assert.match(launcher, /quick-address-toggle/);
   assert.doesNotMatch(launcher, /querySelector\("#account-address"\)/);
 });
 
@@ -53,8 +52,6 @@ test("account address save requires valid coordinates", () => {
 });
 
 test("picker result fills account address coordinates and readable summary", () => {
-  assert.match(launcher, /quickAddressLatitude/);
-  assert.match(launcher, /quickAddressLongitude/);
   assert.match(launcher, /setNativeValue\(latitudeField/);
   assert.match(launcher, /setNativeValue\(longitudeField/);
   assert.match(launcher, /toFixed\(6\)/);
@@ -62,23 +59,9 @@ test("picker result fills account address coordinates and readable summary", () 
   assert.match(launcher, /selectedDetail/);
 });
 
-test("raw coordinate fields remain hidden and manual no-point path is removed", () => {
-  assert.match(launcher, /body\.wloc-account-mode \.wloc-manual/);
-  assert.match(launcher, /display: none !important/);
-  assert.doesNotMatch(launcher, /Latitude:/);
-  assert.doesNotMatch(launcher, /Longitude:/);
-});
-
-test("account bridge is excluded from legacy checkout form hiding", () => {
-  assert.match(
-    launcher,
-    /checkout-quick-address:not\(\.wloc-account-bridge-form\)/,
-  );
-});
-
 test("account opens picker through a dedicated event without synthetic checkout click", () => {
   assert.match(launcher, /ACCOUNT_PICKER_EVENT = "warkost:location-picker-open"/);
-  assert.match(launcher, /detail: \{ source: "account" \}/);
+  assert.match(launcher, /detail: \{ source: "account", applyAddress \}/);
   assert.doesNotMatch(launcher, /oldLocationButton\.click\(/);
 });
 

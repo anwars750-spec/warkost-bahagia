@@ -226,8 +226,6 @@ function installAccountStyles() {
       background: #682c20 !important;
     }
     .wloc-account-location-legacy-hidden { display: none !important; }
-    body.wloc-account-mode .wloc-manual,
-    body.wloc-account-mode .wloc-footnote { display: none !important; }
 
     @media (max-width: 620px) {
       .wloc-account-location-card { padding: 13px !important; }
@@ -243,43 +241,8 @@ function installAccountStyles() {
 
 export default function CustomerLocationLauncher() {
   useEffect(() => {
-    const checkoutInstalled = new Set();
     const accountInstalled = new Set();
     installAccountStyles();
-
-    function installCheckoutLauncher() {
-      const actions = document.querySelectorAll(".checkout-address-actions");
-      for (const container of actions) {
-        if (container.dataset.wlocLauncherReady === "1") continue;
-        const original = container.querySelector(
-          ".quick-address-toggle:not(.wloc-location-launcher)",
-        );
-        if (!original) continue;
-
-        const launcher = document.createElement("button");
-        launcher.type = "button";
-        launcher.className = "quick-address-toggle wloc-location-launcher";
-        launcher.textContent = "+ Tambah lokasi lain";
-        launcher.setAttribute("aria-expanded", "false");
-        launcher.setAttribute("aria-label", "Pilih lokasi pengantaran");
-
-        original.hidden = true;
-        original.setAttribute("aria-hidden", "true");
-        original.insertAdjacentElement("afterend", launcher);
-        container.dataset.wlocLauncherReady = "1";
-        checkoutInstalled.add({ container, original, launcher });
-      }
-
-      const legacyForms = document.querySelectorAll(
-        ".checkout-quick-address:not(.wloc-account-bridge-form)",
-      );
-      for (const form of legacyForms) {
-        if (!form.dataset.wlocLegacyHidden) {
-          form.dataset.wlocLegacyHidden = "1";
-          form.style.display = "none";
-        }
-      }
-    }
 
     function installAccountAddressPicker() {
       for (const form of findAddressFormCandidates()) {
@@ -291,16 +254,17 @@ export default function CustomerLocationLauncher() {
         const longitudeField = form.elements.namedItem("longitude");
         const defaultField = form.elements.namedItem("isDefault");
         const oldLocationButton = findLegacyLocationButton(form);
-        const heading = Array.from(form.querySelectorAll("h1,h2,h3,strong")).find(
-          (node) => /alamat/i.test(String(node.textContent || "")),
-        );
+        const heading = Array.from(
+          form.querySelectorAll("h1,h2,h3,strong"),
+        ).find((node) => /alamat/i.test(String(node.textContent || "")));
         if (!oldLocationButton && !heading) continue;
 
         const labelWrap = labelField.closest("label");
         const detailWrap = detailField.closest("label");
         const defaultZone = defaultField?.closest(".location-card") || null;
         const saveActions = Array.from(form.querySelectorAll(".actions")).find(
-          (node) => node.querySelector('button[type="submit"], button:not([type])'),
+          (node) =>
+            node.querySelector('button[type="submit"], button:not([type])'),
         );
 
         form.classList.add("wloc-account-location-first");
@@ -324,7 +288,9 @@ export default function CustomerLocationLauncher() {
         if (oldLocationButton) {
           oldLocationButton.hidden = true;
           oldLocationButton.setAttribute("aria-hidden", "true");
-          oldLocationButton.classList.add("wloc-account-location-legacy-hidden");
+          oldLocationButton.classList.add(
+            "wloc-account-location-legacy-hidden",
+          );
         }
 
         const card = document.createElement("div");
@@ -362,19 +328,6 @@ export default function CustomerLocationLauncher() {
           form.prepend(card);
         }
 
-        const bridgeForm = document.createElement("div");
-        bridgeForm.className = "checkout-quick-address wloc-account-bridge-form";
-        bridgeForm.style.display = "none";
-        bridgeForm.innerHTML = `
-          <input name="quickAddressLabel" />
-          <textarea name="quickAddressDetail"></textarea>
-          <input name="quickAddressLatitude" />
-          <input name="quickAddressLongitude" />
-          <div class="quick-address-buttons"><button type="button" class="primary">Apply</button></div>
-        `;
-        document.body.append(bridgeForm);
-
-        const applyButton = bridgeForm.querySelector(".primary");
         const saveButton = saveActions?.querySelector(".primary") || null;
 
         function setFormLocked(locked) {
@@ -394,35 +347,7 @@ export default function CustomerLocationLauncher() {
           setFormLocked(true);
         }
 
-        function handleApply() {
-          const selectedLabel = bridgeForm.querySelector(
-            '[name="quickAddressLabel"]',
-          )?.value;
-          const selectedDetail = bridgeForm.querySelector(
-            '[name="quickAddressDetail"]',
-          )?.value;
-          const selectedLatitude = bridgeForm.querySelector(
-            '[name="quickAddressLatitude"]',
-          )?.value;
-          const selectedLongitude = bridgeForm.querySelector(
-            '[name="quickAddressLongitude"]',
-          )?.value;
-          document.body.classList.remove("wloc-account-mode");
-
-          if (!isCoordinatePairValid(selectedLatitude, selectedLongitude)) {
-            status.className = "wloc-account-location-status is-error";
-            status.textContent =
-              "Titik belum akurat. Pilih hasil pencarian atau gunakan GPS.";
-            pickerButton.textContent = "Pilih ulang titik lokasi";
-            setFormLocked(true);
-            return;
-          }
-
-          setNativeValue(labelField, selectedLabel || labelField.value || "Rumah");
-          setNativeValue(detailField, selectedDetail || detailField.value);
-          setNativeValue(latitudeField, Number(selectedLatitude).toFixed(6));
-          setNativeValue(longitudeField, Number(selectedLongitude).toFixed(6));
-
+        function showReady(selectedDetail) {
           form.dataset.wlocPointReady = "1";
           pointSummary.classList.add("is-ready");
           pointSummaryText.textContent =
@@ -432,27 +357,34 @@ export default function CustomerLocationLauncher() {
             "Titik akurat tersimpan. Lengkapi detail lalu simpan alamat.";
           pickerButton.textContent = "Ubah titik lokasi";
           setFormLocked(false);
+        }
+
+        function applyAddress({ label, detail, latitude, longitude }) {
+          if (!form.isConnected || !isCoordinatePairValid(latitude, longitude))
+            throw new Error(
+              "Form alamat belum siap atau titik lokasi tidak valid.",
+            );
+          setNativeValue(labelField, label);
+          setNativeValue(detailField, detail);
+          setNativeValue(latitudeField, Number(latitude).toFixed(6));
+          setNativeValue(longitudeField, Number(longitude).toFixed(6));
+          showReady(detail);
           detailField.focus();
         }
 
         function openPicker(event) {
-          event?.preventDefault();
-          event?.stopPropagation();
-          bridgeForm.querySelector('[name="quickAddressLabel"]').value =
-            labelField.value || "";
-          bridgeForm.querySelector('[name="quickAddressDetail"]').value = "";
-          bridgeForm.querySelector('[name="quickAddressLatitude"]').value = "";
-          bridgeForm.querySelector('[name="quickAddressLongitude"]').value = "";
-          document.body.classList.add("wloc-account-mode");
+          event.preventDefault();
           window.dispatchEvent(
             new CustomEvent(ACCOUNT_PICKER_EVENT, {
-              detail: { source: "account" },
+              detail: { source: "account", applyAddress },
             }),
           );
         }
 
         function guardAccurateSubmit(event) {
-          if (!isCoordinatePairValid(latitudeField.value, longitudeField.value)) {
+          if (
+            !isCoordinatePairValid(latitudeField.value, longitudeField.value)
+          ) {
             event.preventDefault();
             event.stopImmediatePropagation();
             status.className = "wloc-account-location-status is-error";
@@ -463,11 +395,12 @@ export default function CustomerLocationLauncher() {
         }
 
         pickerButton.addEventListener("click", openPicker);
-        applyButton.addEventListener("click", handleApply);
         form.addEventListener("submit", guardAccurateSubmit, true);
         form.addEventListener("reset", resetStatus);
         form.dataset.wlocAccountReady = "1";
-        setFormLocked(true);
+        if (isCoordinatePairValid(latitudeField.value, longitudeField.value))
+          showReady(detailField.value);
+        else setFormLocked(true);
 
         accountInstalled.add({
           form,
@@ -475,10 +408,7 @@ export default function CustomerLocationLauncher() {
           card,
           detailHint,
           pickerButton,
-          bridgeForm,
-          applyButton,
           openPicker,
-          handleApply,
           guardAccurateSubmit,
           resetStatus,
           labelWrap,
@@ -489,34 +419,22 @@ export default function CustomerLocationLauncher() {
       }
     }
 
-    function installAll() {
-      installCheckoutLauncher();
-      installAccountAddressPicker();
-    }
-
-    installAll();
-    const observer = new MutationObserver(() => installAll());
+    installAccountAddressPicker();
+    const observer = new MutationObserver(installAccountAddressPicker);
     observer.observe(document.body, { childList: true, subtree: true });
 
     return () => {
       observer.disconnect();
-      document.body.classList.remove("wloc-account-mode");
-
-      for (const entry of checkoutInstalled) {
-        entry.launcher.remove();
-        entry.original.hidden = false;
-        entry.original.removeAttribute("aria-hidden");
-        delete entry.container.dataset.wlocLauncherReady;
-      }
-
       for (const entry of accountInstalled) {
         entry.pickerButton.removeEventListener("click", entry.openPicker);
-        entry.applyButton.removeEventListener("click", entry.handleApply);
-        entry.form.removeEventListener("submit", entry.guardAccurateSubmit, true);
+        entry.form.removeEventListener(
+          "submit",
+          entry.guardAccurateSubmit,
+          true,
+        );
         entry.form.removeEventListener("reset", entry.resetStatus);
         entry.card.remove();
         entry.detailHint.remove();
-        entry.bridgeForm.remove();
         entry.form.classList.remove("wloc-account-location-first");
         entry.labelWrap?.classList.remove("wloc-account-label-field");
         entry.detailWrap?.classList.remove("wloc-account-detail-field");
@@ -530,14 +448,6 @@ export default function CustomerLocationLauncher() {
           );
         }
         delete entry.form.dataset.wlocAccountReady;
-      }
-
-      const legacyForms = document.querySelectorAll(
-        '.checkout-quick-address[data-wloc-legacy-hidden="1"]',
-      );
-      for (const form of legacyForms) {
-        form.style.removeProperty("display");
-        delete form.dataset.wlocLegacyHidden;
       }
     };
   }, []);

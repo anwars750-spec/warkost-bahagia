@@ -17,7 +17,7 @@ const customerPage = await readFile(new URL("../app/page.js", import.meta.url), 
 test("location picker is scoped inside the authenticated Customer boundary", () => {
   assert.match(customerPage, /CustomerLocationPickerUx/);
   assert.match(layout, /customer-location-picker-ux\.css/);
-  assert.match(customerPage, /<CustomerLocationPickerUx \/>/);
+  assert.match(customerPage, /<CustomerLocationPickerUx\b/);
 });
 
 test("location search uses minimum query and debounce contract", () => {
@@ -32,8 +32,6 @@ test("location picker keeps current, saved and manual fallbacks", () => {
   assert.match(component, /Gunakan lokasi saat ini/);
   assert.match(component, /ALAMAT TERSIMPAN/);
   assert.match(component, /Masukkan alamat secara manual/);
-  assert.match(component, /quickAddressLabel/);
-  assert.match(component, /quickAddressDetail/);
 });
 
 test("GPS fails gracefully outside a secure context", () => {
@@ -61,4 +59,9 @@ test("location picker styles remain mobile first", () => {
   assert.match(css, /width: min\(100%, 430px\)/);
   assert.match(css, /100dvh/);
   assert.match(css, /safe-area-inset-bottom/);
+});
+
+test("saved location picker receives Customer addresses without a Checkout DOM dependency", () => {
+  assert.match(customerPage, /<CustomerLocationPickerUx\b[^>]*savedAddresses=\{deliveryAddresses\}/);
+  assert.doesNotMatch(component, /document\.querySelector\([^\n]*select\[name=/);
 });

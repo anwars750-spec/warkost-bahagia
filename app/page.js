@@ -322,8 +322,6 @@ export default function App() {
     [deliveryQuote, setDeliveryQuote] = useState(null),
     [deliveryQuoteBusy, setDeliveryQuoteBusy] = useState(false),
     [deliveryQuoteError, setDeliveryQuoteError] = useState(""),
-    [quickAddressOpen, setQuickAddressOpen] = useState(false),
-    [quickAddressBusy, setQuickAddressBusy] = useState(false),
     [selectedVoucherId, setSelectedVoucherId] = useState(null),
     [voucherQuote, setVoucherQuote] = useState(null),
     [voucherQuoteBusy, setVoucherQuoteBusy] = useState(false),
@@ -1012,6 +1010,7 @@ export default function App() {
   const deliveryAddresses = account.addresses.filter(
     (address) => address.label !== PICKUP_LABEL,
   );
+  const editingAddressRecord = account.addresses.find((address) => address.id === editingAddress);
   const selectedCheckoutAddress =
     fulfillmentMode === FULFILLMENT_PICKUP
       ? pickupAddress
@@ -1359,47 +1358,37 @@ export default function App() {
       setPickupAddressBusy(false);
     }
   }
-  async function saveQuickAddress(event) {
-    const form = event.currentTarget.form;
-    if (!form || quickAddressAttempt.current) return;
-    const fields = form.elements;
-    const label = String(
-      fields.namedItem("quickAddressLabel")?.value || "",
-    ).trim();
-    const detail = String(
-      fields.namedItem("quickAddressDetail")?.value || "",
-    ).trim();
-    if (label.length < 2 || detail.length < 10) {
-      setError("Lengkapi label dan alamat pengantaran dengan benar.");
-      return;
-    }
+  function selectCheckoutDeliveryAddress(id) {
+    const address = deliveryAddresses.find((item) => String(item.id) === String(id));
+    if (!address || String(address.id) === String(selectedCheckoutAddress?.id)) return;
+    setDeliveryQuote(null);
+    setDeliveryQuoteError("");
+    setCheckoutAddressId(String(address.id));
+  }
+  function selectSavedLocation(id, source) {
+    const address = deliveryAddresses.find((item) => String(item.id) === String(id));
+    if (!address) return;
+    if (source === "account") setEditingAddress(address.id);
+    else selectCheckoutDeliveryAddress(address.id);
+  }
+  async function saveQuickAddress({ label, detail, latitude, longitude }) {
+    if (quickAddressAttempt.current) return;
     quickAddressAttempt.current = true;
-    setQuickAddressBusy(true);
     setError("");
     try {
-      const created = await api("address", {
-        label,
-        detail,
-        latitude: fields.namedItem("quickAddressLatitude")?.value,
-        longitude: fields.namedItem("quickAddressLongitude")?.value,
-        isDefault: false,
-      });
+      const created = await api("address", { label, detail, latitude, longitude, isDefault: false });
       const refreshedAccount = await api("account");
       setAccount(refreshedAccount);
       setCheckoutAddressId(String(created.id));
       setDeliveryQuote(null);
       setDeliveryQuoteError("");
-      setQuickAddressOpen(false);
       showTransientMessage(
         isGuest
           ? "Lokasi pengantaran siap digunakan."
           : "Alamat berhasil ditambahkan.",
       );
-    } catch (saveError) {
-      setError(saveError.message);
     } finally {
       quickAddressAttempt.current = false;
-      setQuickAddressBusy(false);
     }
   }
   function openCustomerHelp() {
@@ -2641,11 +2630,7 @@ export default function App() {
                           name="address"
                           required
                           value={selectedCheckoutAddress?.id || ""}
-                          onChange={(event) => {
-                            setDeliveryQuote(null);
-                            setDeliveryQuoteError("");
-                            setCheckoutAddressId(event.target.value);
-                          }}
+                          onChange={(event) => selectCheckoutDeliveryAddress(event.target.value)}
                         >
                           {deliveryAddresses.map((address) => (
                             <option key={address.id} value={address.id}>
@@ -2657,92 +2642,16 @@ export default function App() {
                       <div className="checkout-address-actions">
                         <button
                           type="button"
-                          className="quick-address-toggle"
-                          aria-expanded={quickAddressOpen}
-                          onClick={() => setQuickAddressOpen((open) => !open)}
+                          className="quick-address-toggle wloc-location-launcher"
+                          aria-haspopup="dialog"
+                          onClick={() => window.dispatchEvent(new CustomEvent(
+                            "warkost:location-picker-open",
+                            { detail: { source: "checkout" } },
+                          ))}
                         >
-                          {quickAddressOpen
-                            ? "Tutup form alamat"
-                            : "+ Tambah lokasi lain"}
+                          + Tambah lokasi lain
                         </button>
                       </div>
-                      {quickAddressOpen && (
-                        <div
-                          className="checkout-quick-address"
-                          aria-label="Tambah lokasi pengantaran"
-                        >
-                          <div className="quick-address-heading">
-                            <LocationIcon />
-                            <span>
-                              <strong>Lokasi pengantaran baru</strong>
-                              <small>
-                                {isGuest
-                                  ? "Lokasi hanya dipakai untuk checkout guest ini."
-                                  : "Alamat disimpan ke akun dan langsung dipakai untuk checkout ini."}
-                              </small>
-                            </span>
-                          </div>
-                          <div className="quick-address-fields">
-                            <label>
-                              Label alamat
-                              <input
-                                name="quickAddressLabel"
-                                placeholder="Rumah / Kantor / Lainnya"
-                                minLength="2"
-                                disabled={quickAddressBusy}
-                              />
-                            </label>
-                            <label>
-                              Alamat lengkap
-                              <textarea
-                                name="quickAddressDetail"
-                                placeholder="Nama jalan, nomor, patokan, RT/RW"
-                                minLength="10"
-                                disabled={quickAddressBusy}
-                              />
-                            </label>
-                          </div>
-                          <div className="quick-address-location">
-                            <button
-                              type="button"
-                              className="location-button"
-                              data-latitude-field="quickAddressLatitude"
-                              data-longitude-field="quickAddressLongitude"
-                              onClick={useDeviceLocation}
-                              disabled={quickAddressBusy}
-                            >
-                              Gunakan lokasi perangkat
-                            </button>
-                            <input name="quickAddressLatitude" type="hidden" />
-                            <input name="quickAddressLongitude" type="hidden" />
-                            <small>
-                              Titik lokasi dipakai untuk kalkulasi ongkir. Input
-                              koordinat teknis tidak ditampilkan.
-                            </small>
-                          </div>
-                          <div className="quick-address-buttons">
-                            <button
-                              type="button"
-                              className="primary"
-                              disabled={quickAddressBusy}
-                              onClick={saveQuickAddress}
-                            >
-                              {quickAddressBusy
-                                ? "Menyimpan…"
-                                : isGuest
-                                  ? "Gunakan alamat"
-                                  : "Simpan dan gunakan alamat"}
-                            </button>
-                            <button
-                              type="button"
-                              disabled={quickAddressBusy}
-                              onClick={() => setQuickAddressOpen(false)}
-                            >
-                              Batal
-                            </button>
-                          </div>
-                        </div>
-                      )}
                       {selectedCheckoutAddress ? (
                         <div className="delivery-summary">
                           <LocationIcon />
@@ -3063,10 +2972,7 @@ export default function App() {
                     Label
                     <input
                       name="label"
-                      defaultValue={
-                        account.addresses.find((a) => a.id === editingAddress)
-                          ?.label || ""
-                      }
+                      defaultValue={editingAddressRecord?.label || ""}
                       placeholder="Rumah / Kantor"
                       required
                       minLength="2"
@@ -3076,10 +2982,7 @@ export default function App() {
                     Alamat lengkap
                     <textarea
                       name="detail"
-                      defaultValue={
-                        account.addresses.find((a) => a.id === editingAddress)
-                          ?.detail || ""
-                      }
+                      defaultValue={editingAddressRecord?.detail || ""}
                       minLength="10"
                       required
                     />
@@ -3101,16 +3004,13 @@ export default function App() {
                     >
                       Gunakan lokasi perangkat
                     </button>
-                    <input name="latitude" type="hidden" />
-                    <input name="longitude" type="hidden" />
+                    <input name="latitude" type="hidden" defaultValue={editingAddressRecord?.latitude ?? ""} />
+                    <input name="longitude" type="hidden" defaultValue={editingAddressRecord?.longitude ?? ""} />
                     <label className="consent-field">
                       <input
                         name="isDefault"
                         type="checkbox"
-                        defaultChecked={
-                          account.addresses.find((a) => a.id === editingAddress)
-                            ?.is_default === 1
-                        }
+                        defaultChecked={editingAddressRecord?.is_default === 1}
                       />
                       <span>Jadikan alamat default</span>
                     </label>
@@ -5112,7 +5012,12 @@ export default function App() {
         <KitchenHeaderActions key={`kitchen-header-${view}`} userId={user.id} updateAlerts={setAlerts} />
       </>}
       {(!role || role === "CUSTOMER") && view !== "auth" && <><CustomerHelpRoutingRuntime /><CustomerGeneralSupportRuntime /></>}
-      {role === "CUSTOMER" && <><CustomerLocationLauncher /><CustomerLocationPickerUx /><CustomerAccountAddressLocationFirst /><CustomerQrisOnlyRuntime /><CustomerLoyaltyPickerRuntime /></>}
+      {role === "CUSTOMER" && <><CustomerLocationLauncher /><CustomerLocationPickerUx
+        key={user.id}
+        savedAddresses={deliveryAddresses}
+        onSelectSavedAddress={selectSavedLocation}
+        onSaveCheckoutAddress={saveQuickAddress}
+      /><CustomerAccountAddressLocationFirst /><CustomerQrisOnlyRuntime /><CustomerLoyaltyPickerRuntime /></>}
       {role === "ADMIN" && <AdminUiRuntime view={view} orders={orders} />}
       {customerLogoutOpen && role === "CUSTOMER" && <CustomerLogoutDialog busy={busy} error={error} onCancel={() => setCustomerLogoutOpen(false)} onConfirm={() => performLogout("menu")} />}
       <footer>
