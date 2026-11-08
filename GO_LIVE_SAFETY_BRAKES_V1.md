@@ -52,6 +52,21 @@ Branch: `work/go-live-safety-brakes-v1`; based on `work/customer-ui-polish-v1` @
 - Add authenticated, read-only Owner observability: total reserved/used credits, last provider success/failure, current internal limit, emergency OFF, and alerts. Avoid full addresses, secret keys, or customer PII in logs.
 - Clearly distinguish app-side modeled consumption from actual provider metering. Monitor Geoapify's own dashboard separately and investigate discrepancy before production.
 
+### Search UX credit throttle — Warkost V1 approved proposal (2026-11-08)
+
+The Product Owner proposes a maximum of **3 address recommendations** so customers see fewer results. This is good UX, **but a `limit=3` response still costs 1 credit per Autocomplete API call**. Reduce actual calls as follows (reference: https://apidocs.geoapify.com/docs/geocoding/address-autocomplete/ and https://www.geoapify.com/pricing-details/):
+
+- Set provider autocomplete `limit=3` and render no more than 3 suggestions. Never load a large result set and only trim it visually.
+- Require at least 3 meaningful characters after normalization; **700 ms debounce** after input pauses; cancel stale client requests and discard outdated responses. Note: cancelling after a provider call is already sent does **not** refund consumed credits.
+- Start with **5 autocomplete requests per active address-search attempt**, plus conservative per-customer/per-IP throttles; treat 5 as a design starting limit subject to usability UAT, not a known ideal. Provide a user-controlled restart after exhaustion without allowing endless free resets. Preserve ability to type a precise address or adjust a location pin.
+- Request a road route only after the user selects/confirms coordinates, not after every keystroke or suggestion change. Debounce rerouting when moving a pin.
+- **Do not download Geoapify map tiles on initial form render.** Lazy-load an interactive map only when user explicitly chooses to check/adjust the pin, after safe accounting. Map tile requests also consume credits and must pass the governed quota strategy or use a permitted alternative provider; no direct unmetered tile calls. If unable to meter all tiles, block production integration.
+- Filter to Indonesia and bias towards the configured Warkost operating area without mistakenly hiding valid in-radius addresses. Never rely on geocoding proximity instead of a backend-confirmed delivery quote.
+- Apply allowlisted provider-term-compliant short-lived caching of repeated normalized queries (with appropriate geographical context), without retaining unnecessary customer location/PII. Server-side enforcement must also prevent automated/key-abuse traffic and persist usage counters across process restarts.
+- Show understandable error UI if the search attempt allowance or daily credit allowance is exceeded, without implying orders/payment were lost. Owner-facing counters should separate autocomplete, routing and map tiles.
+
+Acceptance tests: 1,000 rapid keystrokes while typing one address trigger no more than the designed debounced requests; API response contains <=3; five-request search-attempt limit is server-enforced; stale/cancelled requests do not create duplicate routes; route only after selected coordinate; tiles are lazy and accounted; abusive refresh/new-tab/IP usage cannot bypass app-wide hard cap; pickup and already paid orders continue during quota exhaustion.
+
 ### Safe degradation
 
 - Public catalog, customer account, previously paid orders, realtime and notifications continue normally if Geoapify is unavailable or exhausted.
