@@ -32,7 +32,7 @@ try {
   const [[count]] = await connection.query(
     "SELECT COUNT(*) n FROM schema_migrations",
   );
-  assert.equal(count.n, 35);
+  assert.equal(count.n, 36);
   Object.assign(process.env, {
     DATABASE_URL: url,
     SESSION_SECRET: "native-push-fixture-secret-more-than-32-bytes",

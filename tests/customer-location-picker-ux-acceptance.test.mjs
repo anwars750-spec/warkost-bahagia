@@ -28,11 +28,9 @@ test("customer location UX keeps saved and manual fallbacks", () => {
   assert.match(component, /quickAddressDetail/);
 });
 
-test("customer location UX never displays raw coordinate input fields", () => {
-  assert.doesNotMatch(component, />Latitude</);
-  assert.doesNotMatch(component, />Longitude</);
-  assert.doesNotMatch(component, /placeholder="Latitude/);
-  assert.doesNotMatch(component, /placeholder="Longitude/);
+test("manual coordinates are available only after choosing to adjust the point", () => {
+  assert.match(component, /Periksa \/ ubah titik lokasi/);
+  assert.match(component, /\{adjustPoint && \(/);
 });
 
 test("out of range presentation replaces the final location CTA", () => {
@@ -43,14 +41,14 @@ test("out of range presentation replaces the final location CTA", () => {
 });
 
 test("provider failure copy stays customer friendly", () => {
-  assert.match(component, /Pencarian lokasi otomatis sedang tidak tersedia/);
-  assert.match(component, /alamat manual/);
+  assert.match(component, /Pencarian lokasi belum tersedia/);
+  assert.match(component, /alamat secara manual/i);
   assert.doesNotMatch(component, /quota exceeded/i);
   assert.doesNotMatch(component, /API key/i);
 });
 
-test("maps UI uses embed preview rather than JavaScript Maps SDK", () => {
-  assert.match(component, /google\.com\/maps\/embed\/v1\/place/);
+test("maps UI has no automatic embed or JavaScript Maps SDK", () => {
+  assert.doesNotMatch(component, /<iframe|google\.com\/maps\/embed/);
   assert.doesNotMatch(component, /maps\.googleapis\.com\/maps\/api\/js/);
   assert.doesNotMatch(component, /AdvancedMarkerElement/);
 });

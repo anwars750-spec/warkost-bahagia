@@ -404,9 +404,30 @@ export default function OwnerSettingsExperience() {
     }
   }
 
-  const mapUrl = `https://www.google.com/maps?q=${encodeURIComponent(
-    `${coords.lat},${coords.lng}`,
-  )}&z=18&output=embed`;
+  const [geoUsage, setGeoUsage] = useState(null);
+  useEffect(() => {
+    if (!locationHost || active !== "location") return;
+    const controller = new AbortController();
+    async function refresh() {
+      try {
+        const response = await fetch("/api/owner-geo-usage", {
+          cache: "no-store", signal: controller.signal,
+        });
+        if (!response.ok) throw new Error();
+        const data = await response.json();
+        if (!controller.signal.aborted) setGeoUsage(data);
+      } catch {
+        if (!controller.signal.aborted) setGeoUsage(null);
+      }
+    }
+    refresh();
+    const timer = window.setInterval(refresh, 30_000);
+    return () => {
+      controller.abort();
+      window.clearInterval(timer);
+    };
+  }, [locationHost, active]);
+
   const mapsOpenUrl = `https://www.google.com/maps?q=${encodeURIComponent(
     `${coords.lat},${coords.lng}`,
   )}`;
@@ -438,8 +459,8 @@ export default function OwnerSettingsExperience() {
               <h3>Pilih titik outlet dengan GPS</h3>
               <p>
                 Gunakan perangkat yang berada di outlet agar titik asal delivery
-                mengikuti posisi sebenarnya. Peta di bawah selalu mengikuti
-                latitude dan longitude pada form.
+                mengikuti posisi sebenarnya. Gunakan tautan Maps untuk melihat
+                titik sesuai latitude dan longitude pada form.
               </p>
             </div>
             <div className="osx-map-actions">
@@ -451,17 +472,19 @@ export default function OwnerSettingsExperience() {
               </a>
             </div>
           </div>
-          <div className="osx-map-frame">
-            <iframe
-              key={mapUrl}
-              title="Lokasi outlet Warkost Bahagia"
-              src={mapUrl}
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
-            <div className="osx-map-coordinates">
-              <span>LAT {coords.lat}</span>
-              <span>LNG {coords.lng}</span>
+          <div className="osx-map-copy"><p>LAT {coords.lat} · LNG {coords.lng}</p></div>
+          <div className="osx-map-copy">
+            <div>
+              <h3>Penggunaan Geoapify</h3>
+              {geoUsage ? (
+                <>
+                  <p>{geoUsage.externalEnabled ? "Aktif" : "Nonaktif"} · {geoUsage.estimatedCredits.reserved} / {geoUsage.allowance} estimasi kredit dalam {geoUsage.windowHours} jam.</p>
+                  <p>Pencarian {geoUsage.estimatedCredits.autocomplete} · Rute {geoUsage.estimatedCredits.routing} · Tile {geoUsage.estimatedCredits.tiles}</p>
+                  {geoUsage.alerts.length > 0 && (
+                    <p role="status">Penggunaan mencapai {geoUsage.alerts.at(-1)}% dari batas internal.</p>
+                  )}
+                </>
+              ) : <p>Data penggunaan belum tersedia.</p>}
             </div>
           </div>
           {geoMessage && <p className="osx-map-message">{geoMessage}</p>}

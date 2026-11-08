@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-
-const SEARCH_MIN_LENGTH = 3;
-const SEARCH_DEBOUNCE_MS = 500;
+import { useEffect, useRef, useState } from "react";
+import {
+  normalizeLocationQuery, SEARCH_DEBOUNCE_MS, SEARCH_MAX_LENGTH,
+  SEARCH_RESULT_LIMIT, validLocationQuery,
+} from "../lib/location-search.mjs";
 const ACCOUNT_PICKER_EVENT = "warkost:location-picker-open";
 
 function joinAddress(detail, extra) {
@@ -12,45 +13,6 @@ function joinAddress(detail, extra) {
   if (!primary) return secondary;
   if (!secondary) return primary;
   return `${primary} — ${secondary}`;
-}
-
-function normaliseSuggestions(payload) {
-  const rows = payload?.suggestions || payload?.results || [];
-  if (!Array.isArray(rows)) return [];
-  return rows
-    .map((item) => ({
-      placeId: item.placeId || item.place_id || item.id || "",
-      name:
-        item.name ||
-        item.displayName ||
-        item.mainText ||
-        item.primaryText ||
-        "Lokasi",
-      address:
-        item.address ||
-        item.formattedAddress ||
-        item.secondaryText ||
-        item.description ||
-        "",
-    }))
-    .filter((item) => item.placeId);
-}
-
-function normalisePlace(payload) {
-  const place = payload?.place || payload || {};
-  const latitude = Number(
-    place.latitude ?? place.location?.latitude ?? place.location?.lat,
-  );
-  const longitude = Number(
-    place.longitude ?? place.location?.longitude ?? place.location?.lng,
-  );
-  return {
-    placeId: place.placeId || place.place_id || place.id || "",
-    name: place.name || place.displayName || "Lokasi pilihan",
-    address: place.formattedAddress || place.address || "",
-    latitude: Number.isFinite(latitude) ? latitude : null,
-    longitude: Number.isFinite(longitude) ? longitude : null,
-  };
 }
 
 function formatDistance(value) {
@@ -92,10 +54,13 @@ export default function CustomerLocationPickerUx() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [searchBusy, setSearchBusy] = useState(false);
-  const [providerUnavailable, setProviderUnavailable] = useState(false);
+  const [searchCode, setSearchCode] = useState("");
+  const [attemptId, setAttemptId] = useState("");
   const [searchError, setSearchError] = useState("");
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [adjustPoint, setAdjustPoint] = useState(false);
+  const [pointDraft, setPointDraft] = useState({ latitude: "", longitude: "" });
   const [quote, setQuote] = useState(null);
   const [quoteBusy, setQuoteBusy] = useState(false);
   const [quoteError, setQuoteError] = useState("");
@@ -106,38 +71,30 @@ export default function CustomerLocationPickerUx() {
   const [manualAddress, setManualAddress] = useState("");
   const [locationBusy, setLocationBusy] = useState(false);
   const [locationError, setLocationError] = useState("");
-  const sessionToken = useRef("");
-  const searchSequence = useRef(0);
+  const gpsRequest = useRef(0);
   const sourceRef = useRef("checkout");
 
-  const embedKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY || "";
+  const normalizedQuery = normalizeLocationQuery(query);
+  const validQuery = validLocationQuery(normalizedQuery);
+  const latitude = selected?.latitude;
+  const longitude = selected?.longitude;
+  const pointKey = Number.isFinite(latitude) && Number.isFinite(longitude)
+    ? `${latitude},${longitude}` : null;
+  const currentQuote = quote?.pointKey === pointKey ? quote : null;
 
   const effectiveLabel =
     label === "Lainnya" ? customLabel.trim() || "Lainnya" : label;
 
-  const outOfRange = Boolean(
-    quote?.eligible === false || quote?.outOfRange === true || quote?.out_of_range,
-  );
-  const freeDelivery = Boolean(
-    quote?.free === true || quote?.freeDelivery === true || quote?.isFree === true,
-  );
-  const distanceKm =
-    quote?.distanceKm ?? quote?.distance_km ?? quote?.distance ?? null;
-  const fee = quote?.fee ?? quote?.deliveryFee ?? quote?.delivery_fee ?? null;
-  const duration = quote?.durationText || quote?.duration || quote?.estimatedMinutes;
-
-  const mapSrc = useMemo(() => {
-    if (!embedKey || selected?.latitude === null || selected?.longitude === null)
-      return "";
-    const q = encodeURIComponent(`${selected.latitude},${selected.longitude}`);
-    return `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(embedKey)}&q=${q}`;
-  }, [embedKey, selected?.latitude, selected?.longitude]);
+  const outOfRange = currentQuote?.available === false;
+  const freeDelivery = currentQuote?.free_delivery === true;
+  const distanceKm = currentQuote?.distance_km;
+  const fee = currentQuote?.delivery_fee;
 
   function startSession() {
-    sessionToken.current =
-      typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `warkost-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    setAttemptId(globalThis.crypto?.randomUUID?.() || "");
+    setSearchCode("");
+    setSearchError("");
+    setResults([]);
   }
 
   function readSavedAddressesFromCheckout() {
@@ -165,9 +122,10 @@ export default function CustomerLocationPickerUx() {
     setQuery("");
     setResults([]);
     setSearchBusy(false);
-    setProviderUnavailable(false);
+    setSearchCode("");
     setSearchError("");
     setSelected(null);
+    setAdjustPoint(false);
     setQuote(null);
     setQuoteBusy(false);
     setQuoteError("");
@@ -219,113 +177,109 @@ export default function CustomerLocationPickerUx() {
     return () => {
       document.body.style.overflow = previousOverflow;
       document.body.classList.remove("wloc-account-mode");
+      gpsRequest.current++;
       window.removeEventListener("keydown", handleEscape);
     };
   }, [open]);
 
+  const attemptExhausted = searchCode === "ATTEMPT_LIMIT";
   useEffect(() => {
-    if (!open || screen !== "search") return;
-    const trimmed = query.trim();
-    if (trimmed.length < SEARCH_MIN_LENGTH) {
-      setResults([]);
-      setSearchBusy(false);
-      setSearchError("");
-      return;
-    }
+    if (!open || screen !== "search" || attemptExhausted) return;
+    setResults([]);
+    setSearchBusy(false);
+    setSearchError("");
+    setSearchCode("");
+    if (!validQuery || !attemptId) return;
 
-    const sequence = ++searchSequence.current;
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setSearchBusy(true);
-      setSearchError("");
       try {
-        const params = new URLSearchParams({
-          q: trimmed,
-          sessionToken: sessionToken.current,
-        });
-        const response = await fetch(`/api/location/autocomplete?${params}`, {
-          cache: "no-store",
+        const response = await fetch("/api/location/autocomplete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: normalizedQuery, attemptId }),
           signal: controller.signal,
         });
-        const data = await readJson(response);
-        if (sequence !== searchSequence.current) return;
-        setProviderUnavailable(false);
-        setResults(normaliseSuggestions(data));
-      } catch (error) {
-        if (error.name === "AbortError" || sequence !== searchSequence.current)
+        const data = await response.json();
+        if (controller.signal.aborted) return;
+        if (!response.ok) {
+          setSearchCode(data.code || "UNAVAILABLE");
+          setSearchError(data.error || "Pencarian lokasi belum tersedia.");
           return;
-        setResults([]);
-        setProviderUnavailable(true);
-        setSearchError(
-          error.status === 404
-            ? "Pencarian lokasi otomatis sedang disiapkan. Kamu tetap bisa memakai alamat tersimpan atau alamat manual."
-            : "Pencarian lokasi otomatis sedang tidak tersedia. Coba lagi atau gunakan alamat manual.",
-        );
+        }
+        setResults(Array.isArray(data.suggestions) ? data.suggestions.slice(0, SEARCH_RESULT_LIMIT) : []);
+      } catch {
+        if (!controller.signal.aborted)
+          setSearchError("Pencarian lokasi belum tersedia. Gunakan alamat tersimpan atau tentukan titik secara manual.");
       } finally {
-        if (sequence === searchSequence.current) setSearchBusy(false);
+        if (!controller.signal.aborted) setSearchBusy(false);
       }
     }, SEARCH_DEBOUNCE_MS);
-
     return () => {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [open, query, screen]);
+  }, [open, normalizedQuery, validQuery, attemptId, screen, attemptExhausted]);
 
-  async function requestQuote(place) {
-    if (place.latitude === null || place.longitude === null) return;
+  useEffect(() => {
+    if (!open || screen !== "confirm" || !pointKey) {
+      setQuoteBusy(false);
+      return;
+    }
+    const controller = new AbortController();
     setQuoteBusy(true);
     setQuoteError("");
-    setQuote(null);
-    try {
-      const response = await fetch("/api/delivery/quote", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          latitude: place.latitude,
-          longitude: place.longitude,
-        }),
-      });
-      const data = await readJson(response);
-      setQuote(data);
-    } catch (error) {
-      setQuoteError(
-        error.status === 404
-          ? "Perhitungan jarak otomatis akan aktif setelah layanan Maps terhubung."
-          : "Perhitungan jarak otomatis sedang tidak tersedia.",
-      );
-    } finally {
-      setQuoteBusy(false);
-    }
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await fetch("/api/location/preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ latitude, longitude }),
+          signal: controller.signal,
+        });
+        const data = await readJson(response);
+        if (!controller.signal.aborted) setQuote({ ...data, pointKey });
+      } catch {
+        if (!controller.signal.aborted)
+          setQuoteError("Pratinjau ongkir belum tersedia. Periksa titik lokasi lalu coba lagi.");
+      } finally {
+        if (!controller.signal.aborted) setQuoteBusy(false);
+      }
+    }, 350);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [open, screen, pointKey, latitude, longitude]);
+
+  function chooseSuggestion(suggestion) {
+    if (!Number.isFinite(suggestion.latitude) || !Number.isFinite(suggestion.longitude)) return;
+    gpsRequest.current++;
+    setSelected(suggestion);
+    setManualMode(false);
+    setAdjustPoint(false);
+    setDetail("");
+    setScreen("confirm");
   }
 
-  async function chooseSuggestion(suggestion) {
-    setSearchBusy(true);
-    setSearchError("");
-    try {
-      const response = await fetch("/api/location/place", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          placeId: suggestion.placeId,
-          sessionToken: sessionToken.current,
-        }),
-      });
-      const place = normalisePlace(await readJson(response));
-      setSelected(place);
-      setManualMode(false);
-      setDetail("");
-      setScreen("confirm");
-      sessionToken.current = "";
-      await requestQuote(place);
-    } catch (error) {
-      setProviderUnavailable(true);
-      setSearchError(
-        "Detail lokasi belum dapat dimuat. Gunakan alamat tersimpan atau alamat manual.",
-      );
-    } finally {
-      setSearchBusy(false);
+  function editPoint() {
+    setPointDraft({ latitude: selected?.latitude ?? "", longitude: selected?.longitude ?? "" });
+    setAdjustPoint(true);
+  }
+
+  function applyPoint() {
+    const nextLatitude = Number(pointDraft.latitude);
+    const nextLongitude = Number(pointDraft.longitude);
+    if (String(pointDraft.latitude).trim() === "" || String(pointDraft.longitude).trim() === "" ||
+        !Number.isFinite(nextLatitude) || !Number.isFinite(nextLongitude) ||
+        Math.abs(nextLatitude) > 90 || Math.abs(nextLongitude) > 180) {
+      setQuoteError("Masukkan latitude dan longitude yang valid.");
+      return;
     }
+    setQuoteError("");
+    setSelected({ ...selected, latitude: nextLatitude, longitude: nextLongitude });
+    setAdjustPoint(false);
   }
 
   function chooseSavedAddress(address) {
@@ -337,6 +291,8 @@ export default function CustomerLocationPickerUx() {
   }
 
   function beginManualAddress() {
+    gpsRequest.current++;
+    setAdjustPoint(false);
     setManualMode(true);
     setSelected({
       placeId: "",
@@ -368,47 +324,27 @@ export default function CustomerLocationPickerUx() {
       );
       return;
     }
+    const requestId = ++gpsRequest.current;
     setLocationBusy(true);
     setLocationError("");
     geolocation.getCurrentPosition(
-      async ({ coords }) => {
-        const fallback = {
+      ({ coords }) => {
+        if (requestId !== gpsRequest.current) return;
+        setSelected({
           placeId: "",
           name: "Lokasi perangkat",
-          address: "Lokasi perangkat berhasil ditemukan.",
+          address: "",
           latitude: coords.latitude,
           longitude: coords.longitude,
-        };
-        try {
-          const response = await fetch("/api/location/reverse", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              latitude: coords.latitude,
-              longitude: coords.longitude,
-            }),
-          });
-          const place = normalisePlace(await readJson(response));
-          const resolved = {
-            ...fallback,
-            ...place,
-            latitude: coords.latitude,
-            longitude: coords.longitude,
-          };
-          setSelected(resolved);
-          setManualMode(false);
-          setScreen("confirm");
-          await requestQuote(resolved);
-        } catch {
-          setSelected(fallback);
-          setManualMode(false);
-          setScreen("confirm");
-          await requestQuote(fallback);
-        } finally {
-          setLocationBusy(false);
-        }
+        });
+        setManualAddress("");
+        setManualMode(true);
+        setAdjustPoint(false);
+        setScreen("confirm");
+        setLocationBusy(false);
       },
       (error) => {
+        if (requestId !== gpsRequest.current) return;
         setLocationBusy(false);
         setLocationError(
           error?.code === 1
@@ -421,6 +357,7 @@ export default function CustomerLocationPickerUx() {
   }
 
   function applyToExistingCheckout() {
+    if (currentQuote?.available !== true || adjustPoint) return;
     const baseAddress = manualMode ? manualAddress : selected?.address;
     const finalDetail = joinAddress(baseAddress, detail);
     const latitude = selected?.latitude;
@@ -501,6 +438,7 @@ export default function CustomerLocationPickerUx() {
               <input
                 autoFocus
                 value={query}
+                maxLength={SEARCH_MAX_LENGTH}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Cari alamat, gedung, atau tempat..."
                 aria-label="Cari lokasi pengantaran"
@@ -526,13 +464,16 @@ export default function CustomerLocationPickerUx() {
 
             {locationError && <p className="wloc-alert">{locationError}</p>}
 
-            {query.trim().length >= SEARCH_MIN_LENGTH ? (
+            {(validQuery || attemptExhausted) ? (
               <section className="wloc-section">
                 <div className="wloc-section-title">
                   <span>HASIL PENCARIAN</span>
                   {searchBusy && <small>Mencari…</small>}
                 </div>
-                {searchError && <p className="wloc-alert">{searchError}</p>}
+                {searchError && <p className="wloc-alert" role="status">{searchError}</p>}
+                {attemptExhausted && (
+                  <button type="button" className="wloc-manual" onClick={startSession}>Mulai pencarian baru</button>
+                )}
                 {!searchBusy && !searchError && results.length === 0 && (
                   <div className="wloc-empty">
                     <strong>Belum ada lokasi yang cocok</strong>
@@ -540,7 +481,7 @@ export default function CustomerLocationPickerUx() {
                   </div>
                 )}
                 <div className="wloc-results">
-                  {results.map((item) => (
+                  {results.slice(0, SEARCH_RESULT_LIMIT).map((item) => (
                     <button
                       type="button"
                       key={item.placeId}
@@ -556,6 +497,7 @@ export default function CustomerLocationPickerUx() {
                     </button>
                   ))}
                 </div>
+                {results.length > 0 && <small>Pencarian oleh <a href="https://www.geoapify.com/" target="_blank" rel="noreferrer">Geoapify</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a></small>}
               </section>
             ) : (
               <section className="wloc-section">
@@ -593,7 +535,7 @@ export default function CustomerLocationPickerUx() {
               Masukkan alamat secara manual
             </button>
 
-            {providerUnavailable && (
+            {searchCode && (
               <p className="wloc-footnote">
                 Pencarian otomatis tidak menghalangi checkout. Alamat manual dan alamat tersimpan tetap tersedia.
               </p>
@@ -601,20 +543,20 @@ export default function CustomerLocationPickerUx() {
           </main>
         ) : (
           <main className="wloc-body wloc-confirm">
-            <section className="wloc-map-card" aria-label="Pratinjau lokasi">
-              {mapSrc ? (
-                <iframe
-                  title="Google Maps lokasi pengantaran"
-                  src={mapSrc}
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
-              ) : (
-                <div className="wloc-map-placeholder">
-                  <span className="wloc-map-road wloc-map-road-a" />
-                  <span className="wloc-map-road wloc-map-road-b" />
-                  <span className="wloc-map-pin" aria-hidden="true">●</span>
-                  <small>Pratinjau peta aktif setelah Google Maps Embed dikonfigurasi</small>
+            <section className="wloc-place-card" aria-label="Titik lokasi">
+              <button type="button" className="wloc-secondary" onClick={editPoint}>
+                {pointKey ? "Periksa / ubah titik lokasi" : "Masukkan titik lokasi"}
+              </button>
+              {adjustPoint && (
+                <div>
+                  {["latitude", "longitude"].map((field) => (
+                    <label key={field} className="wloc-field">
+                      <span>{field === "latitude" ? "Latitude" : "Longitude"}</span>
+                      <input type="number" step="any" value={pointDraft[field]}
+                        onChange={(event) => setPointDraft({ ...pointDraft, [field]: event.target.value })} />
+                    </label>
+                  ))}
+                  <button type="button" className="wloc-secondary" onClick={applyPoint}>Terapkan titik</button>
                 </div>
               )}
             </section>
@@ -653,7 +595,7 @@ export default function CustomerLocationPickerUx() {
                 </div>
                 <div>
                   <span>Estimasi</span>
-                  <strong>{duration ? (typeof duration === "number" ? `${duration} menit` : duration) : "—"}</strong>
+                  <strong>—</strong>
                 </div>
               </div>
 
@@ -715,7 +657,7 @@ export default function CustomerLocationPickerUx() {
                   type="button"
                   className="wloc-primary"
                   onClick={applyToExistingCheckout}
-                  disabled={quoteBusy}
+                  disabled={quoteBusy || adjustPoint || currentQuote?.available !== true}
                 >
                   {quoteBusy ? "Menghitung ongkir…" : "GUNAKAN LOKASI INI"}
                 </button>

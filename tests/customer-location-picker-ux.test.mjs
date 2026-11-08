@@ -21,10 +21,10 @@ test("location picker is scoped inside the authenticated Customer boundary", () 
 });
 
 test("location search uses minimum query and debounce contract", () => {
-  assert.match(component, /SEARCH_MIN_LENGTH = 3/);
-  assert.match(component, /SEARCH_DEBOUNCE_MS = 500/);
+  assert.match(component, /validLocationQuery/);
+  assert.match(component, /SEARCH_DEBOUNCE_MS/);
   assert.match(component, /\/api\/location\/autocomplete/);
-  assert.match(component, /sessionToken/);
+  assert.match(component, /attemptId/);
   assert.match(component, /AbortController/);
 });
 
@@ -52,10 +52,9 @@ test("location confirmation exposes delivery UX contract", () => {
   assert.match(component, /Di luar jangkauan pengantaran Warkost/);
 });
 
-test("maps embed stays optional until browser key is configured", () => {
-  assert.match(component, /NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY/);
-  assert.match(component, /google\.com\/maps\/embed\/v1\/place/);
-  assert.match(component, /Pratinjau peta aktif setelah Google Maps Embed dikonfigurasi/);
+test("picker does not load external tiles and preserves manual coordinate editing", () => {
+  assert.doesNotMatch(component, /<iframe|NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY|tileLayer/);
+  assert.match(component, /Periksa \/ ubah titik lokasi/);
 });
 
 test("location picker styles remain mobile first", () => {
