@@ -31,7 +31,7 @@ test("modal Setoran Kas Owner tetap memakai settlement center existing", () => {
   const center = source("app/ManagerOwnerSettlementCenter.js");
 
   assert.match(center, /manager-owner-settlement/);
-  assert.match(center, /data\.user\?\.role/);
+  assert.match(source("app/page.js"), /\["MANAGER", "OWNER"\]\.includes\(role\) && <ManagerOwnerSettlementCenter/);
   assert.match(center, /createPortal\(/);
   assert.match(center, /Setoran Manager/);
   assert.match(center, /action: "VERIFY"/);

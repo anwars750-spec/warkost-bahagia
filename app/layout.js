@@ -112,7 +112,6 @@ import "./admin-action-colors-final.css";
 import DriverRuntimeBootstrap from "./DriverRuntimeBootstrap";
 import DriverLogoFix from "./DriverLogoFix";
 import AdminCodBatchEventBridge from "./AdminCodBatchEventBridge";
-import AdminCashControlCenter from "./AdminCashControlCenter";
 import AdminShiftGateRuntime from "./AdminShiftGateRuntime";
 import AdminShiftSettlementRuntime from "./AdminShiftSettlementRuntime";
 import AdminSettlementStabilityBridge from "./AdminSettlementStabilityBridge";
@@ -130,8 +129,6 @@ import OwnerSettingsCenter from "./OwnerSettingsCenter";
 import OwnerSettingsExperience from "./OwnerSettingsExperience";
 import OwnerNavigationRuntime from "./OwnerNavigationRuntime";
 import OwnerNotificationPopover from "./OwnerNotificationPopover";
-import ManagerCashSettlementCenter from "./ManagerCashSettlementCenter";
-import ManagerOwnerSettlementCenter from "./ManagerOwnerSettlementCenter";
 import ManagerCashSyncBridge from "./ManagerCashSyncBridge";
 import PrintBrandingRuntime from "./PrintBrandingRuntime";
 import PrinterCenterRuntime from "./PrinterCenterRuntime";
@@ -166,7 +163,6 @@ export default function RootLayout({ children }) {
         <DriverRuntimeBootstrap />
         <DriverLogoFix />
         <AdminCodBatchEventBridge />
-        <AdminCashControlCenter />
         <AdminShiftGateRuntime />
         <AdminShiftSettlementRuntime />
         <AdminSettlementStabilityBridge />
@@ -184,8 +180,6 @@ export default function RootLayout({ children }) {
         <OwnerSettingsExperience />
         <OwnerNavigationRuntime />
         <OwnerNotificationPopover />
-        <ManagerCashSettlementCenter />
-        <ManagerOwnerSettlementCenter />
         <ManagerCashSyncBridge />
         <PrintBrandingRuntime />
         <PrinterCenterRuntime />

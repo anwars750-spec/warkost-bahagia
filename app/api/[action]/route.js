@@ -1,4 +1,4 @@
-import { authStage, withAuthTimings } from "../../../lib/auth-timing.mjs";
+import { authStage, withAuthTimings, withCheckoutTimings } from "../../../lib/auth-timing.mjs";
 import { NextResponse } from "next/server";
 import {
   recordAttempt,
@@ -173,7 +173,12 @@ function cookieOptions(request) {
     maxAge: 7 * 86400,
   };
 }
-export async function GET(request, { params }) {
+export async function GET(request, context) {
+  const { action } = await context.params;
+  const run = () => getAction(request, { params: Promise.resolve({ action }) });
+  return action === "account" ? withCheckoutTimings(run) : run();
+}
+async function getAction(request, { params }) {
   try {
     const { action } = await params;
     const user = await currentUser(request);
@@ -416,7 +421,7 @@ export async function GET(request, { params }) {
           integer(request.nextUrl.searchParams.get("batchId")),
         ),
       );
-    if (action === "account") {
+    if (action === "account") return await authStage("checkout.data", async () => {
       required(user, ["CUSTOMER"]);
       const { profile, addresses } = await getCustomerAccount(user);
       if (isGuestCustomer(user))
@@ -452,7 +457,7 @@ export async function GET(request, { params }) {
         promotions,
         rewards,
       });
-    }
+    });
     if (action === "drivers") {
       requiredCapability(user, CAPABILITIES.DELIVERY_READ);
       return out({
@@ -514,9 +519,8 @@ export async function GET(request, { params }) {
 }
 export async function POST(request, context) {
   const { action } = await context.params;
-  return withAuthTimings(action, () =>
-    postAction(request, { params: Promise.resolve({ action }) }),
-  );
+  const run = () => postAction(request, { params: Promise.resolve({ action }) });
+  return action === "address" ? withCheckoutTimings(run) : withAuthTimings(action, run);
 }
 async function postAction(request, { params }) {
   try {
@@ -694,7 +698,7 @@ async function postAction(request, { params }) {
           body.status,
         ),
       );
-    if (action === "address") return out(await addAddress(user, body));
+    if (action === "address") return out(await authStage("checkout.data", () => addAddress(user, body)));
     if (action === "address-replace")
       return out(await replaceAddress(user, integer(body.id), body));
     if (action === "address-default")

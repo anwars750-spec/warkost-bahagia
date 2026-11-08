@@ -55,6 +55,8 @@ test("perubahan alamat mempertahankan histori dan menghalangi checkout alamat no
     latitude: -6.9217,
     longitude: 106.9272,
   });
+  const account = await getCustomerAccount(customer);
+  assert.deepEqual(address.address, account.addresses.find(({ id }) => id === address.id));
   const order = await createOrder(customer, {
     addressId: address.id,
     method: "CASH",

@@ -48,7 +48,6 @@ async function request(body, timeoutMs = 8000) {
 }
 
 export default function AdminCashControlCenter() {
-  const [isAdmin, setIsAdmin] = useState(false);
   const [open, setOpen] = useState(false);
   const [state, setState] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -61,7 +60,6 @@ export default function AdminCashControlCenter() {
 
   const load = useCallback(
     async ({ force = false } = {}) => {
-      if (!isAdmin && !force) return;
       setLoading(true);
       setError("");
       try {
@@ -81,50 +79,13 @@ export default function AdminCashControlCenter() {
         setLoading(false);
       }
     },
-    [isAdmin],
+    [],
   );
-
-  useEffect(() => {
-    let active = true;
-    const detectAdmin = async () => {
-      const hasAdminNav = Boolean(
-        document.querySelector('nav [data-admin-nav="Printer"]'),
-      );
-      if (hasAdminNav) {
-        if (active) setIsAdmin(true);
-        return;
-      }
-      try {
-        const response = await fetch("/api/me", {
-          cache: "no-store",
-          credentials: "same-origin",
-        });
-        const data = await response.json();
-        if (active) setIsAdmin(data.user?.role === "ADMIN");
-      } catch {
-        if (active) setIsAdmin(false);
-      }
-    };
-
-    detectAdmin();
-    const observer = new MutationObserver(detectAdmin);
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["data-admin-nav"],
-    });
-    return () => {
-      active = false;
-      observer.disconnect();
-    };
-  }, []);
 
   useEffect(() => {
     const restoreSession = (event) => {
       const hasShift = Boolean(event?.detail?.hasShift);
       const restored = event?.detail?.currentShift || null;
-      setIsAdmin(true);
 
       if (hasShift && restored) {
         setState((current) => ({
@@ -157,7 +118,6 @@ export default function AdminCashControlCenter() {
   }, [load]);
 
   useEffect(() => {
-    if (!isAdmin) return;
     load({ force: true });
     const refresh = () => load({ force: true });
     window.addEventListener("warkost:cod-batch-updated", refresh);
@@ -166,10 +126,9 @@ export default function AdminCashControlCenter() {
       window.removeEventListener("warkost:cod-batch-updated", refresh);
       window.removeEventListener("warkost:realtime-recovered", refresh);
     };
-  }, [isAdmin, load]);
+  }, [load]);
 
   useEffect(() => {
-    if (!isAdmin) return;
     let navButton = null;
     let observer = null;
 
@@ -216,7 +175,7 @@ export default function AdminCashControlCenter() {
       observer?.disconnect();
       navButton?.remove();
     };
-  }, [isAdmin, load]);
+  }, [load]);
 
   useEffect(() => {
     const button = document.querySelector('nav [data-admin-nav="Setoran"]');
@@ -332,7 +291,7 @@ export default function AdminCashControlCenter() {
     );
   };
 
-  if (!isAdmin || !open) return null;
+  if (!open) return null;
 
   return (
     <div

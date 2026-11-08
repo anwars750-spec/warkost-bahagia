@@ -35,8 +35,7 @@ async function request(body) {
   return data;
 }
 
-export default function ManagerOwnerSettlementCenter() {
-  const [role, setRole] = useState(null);
+export default function ManagerOwnerSettlementCenter({ role }) {
   const [open, setOpen] = useState(false);
   const [state, setState] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -50,42 +49,6 @@ export default function ManagerOwnerSettlementCenter() {
 
   const [selectedId, setSelectedId] = useState(null);
   const [ownerReceived, setOwnerReceived] = useState("");
-
-  useEffect(() => {
-    let alive = true;
-    let checking = false;
-    let lastCheck = 0;
-
-    const detect = async (force = false) => {
-      const now = Date.now();
-      if (checking || (!force && now - lastCheck < 900)) return;
-      checking = true;
-      lastCheck = now;
-      try {
-        const response = await fetch("/api/me", {
-          credentials: "same-origin",
-          cache: "no-store",
-        });
-        const data = await response.json().catch(() => ({}));
-        const nextRole = ["MANAGER", "OWNER"].includes(data.user?.role)
-          ? data.user.role
-          : null;
-        if (alive) setRole(nextRole);
-      } catch {
-        if (alive) setRole(null);
-      } finally {
-        checking = false;
-      }
-    };
-
-    detect(true);
-    const observer = new MutationObserver(() => detect(false));
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => {
-      alive = false;
-      observer.disconnect();
-    };
-  }, []);
 
   const load = useCallback(async () => {
     if (!role) return;

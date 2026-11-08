@@ -1,3 +1,7 @@
+import {
+  authStage,
+  withCheckoutTimings,
+} from "../../../../lib/auth-timing.mjs";
 import { NextResponse } from "next/server";
 import { currentUser } from "../../../../lib/auth.mjs";
 import { DomainError, quoteDelivery } from "../../../../lib/domain.mjs";
@@ -12,6 +16,10 @@ const out = (data, status = 200) =>
   });
 
 export async function POST(request) {
+  return withCheckoutTimings(() => quote(request));
+}
+
+async function quote(request) {
   try {
     assertSameOrigin(request);
     const user = await currentUser(request);
@@ -19,7 +27,9 @@ export async function POST(request) {
     const addressId = Number(body.addressId);
     if (!Number.isSafeInteger(addressId) || addressId < 1)
       throw new DomainError("Alamat tidak valid");
-    return out(await quoteDelivery(user, addressId));
+    return out(
+      await authStage("checkout.data", () => quoteDelivery(user, addressId)),
+    );
   } catch (error) {
     if (error instanceof DomainError)
       return out({ error: error.message }, error.status);

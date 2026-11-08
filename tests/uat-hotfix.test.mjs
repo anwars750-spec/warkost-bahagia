@@ -324,7 +324,8 @@ test("checkout quick address menyimpan, memilih, dan memicu ulang quote tanpa me
   assert.match(handler, /if \(quickAddressAttempt\.current\) return/);
   assert.match(handler, /await api\("address",/);
   assert.match(handler, /isDefault:\s*false/);
-  assert.match(handler, /await api\("account"\)/);
+  assert.doesNotMatch(handler, /api\("account"\)/);
+  assert.match(handler, /created\.address/);
   assert.match(handler, /setCheckoutAddressId\(String\(created\.id\)\)/);
   assert.match(
     handler,

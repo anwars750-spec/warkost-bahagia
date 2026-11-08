@@ -4,6 +4,9 @@ import PushNotificationSettings from "./PushNotificationSettings";
 import CustomerHelpRoutingRuntime from "./CustomerHelpRoutingRuntime";
 import CustomerGeneralSupportRuntime from "./CustomerGeneralSupportRuntime";
 import CustomerLocationLauncher from "./CustomerLocationLauncher";
+import AdminCashControlCenter from "./AdminCashControlCenter";
+import ManagerCashSettlementCenter from "./ManagerCashSettlementCenter";
+import ManagerOwnerSettlementCenter from "./ManagerOwnerSettlementCenter";
 import CustomerLocationPickerUx from "./CustomerLocationPickerUx";
 import CustomerAccountAddressLocationFirst from "./CustomerAccountAddressLocationFirst";
 import CustomerQrisOnlyRuntime from "./CustomerQrisOnlyRuntime";
@@ -234,6 +237,7 @@ export default function App() {
   const [customerLogoutOpen, setCustomerLogoutOpen] = useState(false);
   const checkoutAttempt = useRef(null);
   const quickAddressAttempt = useRef(false);
+  const accountRevision = useRef(0);
   const pollController = useRef(null);
   const refreshController = useRef(null);
   const messageTimer = useRef(null);
@@ -361,6 +365,11 @@ export default function App() {
       await api("product", body);
     });
   }
+  async function refreshCustomerAccount(signal) {
+    const revision = accountRevision.current;
+    const result = await api("account", undefined, signal);
+    if (!signal?.aborted && revision === accountRevision.current) setAccount(result);
+  }
   async function refresh() {
     refreshController.current?.abort();
     const controller = new AbortController();
@@ -401,7 +410,7 @@ export default function App() {
         }
         setAlerts(await api("notifications", undefined, signal));
         if (me.user.role === "CUSTOMER")
-          setAccount(await api("account", undefined, signal));
+          await refreshCustomerAccount(signal);
         if (["ADMIN", "OWNER"].includes(me.user.role)) {
           setDashboard(await api("dashboard", undefined, signal));
           if (view === "reports")
@@ -510,7 +519,7 @@ export default function App() {
         if (["ADMIN", "OWNER"].includes(user.role))
           setDashboard(await api("dashboard", undefined, controller.signal));
         if (user.role === "CUSTOMER")
-          setAccount(await api("account", undefined, controller.signal));
+          await refreshCustomerAccount(controller.signal);
         if (user.role === "CUSTOMER")
           setMenu(await api("menu", undefined, controller.signal));
         if (user.role === "MANAGER") {
@@ -593,7 +602,7 @@ export default function App() {
         if (groups.has("dashboard") && user.role === "ADMIN")
           jobs.push(api("dashboard").then(setDashboard));
         if (groups.has("account") && user.role === "CUSTOMER")
-          jobs.push(api("account").then(setAccount));
+          jobs.push(refreshCustomerAccount());
         if (groups.has("catalog")) {
           if (user.role === "CUSTOMER") jobs.push(api("menu").then(setMenu));
           if (user.role === "MANAGER")
@@ -705,6 +714,7 @@ export default function App() {
   }, [view]);
   useEffect(() => () => { authAttempt.current?.abort(); refreshController.current?.abort(); }, []);
   function clearCustomerData(clearCart = true) {
+    accountRevision.current++;
     setAccount({ profile: null, addresses: [], loyalty: 0, transactions: [], vouchers: [], promotions: [], rewards: [] });
     setAlerts({ notifications: [], unread: 0 });
     setOrders([]);
@@ -1375,10 +1385,21 @@ export default function App() {
     if (quickAddressAttempt.current) return;
     quickAddressAttempt.current = true;
     setError("");
+    const revision = accountRevision.current;
     try {
       const created = await api("address", { label, detail, latitude, longitude, isDefault: false });
-      const refreshedAccount = await api("account");
-      setAccount(refreshedAccount);
+      if (revision !== accountRevision.current) return;
+      accountRevision.current++;
+      const address = created.address;
+      setAccount((current) => {
+        const others = current.addresses.filter((item) => String(item.id) !== String(address.id));
+        return {
+          ...current,
+          addresses: address.is_default
+            ? [address, ...others.map((item) => ({ ...item, is_default: 0 }))]
+            : [address, ...others].sort((a, b) => b.is_default - a.is_default),
+        };
+      });
       setCheckoutAddressId(String(created.id));
       setDeliveryQuote(null);
       setDeliveryQuoteError("");
@@ -5019,6 +5040,9 @@ export default function App() {
         onSaveCheckoutAddress={saveQuickAddress}
       /><CustomerAccountAddressLocationFirst /><CustomerQrisOnlyRuntime /><CustomerLoyaltyPickerRuntime /></>}
       {role === "ADMIN" && <AdminUiRuntime view={view} orders={orders} />}
+      {role === "ADMIN" && <AdminCashControlCenter key={user.id} />}
+      {role === "MANAGER" && <ManagerCashSettlementCenter key={user.id} />}
+      {["MANAGER", "OWNER"].includes(role) && <ManagerOwnerSettlementCenter key={`${role}:${user.id}`} role={role} />}
       {customerLogoutOpen && role === "CUSTOMER" && <CustomerLogoutDialog busy={busy} error={error} onCancel={() => setCustomerLogoutOpen(false)} onConfirm={() => performLogout("menu")} />}
       <footer>
         Warkost Bahagia · Dibuat untuk operasional yang lebih rapi

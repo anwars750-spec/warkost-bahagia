@@ -36,7 +36,6 @@ async function request(body) {
 }
 
 export default function ManagerCashSettlementCenter() {
-  const [isManager, setIsManager] = useState(false);
   const [open, setOpen] = useState(false);
   const [state, setState] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
@@ -47,36 +46,7 @@ export default function ManagerCashSettlementCenter() {
   const [success, setSuccess] = useState("");
   const [printSettlement, setPrintSettlement] = useState(null);
 
-  useEffect(() => {
-    let alive = true;
-    let checking = false;
-    const detect = async () => {
-      if (checking) return;
-      checking = true;
-      try {
-        const response = await fetch("/api/me", {
-          credentials: "same-origin",
-          cache: "no-store",
-        });
-        const data = await response.json().catch(() => ({}));
-        if (alive) setIsManager(data.user?.role === "MANAGER");
-      } catch {
-        if (alive) setIsManager(false);
-      } finally {
-        checking = false;
-      }
-    };
-    detect();
-    const observer = new MutationObserver(detect);
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => {
-      alive = false;
-      observer.disconnect();
-    };
-  }, []);
-
   const load = useCallback(async () => {
-    if (!isManager) return;
     setLoading(true);
     setError("");
     try {
@@ -93,10 +63,9 @@ export default function ManagerCashSettlementCenter() {
     } finally {
       setLoading(false);
     }
-  }, [isManager]);
+  }, []);
 
   useEffect(() => {
-    if (!isManager) return;
     load();
     const refresh = () => load();
     window.addEventListener("warkost:admin-settlement-submitted", refresh);
@@ -105,10 +74,9 @@ export default function ManagerCashSettlementCenter() {
       window.removeEventListener("warkost:admin-settlement-submitted", refresh);
       window.removeEventListener("warkost:realtime-recovered", refresh);
     };
-  }, [isManager, load]);
+  }, [load]);
 
   useEffect(() => {
-    if (!isManager) return;
     let desktop = null;
     let mobile = null;
 
@@ -163,7 +131,7 @@ export default function ManagerCashSettlementCenter() {
       desktop?.remove();
       mobile?.remove();
     };
-  }, [isManager, load]);
+  }, [load]);
 
   useEffect(() => {
     const count = Number(state?.summary?.pending_count || 0);
@@ -245,7 +213,6 @@ export default function ManagerCashSettlementCenter() {
     window.setTimeout(() => window.print(), 120);
   };
 
-  if (!isManager) return null;
 
   return (
     <>
