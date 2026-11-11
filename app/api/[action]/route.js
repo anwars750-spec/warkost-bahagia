@@ -89,6 +89,7 @@ import {
   setDefaultAddress,
   updateProfile,
 } from "../../../lib/account.mjs";
+import { readAddressPoint } from "../../../lib/address-point.mjs";
 import {
   authenticateCustomer,
   registerCustomer,
@@ -698,9 +699,15 @@ async function postAction(request, { params }) {
           body.status,
         ),
       );
-    if (action === "address") return out(await authStage("checkout.data", () => addAddress(user, body)));
-    if (action === "address-replace")
-      return out(await replaceAddress(user, integer(body.id), body));
+    if (action === "address" || action === "address-replace") {
+      required(user, ["CUSTOMER"]);
+      const point = readAddressPoint(body.latitude, body.longitude);
+      if (!point) throw new DomainError("Titik lokasi tidak valid");
+      const address = { ...body, ...point };
+      if (action === "address-replace")
+        return out(await replaceAddress(user, integer(body.id), address));
+      return out(await authStage("checkout.data", () => addAddress(user, address)));
+    }
     if (action === "address-default")
       return out(await setDefaultAddress(user, integer(body.id)));
     if (action === "address-remove")

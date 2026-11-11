@@ -1,71 +1,84 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { readAddressPoint } from "../lib/address-point.mjs";
 
-const launcher = fs.readFileSync(
-  new URL("../app/CustomerLocationLauncher.js", import.meta.url),
+const form = await readFile(
+  new URL("../app/CustomerAccountAddressLocationFirst.js", import.meta.url),
+  "utf8",
+);
+const page = await readFile(new URL("../app/page.js", import.meta.url), "utf8");
+const route = await readFile(
+  new URL("../app/api/[action]/route.js", import.meta.url),
   "utf8",
 );
 
-test("account address settings reuse the location picker without layout-id coupling", () => {
-  assert.match(launcher, /findAddressFormCandidates/);
-  assert.match(launcher, /\["label", "detail", "latitude", "longitude"\]/);
-  assert.match(launcher, /Pilih titik lokasi/);
-  assert.match(launcher, /wloc-account-picker-trigger/);
-  assert.doesNotMatch(launcher, /querySelector\("#account-address"\)/);
-});
-
-test("legacy account location action is detected by class or visible label", () => {
-  assert.match(launcher, /findLegacyLocationButton/);
-  assert.match(launcher, /\.location-button/);
-  assert.match(launcher, /gunakan lokasi perangkat/);
-});
-
-test("account address is explicitly location-first", () => {
-  assert.match(launcher, /wloc-account-location-first/);
-  assert.match(launcher, /Pilih titik lokasi pengantaran/);
-  assert.match(launcher, /wloc-account-step-number/);
-  assert.match(launcher, /wloc-account-point-summary/);
-  assert.match(launcher, /Alamat & detail pengantaran/);
-  assert.match(launcher, /Label alamat/);
-});
-
-test("detail label default and save stay locked until a precise point exists", () => {
-  assert.match(launcher, /function setFormLocked/);
-  assert.match(launcher, /labelField\.disabled = locked/);
-  assert.match(launcher, /detailField\.disabled = locked/);
-  assert.match(launcher, /defaultField\) defaultField\.disabled = locked/);
-  assert.match(launcher, /saveButton\) saveButton\.disabled = locked/);
-  assert.match(launcher, /setFormLocked\(true\)/);
-  assert.match(launcher, /setFormLocked\(false\)/);
-});
-
-test("account address save requires valid coordinates", () => {
-  assert.match(launcher, /isCoordinatePairValid/);
-  assert.match(launcher, /guardAccurateSubmit/);
+test("Account opens the location picker with its current draft", () => {
+  assert.match(form, /new CustomEvent\("warkost:location-picker-open"/);
+  assert.match(form, /source: "account"/);
   assert.match(
-    launcher,
-    /Pilih titik lokasi terlebih dahulu agar alamat tersimpan akurat/,
+    form,
+    /address: \{ label: draft.label, detail: draft.detail, \.\.\.draft.point \}/,
   );
-  assert.match(launcher, /latitudeField\.value/);
-  assert.match(launcher, /longitudeField\.value/);
 });
 
-test("picker result fills account address coordinates and readable summary", () => {
-  assert.match(launcher, /setNativeValue\(latitudeField/);
-  assert.match(launcher, /setNativeValue\(longitudeField/);
-  assert.match(launcher, /toFixed\(6\)/);
-  assert.match(launcher, /pointSummaryText\.textContent/);
-  assert.match(launcher, /selectedDetail/);
+test("picker result atomically applies the selected label, detail and coordinates", () => {
+  assert.match(
+    form,
+    /applyAddress\(\{ label, detail, latitude, longitude \}\)/,
+  );
+  assert.match(
+    form,
+    /setDraft\(\(current\) => \(\{ \.\.\.current, label, detail, point \}\)\)/,
+  );
 });
 
-test("account opens picker through a dedicated event without synthetic checkout click", () => {
-  assert.match(launcher, /ACCOUNT_PICKER_EVENT = "warkost:location-picker-open"/);
-  assert.match(launcher, /detail: \{ source: "account", applyAddress \}/);
-  assert.doesNotMatch(launcher, /oldLocationButton\.click\(/);
+test("Account save requires the same draft point shown in the form", () => {
+  assert.match(form, /if \(!draft.point\)/);
+  assert.match(form, /\.\.\.draft.point,\s*isDefault: draft.isDefault/);
+  assert.doesNotMatch(
+    form,
+    /MutationObserver|new FormData|setNativeValue|name="(?:latitude|longitude)"/,
+  );
 });
 
-test("blank coordinate values are never accepted as zero coordinates", () => {
-  assert.match(launcher, /String\(latitude\)\.trim\(\) === ""/);
-  assert.match(launcher, /String\(longitude\)\.trim\(\) === ""/);
+test("address HTTP writes validate the coordinate pair before dispatching either mutation", () => {
+  assert.match(route, /action === "address" \|\| action === "address-replace"/);
+  assert.match(
+    route,
+    /if \(!point\) throw new DomainError\("Titik lokasi tidak valid"\)/,
+  );
+});
+
+test("address coordinate parsing preserves numbers and numeric strings", () => {
+  assert.deepEqual(readAddressPoint("-6.9", 106), {
+    latitude: -6.9,
+    longitude: 106,
+  });
+});
+
+test("a coordinate of zero is valid", () => {
+  assert.deepEqual(readAddressPoint(0, "0"), { latitude: 0, longitude: 0 });
+});
+
+test("missing and whitespace coordinates are invalid", () => {
+  for (const value of [undefined, null, "", " "]) {
+    assert.equal(readAddressPoint(value, 106), null);
+    assert.equal(readAddressPoint(-6.9, value), null);
+  }
+});
+
+test("out-of-range, nonfinite and coerced booleans or arrays are invalid", () => {
+  for (const value of [91, -91, NaN, Infinity, true, [], "invalid"]) {
+    assert.equal(readAddressPoint(value, 106), null);
+  }
+  assert.equal(readAddressPoint(-6.9, 181), null);
+});
+
+test("an in-flight Account mutation blocks duplicate submissions", () => {
+  assert.match(page, /if \(addressSaveAttempt.current\) return false/);
+  assert.match(
+    page,
+    /addressSaveAttempt.current = true;[\s\S]*?await api\(/,
+  );
 });

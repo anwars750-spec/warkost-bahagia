@@ -1,304 +1,200 @@
 "use client";
 
-import { useEffect } from "react";
+import { useRef, useState } from "react";
+import { readAddressPoint } from "../lib/address-point.mjs";
+import "./customer-account-address.css";
 
-const STYLE_ID = "wloc-account-location-first-native-style";
+const emptyDraft = { label: "", detail: "", point: null, isDefault: false };
+const missingPoint =
+  "Pilih titik lokasi terlebih dahulu agar alamat tersimpan akurat.";
 
-function installStyles() {
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = `
-    .wloc-native-location-first {
-      display: grid !important;
-      gap: 14px !important;
-    }
-    .wloc-native-location-first > .wloc-account-location-card {
-      margin: 0 !important;
-    }
-    .wloc-native-step-hidden {
-      display: none !important;
-    }
-    .wloc-native-step-heading {
-      display: flex !important;
-      align-items: flex-start !important;
-      gap: 10px !important;
-      margin: 0 0 7px !important;
-      color: #352721 !important;
-    }
-    .wloc-native-step-heading > b {
-      display: grid !important;
-      place-items: center !important;
-      width: 26px !important;
-      height: 26px !important;
-      flex: 0 0 26px !important;
-      border-radius: 9px !important;
-      background: #682c20 !important;
-      color: #fff !important;
-      font-size: 11px !important;
-      line-height: 1 !important;
-    }
-    .wloc-native-step-heading > span {
-      display: grid !important;
-      gap: 2px !important;
-    }
-    .wloc-native-step-heading strong {
-      font-size: 13px !important;
-      color: #352721 !important;
-    }
-    .wloc-native-step-heading small {
-      color: #81736b !important;
-      font-size: 10.5px !important;
-      line-height: 1.45 !important;
-      font-weight: 500 !important;
-    }
-    .wloc-native-detail-section,
-    .wloc-native-label-section,
-    .wloc-native-default-section {
-      display: grid !important;
-      gap: 7px !important;
-    }
-    .wloc-native-default-section {
-      padding: 12px 13px !important;
-      border: 1px solid #eee3da !important;
-      border-radius: 14px !important;
-      background: #fffdf9 !important;
-    }
-    .wloc-native-default-section .consent-field {
-      margin: 0 !important;
-    }
-    .wloc-native-save-section {
-      display: grid !important;
-      gap: 8px !important;
-    }
-    .wloc-native-save-section .primary {
-      min-height: 48px !important;
-      background: #682c20 !important;
-      border-color: #682c20 !important;
-      color: #fff !important;
-    }
-    .wloc-native-locked-note {
-      display: block !important;
-      margin-top: 1px !important;
-      color: #8a786e !important;
-      font-size: 10.5px !important;
-      line-height: 1.45 !important;
-    }
-    .wloc-native-ready-note {
-      display: none !important;
-      margin-top: 1px !important;
-      color: #682c20 !important;
-      font-size: 10.5px !important;
-      line-height: 1.45 !important;
-      font-weight: 700 !important;
-    }
-    .wloc-native-location-first[data-wloc-point-ready="1"] .wloc-native-ready-note {
-      display: block !important;
-    }
-    .wloc-native-location-first[data-wloc-point-ready="1"] .wloc-native-locked-note {
-      display: none !important;
-    }
-    @media (max-width: 620px) {
-      .wloc-native-save-section button {
-        width: 100% !important;
-      }
-    }
-  `;
-  document.head.appendChild(style);
-}
-
-function findAddressForm() {
-  return Array.from(document.querySelectorAll("form")).find((form) =>
-    ["label", "detail", "latitude", "longitude"].every((name) =>
-      form.elements?.namedItem(name),
-    ),
-  );
-}
-
-function makeStep(number, title, description) {
-  const box = document.createElement("div");
-  box.className = "wloc-native-step-heading";
-  box.innerHTML = `
-    <b>${number}</b>
-    <span>
-      <strong>${title}</strong>
-      <small>${description}</small>
-    </span>
-  `;
-  return box;
-}
-
-function hasValidCoordinatePair(latitudeField, longitudeField) {
-  const latitudeValue = String(latitudeField?.value ?? "").trim();
-  const longitudeValue = String(longitudeField?.value ?? "").trim();
-  if (!latitudeValue || !longitudeValue) return false;
-  const latitude = Number(latitudeValue);
-  const longitude = Number(longitudeValue);
+function AddressStep({ number, title, description }) {
   return (
-    Number.isFinite(latitude) &&
-    latitude >= -90 &&
-    latitude <= 90 &&
-    Number.isFinite(longitude) &&
-    longitude >= -180 &&
-    longitude <= 180
+    <div className="wloc-native-step-heading">
+      <b aria-hidden="true">{number}</b>
+      <span>
+        <strong>{title}</strong>
+        <small>{description}</small>
+      </span>
+    </div>
   );
 }
 
-export function syncAccountPointReadyState(
-  form,
-  latitudeField,
-  longitudeField,
-  sections,
-) {
-  const ready =
-    form.dataset.wlocPointReady === "1" &&
-    hasValidCoordinatePair(latitudeField, longitudeField);
+export default function CustomerAccountAddressLocationFirst({
+  address,
+  busy,
+  saving,
+  onCancel,
+  onSave,
+}) {
+  const [draft, setDraft] = useState(() =>
+    address
+      ? {
+          label: address.label,
+          detail: address.detail,
+          point: readAddressPoint(address.latitude, address.longitude),
+          isDefault: address.is_default === 1,
+        }
+      : emptyDraft,
+  );
+  const [error, setError] = useState("");
+  const form = useRef(null);
 
-  const nextReady = ready ? "1" : "0";
-  if (form.dataset.wlocPointReady !== nextReady) {
-    form.dataset.wlocPointReady = nextReady;
+  function openPicker() {
+    window.dispatchEvent(
+      new CustomEvent("warkost:location-picker-open", {
+        detail: {
+          source: "account",
+          address: { label: draft.label, detail: draft.detail, ...draft.point },
+          applyAddress({ label, detail, latitude, longitude }) {
+            const point = readAddressPoint(latitude, longitude);
+            if (!form.current || !point) {
+              throw new Error(
+                "Form alamat belum siap atau titik lokasi tidak valid.",
+              );
+            }
+            setDraft((current) => ({ ...current, label, detail, point }));
+            setError("");
+          },
+        },
+      }),
+    );
   }
-  for (const section of sections) {
-    const hidden = !ready;
-    if (section.classList.contains("wloc-native-step-hidden") !== hidden) {
-      section.classList.toggle("wloc-native-step-hidden", hidden);
+
+  async function submit(event) {
+    event.preventDefault();
+    if (!draft.point) {
+      setError(missingPoint);
+      return;
+    }
+    if (busy || saving) return;
+
+    setError("");
+    try {
+      const saved = await onSave(address?.id ?? null, {
+        label: draft.label,
+        detail: draft.detail,
+        ...draft.point,
+        isDefault: draft.isDefault,
+      });
+      if (saved) setDraft(emptyDraft);
+    } catch (saveError) {
+      setError(saveError.message);
     }
   }
-  return ready;
-}
 
-function enhance(form) {
-  if (!form || form.dataset.wlocNativeLocationFirst === "1") return;
+  return (
+    <form className="wloc-native-location-first" ref={form} onSubmit={submit}>
+      <h2>{address ? "Ubah alamat" : "Tambah alamat"}</h2>
+      <section className="wloc-account-location-card">
+        <AddressStep
+          number={1}
+          title="Pilih titik lokasi pengantaran"
+          description="Pilih titik di peta atau gunakan GPS."
+        />
+        {draft.point && (
+          <div className="wloc-account-point-summary">
+            <strong>Lokasi terpilih</strong>
+            <span>{draft.detail}</span>
+          </div>
+        )}
+        <button
+          className="wloc-account-picker-button wloc-account-picker-trigger"
+          type="button"
+          aria-haspopup="dialog"
+          disabled={busy || saving}
+          onClick={openPicker}
+        >
+          {draft.point ? "Ubah titik lokasi" : "Pilih titik lokasi"}
+        </button>
+        {!draft.point && (
+          <small>Pilih titik untuk membuka detail alamat.</small>
+        )}
+      </section>
 
-  const labelField = form.elements.namedItem("label");
-  const detailField = form.elements.namedItem("detail");
-  const latitudeField = form.elements.namedItem("latitude");
-  const longitudeField = form.elements.namedItem("longitude");
-  const defaultField = form.elements.namedItem("isDefault");
-  const heading = Array.from(form.children).find(
-    (node) => /^H[1-3]$/.test(node.tagName) && /alamat/i.test(node.textContent || ""),
+      {draft.point && (
+        <>
+          <section className="wloc-native-detail-section">
+            <AddressStep
+              number={2}
+              title="Lengkapi detail alamat"
+              description="Tambahkan nomor rumah atau patokan bila perlu."
+            />
+            <label>
+              Alamat &amp; detail pengantaran
+              <textarea
+                name="detail"
+                value={draft.detail}
+                onChange={(event) =>
+                  setDraft({ ...draft, detail: event.target.value })
+                }
+                disabled={saving}
+                required
+                minLength={10}
+                maxLength={500}
+              />
+            </label>
+          </section>
+          <section className="wloc-native-label-section">
+            <AddressStep
+              number={3}
+              title="Beri label alamat"
+              description="Misalnya Rumah, Kantor, atau Kos."
+            />
+            <label>
+              Label alamat
+              <input
+                name="label"
+                value={draft.label}
+                onChange={(event) =>
+                  setDraft({ ...draft, label: event.target.value })
+                }
+                disabled={saving}
+                required
+                minLength={2}
+                maxLength={60}
+              />
+            </label>
+          </section>
+          <section className="wloc-native-default-section">
+            <AddressStep
+              number={4}
+              title="Pilih sebagai alamat default"
+              description="Opsional. Digunakan otomatis saat checkout berikutnya."
+            />
+            <label className="consent-field">
+              <input
+                name="isDefault"
+                type="checkbox"
+                checked={draft.isDefault}
+                onChange={(event) =>
+                  setDraft({ ...draft, isDefault: event.target.checked })
+                }
+                disabled={saving}
+              />
+              <span>Jadikan alamat default</span>
+            </label>
+          </section>
+        </>
+      )}
+      <section className="wloc-native-save-section">
+        {draft.point && (
+          <>
+            <small className="wloc-native-ready-note">
+              Titik lokasi sudah valid.
+            </small>
+            <button type="submit" className="primary" disabled={busy || saving}>
+              {saving ? "Menyimpan…" : "Simpan alamat"}
+            </button>
+          </>
+        )}
+        {address && (
+          <button type="button" disabled={saving} onClick={onCancel}>
+            Batal
+          </button>
+        )}
+        {error && <p role="alert">{error}</p>}
+      </section>
+    </form>
   );
-  const labelWrap = labelField?.closest("label");
-  const detailWrap = detailField?.closest("label");
-  const legacyLocationCard = latitudeField?.closest(".location-card");
-  const consentField = defaultField?.closest(".consent-field");
-  const actions = Array.from(form.children).find((node) =>
-    node.classList?.contains("actions"),
-  );
-
-  if (!heading || !labelWrap || !detailWrap || !actions) return;
-
-  const pickerCard = form.querySelector(".wloc-account-location-card");
-  if (!pickerCard) return;
-
-  form.classList.add("wloc-native-location-first");
-  form.dataset.wlocNativeLocationFirst = "1";
-
-  heading.insertAdjacentElement("afterend", pickerCard);
-
-  const detailSection = document.createElement("section");
-  detailSection.className = "wloc-native-detail-section";
-  detailSection.append(
-    makeStep(
-      2,
-      "Lengkapi detail alamat",
-      "Tambahkan nomor rumah, blok, RT/RW, lantai, atau patokan agar driver lebih mudah menemukan lokasi.",
-    ),
-    detailWrap,
-  );
-
-  const labelSection = document.createElement("section");
-  labelSection.className = "wloc-native-label-section";
-  labelSection.append(
-    makeStep(
-      3,
-      "Beri label alamat",
-      "Gunakan label sederhana seperti Rumah, Kantor, Kos, atau nama lain yang mudah dikenali.",
-    ),
-    labelWrap,
-  );
-
-  const defaultSection = document.createElement("section");
-  defaultSection.className = "wloc-native-default-section";
-  defaultSection.append(
-    makeStep(
-      4,
-      "Pilih sebagai alamat default",
-      "Opsional. Alamat default akan dipilih otomatis saat checkout berikutnya.",
-    ),
-  );
-  if (consentField) defaultSection.append(consentField);
-
-  const saveSection = document.createElement("section");
-  saveSection.className = "wloc-native-save-section";
-  saveSection.append(
-    makeStep(
-      5,
-      "Simpan alamat",
-      "Alamat hanya dapat disimpan setelah titik lokasi valid dipilih.",
-    ),
-    actions,
-  );
-  const lockedNote = document.createElement("small");
-  lockedNote.className = "wloc-native-locked-note";
-  lockedNote.textContent = "Pilih titik lokasi pada langkah 1 untuk membuka langkah berikutnya.";
-  const readyNote = document.createElement("small");
-  readyNote.className = "wloc-native-ready-note";
-  readyNote.textContent = "Titik lokasi sudah valid. Lengkapi detail lalu simpan alamat.";
-  saveSection.append(lockedNote, readyNote);
-
-  pickerCard.insertAdjacentElement("afterend", detailSection);
-  detailSection.insertAdjacentElement("afterend", labelSection);
-  labelSection.insertAdjacentElement("afterend", defaultSection);
-  defaultSection.insertAdjacentElement("afterend", saveSection);
-
-  if (legacyLocationCard) legacyLocationCard.classList.add("wloc-native-step-hidden");
-
-  function sync() {
-    syncAccountPointReadyState(form, latitudeField, longitudeField, [
-      detailSection,
-      labelSection,
-      defaultSection,
-      saveSection,
-    ]);
-  }
-
-  sync();
-
-  const observer = new MutationObserver(sync);
-  observer.observe(form, {
-    attributes: true,
-    attributeFilter: ["data-wloc-point-ready"],
-  });
-
-  latitudeField?.addEventListener("input", sync);
-  longitudeField?.addEventListener("input", sync);
-  form._wlocNativeCleanup = () => {
-    observer.disconnect();
-    latitudeField?.removeEventListener("input", sync);
-    longitudeField?.removeEventListener("input", sync);
-  };
-}
-
-export default function CustomerAccountAddressLocationFirst() {
-  useEffect(() => {
-    installStyles();
-
-    function install() {
-      const form = findAddressForm();
-      if (form) enhance(form);
-    }
-
-    install();
-    const observer = new MutationObserver(install);
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    return () => {
-      observer.disconnect();
-      const form = findAddressForm();
-      form?._wlocNativeCleanup?.();
-    };
-  }, []);
-
-  return null;
 }

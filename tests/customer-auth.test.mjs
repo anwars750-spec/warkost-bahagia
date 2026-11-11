@@ -112,7 +112,7 @@ test("one auth form, one request lock, and scoped Customer presentation replace 
   assert.match(page, /clearCustomerData/);
   assert.doesNotMatch(
     layout,
-    /CustomerCatalogPolish|CustomerQuantityUnitPolish|CustomerBannerCarouselRuntime|CustomerLocationLauncher|CustomerQrisOnlyRuntime/,
+    /CustomerCatalogPolish|CustomerQuantityUnitPolish|CustomerBannerCarouselRuntime|CustomerLocationVisualLock|CustomerQrisOnlyRuntime/,
   );
   assert.match(
     page,

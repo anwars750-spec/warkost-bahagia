@@ -54,7 +54,6 @@ async function readJson(response) {
 
 export default function CustomerLocationPickerUx({
   savedAddresses,
-  accountAddress,
   checkoutAddress,
   onSelectSavedAddress,
   onSaveCheckoutAddress,
@@ -96,9 +95,12 @@ export default function CustomerLocationPickerUx({
       ? `${latitude},${longitude}`
       : null;
   const currentQuote = quote?.pointKey === pointKey ? quote : null;
+  const accountAddress = pickerContext.current?.address;
   const preferredAddress =
     pickerContext.current?.source === "account"
-      ? (accountAddress ?? savedAddresses.find((address) => address.is_default))
+      ? accountAddress?.latitude != null
+        ? accountAddress
+        : savedAddresses.find((address) => address.is_default)
       : checkoutAddress;
   const preferredPoint =
     preferredAddress?.latitude != null && preferredAddress?.longitude != null

@@ -3,7 +3,7 @@ import Image from "next/image";
 import PushNotificationSettings from "./PushNotificationSettings";
 import CustomerHelpRoutingRuntime from "./CustomerHelpRoutingRuntime";
 import CustomerGeneralSupportRuntime from "./CustomerGeneralSupportRuntime";
-import CustomerLocationLauncher from "./CustomerLocationLauncher";
+import CustomerLocationVisualLock from "./CustomerLocationVisualLock";
 import AdminCashControlCenter from "./AdminCashControlCenter";
 import ManagerCashSettlementCenter from "./ManagerCashSettlementCenter";
 import ManagerOwnerSettlementCenter from "./ManagerOwnerSettlementCenter";
@@ -236,7 +236,8 @@ export default function App() {
   const [sessionFailure, setSessionFailure] = useState("");
   const [customerLogoutOpen, setCustomerLogoutOpen] = useState(false);
   const checkoutAttempt = useRef(null);
-  const quickAddressAttempt = useRef(false);
+  const addressSaveAttempt = useRef(false);
+  const [addressSaving, setAddressSaving] = useState(false);
   const accountRevision = useRef(0);
   const pollController = useRef(null);
   const refreshController = useRef(null);
@@ -715,6 +716,7 @@ export default function App() {
   useEffect(() => () => { authAttempt.current?.abort(); refreshController.current?.abort(); }, []);
   function clearCustomerData(clearCart = true) {
     accountRevision.current++;
+    setEditingAddress(null);
     setAccount({ profile: null, addresses: [], loyalty: 0, transactions: [], vouchers: [], promotions: [], rewards: [] });
     setAlerts({ notifications: [], unread: 0 });
     setOrders([]);
@@ -1304,39 +1306,6 @@ export default function App() {
       setView(destination === "auth" ? "auth" : "menu");
     }, false);
   }
-  function useDeviceLocation(event) {
-    const form = event.currentTarget.form;
-    const latitudeField =
-      event.currentTarget.dataset.latitudeField || "latitude";
-    const longitudeField =
-      event.currentTarget.dataset.longitudeField || "longitude";
-    const latitudeInput = form?.elements.namedItem(latitudeField);
-    const longitudeInput = form?.elements.namedItem(longitudeField);
-    if (!latitudeInput || !longitudeInput) {
-      setError("Form titik lokasi tidak tersedia");
-      return;
-    }
-    if (!navigator.geolocation) {
-      setError("Lokasi perangkat tidak didukung browser ini");
-      return;
-    }
-    setError("");
-    setMessage("Meminta izin lokasi perangkat…");
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        latitudeInput.value = coords.latitude.toFixed(6);
-        longitudeInput.value = coords.longitude.toFixed(6);
-        setMessage("Titik lokasi berhasil diisi");
-      },
-      () => {
-        setMessage("");
-        setError(
-          "Lokasi belum dapat diambil. Izinkan akses lokasi lalu coba lagi.",
-        );
-      },
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
-  }
   async function selectFulfillmentMode(nextMode) {
     if (nextMode === fulfillmentMode || pickupAddressBusy) return;
     setError("");
@@ -1381,25 +1350,52 @@ export default function App() {
     if (source === "account") setEditingAddress(address.id);
     else selectCheckoutDeliveryAddress(address.id);
   }
+  function commitSavedAddress(address, replacedId = null) {
+    accountRevision.current++;
+    setAccount((current) => {
+      const others = current.addresses.filter(
+        (item) => String(item.id) !== String(address.id) && item.id !== replacedId,
+      );
+      return {
+        ...current,
+        addresses: address.is_default
+          ? [address, ...others.map((item) => ({ ...item, is_default: 0 }))]
+          : [address, ...others].sort((a, b) => b.is_default - a.is_default),
+      };
+    });
+  }
+
+  async function saveAccountAddress(addressId, draft) {
+    if (addressSaveAttempt.current) return false;
+    addressSaveAttempt.current = true;
+    setAddressSaving(true);
+    const revision = accountRevision.current;
+    try {
+      const saved = await api(
+        addressId === null ? "address" : "address-replace",
+        addressId === null ? draft : { id: addressId, ...draft },
+      );
+      if (revision !== accountRevision.current) return false;
+      commitSavedAddress(saved.address, addressId);
+      if (addressId !== null) setEditingAddress(null);
+      return true;
+    } finally {
+      addressSaveAttempt.current = false;
+      setAddressSaving(false);
+    }
+  }
+
   async function saveQuickAddress({ label, detail, latitude, longitude }) {
-    if (quickAddressAttempt.current) return;
-    quickAddressAttempt.current = true;
+    if (addressSaveAttempt.current)
+      throw new Error("Alamat lain sedang disimpan. Coba lagi.");
+    addressSaveAttempt.current = true;
+    setAddressSaving(true);
     setError("");
     const revision = accountRevision.current;
     try {
       const created = await api("address", { label, detail, latitude, longitude, isDefault: false });
       if (revision !== accountRevision.current) return;
-      accountRevision.current++;
-      const address = created.address;
-      setAccount((current) => {
-        const others = current.addresses.filter((item) => String(item.id) !== String(address.id));
-        return {
-          ...current,
-          addresses: address.is_default
-            ? [address, ...others.map((item) => ({ ...item, is_default: 0 }))]
-            : [address, ...others].sort((a, b) => b.is_default - a.is_default),
-        };
-      });
+      commitSavedAddress(created.address);
       setCheckoutAddressId(String(created.id));
       setDeliveryQuote(null);
       setDeliveryQuoteError("");
@@ -1409,7 +1405,8 @@ export default function App() {
           : "Alamat berhasil ditambahkan.",
       );
     } finally {
-      quickAddressAttempt.current = false;
+      addressSaveAttempt.current = false;
+      setAddressSaving(false);
     }
   }
   function openCustomerHelp() {
@@ -2944,7 +2941,7 @@ export default function App() {
                     <span className="actions">
                       {a.is_default !== 1 && (
                         <button
-                          disabled={busy}
+                          disabled={busy || addressSaving}
                           onClick={() =>
                             run(() => api("address-default", { id: a.id }))
                           }
@@ -2952,11 +2949,14 @@ export default function App() {
                           Jadikan default
                         </button>
                       )}
-                      <button onClick={() => setEditingAddress(a.id)}>
+                      <button
+                        disabled={busy || addressSaving}
+                        onClick={() => setEditingAddress(a.id)}
+                      >
                         Ubah
                       </button>
                       <button
-                        disabled={busy}
+                        disabled={busy || addressSaving}
                         onClick={() =>
                           run(() => api("address-remove", { id: a.id }))
                         }
@@ -2966,95 +2966,14 @@ export default function App() {
                     </span>
                   </div>
                 ))}
-                <form
-                  key={editingAddress || "new"}
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const f = new FormData(e.currentTarget);
-                    run(async () => {
-                      await api(
-                        editingAddress ? "address-replace" : "address",
-                        {
-                          ...(editingAddress ? { id: editingAddress } : {}),
-                          label: f.get("label"),
-                          detail: f.get("detail"),
-                          latitude: f.get("latitude"),
-                          longitude: f.get("longitude"),
-                          isDefault: f.get("isDefault") === "on",
-                        },
-                      );
-                      setEditingAddress(null);
-                      e.target.reset();
-                    });
-                  }}
-                >
-                  <h2>{editingAddress ? "Ubah alamat" : "Tambah alamat"}</h2>
-                  <label>
-                    Label
-                    <input
-                      name="label"
-                      defaultValue={editingAddressRecord?.label || ""}
-                      placeholder="Rumah / Kantor"
-                      required
-                      minLength="2"
-                    />
-                  </label>
-                  <label>
-                    Alamat lengkap
-                    <textarea
-                      name="detail"
-                      defaultValue={editingAddressRecord?.detail || ""}
-                      minLength="10"
-                      required
-                    />
-                  </label>
-                  <div className="location-card">
-                    <div className="location-card-heading">
-                      <LocationIcon />
-                      <div>
-                        <strong>Titik lokasi pengantaran</strong>
-                        <small>
-                          Dipakai hanya untuk menghitung jarak dan ongkir.
-                        </small>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="location-button"
-                      onClick={useDeviceLocation}
-                    >
-                      Gunakan lokasi perangkat
-                    </button>
-                    <input name="latitude" type="hidden" defaultValue={editingAddressRecord?.latitude ?? ""} />
-                    <input name="longitude" type="hidden" defaultValue={editingAddressRecord?.longitude ?? ""} />
-                    <label className="consent-field">
-                      <input
-                        name="isDefault"
-                        type="checkbox"
-                        defaultChecked={editingAddressRecord?.is_default === 1}
-                      />
-                      <span>Jadikan alamat default</span>
-                    </label>
-                    <small>
-                      Gunakan pin peta atau lokasi perangkat untuk memperbarui
-                      titik pengantaran. Jika tidak diubah, titik lama tetap
-                      dipakai.
-                    </small>
-                  </div>
-                  <div className="actions">
-                    <button className="primary" disabled={busy}>
-                      Simpan alamat
-                    </button>
-                    {editingAddress && (
-                      <button
-                        type="button"
-                        onClick={() => setEditingAddress(null)}
-                      >
-                        Batal
-                      </button>
-                    )}
-                  </div>
-                </form>
+                <CustomerAccountAddressLocationFirst
+                  key={editingAddressRecord?.id ?? "new"}
+                  address={editingAddressRecord}
+                  busy={busy}
+                  saving={addressSaving}
+                  onCancel={() => setEditingAddress(null)}
+                  onSave={saveAccountAddress}
+                />
               </section>
               <section className="panel" id="account-settings">
                 <h2>Pengaturan Akun</h2>
@@ -5032,14 +4951,13 @@ export default function App() {
         <KitchenHeaderActions key={`kitchen-header-${view}`} userId={user.id} updateAlerts={setAlerts} />
       </>}
       {(!role || role === "CUSTOMER") && view !== "auth" && <><CustomerHelpRoutingRuntime /><CustomerGeneralSupportRuntime /></>}
-      {role === "CUSTOMER" && <><CustomerLocationLauncher /><CustomerLocationPickerUx
+      {role === "CUSTOMER" && <><CustomerLocationVisualLock /><CustomerLocationPickerUx
         key={user.id}
         savedAddresses={deliveryAddresses}
-        accountAddress={editingAddressRecord}
         checkoutAddress={selectedCheckoutAddress}
         onSelectSavedAddress={selectSavedLocation}
         onSaveCheckoutAddress={saveQuickAddress}
-      /><CustomerAccountAddressLocationFirst /><CustomerQrisOnlyRuntime /><CustomerLoyaltyPickerRuntime /></>}
+      /><CustomerQrisOnlyRuntime /><CustomerLoyaltyPickerRuntime /></>}
       {role === "ADMIN" && <AdminUiRuntime view={view} orders={orders} />}
       {role === "ADMIN" && <AdminCashControlCenter key={user.id} />}
       {role === "MANAGER" && <ManagerCashSettlementCenter key={user.id} />}

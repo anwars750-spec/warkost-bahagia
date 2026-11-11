@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test.describe.configure({ timeout: 60_000 });
+test.describe.configure({ timeout: 120_000 });
 
 // This suite creates addresses and uses a loopback-only session cookie.
 test.beforeEach(({ baseURL }) => {
@@ -92,6 +92,21 @@ function picker(page) {
   return page.getByRole("dialog", { name: "Pilih lokasi pengantaran" });
 }
 
+async function readAddresses(page, origin) {
+  const response = await page.request.get(origin + "/api/account");
+  expect(response.ok()).toBeTruthy();
+  return (await response.json()).addresses;
+}
+
+async function refreshAccountView(page, account, newAddressDetail) {
+  await page.evaluate(() =>
+    window.dispatchEvent(new Event("warkost:realtime-recovered")),
+  );
+  await expect(
+    account.locator(".line").filter({ hasText: newAddressDetail }),
+  ).toBeVisible();
+}
+
 function postResponse(page, path) {
   return page.waitForResponse(
     (response) =>
@@ -170,7 +185,7 @@ async function enterManual(page, dialog, detail, info) {
   return point;
 }
 
-test("Akun lists owned addresses without Checkout and saves a map-selected address with Geoapify OFF", async ({
+test("Akun saves a map-selected address once after realtime refresh and keeps it after reload", async ({
   page,
   baseURL,
 }, info) => {
@@ -201,14 +216,10 @@ test("Akun lists owned addresses without Checkout and saves a map-selected addre
   await expect(account.locator('textarea[name="detail"]')).toHaveValue(
     savedDetail,
   );
-  await expect(account.locator('input[name="latitude"]')).toHaveValue(
-    String(savedPoint.latitude),
+  const previous = (await readAddresses(page, origin)).find(
+    (address) => address.id === id,
   );
-  expect(
-    (await (await page.request.get(origin + "/api/account")).json()).addresses
-      .filter((address) => address.detail === savedDetail)
-      .map((address) => address.id),
-  ).toEqual([id]);
+  expect(previous).toMatchObject({ id, ...savedPoint, detail: savedDetail });
 
   await account.getByRole("button", { name: "Batal", exact: true }).click();
   await account
@@ -218,17 +229,72 @@ test("Akun lists owned addresses without Checkout and saves a map-selected addre
   await expect(account.locator('textarea[name="detail"]')).toHaveValue(
     manualDetail + " — Pagar cokelat",
   );
-  await expect(account.locator('input[name="latitude"]')).toHaveValue(
-    point.latitude.toFixed(6),
-  );
-  const saved = postResponse(page, "/api/address");
-  await account
-    .getByRole("button", { name: "Simpan alamat", exact: true })
-    .click();
-  expect((await saved).ok()).toBeTruthy();
   await expect(
-    account.locator(".line").filter({ hasText: manualDetail }),
+    account.getByRole("textbox", { name: "Label alamat" }),
+  ).toHaveValue("Kantor");
+
+  // The normal recovery handler pulls updated account data and rerenders this form.
+  const concurrentDetail = `Jl. Refresh Realtime ${info.project.name}`;
+  await addAddress(page, origin, concurrentDetail);
+  await refreshAccountView(page, account, concurrentDetail);
+  await expect(account.getByText("Lokasi terpilih")).toBeVisible();
+  await expect(account.getByText("Titik lokasi sudah valid.")).toBeVisible();
+
+  const form = account.locator("form");
+  const writes = [];
+  let releaseSave;
+  const holdSave = new Promise((resolve) => {
+    releaseSave = resolve;
+  });
+  await page.route("**/api/address", async (route) => {
+    writes.push(route.request().postDataJSON());
+    await holdSave;
+    await route.continue();
+  });
+  const saved = postResponse(page, "/api/address");
+  try {
+    await account
+      .getByRole("button", { name: "Simpan alamat", exact: true })
+      .click();
+    await expect(
+      account.getByRole("button", { name: "Menyimpan…" }),
+    ).toBeDisabled();
+    await form.evaluate((element) => {
+      for (let i = 0; i < 5; i++) element.requestSubmit();
+    });
+    await expect.poll(() => writes.length).toBe(1);
+  } finally {
+    releaseSave();
+  }
+  const response = await saved;
+  expect(response.ok()).toBeTruthy();
+  expect(writes).toEqual([
+    {
+      label: "Kantor",
+      detail: manualDetail + " — Pagar cokelat",
+      ...point,
+      isDefault: false,
+    },
+  ]);
+  const { id: addedId } = await response.json();
+  const added = account.locator(".line").filter({ hasText: manualDetail });
+  await expect(added).toContainText("Kantor");
+  await expect(
+    account.getByRole("button", { name: "Pilih titik lokasi", exact: true }),
   ).toBeVisible();
+  await expect(form.getByText("Lokasi terpilih")).toHaveCount(0);
+  await expect(form.getByRole("textbox")).toHaveCount(0);
+
+  await page.reload();
+  await openAccount(page);
+  await expect(added).toContainText("Kantor");
+  const addresses = await readAddresses(page, origin);
+  expect(
+    addresses.filter((address) => address.detail.includes(manualDetail)),
+  ).toEqual([
+    expect.objectContaining({ id: addedId, label: "Kantor", ...point }),
+  ]);
+  expect(addresses.find((address) => address.id === id)).toEqual(previous);
 });
 
 test("Checkout switches saved address and saves a manual address without losing cart or server quote", async ({
@@ -434,6 +500,14 @@ test("map gestures quote once after settling, preserve Account edit, and reject 
   const oldDetail = "Jl. Titik Awal Peta " + info.project.name;
   const updatedDetail = "Jl. Titik Baru Peta " + info.project.name;
   const id = await addAddress(page, origin, oldDetail);
+  const retainedId = await addAddress(
+    page,
+    origin,
+    "Jl. Tetap " + info.project.name,
+  );
+  const retained = (await readAddresses(page, origin)).find(
+    (address) => address.id === retainedId,
+  );
   await page.goto("/");
   const account = await openAccount(page);
   const launch = account.getByRole("button", {
@@ -501,7 +575,8 @@ test("map gestures quote once after settling, preserve Account edit, and reject 
     expect(counts.quote).toBe(1);
   });
   const second = await afterDrag;
-  expect(second.request().postDataJSON()).not.toEqual(point);
+  const newPoint = second.request().postDataJSON();
+  expect(newPoint).not.toEqual(point);
   await expect(dialog.getByText(/GRATIS ONGKIR/)).toBeVisible();
   await page.waitForTimeout(475);
   expect(counts).toEqual({ me: 0, quote: 2, search: 0, external: 0 });
@@ -510,8 +585,15 @@ test("map gestures quote once after settling, preserve Account edit, and reject 
   await dialog
     .getByRole("textbox", { name: "Alamat lengkap" })
     .fill(updatedDetail);
+  await dialog.getByRole("button", { name: "Lainnya", exact: true }).click();
+  await dialog
+    .getByPlaceholder("Contoh: Kos, Kampus, Orang Tua")
+    .fill("Kos UAT");
   await dialog.getByRole("button", { name: "GUNAKAN LOKASI INI" }).click();
   await expect(dialog).toHaveCount(0);
+  await expect(
+    account.getByRole("textbox", { name: "Label alamat" }),
+  ).toHaveValue("Kos UAT");
   const edit = postResponse(page, "/api/address-replace");
   await account
     .getByRole("button", { name: "Simpan alamat", exact: true })
@@ -521,14 +603,26 @@ test("map gestures quote once after settling, preserve Account edit, and reject 
   expect(replaced.request().postDataJSON()).toMatchObject({
     id,
     detail: updatedDetail,
+    label: "Kos UAT",
+    ...newPoint,
   });
-  const { addresses } = await (
-    await page.request.get(origin + "/api/account")
-  ).json();
+  const updated = account.locator(".line").filter({ hasText: updatedDetail });
+  await expect(updated).toContainText("Kos UAT");
+  await expect(
+    account.getByRole("heading", { name: "Tambah alamat", exact: true }),
+  ).toBeVisible();
+  await expect(account.locator("form").getByRole("textbox")).toHaveCount(0);
+  await page.reload();
+  await openAccount(page);
+  await expect(updated).toContainText("Kos UAT");
+  const addresses = await readAddresses(page, origin);
   expect(addresses.filter((address) => address.id === id)).toHaveLength(0);
   expect(
     addresses.filter((address) => address.detail === updatedDetail),
-  ).toHaveLength(1);
+  ).toEqual([expect.objectContaining({ label: "Kos UAT", ...newPoint })]);
+  expect(addresses.find((address) => address.id === retainedId)).toEqual(
+    retained,
+  );
 });
 
 test("Checkout remains usable on map failure and retry reloads the local asset", async ({
@@ -581,4 +675,59 @@ test("Checkout remains usable on map failure and retry reloads the local asset",
   await expect(pinMap(dialog).locator("canvas")).toBeVisible();
   expect(loads).toBe(3);
   await expect(dialog.getByRole("spinbutton")).toHaveCount(0);
+});
+
+test("Akun blocks missing coordinates and address APIs reject incomplete and invalid points", async ({
+  page,
+  baseURL,
+}, info) => {
+  const origin = new URL(baseURL).origin;
+  await customer(page, origin);
+  const retainedId = await addAddress(
+    page,
+    origin,
+    "Jl. Validasi " + info.project.name,
+  );
+  const before = await readAddresses(page, origin);
+  await page.goto("/");
+  const account = await openAccount(page);
+  const form = account.locator("form");
+  let writes = 0;
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      /\/api\/address(?:-replace)?$/.test(request.url())
+    )
+      writes++;
+  });
+  await expect(form.getByRole("button", { name: "Simpan alamat" })).toHaveCount(
+    0,
+  );
+  await form.evaluate((element) => element.requestSubmit());
+  await expect(form.getByRole("alert")).toHaveText(
+    "Pilih titik lokasi terlebih dahulu agar alamat tersimpan akurat.",
+  );
+  expect(writes).toBe(0);
+
+  for (const path of ["address", "address-replace"]) {
+    for (const point of [
+      {},
+      { latitude: -6.9 },
+      { latitude: 91, longitude: 106 },
+      { latitude: " ", longitude: 106 },
+    ]) {
+      const result = await page.request.post(origin + "/api/" + path, {
+        headers: { Origin: origin },
+        data: {
+          id: retainedId,
+          label: "Kantor",
+          detail: "Alamat tidak valid UAT",
+          ...point,
+        },
+      });
+      expect(result.status()).toBe(400);
+      expect((await result.json()).error).toBe("Titik lokasi tidak valid");
+    }
+  }
+  expect(await readAddresses(page, origin)).toEqual(before);
 });

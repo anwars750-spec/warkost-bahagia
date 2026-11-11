@@ -113,16 +113,15 @@ test("registrasi duplicate email/phone tidak membuat akun kedua", async () => {
 test("kontrak UI tidak mengekspos social login atau input koordinat mentah dan memakai OTP nyata", () => {
   const page =
     fs.readFileSync(new URL("../app/page.js", import.meta.url), "utf8") +
-    fs.readFileSync(new URL("../app/CustomerAuth.js", import.meta.url), "utf8");
+    fs.readFileSync(new URL("../app/CustomerAuth.js", import.meta.url), "utf8") +
+    fs.readFileSync(new URL("../app/CustomerAccountAddressLocationFirst.js", import.meta.url), "utf8");
   assert.doesNotMatch(
     page,
     /Google Sign-In|Masuk dengan Google|Apple Sign-In|Masuk dengan Apple/,
   );
   assert.match(page, /name="code"/);
   assert.match(page, /password-reset-request/);
-  assert.doesNotMatch(page, /name="latitude"\s+type="number"/);
-  assert.doesNotMatch(page, /name="longitude"\s+type="number"/);
-  assert.match(page, /name="latitude" type="hidden"/);
+  assert.doesNotMatch(page, /name="(?:latitude|longitude)"/);
   assert.match(page, /Email atau Nomor HP/);
   assert.match(page, /<strong>Voucher &amp; Poin<\/strong>/);
   assert.match(page, /<strong>Akun &amp; Alamat<\/strong>/);

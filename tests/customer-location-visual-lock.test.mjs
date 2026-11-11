@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const launcher = await readFile(
-  new URL("../app/CustomerLocationLauncher.js", import.meta.url),
+const page = await readFile(
+  new URL("../app/page.js", import.meta.url),
   "utf8",
 );
 const visualLock = await readFile(
@@ -11,9 +11,8 @@ const visualLock = await readFile(
   "utf8",
 );
 
-test("location launcher mounts runtime visual lock", () => {
-  assert.match(launcher, /CustomerLocationVisualLock/);
-  assert.match(launcher, /return <CustomerLocationVisualLock \/>/);
+test("Customer shell mounts runtime visual lock", () => {
+  assert.match(page, /role === "CUSTOMER" && <><CustomerLocationVisualLock \/>/);
 });
 
 test("visual lock uses Warkost parent palette", () => {
