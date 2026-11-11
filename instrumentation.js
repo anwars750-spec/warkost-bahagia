@@ -3,4 +3,7 @@ export async function register() {
   const { startQrisAutoConfirmWorker } =
     await import("./lib/qris-auto-confirm-worker.mjs");
   startQrisAutoConfirmWorker();
+  const { startMidtransReconciliation } =
+    await import("./lib/midtrans-reconciliation.mjs");
+  startMidtransReconciliation();
 }

@@ -4,6 +4,7 @@ import PushNotificationSettings from "./PushNotificationSettings";
 import CustomerHelpRoutingRuntime from "./CustomerHelpRoutingRuntime";
 import CustomerGeneralSupportRuntime from "./CustomerGeneralSupportRuntime";
 import CustomerLocationVisualLock from "./CustomerLocationVisualLock";
+import MidtransSandboxOperations from "./MidtransSandboxOperations";
 import AdminCashControlCenter from "./AdminCashControlCenter";
 import ManagerCashSettlementCenter from "./ManagerCashSettlementCenter";
 import ManagerOwnerSettlementCenter from "./ManagerOwnerSettlementCenter";
@@ -228,6 +229,24 @@ async function api(route, body, signal) {
   if (!response.ok) throw Error(data.error || "Gagal memuat");
   return data;
 }
+async function sandboxCheckoutAttempt(userId, signature) {
+  const storageKey = "warkost-midtrans-checkout:" + userId;
+  try {
+    const hash = Array.from(
+      new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(signature))),
+      (byte) => byte.toString(16).padStart(2, "0"),
+    ).join("");
+    const previous = JSON.parse(sessionStorage.getItem(storageKey));
+    if (previous?.hash === hash && typeof previous.key === "string")
+      return { signature, key: previous.key, storageKey };
+    const key = crypto.randomUUID();
+    sessionStorage.setItem(storageKey, JSON.stringify({ hash, key }));
+    return { signature, key, storageKey };
+  } catch {
+    return { signature, key: crypto.randomUUID() };
+  }
+}
+
 export default function App() {
   const [sessionResolved, setSessionResolved] = useState(false);
   const authAttempt = useRef(null);
@@ -236,6 +255,7 @@ export default function App() {
   const [sessionFailure, setSessionFailure] = useState("");
   const [customerLogoutOpen, setCustomerLogoutOpen] = useState(false);
   const checkoutAttempt = useRef(null);
+  const checkoutSubmitting = useRef(false);
   const addressSaveAttempt = useRef(false);
   const [addressSaving, setAddressSaving] = useState(false);
   const accountRevision = useRef(0);
@@ -1824,6 +1844,8 @@ export default function App() {
               )}
             </div>
           )}
+        {storeStatus?.qrisSandbox && ["ADMIN", "OWNER"].includes(role) &&
+          ["orders", "settings"].includes(view) && <MidtransSandboxOperations />}
         {error && view !== "auth" && (
           <div role="alert" className="alert">
             {error}
@@ -2181,6 +2203,8 @@ export default function App() {
                     );
                     return;
                   }
+                  if (checkoutSubmitting.current) return;
+                  checkoutSubmitting.current = true;
                   const f = new FormData(e.currentTarget);
                   run(async () => {
                     const payload = {
@@ -2193,14 +2217,16 @@ export default function App() {
                     };
                     const signature = JSON.stringify(payload);
                     if (checkoutAttempt.current?.signature !== signature)
-                      checkoutAttempt.current = {
-                        signature,
-                        key: crypto.randomUUID(),
-                      };
+                      checkoutAttempt.current = storeStatus?.qrisSandbox
+                        ? await sandboxCheckoutAttempt(user.id, signature)
+                        : { signature, key: crypto.randomUUID() };
                     const result = await api("checkout", {
                       ...payload,
                       idempotencyKey: checkoutAttempt.current.key,
                     });
+                    if (checkoutAttempt.current.storageKey) {
+                      try { sessionStorage.removeItem(checkoutAttempt.current.storageKey); } catch {}
+                    }
                     checkoutAttempt.current = null;
                     setLastCreatedOrderId(result.id);
                     setFocusedOrderId(result.id);
@@ -2212,7 +2238,7 @@ export default function App() {
                     setSelectedRewardId(null);
                     setLoyaltyQuote(null);
                     setView("order-success");
-                  });
+                  }).finally(() => { checkoutSubmitting.current = false; });
                 }}
               >
                 <div className="checkout-stack">
@@ -2877,6 +2903,7 @@ export default function App() {
                       voucherQuoteBusy ||
                       loyaltyQuoteBusy ||
                       storeStatus?.isOpen !== true ||
+                      (storeStatus?.qrisSandbox && !storeStatus.qrisAvailable) ||
                       Boolean(selectedVoucherId && !voucherQuote) ||
                       Boolean(selectedRewardId && !loyaltyQuote) ||
                       !selectedCheckoutAddress?.id ||
@@ -5232,6 +5259,8 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
   const [detailError, setDetailError] = useState("");
   const [payment, setPayment] = useState(null);
   const [paymentError, setPaymentError] = useState("");
+  const [sandboxQrError, setSandboxQrError] = useState(false);
+  const [sandboxQrRetry, setSandboxQrRetry] = useState(0);
   const [clock, setClock] = useState(Date.now());
   useEffect(() => {
     if (!order?.id) return;
@@ -5250,6 +5279,7 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
       method: order.method,
       status: order.payment_status,
       amount: order.payment_amount,
+      provider: order.provider,
       provider_reference: order.provider_reference,
       transaction_reference: order.transaction_reference,
       qr_payload: order.qr_payload,
@@ -5274,7 +5304,9 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
         refreshPayment();
     };
     window.addEventListener("warkost:realtime", onRealtime);
-    const poll = setInterval(refreshPayment, 120000);
+    const sandbox = payment.provider === "MIDTRANS_SANDBOX";
+    if (sandbox) refreshPayment();
+    const poll = setInterval(refreshPayment, sandbox ? 5000 : 120000);
     const tick = setInterval(() => setClock(Date.now()), 1000);
     return () => {
       active = false;
@@ -5282,7 +5314,7 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
       clearInterval(tick);
       window.removeEventListener("warkost:realtime", onRealtime);
     };
-  }, [order?.id, order?.method, payment?.status]);
+  }, [order?.id, order?.method, payment?.status, payment?.provider]);
   if (!order)
     return (
       <section className="tracking-loading panel" aria-live="polite">
@@ -5299,6 +5331,7 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
     0,
     Math.floor((paymentExpiry - clock) / 1000),
   );
+  const sandboxPayment = payment?.provider === "MIDTRANS_SANDBOX";
   const paymentCountdown = `${String(Math.floor(paymentSeconds / 60)).padStart(2, "0")}:${String(paymentSeconds % 60).padStart(2, "0")}`;
   return (
     <section className="customer-tracking" aria-labelledby="tracking-title">
@@ -5325,9 +5358,11 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
               <div>
                 <strong>Pesanan #{order.id} berhasil dibuat</strong>
                 <small>
-                  {pickup
-                    ? "Pesanan sedang diproses untuk diambil di Warkost."
-                    : "Pesanan sedang diproses dan akan segera diantar."}
+                  {sandboxPayment && payment.status !== "PAID"
+                    ? "Pesanan menunggu verifikasi pembayaran QRIS."
+                    : pickup
+                      ? "Pesanan sedang diproses untuk diambil di Warkost."
+                      : "Pesanan sedang diproses dan akan segera diantar."}
                 </small>
               </div>
             </section>
@@ -5451,7 +5486,19 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
                 {payment.qr_payload && payment.status === "PENDING" && (
                   <code>{payment.qr_payload}</code>
                 )}
-                {payment.payment_url && payment.status === "PENDING" && (
+                {sandboxPayment && payment.status === "PENDING" && (
+                  payment.payment_url === "/api/payment/midtrans/qr?orderId=" + order.id
+                    ? sandboxQrError
+                      ? <button type="button" onClick={() => {
+                          setSandboxQrError(false);
+                          setSandboxQrRetry((value) => value + 1);
+                        }}>Muat ulang kode QRIS</button>
+                      : <img src={payment.payment_url + "&retry=" + sandboxQrRetry}
+                          alt="Kode QRIS Midtrans sandbox" width="220" height="220"
+                          onError={() => setSandboxQrError(true)} />
+                    : <p role="status">Menyiapkan kode QRIS sandbox…</p>
+                )}
+                {!sandboxPayment && payment.payment_url && payment.status === "PENDING" && (
                   <a
                     className="button-link"
                     href={payment.payment_url}
@@ -5464,6 +5511,8 @@ function CustomerTracking({ order, justCreated, onBack, onSupport }) {
                 <p>
                   {payment.status === "PAID"
                     ? "Pembayaran berhasil diverifikasi."
+                    : sandboxPayment && ["FAILED", "EXPIRED"].includes(payment.status)
+                      ? "Pembayaran belum tercatat lunas. Jika dana terdebit, hubungi Admin dengan nomor pesanan ini."
                     : payment.status === "FAILED"
                       ? "Pembayaran gagal. Silakan buat pesanan baru untuk mencoba kembali."
                       : payment.status === "EXPIRED"

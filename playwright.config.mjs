@@ -31,7 +31,10 @@ export default defineConfig({
       ? [
           {
             name: "iphone-webkit",
-            testMatch: "customer-location-fallback.spec.mjs",
+            testMatch: [
+              "customer-location-fallback.spec.mjs",
+              "midtrans-sandbox.spec.mjs",
+            ],
             use: { ...devices["iPhone 13"], browserName: "webkit" },
           },
         ]

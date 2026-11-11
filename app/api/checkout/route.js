@@ -5,6 +5,7 @@ import { assertCustomerCheckoutPaymentMethod } from "../../../lib/customer-check
 import { ensurePickupAddress } from "../../../lib/pickup.mjs";
 import { publishActionRealtime } from "../../../lib/realtime.mjs";
 import { assertSameOrigin, readJsonBody } from "../../../lib/request.mjs";
+import { prepareMidtransCheckout } from "../../../lib/midtrans-reconciliation.mjs";
 
 export const runtime = "nodejs";
 
@@ -67,7 +68,7 @@ export async function POST(request) {
       console.error("Checkout realtime publication failed", realtimeError);
     }
 
-    return out(result, 201);
+    return out(await prepareMidtransCheckout(result), 201);
   } catch (error) {
     return errorResponse(error);
   }

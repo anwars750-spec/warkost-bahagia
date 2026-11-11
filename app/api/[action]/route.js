@@ -53,7 +53,9 @@ import {
   getPaymentStatus,
   verifyPayment,
 } from "../../../lib/payments.mjs";
-import { paymentProviderConfiguration } from "../../../lib/payment-provider.mjs";
+import { midtransNewPaymentsEnabled, paymentProviderConfiguration } from "../../../lib/payment-provider.mjs";
+import { MIDTRANS_SANDBOX } from "../../../lib/midtrans-sandbox.mjs";
+import { prepareMidtransCheckout } from "../../../lib/midtrans-reconciliation.mjs";
 import {
   submitCodSettlement,
   verifyCodSettlement,
@@ -226,9 +228,12 @@ async function getAction(request, { params }) {
     if (action === "settings") return out(await getSettings(user));
     if (action === "store-hours") {
       const status = await getStoreOperatingStatus();
+      const provider = paymentProviderConfiguration();
       return out({
         ...status,
-        qrisAvailable: paymentProviderConfiguration().available === true,
+        qrisAvailable: provider.available &&
+          (provider.provider !== MIDTRANS_SANDBOX || await midtransNewPaymentsEnabled(store)),
+        qrisSandbox: provider.available && provider.provider === MIDTRANS_SANDBOX,
       });
     }
     if (action === "promotions")
@@ -350,7 +355,7 @@ async function getAction(request, { params }) {
       let orders;
       if (user.role === "CUSTOMER")
         orders = await store.all(
-          "SELECT o.*,a.label address_label,a.detail address,p.method,p.status payment_status,p.amount payment_amount,p.provider_reference,p.transaction_reference,p.qr_payload,p.payment_url,p.expires_at payment_expires_at,d.driver_id,d.accepted_at,d.delivered_at,du.phone driver_phone FROM orders o JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id LEFT JOIN users du ON du.id=d.driver_id WHERE o.customer_id=?" +
+          "SELECT o.*,a.label address_label,a.detail address,p.method,p.status payment_status,p.amount payment_amount,p.provider,p.provider_reference,p.transaction_reference,p.qr_payload,p.payment_url,p.expires_at payment_expires_at,d.driver_id,d.accepted_at,d.delivered_at,du.phone driver_phone FROM orders o JOIN addresses a ON a.id=o.address_id JOIN payments p ON p.order_id=o.id LEFT JOIN deliveries d ON d.order_id=o.id LEFT JOIN users du ON du.id=d.driver_id WHERE o.customer_id=?" +
             bound +
             " ORDER BY o.id DESC LIMIT 26",
           user.id,
@@ -732,8 +737,8 @@ async function postAction(request, { params }) {
         action,
         user,
         body,
-        () =>
-          createOrder(user, {
+        async () =>
+          prepareMidtransCheckout(await createOrder(user, {
             ...body,
             addressId: integer(body.addressId),
             promotionId:
@@ -742,7 +747,7 @@ async function postAction(request, { params }) {
               body.loyaltyRewardId == null
                 ? null
                 : integer(body.loyaltyRewardId),
-          }),
+          })),
         201,
       );
     }
