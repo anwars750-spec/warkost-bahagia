@@ -138,7 +138,7 @@ test("sandbox QRIS survives a lost checkout response and reconciles after reload
       order_id: pending.transaction_reference,
       transaction_id: pending.provider_reference,
       merchant_id: fixtureMerchant,
-      gross_amount: pending.amount + ".00",
+      gross_amount: pending.amount + ".0000",
       status_code: "201",
       transaction_status: "pending",
       currency: "IDR",

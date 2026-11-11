@@ -68,6 +68,9 @@ const input = (extra = {}) => ({
   items: [{ productId: 1, quantity: 1 }],
   ...extra,
 });
+const openStoreAt = Date.parse("2026-10-23T12:00:00+07:00");
+const createFixtureOrder = (payload) =>
+  createOrder(customer, payload, { nowMs: openStoreAt });
 const reference = (order) => order.payment.transaction_reference;
 const payment = (order) =>
   database.prepare("SELECT * FROM payments WHERE order_id=?").get(order.id);
@@ -115,7 +118,7 @@ const notify = (data, overrides, source = fixture) =>
   });
 
 async function charged(extra = {}, source = fixture) {
-  const order = await createOrder(customer, input(extra));
+  const order = await createFixtureOrder(input(extra));
   await sweep(source);
   assert.ok(source.pending(reference(order)));
   return order;
@@ -139,7 +142,7 @@ test("sandbox transport is restricted to isolated SQLite and a sandbox key", () 
 
 test("Owner switch defaults OFF, blocks new orders, and leaves webhook/reconciliation active", async () => {
   assert.equal((await getMidtransOperations(owner)).enabled, false);
-  await assert.rejects(createOrder(customer, input()), { status: 503 });
+  await assert.rejects(createFixtureOrder(input()), { status: 503 });
   await assert.rejects(
     updateMidtransOperations(admin, {
       action: "set-new-payments",
@@ -150,12 +153,12 @@ test("Owner switch defaults OFF, blocks new orders, and leaves webhook/reconcili
   assert.equal(database.prepare("SELECT COUNT(*) n FROM orders").get().n, 0);
   await switchNew(true);
   const payload = input();
-  const order = await createOrder(customer, payload);
+  const order = await createFixtureOrder(payload);
   await sweep();
   assert.ok(payment(order).provider_reference);
   await switchNew(false);
-  assert.equal((await createOrder(customer, payload)).id, order.id);
-  await assert.rejects(createOrder(customer, input()), { status: 503 });
+  assert.equal((await createFixtureOrder(payload)).id, order.id);
+  await assert.rejects(createFixtureOrder(input()), { status: 503 });
   await notify(fixture.setStatus(reference(order), "settlement"));
   assert.equal(payment(order).status, "PAID");
   await switchNew(true);
@@ -177,8 +180,8 @@ test("checkout and worker retries keep one order and one provider charge after a
   });
   const payload = input();
   const [a, b] = await Promise.all([
-    createOrder(customer, payload),
-    createOrder(customer, payload),
+    createFixtureOrder(payload),
+    createFixtureOrder(payload),
   ]);
   assert.equal(a.id, b.id);
   assert.equal(reference(a), reference(b));
@@ -253,6 +256,75 @@ test("only authenticated, matching QRIS observations can activate payment", asyn
   assert.equal(caseFor(order).observed_amount, 1);
   assert.equal(payment(order).status, "PENDING");
   assert.equal(wrongStatus.status_code, "200");
+});
+
+test("signed QRIS notifications preserve the exact spelling of whole-rupiah amounts", async () => {
+  const order = await charged();
+  const pending = fixture.pending(reference(order));
+  const callback = signedMidtrans(pending, key, {
+    gross_amount: order.total + ".0",
+  });
+  const requestCount = fixture.requests.length;
+  await assert.rejects(
+    handleMidtransNotification(
+      { ...callback, gross_amount: pending.gross_amount },
+      { fetcher: fixture.fetcher },
+    ),
+    { status: 401 },
+  );
+  assert.equal(fixture.requests.length, requestCount);
+  assert.equal(
+    (await handleMidtransNotification(callback, { fetcher: fixture.fetcher }))
+      .received,
+    true,
+  );
+  assert.equal(payment(order).status, "PENDING");
+  assert.deepEqual(counts(order), empty);
+
+  const settled = fixture.setStatus(reference(order), "settlement");
+  const overrides = { gross_amount: order.total + ".0000" };
+  assert.equal((await notify(settled, overrides)).received, true);
+  assert.equal((await notify(settled, overrides)).replayed, true);
+  assert.equal(payment(order).status, "PAID");
+  assert.deepEqual(counts(order), { ...empty, stock: 1, print: 1 });
+  const evidence = database
+    .prepare(
+      "SELECT reported_status,observed_amount FROM midtrans_qris_callback_evidence WHERE payment_id=? ORDER BY reported_status",
+    )
+    .all(order.payment.id);
+  assert.deepEqual(
+    evidence.map(({ reported_status, observed_amount }) => [
+      reported_status,
+      observed_amount,
+    ]),
+    [
+      ["pending", order.total],
+      ["settlement", order.total],
+    ],
+  );
+});
+
+test("a valid signature does not make fractional rupiah or an unrelated reference valid", async () => {
+  const order = await charged();
+  const pending = fixture.pending(reference(order));
+  const requestCount = fixture.requests.length;
+  for (const overrides of [
+    { gross_amount: order.total + ".0001" },
+    { gross_amount: "1e4" },
+    { order_id: "another-merchant-order" },
+  ]) {
+    await assert.rejects(notify(pending, overrides), { status: 422 });
+  }
+  assert.equal(fixture.requests.length, requestCount);
+  assert.equal(payment(order).status, "PENDING");
+  assert.equal(
+    database
+      .prepare(
+        "SELECT COUNT(*) n FROM midtrans_qris_callback_evidence WHERE payment_id=?",
+      )
+      .get(order.payment.id).n,
+    0,
+  );
 });
 
 test("missing webhook and later out-of-order/replayed callbacks yield one set of effects", async () => {
