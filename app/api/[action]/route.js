@@ -109,7 +109,7 @@ import {
   listStock,
   listAuditLogs,
 } from "../../../lib/operations.mjs";
-import { listPrintJobs, retryPrintJob } from "../../../lib/printer.mjs";
+import { getPrintTicket, listPrintJobs, retryPrintJob } from "../../../lib/printer.mjs";
 import { driverContactIsVisible } from "../../../lib/delivery.mjs";
 import { listPromotions, savePromotion } from "../../../lib/promotions.mjs";
 import {
@@ -243,6 +243,8 @@ async function getAction(request, { params }) {
       return out({ vouchers: await listCustomerVouchers(user) });
     if (action === "loyalty-rewards")
       return out({ rewards: await listRewardRules(user) });
+    if (action === "print-ticket")
+      return out(await getPrintTicket(user, integer(request.nextUrl.searchParams.get("id"))));
     if (action === "print-jobs")
       return out({ jobs: await listPrintJobs(user) });
     if (action === "delivery-capacity") {

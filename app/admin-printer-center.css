@@ -949,3 +949,42 @@ body.admin-printer-stable-view #admin-ui-portal-root {
     margin: 0 16px 16px;
   }
 }
+
+.admin-printer-modal > :is(.admin-order-print-sheet, .kitchen-print-sheet) {
+  display: none;
+}
+
+@media print {
+  body:has(.admin-printer-modal > [data-fulfillment-type]) > :not(.admin-printer-modal-overlay),
+  .admin-printer-modal:has(> [data-fulfillment-type]) > :not([data-fulfillment-type]) {
+    display: none !important;
+  }
+
+  .admin-printer-modal-overlay:has([data-fulfillment-type]),
+  .admin-printer-modal:has(> [data-fulfillment-type]) {
+    position: static !important;
+    display: block !important;
+    width: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .admin-printer-modal > :is(.admin-order-print-sheet, .kitchen-print-sheet) {
+    display: block !important;
+    width: 80mm;
+    max-width: 100%;
+    padding: 5mm;
+    font-size: 11px;
+  }
+
+  .admin-printer-modal > [data-fulfillment-type],
+  .admin-printer-modal > [data-fulfillment-type] * {
+    visibility: visible !important;
+  }
+}
