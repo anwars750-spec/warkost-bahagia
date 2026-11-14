@@ -74,3 +74,14 @@ test("print branding follows a reused sheet and defaults to delivery for older s
   assert.match(getHeader().innerHTML, /<span>DELIVERY<\/span>/);
   assert.equal(getInnerHtmlWrites(), 3);
 });
+
+
+test("an order ticket without fulfillment data does not use a delivery label", () => {
+  const { sheet, makeElement, getHeader } = fakeSheet();
+  sheet.matches = () => true;
+
+  ensurePrintBranding(sheet, makeElement);
+  assert.match(getHeader().innerHTML, /<span><\/span>/);
+  sheet.dataset.fulfillmentType = "UNKNOWN";
+  assert.equal(ensurePrintBranding(sheet, makeElement), false);
+});

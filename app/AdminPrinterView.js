@@ -90,6 +90,26 @@ export default function AdminPrinterView({ role = "ADMIN" }) {
   const [search, setSearch] = useState("");
   const [lastSync, setLastSync] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
+  const [ticket, setTicket] = useState(null);
+  const [ticketError, setTicketError] = useState("");
+  useEffect(() => {
+    if (selectedId === null) return;
+    const controller = new AbortController();
+    async function loadTicket() {
+      try {
+        const result = await request(
+          "print-ticket?id=" + encodeURIComponent(selectedId),
+          undefined,
+          controller.signal,
+        );
+        if (!controller.signal.aborted) setTicket({ id: selectedId, ...result });
+      } catch (error) {
+        if (!controller.signal.aborted) setTicketError(error.message);
+      }
+    }
+    void loadTicket();
+    return () => controller.abort();
+  }, [selectedId]);
   useEffect(() => {
     const controller = new AbortController();
     const load = async () => {
@@ -191,6 +211,7 @@ export default function AdminPrinterView({ role = "ADMIN" }) {
   const selected = scopedJobs.find(
     (job) => String(job.id) === String(selectedId),
   );
+  const selectedTicket = ticket?.id === selectedId ? ticket : null;
   return (
     <div
       id="admin-printer-center-v1"
@@ -389,7 +410,11 @@ export default function AdminPrinterView({ role = "ADMIN" }) {
                         type="button"
                         className="admin-printer-detail"
                         data-printer-detail={job.id}
-                        onClick={() => setSelectedId(job.id)}
+                        onClick={() => {
+                          setTicket(null);
+                          setTicketError("");
+                          setSelectedId(job.id);
+                        }}
                       >
                         Detail
                       </button>
@@ -480,6 +505,37 @@ export default function AdminPrinterView({ role = "ADMIN" }) {
                     "Tidak ada pesan error pada print job ini."}
                 </p>
               </section>
+              {selectedTicket && (
+                <section
+                  className={selectedTicket.station === "KITCHEN" ? "kitchen-print-sheet" : "admin-order-print-sheet"}
+                  data-fulfillment-type={selectedTicket.fulfillmentType}
+                  aria-label="Tiket pesanan"
+                >
+                  <h4>{displayOrder(selected)}</h4>
+                  <ul>
+                    {selectedTicket.items.map((item, index) => (
+                      <li key={index}>
+                        {item.quantityLabel || item.quantity} × {item.name}
+                        {item.note && <div>{item.note}</div>}
+                      </li>
+                    ))}
+                  </ul>
+                  {selectedTicket.station === "ADMIN" && (
+                    <>
+                      {selectedTicket.address && <p>{selectedTicket.address}</p>}
+                      <p>Subtotal Rp{Number(selectedTicket.subtotal).toLocaleString("id-ID")}</p>
+                      <p>Ongkir Rp{Number(selectedTicket.deliveryFee).toLocaleString("id-ID")}</p>
+                      <p>Total Rp{Number(selectedTicket.total).toLocaleString("id-ID")}</p>
+                    </>
+                  )}
+                </section>
+              )}
+              {ticketError && <p role="alert">{ticketError}</p>}
+              {selectedTicket && (
+                <button type="button" className="admin-printer-detail" onClick={() => window.print()}>
+                  Cetak tiket
+                </button>
+              )}
               {retryButton(selected)}
             </section>
           </div>,
