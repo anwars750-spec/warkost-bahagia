@@ -24,7 +24,12 @@ export default function PrintBrandingRuntime() {
     applyBranding();
 
     const observer = new MutationObserver(() => applyBranding());
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-fulfillment-type"],
+    });
 
     window.addEventListener("beforeprint", applyBranding);
     window.addEventListener("warkost:print-ready", applyBranding);

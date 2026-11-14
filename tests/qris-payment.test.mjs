@@ -23,6 +23,7 @@ const {
 } = await import("../lib/payments.mjs");
 const { signLocalWebhook, LOCAL_QRIS_PROVIDER } =
   await import("../lib/payment-provider.mjs");
+const { ensurePickupAddress } = await import("../lib/pickup.mjs");
 const { claimVoucher } = await import("../lib/vouchers.mjs");
 const { saveRewardRule } = await import("../lib/loyalty.mjs");
 
@@ -39,6 +40,8 @@ database.exec(`
     (1,1,'Nasi QRIS',50000,20),
     (2,1,'Kopi QRIS',20000,20),
     (3,1,'Stok Terbatas QRIS',30000,1);
+  INSERT INTO products(id,category_id,name,price,stock_quantity,prep_station)
+    VALUES(4,1,'Teh Printer Fixture',12000,20,'CASHIER');
   INSERT INTO addresses(id,user_id,label,detail,latitude,longitude) VALUES
     (1,3,'Rumah','Alamat gratis ongkir',0,0),
     (2,3,'Kantor','Alamat ongkir tambahan',0.027887,0),
@@ -421,3 +424,36 @@ test("reservasi QRIS melindungi stok dan PAID yang melewati expires_at ditolak",
   );
   assert.equal((await getPaymentStatus(customer, stale.id)).status, "EXPIRED");
 });
+
+for (const fulfillmentType of ["PICKUP", "DELIVERY"]) {
+  test(fulfillmentType + " mixed order prints once per station after payment replay", async () => {
+    const addressId = fulfillmentType === "PICKUP"
+      ? (await ensurePickupAddress(customer.id)).id
+      : 1;
+    const created = await createOrder(customer, input({
+      addressId,
+      fulfillmentType,
+      items: [{ productId: 1, quantity: 1 }, { productId: 4, quantity: 1 }],
+    }));
+    const readJobs = () => database
+      .prepare("SELECT id,station,payload_json,attempts FROM print_jobs WHERE order_id=? ORDER BY station")
+      .all(created.id);
+
+    assert.equal(readJobs().length, 0);
+    const eventId = "evt-print-" + fulfillmentType;
+    assert.equal((await webhook(created.payment, "PAID", eventId)).replayed, false);
+    const jobs = readJobs();
+    assert.deepEqual(jobs.map(({ station, attempts }) => [station, attempts]), [["ADMIN", 1], ["KITCHEN", 1]]);
+    for (const job of jobs) {
+      const ticket = JSON.parse(job.payload_json);
+      assert.equal(ticket.serviceType, fulfillmentType);
+      assert.deepEqual(ticket.items.map(({ name }) => name), [
+        job.station === "ADMIN" ? "Teh Printer Fixture" : "Nasi QRIS",
+      ]);
+    }
+
+    assert.equal((await webhook(created.payment, "PAID", eventId)).replayed, true);
+    assert.equal((await webhook(created.payment, "PAID", eventId + "-again")).replayed, true);
+    assert.deepEqual(readJobs(), jobs);
+  });
+}

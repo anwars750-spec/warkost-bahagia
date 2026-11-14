@@ -57,3 +57,20 @@ test("print branding is idempotent and does not rewrite branded DOM", () => {
   );
   assert.equal(fixture.getHeader().className, "warkost-print-brand");
 });
+
+test("print branding follows a reused sheet and defaults to delivery for older sheets", () => {
+  const { sheet, makeElement, getHeader, getInnerHtmlWrites } = fakeSheet();
+
+  assert.equal(ensurePrintBranding(sheet, makeElement), true);
+  assert.match(getHeader().innerHTML, /<span>DELIVERY<\/span>/);
+
+  sheet.dataset.fulfillmentType = "PICKUP";
+  assert.equal(ensurePrintBranding(sheet, makeElement), true);
+  assert.match(getHeader().innerHTML, /<span>PICKUP<\/span>/);
+  assert.equal(ensurePrintBranding(sheet, makeElement), false);
+
+  sheet.dataset.fulfillmentType = "DELIVERY";
+  assert.equal(ensurePrintBranding(sheet, makeElement), true);
+  assert.match(getHeader().innerHTML, /<span>DELIVERY<\/span>/);
+  assert.equal(getInnerHtmlWrites(), 3);
+});

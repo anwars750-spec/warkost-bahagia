@@ -391,3 +391,36 @@ test("Kitchen stock realtime refresh keeps the modern workspace and correct acti
   await expect(page.locator(".kitchen-stock-status")).toHaveText("Menipis");
   await healthy(page);
 });
+
+test("print branding labels Admin and Kitchen sheets by fulfillment type", async ({ page }) => {
+  await fixture(page);
+  await page.goto("/");
+  await page.evaluate(() => {
+    const sheets = document.createElement("section");
+    sheets.id = "print-fulfillment-fixture";
+    for (const [station, className] of [
+      ["ADMIN", "admin-order-print-sheet"],
+      ["KITCHEN", "kitchen-print-sheet"],
+    ]) {
+      for (const type of ["PICKUP", "DELIVERY"]) {
+        const sheet = document.createElement("section");
+        sheet.id = station + "-" + type;
+        sheet.className = className;
+        sheet.dataset.fulfillmentType = type;
+        sheets.append(sheet);
+      }
+    }
+    document.body.append(sheets);
+  });
+
+  for (const station of ["ADMIN", "KITCHEN"]) {
+    for (const type of ["PICKUP", "DELIVERY"]) {
+      await expect(page.locator("#" + station + "-" + type + " .warkost-print-brand span")).toHaveText(type);
+    }
+  }
+
+  const reused = page.locator("#ADMIN-PICKUP");
+  await reused.evaluate((sheet) => { sheet.dataset.fulfillmentType = "DELIVERY"; });
+  await expect(reused.locator(".warkost-print-brand span")).toHaveText("DELIVERY");
+  await expect(reused.locator(".warkost-print-brand")).toHaveCount(1);
+});
