@@ -8,6 +8,16 @@
 - Current UAT evidence: runtime Sandbox Server Key matches configured process and GET Status returns settlement, but received callback signature mismatch remains unexplained. This tool does **not** claim that error is fixed.
 - The diagnostic is offline, read-only. It makes **no network requests** and **no database writes**.
 
+## Retrieve the original notification (Midtrans Sandbox dashboard)
+
+As documented by Midtrans, log into the **Sandbox** merchant dashboard, then use **Settings > Configuration > See History** (or Payment Settings > View Notification History). Search the relevant Sandbox Order ID, select the **HTTP** notification entry, open **Details**, and locate **Request Body**. This is the payload actually transmitted to the callback endpoint.
+
+**Do not paste Request Body JSON into chat, a GitHub issue, or an unprotected shell history.** Place the exact JSON in an access-controlled temporary file on the isolated UAT host using an approved secure transfer. Do not change numeric formatting, redact properties within the local file, or manually reconstruct the signed fields before verification. Only sanitized diagnostic results may leave the host.
+
+Official references:
+- https://docs.midtrans.com/docs/https-notification-webhooks
+- https://docs.midtrans.com/docs/payment-settings
+
 ## Procedure (authorized UAT operator)
 
 1. Obtain the exact, untouched webhook JSON as sent by Midtrans for a specific transaction. Do not use a manually retyped notification or a GET Status response. Preserve original string spellings like "22000.00".
