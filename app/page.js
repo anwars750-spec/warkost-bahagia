@@ -16,6 +16,7 @@ import CustomerBanner from "./CustomerBanner";
 import CustomerLogoutDialog from "./CustomerLogoutDialog";
 import { catalogPresentation, compactQuantity, compactStepQuantity } from "./customer-catalog.mjs";
 import { CatalogIcon } from "./CustomerCatalogIcons";
+import { productBadgePresentation } from "../lib/product-badges.mjs";
 import KitchenWorkspace, { KitchenNavIcon } from "./KitchenWorkspace";
 import KitchenDashboardFast from "./KitchenDashboardFast";
 import KitchenStockCenter from "./KitchenStockCenter";
@@ -58,6 +59,9 @@ import {
   MAX_ITEM_NOTE_LENGTH,
   normalizeItemNote,
   removeItemNote,
+  isProductOrderable,
+  canIncreaseProductQuantity,
+  isCartQuantityAvailable,
   updateCartQuantity,
   updateItemNote,
 } from "../lib/customer-cart.mjs";
@@ -104,11 +108,7 @@ const demoProductImage = (name) => {
   if (normalized.includes("biji kopi")) return "/demo/bahan-baku-kopi.svg";
   return "/demo/promo-warkost.webp";
 };
-const demoProductBadges = [
-  ["★", "Best Seller", "best-seller"],
-  ["●", "Populer", "popular"],
-  ["♛", "Rekomendasi", "recommended"],
-];
+
 const ORDER_STAGES = [
   { key: "received", label: "Diterima" },
   { key: "preparing", label: "Diproses" },
@@ -349,8 +349,9 @@ export default function App() {
     );
     setCustomerCursor(page.nextCursor);
   }
-  function saveProductWithImage(body, file) {
-    return run(async () => {
+  async function saveProductWithImage(body, file) {
+    let saved = false;
+    await run(async () => {
       if (file?.size > 0) {
         const form = new FormData();
         form.append("image", file);
@@ -364,7 +365,9 @@ export default function App() {
         body.imageUrl = result.url;
       }
       await api("product", body);
+      saved = true;
     });
+    return saved;
   }
   async function refreshCustomerAccount(signal) {
     const revision = accountRevision.current;
@@ -891,11 +894,18 @@ export default function App() {
       note: normalizeItemNote(itemNotes[product.id]),
     }));
   const checkoutItemsSignature = JSON.stringify(checkoutItems);
+  const unavailableCartProducts = menu.products.filter(
+    (product) =>
+      Number(cart[product.id] || 0) > 0 &&
+      !isCartQuantityAvailable(product, cart[product.id]),
+  );
   function step(product, direction) {
     const { minimumOrderQuantity, orderStepQuantity } =
       productQuantityRules(product);
     setCart((current) => {
       const currentQuantity = Number(current[product.id] || 0);
+      if (direction > 0 && !canIncreaseProductQuantity(product, currentQuantity))
+        return current;
       const delta =
         direction > 0
           ? currentQuantity
@@ -911,6 +921,7 @@ export default function App() {
     setItemNotes((notes) => updateItemNote(notes, id, value));
   }
   function activateProductCard(event, product) {
+    if (!isProductOrderable(product)) return;
     if (event.target?.closest?.("button,a,input,textarea,select")) return;
     if (role === "CUSTOMER") {
       step(product, 1);
@@ -920,6 +931,7 @@ export default function App() {
     setView("auth");
   }
   function productCardKeyDown(event, product) {
+    if (!isProductOrderable(product)) return;
     if (!["Enter", " "].includes(event.key)) return;
     if (event.target?.closest?.("button,a,input,textarea,select")) return;
     event.preventDefault();
@@ -1964,17 +1976,20 @@ export default function App() {
               </div></div>
               <div className={`grid customer-products ${!selectedCategory ? "catalog-grouped-view" : ""}`} id="menu-grid">
                 {catalog.entries.map(({ product: p, index, categoryName, subcategoryName, categoryStart, subcategoryStart, categoryCount }) => {
-                  const badge = demoProductBadges[index];
+                  const badge = productBadgePresentation(p.badge_type);
+                  const outOfStock = !isProductOrderable(p);
+                  const canIncrease = canIncreaseProductQuantity(p, cart[p.id] || 0);
                   return (
                     <Fragment key={p.id}>
                     {categoryStart && <div className="catalog-group-category-heading customer-catalog-polish-node"><span className="catalog-group-category-icon"><CatalogIcon name={categoryName} /></span><div className="catalog-group-category-copy"><span className="catalog-group-kicker">KATEGORI</span><h3>{categoryName}</h3><p>{catalog.categoryCopy[categoryName] || "Pilihan produk Warkost Bahagia."}</p></div><span className="catalog-group-count">{categoryCount} menu</span></div>}
                     {subcategoryStart && <div className="catalog-group-subcategory-heading customer-catalog-polish-node"><h4>{subcategoryName}</h4></div>}
                     <article
-                      className={`product customer-product ${cart[p.id] ? "has-quantity" : ""} ${p.stock_unit === "GRAM" ? "weighted-product" : ""}`}
+                      className={`product customer-product ${cart[p.id] ? "has-quantity" : ""} ${p.stock_unit === "GRAM" ? "weighted-product" : ""} ${outOfStock ? "is-out-of-stock" : ""}`}
                       key={p.id}
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`${p.name}. ${productPriceLabel(p, money)}. ${role === "CUSTOMER" ? "Ketuk untuk menambah ke keranjang" : "Ketuk untuk masuk dan memesan"}`}
+                      role={outOfStock ? undefined : "button"}
+                      tabIndex={outOfStock ? -1 : 0}
+                      aria-disabled={outOfStock || undefined}
+                      aria-label={`${p.name}. ${productPriceLabel(p, money)}. ${outOfStock ? "Stok habis" : role === "CUSTOMER" ? "Ketuk untuk menambah ke keranjang" : "Ketuk untuk masuk dan memesan"}`}
                       onClick={(event) => activateProductCard(event, p)}
                       onKeyDown={(event) => productCardKeyDown(event, p)}
                     >
@@ -1986,9 +2001,11 @@ export default function App() {
                           sizes="(max-width: 620px) 50vw, (max-width: 850px) 50vw, 33vw"
                           unoptimized={Boolean(p.image_url)}
                         />
-                        {badge && (
-                          <span className={`product-badge ${badge[2]}`}>
-                            <b>{badge[0]}</b> {badge[1]}
+                        {outOfStock ? (
+                          <span className="customer-stock-out-badge">Habis</span>
+                        ) : badge && (
+                          <span className={`product-badge ${badge.className}`}>
+                            <b>{badge.icon}</b> {badge.label}
                           </span>
                         )}
                       </div>
@@ -2013,12 +2030,12 @@ export default function App() {
                         <div className="product-foot">
                           <span className="product-price-stack">
                             <strong>{money(p.price)}</strong>
-                            <small>
-                              Stok{" "}
-                              {formatStockQuantity(
-                                p.available_quantity,
-                                p.stock_unit,
-                              )}
+                            <small className={outOfStock ? "customer-stock-out-text" : ""}>
+                              {Number(p.unlimited_stock) === 1
+                                ? "Stok tanpa batas"
+                                : outOfStock
+                                  ? "Stok habis"
+                                  : `Stok ${formatStockQuantity(p.available_quantity, p.stock_unit)}`}
                             </small>
                             {p.stock_unit === "GRAM" && (
                               <small>
@@ -2027,7 +2044,11 @@ export default function App() {
                               </small>
                             )}
                           </span>
-                          {role === "CUSTOMER" ? (
+                          {outOfStock ? (
+                            <span className="customer-stock-out-cta" aria-disabled="true">
+                              Habis
+                            </span>
+                          ) : role === "CUSTOMER" ? (
                             <div
                               className={`qty ${cart[p.id] ? "" : "is-empty"} ${p.stock_unit === "GRAM" ? "weighted-qty" : "piece-qty"}`}
                               aria-live="polite"
@@ -2045,9 +2066,11 @@ export default function App() {
                                   </button>
                                   <span aria-label={`Jumlah ${compactQuantity(cart[p.id], p.stock_unit)}`}>{compactQuantity(cart[p.id], p.stock_unit)}</span>
                                   <small>
-                                    {p.stock_unit === "GRAM"
-                                      ? `+${compactStepQuantity(p.order_step_quantity, p.stock_unit)}`
-                                      : "+1"}
+                                    {!canIncrease
+                                      ? "Maks"
+                                      : p.stock_unit === "GRAM"
+                                        ? `+${compactStepQuantity(p.order_step_quantity, p.stock_unit)}`
+                                        : "+1"}
                                   </small>
                                 </>
                               ) : (
@@ -2171,6 +2194,10 @@ export default function App() {
                     setError(
                       "Warkost sedang tutup. Pesanan baru belum dapat dibuat.",
                     );
+                    return;
+                  }
+                  if (unavailableCartProducts.length > 0) {
+                    setError("Stok produk tidak mencukupi. Periksa isi keranjang.");
                     return;
                   }
                   if (!deliveryQuote?.available) {
@@ -2391,6 +2418,7 @@ export default function App() {
                                 type="button"
                                 aria-label={`Tambah ${p.name}`}
                                 onClick={() => step(p, 1)}
+                                disabled={!canIncreaseProductQuantity(p, cart[p.id])}
                               >
                                 +
                               </button>
@@ -2401,6 +2429,13 @@ export default function App() {
                           </div>
                         ))}
                     </div>
+                    {unavailableCartProducts.length > 0 && (
+                      <p className="checkout-stock-warning" role="alert">
+                        Stok tidak mencukupi untuk{" "}
+                        {unavailableCartProducts.map((product) => product.name).join(", ")}.
+                        Kurangi atau hapus item tersebut sebelum melanjutkan.
+                      </p>
+                    )}
                     <div className="checkout-subtotal">
                       <span>Subtotal</span>
                       <strong>{money(total)}</strong>
@@ -2876,6 +2911,8 @@ export default function App() {
                       deliveryQuoteBusy ||
                       voucherQuoteBusy ||
                       loyaltyQuoteBusy ||
+                      unavailableCartProducts.length > 0 ||
+                      checkoutItems.length === 0 ||
                       storeStatus?.isOpen !== true ||
                       Boolean(selectedVoucherId && !voucherQuote) ||
                       Boolean(selectedRewardId && !loyaltyQuote) ||
@@ -2885,6 +2922,8 @@ export default function App() {
                   >
                     {busy
                       ? "Membuat Pesanan…"
+                      : unavailableCartProducts.length > 0
+                        ? "Stok Tidak Mencukupi"
                       : storeStatus?.isOpen !== true
                         ? "Toko Sedang Tutup"
                         : deliveryQuoteBusy
@@ -4243,6 +4282,7 @@ export default function App() {
                         <button
                           aria-label={`Tambah ${product.name} dari keranjang`}
                           onClick={() => step(product, 1)}
+                          disabled={!canIncreaseProductQuantity(product, cart[product.id])}
                         >
                           +
                         </button>

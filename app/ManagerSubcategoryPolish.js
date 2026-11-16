@@ -32,17 +32,34 @@ function decorateRows(page) {
     const main = row.firstElementChild;
     if (main) {
       main.classList.add("manager-subcategory-main");
-      const oldMeta = main.querySelector(".manager-subcategory-meta");
-      if (!oldMeta) {
-        const meta = document.createElement("div");
+      let meta = main.querySelector(".manager-subcategory-meta");
+      if (!meta) {
+        meta = document.createElement("div");
         meta.className = "manager-subcategory-meta";
-        meta.innerHTML = `
-          <span class="manager-subcategory-category">${data.category}</span>
-          <span class="manager-subcategory-order">Urutan ${data.order}</span>
-          <span class="manager-subcategory-state ${data.active ? "is-active" : "is-inactive"}">${data.active ? "Aktif" : "Nonaktif"}</span>
-        `;
+        for (const className of [
+          "manager-subcategory-category",
+          "manager-subcategory-order",
+          "manager-subcategory-state",
+        ]) {
+          const chip = document.createElement("span");
+          chip.className = className;
+          meta.appendChild(chip);
+        }
         main.appendChild(meta);
       }
+      // Refresh existing chips whenever React updates the row. Otherwise
+      // the visual status stays stale even after the server saves the toggle.
+      const categoryChip = meta.querySelector(".manager-subcategory-category");
+      const orderChip = meta.querySelector(".manager-subcategory-order");
+      const stateChip = meta.querySelector(".manager-subcategory-state");
+      const categoryText = data.category;
+      const orderText = `Urutan ${data.order}`;
+      const stateText = data.active ? "Aktif" : "Nonaktif";
+      const stateClass = `manager-subcategory-state ${data.active ? "is-active" : "is-inactive"}`;
+      if (categoryChip.textContent !== categoryText) categoryChip.textContent = categoryText;
+      if (orderChip.textContent !== orderText) orderChip.textContent = orderText;
+      if (stateChip.textContent !== stateText) stateChip.textContent = stateText;
+      if (stateChip.className !== stateClass) stateChip.className = stateClass;
     }
 
     const actions = row.lastElementChild;
@@ -60,7 +77,8 @@ function updateSummary(page, rows) {
   const categories = new Set(parsed.map((row) => row.category).filter(Boolean)).size;
   const values = [parsed.length, active, inactive, categories];
   summary.querySelectorAll("[data-summary-value]").forEach((node, index) => {
-    node.textContent = String(values[index] ?? 0);
+    const nextValue = String(values[index] ?? 0);
+    if (node.textContent !== nextValue) node.textContent = nextValue;
   });
 }
 
@@ -79,7 +97,8 @@ function applyFilters(page) {
     if (show) visible += 1;
   });
   const count = page.querySelector("[data-subcategory-visible]");
-  if (count) count.textContent = `${visible} subkategori`;
+  const nextCount = `${visible} subkategori`;
+  if (count && count.textContent !== nextCount) count.textContent = nextCount;
 }
 
 function ensureSummary(page, rows) {
@@ -277,7 +296,7 @@ export default function ManagerSubcategoryPolish() {
     };
     schedule();
     const observer = new MutationObserver(schedule);
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { childList: true, characterData: true, subtree: true });
     return () => observer.disconnect();
   }, []);
   return null;

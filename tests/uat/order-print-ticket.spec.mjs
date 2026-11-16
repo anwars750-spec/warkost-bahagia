@@ -42,7 +42,13 @@ test("persisted order tickets print from Admin and Kitchen workspaces", async ({
     });
     expect(res.status()).toBe(201);
     const order = await res.json();
-    expect(order.payment.provider).toBe("LOCAL_SIMULATION");
+    expect(order.payment).toMatchObject({
+      method: "QRIS",
+      status: "PENDING",
+      transaction_reference: expect.stringMatching(/^WB-QRIS-/),
+      provider_reference: expect.stringMatching(/^SIM-/),
+      qr_payload: expect.stringMatching(/^WARKOST-LOCAL-QRIS\|/),
+    });
     const body = JSON.stringify({
       status: "PAID",
       event_id: randomUUID(),
@@ -59,7 +65,15 @@ test("persisted order tickets print from Admin and Kitchen workspaces", async ({
         },
       });
       expect(paid.status()).toBe(200);
-      expect((await paid.json()).replayed).toBe(replay);
+      expect(await paid.json()).toMatchObject({
+        replayed: replay,
+        payment: {
+          order_id: order.id,
+          status: "PAID",
+          transaction_reference: order.payment.transaction_reference,
+          provider_reference: order.payment.provider_reference,
+        },
+      });
     }
     orders.push({ id: order.id, type });
   }

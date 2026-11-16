@@ -255,3 +255,42 @@ test("kontrak React Manager menyediakan dashboard, filter global, product master
   );
   assert.doesNotMatch(component, /MutationObserver|querySelector/);
 });
+
+
+test("Manager dapat nonaktifkan dan aktifkan ulang subkategori tanpa menghapus data", async () => {
+  const original = (await listCatalog(true)).subcategories.find((row) => row.id === 1);
+  assert.ok(original);
+  await saveSubcategory(manager, {
+    id: original.id,
+    categoryId: original.category_id,
+    name: original.name,
+    sortOrder: original.sort_order,
+    active: false,
+  });
+  assert.equal((await listCatalog(true)).subcategories.find((row) => row.id === 1).active, 0);
+  assert.equal((await listCatalog(false)).subcategories.some((row) => row.id === 1), false);
+  await saveSubcategory(manager, {
+    id: original.id,
+    categoryId: original.category_id,
+    name: original.name,
+    sortOrder: original.sort_order,
+    active: true,
+  });
+  assert.equal((await listCatalog(true)).subcategories.find((row) => row.id === 1).active, 1);
+  assert.equal((await listCatalog(false)).subcategories.some((row) => row.id === 1), true);
+});
+
+test("Manager subcategory UI menunggu sukses sebelum reset dan menyegarkan status dekoratif", () => {
+  const core = fs.readFileSync(path.resolve("app/ManagerControlCenterCore.js"), "utf8");
+  const polish = fs.readFileSync(path.resolve("app/ManagerSubcategoryPolish.js"), "utf8");
+  const section = core.split("function Subcategories({ inventory, busy, mutate })")[1]
+    ?.split("function Stock({ stock, busy, mutate })")[0];
+  assert.ok(section);
+  assert.match(section, /const formElement = event\.currentTarget;/);
+  assert.match(section, /const succeeded = await mutate\("subcategory",/);
+  assert.match(section, /if \(!succeeded\) return;/);
+  assert.match(section, /else formElement\.reset\(\);/);
+  assert.match(section, /active: !isActive\(row\.active\)/);
+  assert.match(polish, /stateChip\.textContent !== stateText/);
+  assert.match(polish, /characterData: true/);
+});
