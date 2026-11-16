@@ -62,6 +62,7 @@ test("guest storefront menerima produk, kategori, dan promo aktif yang public-sa
   for (const product of catalog.products) {
     assert.deepEqual(Object.keys(product).sort(), [
       "available_quantity",
+      "badge_type",
       "category_id",
       "description",
       "id",
@@ -74,6 +75,7 @@ test("guest storefront menerima produk, kategori, dan promo aktif yang public-sa
       "price_unit_quantity",
       "stock_unit",
       "subcategory_id",
+      "unlimited_stock",
     ]);
     assert.equal("stock_quantity" in product, false);
     assert.equal("prep_station" in product, false);

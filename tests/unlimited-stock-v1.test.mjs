@@ -67,7 +67,7 @@ test("Manager dapat menyimpan flag unlimited dan Customer catalog selalu in-stoc
 
   const catalog = await listCatalog(false);
   const publicProduct = catalog.products.find((row) => Number(row.id) === Number(product.id));
-  assert.equal("unlimited_stock" in publicProduct, false);
+  assert.equal(Number(publicProduct.unlimited_stock), 1);
   assert.equal(Number(publicProduct.in_stock), 1);
 });
 
@@ -77,7 +77,7 @@ test("produk finite dengan stok nol tetap tidak tersedia", async () => {
   const finite = catalog.products.find((row) => row.name === "Produk Finite Test");
   const finiteDb = database.prepare("SELECT unlimited_stock FROM products WHERE name=?").get("Produk Finite Test");
   assert.equal(Number(finiteDb.unlimited_stock), 0);
-  assert.equal("unlimited_stock" in finite, false);
+  assert.equal(Number(finite.unlimited_stock), 0);
   assert.equal(Number(finite.in_stock), 0);
 });
 
