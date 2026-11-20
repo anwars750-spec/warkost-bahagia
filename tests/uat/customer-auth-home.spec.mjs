@@ -15,6 +15,7 @@ const food = {
   description: "Menu fixture",
   price: 25000,
   image_url: "/demo/nasi-goreng-warkost.webp",
+  in_stock: 1, // Public /api/menu contract; quantity alone does not authorize ordering.
   available_quantity: 10,
   stock_quantity: 10,
   stock_unit: "PCS",
@@ -381,6 +382,8 @@ test("login, modern catalog, account, notifications, refresh and React logout pr
   await dialog.getByRole("button", { name: "Keluar", exact: true }).click();
   await expect(page.locator("header.customer-home-header")).toHaveCount(0);
   await expect(page.locator(".guest-product-cta").first()).toBeVisible();
+  await page.locator(".guest-product-cta").first().click();
+  await expect(page.locator(".auth-login-card")).toBeVisible();
   expect(state.authenticated).toBe(false);
   expect(state.writes.filter((k) => k === "logout")).toHaveLength(1);
   await page

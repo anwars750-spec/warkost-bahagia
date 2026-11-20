@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 const password = process.env.SEED_DEMO_PASSWORD;
@@ -132,7 +133,45 @@ async function openNotifications(page) {
 
 test("Admin view lifecycle remains isolated through three repeated cycles", async ({
   page,
+  request,
+  baseURL,
 }) => {
+  // Real local provisioning plus three full navigation cycles; individual assertions retain their normal timeout.
+  test.setTimeout(90_000);
+  expect(new URL(baseURL).hostname).toBe("127.0.0.1");
+  const headers = async (role) => {
+    const response = await request.post("/api/login", {
+      data: { identifier: role + "@warkost.local", password },
+    });
+    expect(response.status()).toBe(200);
+    return { Cookie: response.headers()["set-cookie"].split(";")[0] };
+  };
+  const admin = await headers("admin");
+  const cashResponse = await request.get("/api/admin-cash-control", {
+    headers: admin,
+  });
+  expect(cashResponse.status()).toBe(200);
+  if (!(await cashResponse.json()).current_shift) {
+    const pin = "173682";
+    const operator = await request.post("/api/owner-admin-operators", {
+      headers: await headers("owner"),
+      data: {
+        action: "CREATE",
+        name: "Lifecycle UAT " + randomUUID().slice(0, 8),
+        pin,
+      },
+    });
+    expect(operator.status()).toBe(201);
+    const shift = await request.post("/api/admin-cash-control", {
+      headers: admin,
+      data: {
+        action: "START_SHIFT",
+        operatorId: (await operator.json()).id,
+        pin,
+      },
+    });
+    expect(shift.status()).toBe(200);
+  }
   const errors = [];
   page.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());

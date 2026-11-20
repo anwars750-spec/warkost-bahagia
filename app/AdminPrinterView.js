@@ -102,6 +102,13 @@ export default function AdminPrinterView({ role = "ADMIN" }) {
           undefined,
           controller.signal,
         );
+        if (
+          !Array.isArray(result?.items) ||
+          !["ADMIN", "KITCHEN"].includes(result.station) ||
+          !["PICKUP", "DELIVERY"].includes(result.fulfillmentType)
+        ) {
+          throw new Error("Data tiket cetak tidak valid. Silakan coba lagi.");
+        }
         if (!controller.signal.aborted) setTicket({ id: selectedId, ...result });
       } catch (error) {
         if (!controller.signal.aborted) setTicketError(error.message);

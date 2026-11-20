@@ -2,7 +2,10 @@ import { expect, test } from "@playwright/test";
 
 // Browser-only API fixtures: no database, real user account, payment, shift,
 // notification or print job is mutated by this UI regression suite.
-async function installFixture(page, { failCustomers = false } = {}) {
+async function installFixture(
+  page,
+  { failCustomers = false, badTicket = false } = {},
+) {
   const writes = [];
   const order = {
     id: 101,
@@ -51,7 +54,7 @@ async function installFixture(page, { failCustomers = false } = {}) {
     {
       id: 7,
       order_id: 101,
-      station: "CASHIER",
+      station: "ADMIN",
       status: "FAILED",
       attempts: 1,
       retry_count: 0,
@@ -75,6 +78,8 @@ async function installFixture(page, { failCustomers = false } = {}) {
     )
       await new Promise((resolve) => setTimeout(resolve, 180));
     if (page.isClosed()) return;
+    if (key === "print-ticket" && badTicket)
+      return route.fulfill({ status: 200, json: { ok: true } });
     if (key === "customers" && failCustomers)
       return route.fulfill({
         status: 503,
@@ -130,6 +135,15 @@ async function installFixture(page, { failCustomers = false } = {}) {
       stock: { products, movements: [] },
       "admin-beverage-stock": { products },
       "print-jobs": { jobs },
+      "print-ticket": {
+        orderId: 101,
+        station: "ADMIN",
+        fulfillmentType: order.fulfillment_type,
+        items: [{ name: "Kopi Susu", quantity: 1, quantityLabel: "1 pcs" }],
+        subtotal: 25000,
+        deliveryFee: 0,
+        total: 25000,
+      },
       notifications: {
         notifications: [
           {
@@ -351,6 +365,12 @@ test("Admin existing controls retain order, customer, stock, printer, notificati
   await expect(
     page.getByRole("dialog", { name: "Detail cetakan" }),
   ).toBeVisible();
+  await expect(
+    page.locator('.admin-printer-modal [data-fulfillment-type="DELIVERY"]'),
+  ).toContainText("Kopi Susu");
+  await expect(
+    page.locator('.admin-printer-modal [data-fulfillment-type="DELIVERY"]'),
+  ).toContainText("Total Rp25.000");
   await page
     .getByRole("dialog", { name: "Detail cetakan" })
     .getByRole("button", { name: "Cetak ulang", exact: true })
@@ -431,17 +451,75 @@ test("realtime order metadata refresh keeps the final React preview in place", a
 });
 
 for (const role of [null, "CUSTOMER"]) {
-  test(`shared session boundary preserves ${role || "guest"} storefront first load`, async ({ page }) => {
+  test(`shared session boundary preserves ${role || "guest"} storefront first load`, async ({
+    page,
+  }) => {
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
     await installFixture(page);
-    await page.route("**/api/me", (route) => route.fulfill({ json: { user: role ? { id: 2, role, name: "Pelanggan UI", email: "ui@example.test" } : null } }));
-    await page.route("**/api/account", (route) => route.fulfill({ json: { profile: { id: 2, name: "Pelanggan UI", email: "ui@example.test" }, addresses: [], loyalty: 0, transactions: [], vouchers: [], promotions: [], rewards: [] } }));
+    await page.route("**/api/me", (route) =>
+      route.fulfill({
+        json: {
+          user: role
+            ? { id: 2, role, name: "Pelanggan UI", email: "ui@example.test" }
+            : null,
+        },
+      }),
+    );
+    await page.route("**/api/account", (route) =>
+      route.fulfill({
+        json: {
+          profile: { id: 2, name: "Pelanggan UI", email: "ui@example.test" },
+          addresses: [],
+          loyalty: 0,
+          transactions: [],
+          vouchers: [],
+          promotions: [],
+          rewards: [],
+        },
+      }),
+    );
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: "Mau makan apa hari ini?", exact: true })).toBeVisible();
-    if (role) await expect(page.getByRole("navigation", { name: "Navigasi pelanggan utama" })).toBeVisible();
-    else await expect(page.locator("header.top nav").getByRole("button", { name: "Masuk", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        name: "Mau makan apa hari ini?",
+        exact: true,
+      }),
+    ).toBeVisible();
+    if (role)
+      await expect(
+        page.getByRole("navigation", { name: "Navigasi pelanggan utama" }),
+      ).toBeVisible();
+    else
+      await expect(
+        page
+          .locator("header.top nav")
+          .getByRole("button", { name: "Masuk", exact: true }),
+      ).toBeVisible();
     await expect(page.locator("main[data-admin-view]")).toHaveCount(0);
     expect(errors).toEqual([]);
   });
 }
+
+test("invalid print ticket response preserves Admin dialog and workspace", async ({
+  page,
+}) => {
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await installFixture(page, { badTicket: true });
+  await page.goto("/");
+  await openView(page, "Printer", "printing");
+  await page.getByRole("button", { name: "Riwayat", exact: true }).click();
+  await page.getByRole("button", { name: "Detail", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Detail cetakan" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("alert")).toHaveText(
+    "Data tiket cetak tidak valid. Silakan coba lagi.",
+  );
+  await expect(
+    dialog.getByRole("button", { name: "Cetak tiket", exact: true }),
+  ).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Tutup", exact: true }).click();
+  await expect(page.locator(".admin-printer-job")).toContainText("WB000101");
+  expect(errors).toEqual([]);
+});
