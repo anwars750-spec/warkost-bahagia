@@ -1,0 +1,28 @@
+/* Mobile alignment fix for Admin beverage stock KPI summary. */
+@media (max-width: 700px) {
+  .admin-beverage-stock-stats article {
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  .admin-beverage-stock-stats article > span,
+  .admin-beverage-stock-stats article > small,
+  .admin-beverage-stock-stats article > strong {
+    align-self: center !important;
+  }
+
+  .admin-beverage-stock-stats article > small,
+  .admin-beverage-stock-stats article > strong {
+    width: 100%;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    text-align: center !important;
+  }
+
+  .admin-beverage-stock-stats article > strong {
+    display: block;
+    margin-top: 1px !important;
+    line-height: 1;
+  }
+}

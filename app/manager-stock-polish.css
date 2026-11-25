@@ -1,0 +1,890 @@
+/* Manager Stock — polished UI inspired by approved mockup.
+ * UI only: existing stock mutation flow remains the source of truth.
+ */
+
+.manager-stock-polished {
+  --stock-ink: #321a12;
+  --stock-muted: #7d695e;
+  --stock-border: #eadbd0;
+  --stock-surface: #fffdfb;
+  --stock-brand: #b84425;
+  --stock-brand-dark: #96391f;
+  --stock-green: #14834c;
+  --stock-green-bg: #ddf5e5;
+  --stock-amber: #c77911;
+  --stock-amber-bg: #fff0d4;
+  --stock-red: #b84638;
+  --stock-red-bg: #fce5e2;
+}
+
+.manager-stock-polished .manager-page-title {
+  margin-bottom: 16px;
+}
+
+.manager-stock-polished .manager-page-title h1 {
+  margin-top: 5px;
+  margin-bottom: 4px;
+  font-size: clamp(2.25rem, 3.9vw, 3.55rem);
+  line-height: 1.02;
+  letter-spacing: -0.045em;
+}
+
+.manager-stock-polished .manager-page-title p {
+  max-width: 760px;
+  color: var(--stock-muted);
+}
+
+.manager-stock-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 14px;
+}
+
+.manager-stock-kpi {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-height: 104px;
+  padding: 16px 17px;
+  border: 1px solid var(--stock-border);
+  border-radius: 19px;
+  background: linear-gradient(180deg, #fff, #fffdfb);
+  box-shadow: 0 10px 24px rgba(62, 35, 23, 0.045);
+}
+
+.manager-stock-kpi-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background: #fff0e7;
+  color: #cf5b31;
+}
+
+.manager-stock-kpi-icon svg,
+.manager-stock-toolbar svg,
+.manager-stock-drawer svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.manager-stock-kpi.kpi-safe .manager-stock-kpi-icon {
+  background: var(--stock-green-bg);
+  color: var(--stock-green);
+}
+
+.manager-stock-kpi.kpi-low .manager-stock-kpi-icon {
+  background: var(--stock-amber-bg);
+  color: var(--stock-amber);
+}
+
+.manager-stock-kpi.kpi-out .manager-stock-kpi-icon {
+  background: var(--stock-red-bg);
+  color: var(--stock-red);
+}
+
+.manager-stock-kpi > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.manager-stock-kpi strong {
+  color: var(--stock-ink);
+  font-size: 1.55rem;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.manager-stock-kpi b {
+  color: var(--stock-ink);
+  font-size: 0.82rem;
+}
+
+.manager-stock-kpi small {
+  color: var(--stock-muted);
+  font-size: 0.68rem;
+}
+
+.manager-stock-polished .manager-stock-tabs {
+  display: none !important;
+}
+
+.manager-stock-toolbar {
+  display: grid;
+  grid-template-columns: minmax(300px, 1.7fr) minmax(180px, 0.72fr) minmax(170px, 0.68fr) auto;
+  gap: 10px;
+  align-items: center;
+  margin: 0 0 15px;
+  padding: 10px;
+  border: 1px solid var(--stock-border);
+  border-radius: 18px;
+  background: rgba(255, 253, 251, 0.95);
+  box-shadow: 0 9px 24px rgba(67, 37, 24, 0.045);
+}
+
+.manager-stock-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.manager-stock-search > span {
+  position: absolute;
+  left: 14px;
+  display: grid;
+  place-items: center;
+  color: #7e6c61;
+  pointer-events: none;
+}
+
+.manager-stock-search input,
+.manager-stock-toolbar select {
+  width: 100%;
+  min-width: 0;
+  height: 48px;
+  border: 1px solid #e7d9cf;
+  border-radius: 13px;
+  background: #fff;
+  color: var(--stock-ink);
+  font: inherit;
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+
+.manager-stock-search input {
+  padding: 0 14px 0 43px;
+}
+
+.manager-stock-toolbar select {
+  padding: 0 38px 0 13px;
+}
+
+.manager-stock-search input:focus,
+.manager-stock-toolbar select:focus {
+  border-color: #d99c82;
+  box-shadow: 0 0 0 3px rgba(184, 68, 37, 0.08);
+}
+
+.manager-stock-adjust-all {
+  min-height: 48px;
+  padding: 0 19px !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 13px !important;
+  white-space: nowrap;
+  box-shadow: 0 8px 18px rgba(165, 58, 30, 0.14);
+}
+
+.manager-stock-list-polished {
+  padding: 0 !important;
+  overflow: hidden;
+  border-radius: 22px !important;
+  box-shadow: 0 12px 30px rgba(62, 35, 23, 0.05);
+}
+
+.manager-stock-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #eee2da;
+  background: #fffefa;
+}
+
+.manager-stock-list-heading h2 {
+  margin: 0 0 3px;
+  color: var(--stock-ink);
+  font-size: 1.15rem;
+}
+
+.manager-stock-list-heading p {
+  margin: 0;
+  color: var(--stock-muted);
+  font-size: 0.72rem;
+}
+
+.manager-stock-list-heading > span {
+  color: var(--stock-muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.manager-stock-columns {
+  display: grid;
+  grid-template-columns: minmax(250px, 1.45fr) minmax(400px, 2fr) 100px 96px;
+  gap: 16px;
+  align-items: center;
+  padding: 11px 20px;
+  border-bottom: 1px solid #eee4dc;
+  background: #fbf6f1;
+  color: #826d61;
+  font-size: 0.64rem;
+  font-weight: 850;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.manager-stock-row {
+  display: grid !important;
+  grid-template-columns: minmax(250px, 1.45fr) minmax(400px, 2fr) 100px 96px !important;
+  gap: 16px !important;
+  align-items: center !important;
+  width: 100%;
+  min-width: 0;
+  padding: 14px 20px !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid #f0e6df !important;
+  background: #fffdfb;
+  transition: background 140ms ease;
+}
+
+.manager-stock-row:last-child {
+  border-bottom: 0 !important;
+}
+
+.manager-stock-row:hover {
+  background: #fff9f5;
+}
+
+.manager-stock-row[hidden] {
+  display: none !important;
+}
+
+.manager-stock-identity {
+  min-width: 0;
+  display: grid !important;
+  grid-template-columns: 58px minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  column-gap: 12px;
+  align-items: center;
+}
+
+.manager-stock-thumb {
+  grid-row: 1 / 4;
+  width: 58px;
+  height: 58px;
+  object-fit: cover;
+  border-radius: 13px;
+  border: 1px solid #eaded5;
+  background: #f6ede5;
+}
+
+.manager-stock-identity strong {
+  min-width: 0;
+  color: var(--stock-ink);
+  font-size: 0.88rem;
+  font-weight: 850;
+  line-height: 1.28;
+  overflow-wrap: break-word;
+}
+
+.manager-stock-identity small {
+  min-width: 0;
+  color: var(--stock-muted);
+  font-size: 0.66rem;
+  line-height: 1.25;
+}
+
+.manager-stock-category-chip {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 23px;
+  margin-top: 2px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #fff0df;
+  color: #9d4b1c;
+  font-size: 0.61rem;
+  font-weight: 800;
+}
+
+.manager-stock-category-chip.cat-minuman {
+  background: #e7f6f5;
+  color: #257b76;
+}
+
+.manager-stock-category-chip.cat-bahan-baku {
+  background: #f2e8de;
+  color: #704b37;
+}
+
+.manager-stock-metrics {
+  min-width: 0;
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0 !important;
+}
+
+.manager-stock-metrics > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.manager-stock-metrics dt {
+  color: #927d71;
+  font-size: 0.61rem;
+  line-height: 1.1;
+}
+
+.manager-stock-metrics dd {
+  margin: 0 !important;
+  color: var(--stock-ink);
+  font-size: 0.82rem;
+  font-weight: 850;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.manager-stock-metrics > div:last-child {
+  display: none;
+}
+
+.manager-stock-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 66px;
+  min-height: 29px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 0.67rem;
+  font-weight: 850;
+}
+
+.manager-stock-state.state-safe {
+  color: var(--stock-green);
+  background: var(--stock-green-bg);
+}
+
+.manager-stock-state.state-low {
+  color: var(--stock-amber);
+  background: var(--stock-amber-bg);
+}
+
+.manager-stock-state.state-out {
+  color: var(--stock-red);
+  background: var(--stock-red-bg);
+}
+
+.manager-stock-row > input,
+.manager-stock-row > .manager-primary {
+  display: none !important;
+}
+
+.manager-stock-action {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid #e5d5ca;
+  border-radius: 11px;
+  background: #fff;
+  color: #4b3025;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+}
+
+.manager-stock-action:hover {
+  transform: translateY(-1px);
+  background: #fff5ee;
+  border-color: #dda58e;
+  color: #9b3d21;
+}
+
+/* Drawer */
+.manager-stock-drawer-shell[hidden] {
+  display: none !important;
+}
+
+.manager-stock-drawer-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 10020;
+}
+
+.manager-stock-drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(41, 22, 15, 0.26);
+  backdrop-filter: blur(2px);
+}
+
+.manager-stock-drawer {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  bottom: 18px;
+  width: min(430px, calc(100vw - 36px));
+  overflow-y: auto;
+  border: 1px solid #e8d9cf;
+  border-radius: 24px;
+  background: #fffdfb;
+  box-shadow: 0 24px 70px rgba(57, 31, 21, 0.22);
+}
+
+.manager-stock-drawer > header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 20px 20px 17px;
+  border-bottom: 1px solid #eee2da;
+  background: rgba(255, 253, 251, 0.97);
+  backdrop-filter: blur(10px);
+}
+
+.manager-stock-drawer > header > div > span {
+  color: #b84a2a;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.manager-stock-drawer h2 {
+  margin: 5px 0 4px;
+  color: var(--stock-ink);
+  font-size: 1.45rem;
+}
+
+.manager-stock-drawer header p {
+  margin: 0;
+  max-width: 310px;
+  color: var(--stock-muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.manager-stock-drawer-close {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #e8d9cf;
+  border-radius: 12px;
+  background: #fff;
+  color: #775d51;
+  cursor: pointer;
+}
+
+.manager-stock-drawer form {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px 22px;
+}
+
+.manager-stock-field {
+  display: grid;
+  gap: 7px;
+  color: #3a251d;
+  font-size: 0.75rem;
+  font-weight: 820;
+}
+
+.manager-stock-field input,
+.manager-stock-field select,
+.manager-stock-field textarea {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #e7d8ce;
+  border-radius: 12px;
+  background: #fff;
+  color: #36231c;
+  padding: 0 12px;
+  font: inherit;
+  font-weight: 600;
+  outline: none;
+}
+
+.manager-stock-field textarea {
+  min-height: 92px;
+  padding-top: 11px;
+  resize: vertical;
+}
+
+.manager-stock-field input:focus,
+.manager-stock-field select:focus,
+.manager-stock-field textarea:focus {
+  border-color: #d99c82;
+  box-shadow: 0 0 0 3px rgba(184, 68, 37, 0.08);
+}
+
+.manager-stock-field small {
+  color: #99857a;
+  font-size: 0.63rem;
+  font-weight: 560;
+  line-height: 1.4;
+}
+
+.manager-stock-selected {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #eaded5;
+  border-radius: 15px;
+  background: #fff8f3;
+}
+
+.manager-stock-selected img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #eaded5;
+  background: #f6eee7;
+}
+
+.manager-stock-selected > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.manager-stock-selected strong {
+  color: var(--stock-ink);
+  font-size: 0.88rem;
+  line-height: 1.25;
+}
+
+.manager-stock-selected small {
+  color: var(--stock-muted);
+  font-size: 0.67rem;
+}
+
+.manager-stock-selected span {
+  justify-self: start;
+  margin-top: 3px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #e7f5e9;
+  color: #2a7547;
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.manager-stock-drawer-actions {
+  position: sticky;
+  bottom: -22px;
+  display: grid;
+  grid-template-columns: 0.8fr 1.25fr;
+  gap: 10px;
+  margin: 4px -20px -22px;
+  padding: 14px 20px 20px;
+  border-top: 1px solid #eee2da;
+  background: rgba(255, 253, 251, 0.97);
+  backdrop-filter: blur(10px);
+}
+
+.manager-stock-drawer-actions button {
+  min-height: 46px;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 800;
+}
+
+.manager-stock-drawer-actions button:first-child {
+  border: 1px solid #e6d7cd;
+  background: #fff;
+  color: #6b5146;
+}
+
+html.manager-stock-drawer-open,
+html.manager-stock-drawer-open body {
+  overflow: hidden;
+}
+
+@media (max-width: 1080px) {
+  .manager-stock-columns,
+  .manager-stock-row {
+    grid-template-columns: minmax(220px, 1.2fr) minmax(360px, 1.8fr) 90px 90px !important;
+  }
+
+  .manager-stock-toolbar {
+    grid-template-columns: minmax(0, 1fr) minmax(160px, 0.55fr) minmax(150px, 0.5fr);
+  }
+
+  .manager-stock-adjust-all {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .manager-stock-polished {
+    width: 100%;
+    min-width: 0;
+    padding: 0 8px 108px !important;
+    overflow-x: clip;
+  }
+
+  .manager-stock-polished .manager-page-title {
+    margin-bottom: 12px;
+  }
+
+  .manager-stock-polished .manager-page-title h1 {
+    font-size: 1.75rem;
+    line-height: 1.06;
+    letter-spacing: -0.035em;
+  }
+
+  .manager-stock-polished .manager-page-title p {
+    font-size: 0.71rem;
+    line-height: 1.45;
+  }
+
+  .manager-stock-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .manager-stock-kpi {
+    min-height: 78px;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 15px;
+  }
+
+  .manager-stock-kpi-icon {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+    border-radius: 11px;
+  }
+
+  .manager-stock-kpi-icon svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .manager-stock-kpi strong {
+    font-size: 1.15rem;
+  }
+
+  .manager-stock-kpi b {
+    font-size: 0.63rem;
+    line-height: 1.15;
+  }
+
+  .manager-stock-kpi small {
+    font-size: 0.54rem;
+    line-height: 1.2;
+  }
+
+  .manager-stock-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    padding: 7px;
+    margin-bottom: 10px;
+    border-radius: 15px;
+  }
+
+  .manager-stock-search {
+    grid-column: 1 / -1;
+  }
+
+  .manager-stock-search input,
+  .manager-stock-toolbar select {
+    height: 42px;
+    font-size: 0.72rem;
+    border-radius: 11px;
+  }
+
+  .manager-stock-search input {
+    padding-left: 38px;
+  }
+
+  .manager-stock-search > span {
+    left: 12px;
+  }
+
+  .manager-stock-search svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .manager-stock-adjust-all {
+    grid-column: 1 / -1;
+    min-height: 43px;
+    font-size: 0.72rem;
+    border-radius: 11px !important;
+  }
+
+  .manager-stock-list-heading {
+    padding: 13px 12px;
+  }
+
+  .manager-stock-list-heading h2 {
+    font-size: 0.88rem;
+  }
+
+  .manager-stock-list-heading p {
+    font-size: 0.58rem;
+    line-height: 1.35;
+  }
+
+  .manager-stock-list-heading > span {
+    font-size: 0.59rem;
+  }
+
+  .manager-stock-columns {
+    display: none !important;
+  }
+
+  .manager-stock-list-polished {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    overflow: visible;
+  }
+
+  .manager-stock-list-polished .manager-stock-list-heading {
+    border: 1px solid var(--stock-border);
+    border-radius: 15px;
+    margin-bottom: 8px;
+  }
+
+  .manager-stock-row {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin: 0 0 9px !important;
+    padding: 12px !important;
+    border: 1px solid var(--stock-border) !important;
+    border-radius: 16px;
+    background: #fffdfb !important;
+    box-shadow: 0 7px 20px rgba(62, 35, 23, 0.04);
+  }
+
+  .manager-stock-identity {
+    grid-template-columns: 60px minmax(0, 1fr);
+    margin-bottom: 11px;
+    padding-bottom: 11px;
+    border-bottom: 1px solid #eee4dc;
+  }
+
+  .manager-stock-thumb {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+  }
+
+  .manager-stock-identity strong {
+    font-size: 0.82rem;
+  }
+
+  .manager-stock-identity small {
+    font-size: 0.6rem;
+  }
+
+  .manager-stock-category-chip {
+    min-height: 21px;
+    font-size: 0.56rem;
+  }
+
+  .manager-stock-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .manager-stock-metrics > div {
+    min-height: 56px;
+    padding: 8px;
+    border: 1px solid #eee3db;
+    border-radius: 11px;
+    background: #fffaf6;
+  }
+
+  .manager-stock-metrics > div:last-child {
+    display: grid;
+    grid-column: 1 / -1;
+    min-height: auto;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .manager-stock-metrics dt {
+    font-size: 0.54rem;
+  }
+
+  .manager-stock-metrics dd {
+    font-size: 0.72rem;
+  }
+
+  .manager-stock-state {
+    justify-self: end;
+    min-width: 58px;
+    min-height: 25px;
+    font-size: 0.58rem;
+  }
+
+  .manager-stock-action {
+    min-height: 38px;
+    font-size: 0.68rem;
+    border-radius: 10px;
+  }
+
+  .manager-stock-drawer-backdrop {
+    background: rgba(35, 19, 13, 0.32);
+  }
+
+  .manager-stock-drawer {
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    border: 0;
+    border-radius: 0;
+    background: #fffdfb;
+  }
+
+  .manager-stock-drawer > header {
+    padding: 16px 16px 14px;
+  }
+
+  .manager-stock-drawer h2 {
+    font-size: 1.25rem;
+  }
+
+  .manager-stock-drawer header p {
+    font-size: 0.68rem;
+  }
+
+  .manager-stock-drawer form {
+    padding: 14px 16px 20px;
+  }
+
+  .manager-stock-drawer-actions {
+    bottom: -20px;
+    margin: 6px -16px -20px;
+    padding: 12px 16px calc(18px + env(safe-area-inset-bottom));
+  }
+}

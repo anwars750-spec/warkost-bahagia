@@ -1,0 +1,120 @@
+.olc-modal>header{
+  padding-right:88px!important;
+}
+
+.olc-modal>header>button{
+  position:absolute!important;
+  top:28px!important;
+  right:26px!important;
+  width:44px!important;
+  height:44px!important;
+  min-width:44px!important;
+  min-height:44px!important;
+  margin:0!important;
+  padding:0!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  border:1px solid #e3d2c5!important;
+  border-radius:14px!important;
+  background:#fffdfb!important;
+  color:transparent!important;
+  font-size:0!important;
+  line-height:0!important;
+  text-indent:-9999px!important;
+  overflow:hidden!important;
+  box-sizing:border-box!important;
+  box-shadow:0 4px 12px rgba(70,44,29,.045)!important;
+  transform:none!important;
+  transition:background .16s ease,border-color .16s ease,box-shadow .16s ease!important;
+}
+
+.olc-modal>header>button::before,
+.olc-modal>header>button::after{
+  content:""!important;
+  position:absolute!important;
+  top:50%!important;
+  left:50%!important;
+  width:17px!important;
+  height:2px!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:999px!important;
+  background:#5c3d2e!important;
+  transform-origin:center!important;
+  pointer-events:none!important;
+}
+
+.olc-modal>header>button::before{
+  transform:translate(-50%,-50%) rotate(45deg)!important;
+}
+
+.olc-modal>header>button::after{
+  transform:translate(-50%,-50%) rotate(-45deg)!important;
+}
+
+.olc-modal>header>button:hover:not(:disabled){
+  background:#fff5ed!important;
+  border-color:#d3b49f!important;
+  box-shadow:0 6px 16px rgba(105,58,32,.08)!important;
+  transform:none!important;
+}
+
+.olc-modal>header>button:hover:not(:disabled)::before,
+.olc-modal>header>button:hover:not(:disabled)::after{
+  background:#7d4023!important;
+}
+
+.olc-modal>header>button:focus-visible{
+  outline:3px solid rgba(138,68,36,.16)!important;
+  outline-offset:3px!important;
+}
+
+.olc-modal>header>button:active:not(:disabled){
+  background:#f9eadf!important;
+  border-color:#cda98f!important;
+}
+
+@media(max-width:720px){
+  .olc-modal>header{
+    padding-right:76px!important;
+  }
+
+  .olc-modal>header>button{
+    top:20px!important;
+    right:18px!important;
+    width:40px!important;
+    height:40px!important;
+    min-width:40px!important;
+    min-height:40px!important;
+    border-radius:13px!important;
+  }
+
+  .olc-modal>header>button::before,
+  .olc-modal>header>button::after{
+    width:16px!important;
+  }
+}
+
+@media(max-width:460px){
+  .olc-modal>header{
+    padding-right:68px!important;
+  }
+
+  .olc-modal>header>button{
+    top:18px!important;
+    right:16px!important;
+    width:38px!important;
+    height:38px!important;
+    min-width:38px!important;
+    min-height:38px!important;
+    border-radius:12px!important;
+  }
+
+  .olc-modal>header>button::before,
+  .olc-modal>header>button::after{
+    width:15px!important;
+    height:1.8px!important;
+  }
+}

@@ -1,0 +1,790 @@
+/* Grouped COD settlement center — Admin + Driver */
+
+.cod-batch-admin-launcher {
+  position: relative;
+  cursor: pointer !important;
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+
+.cod-batch-admin-launcher:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(104, 53, 31, .12);
+}
+
+.cod-batch-launcher-badge {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #8a3f28;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .015em;
+  box-shadow: 0 6px 16px rgba(138, 63, 40, .2);
+}
+
+.cod-batch-driver-launcher {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 1550;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  min-width: 300px;
+  max-width: min(420px, calc(100vw - 28px));
+  padding: 11px 12px;
+  border: 1px solid #ead8cb;
+  border-radius: 16px;
+  background: rgba(255, 252, 249, .98);
+  color: #342018;
+  box-shadow: 0 18px 42px rgba(70, 38, 26, .18);
+  cursor: pointer;
+  text-align: left;
+  backdrop-filter: blur(12px);
+}
+
+.cod-batch-driver-launcher-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  background: #f5e5d9;
+  color: #8a3f28;
+  font-size: 18px;
+}
+
+.cod-batch-driver-launcher span:nth-child(2) {
+  min-width: 0;
+}
+
+.cod-batch-driver-launcher small,
+.cod-batch-driver-launcher strong {
+  display: block;
+}
+
+.cod-batch-driver-launcher small {
+  color: #a35d40;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .12em;
+}
+
+.cod-batch-driver-launcher strong {
+  margin-top: 2px;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cod-batch-driver-launcher em {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #f4eee9;
+  color: #7b685e;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.cod-batch-driver-launcher em.submitted { background: #efedff; color: #5d4aae; }
+.cod-batch-driver-launcher em.review { background: #fdebea; color: #a13e34; }
+.cod-batch-driver-launcher em.verified { background: #e5f6eb; color: #167643; }
+
+.cod-batch-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(43, 31, 26, .56);
+  backdrop-filter: blur(5px);
+}
+
+.cod-batch-modal {
+  width: min(1120px, 100%);
+  max-height: min(88vh, 920px);
+  overflow: hidden;
+  border: 1px solid rgba(232, 214, 203, .95);
+  border-radius: 24px;
+  background: #fffdfa;
+  box-shadow: 0 34px 90px rgba(48, 27, 19, .28);
+}
+
+.cod-batch-shell {
+  display: flex;
+  max-height: min(88vh, 920px);
+  flex-direction: column;
+  color: #2f1b14;
+}
+
+.cod-batch-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid #eee2d9;
+  background: linear-gradient(135deg, #fffdfb 0%, #fbf3ed 100%);
+}
+
+.cod-batch-header small,
+.cod-batch-detail-head small,
+.cod-batch-section-heading small {
+  display: block;
+  color: #a05534;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .13em;
+}
+
+.cod-batch-header h2 {
+  margin: 5px 0 3px;
+  font-size: 26px;
+  line-height: 1.05;
+  letter-spacing: -.035em;
+}
+
+.cod-batch-header p,
+.cod-batch-detail-head p {
+  margin: 0;
+  color: #7e6f67;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.cod-batch-close {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  border: 1px solid #ead9cd;
+  border-radius: 13px;
+  background: #fffaf6;
+  color: #7e452f;
+  font-size: 23px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cod-batch-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 12px 24px;
+  border-bottom: 1px solid #f1e7e0;
+  background: #fff;
+}
+
+.cod-batch-tabs button {
+  min-height: 34px;
+  padding: 7px 13px;
+  border: 0;
+  border-radius: 10px;
+  background: #f7f1ec;
+  color: #7d685d;
+  font-size: 10px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.cod-batch-tabs button.active {
+  background: #8a3f28;
+  color: #fff;
+}
+
+.cod-batch-feedback {
+  margin: 12px 24px 0;
+  padding: 10px 12px;
+  border-radius: 11px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.cod-batch-feedback.error {
+  border: 1px solid #efc9c4;
+  background: #fff1ef;
+  color: #9c3d34;
+}
+
+.cod-batch-admin-grid {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: 330px minmax(0, 1fr);
+  flex: 1;
+}
+
+.cod-batch-sidebar {
+  min-height: 0;
+  overflow: auto;
+  padding: 16px;
+  border-right: 1px solid #eee3dc;
+  background: #fcf8f5;
+}
+
+.cod-batch-sidebar-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: #6f5c52;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.cod-batch-sidebar-title strong {
+  display: grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: #f0e2d9;
+  color: #824129;
+}
+
+.cod-batch-list {
+  display: grid;
+  gap: 8px;
+}
+
+.cod-batch-list > button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #eaded6;
+  border-radius: 14px;
+  background: #fff;
+  color: #352019;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+
+.cod-batch-list > button:hover,
+.cod-batch-list > button.active {
+  border-color: #c98b70;
+  box-shadow: 0 7px 18px rgba(93, 48, 29, .08);
+}
+
+.cod-batch-list > button.active {
+  transform: translateY(-1px);
+  background: #fffaf6;
+}
+
+.cod-batch-list > button > div:last-child {
+  display: grid;
+  justify-items: end;
+  align-content: start;
+  gap: 5px;
+}
+
+.cod-batch-list span,
+.cod-batch-list small,
+.cod-batch-list strong {
+  display: block;
+}
+
+.cod-batch-list span,
+.cod-batch-list small {
+  color: #8f7c72;
+  font-size: 9px;
+}
+
+.cod-batch-list strong {
+  margin: 3px 0;
+  font-size: 11px;
+}
+
+.cod-batch-detail {
+  min-height: 0;
+  overflow: auto;
+  padding: 18px 20px 24px;
+}
+
+.cod-batch-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.cod-batch-detail-head h3 {
+  margin: 5px 0 3px;
+  font-size: 21px;
+  letter-spacing: -.03em;
+}
+
+.cod-batch-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 8px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.cod-batch-status.large {
+  min-height: 30px;
+  padding: 7px 10px;
+  font-size: 9px;
+}
+
+.cod-batch-status.waiting { background: #fff2cb; color: #8a5a08; }
+.cod-batch-status.submitted { background: #efedff; color: #5d4aae; }
+.cod-batch-status.review { background: #fdebea; color: #a13e34; }
+.cod-batch-status.verified { background: #e5f6eb; color: #167643; }
+
+.cod-batch-amount-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.cod-batch-amount-grid article {
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid #ebe0d8;
+  border-radius: 14px;
+  background: #fbf7f4;
+}
+
+.cod-batch-amount-grid article span,
+.cod-batch-amount-grid article strong,
+.cod-batch-amount-grid article small {
+  display: block;
+}
+
+.cod-batch-amount-grid article span {
+  color: #8e7a70;
+  font-size: 8px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.cod-batch-amount-grid article strong {
+  margin: 6px 0 3px;
+  overflow: hidden;
+  font-size: 18px;
+  letter-spacing: -.03em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cod-batch-amount-grid article small {
+  color: #9b8a81;
+  font-size: 8px;
+}
+
+.cod-batch-amount-grid article.is-match {
+  border-color: #c7e8d4;
+  background: #f0faf4;
+}
+
+.cod-batch-amount-grid article.is-match strong,
+.cod-batch-amount-grid article.is-match small { color: #157446; }
+
+.cod-batch-amount-grid article.is-mismatch {
+  border-color: #efc8c3;
+  background: #fff2f0;
+}
+
+.cod-batch-amount-grid article.is-mismatch strong,
+.cod-batch-amount-grid article.is-mismatch small { color: #a13e34; }
+
+.cod-batch-warning,
+.cod-batch-success,
+.cod-batch-waiting-card {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 11px 12px;
+  border-radius: 12px;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.cod-batch-warning {
+  border: 1px solid #efc9c4;
+  background: #fff4f2;
+  color: #9e4338;
+}
+
+.cod-batch-success {
+  border: 1px solid #cbe7d6;
+  background: #effaf3;
+  color: #176f45;
+}
+
+.cod-batch-waiting-card {
+  border: 1px solid #d9d3f6;
+  background: #f5f3ff;
+  color: #5c4ba5;
+}
+
+.cod-batch-meta-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.cod-batch-meta-row > div {
+  padding: 10px 11px;
+  border: 1px solid #eee4de;
+  border-radius: 11px;
+  background: #fff;
+}
+
+.cod-batch-meta-row span,
+.cod-batch-meta-row strong {
+  display: block;
+}
+
+.cod-batch-meta-row span {
+  color: #9a8b83;
+  font-size: 8px;
+}
+
+.cod-batch-meta-row strong {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  font-size: 9px;
+}
+
+.cod-batch-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 0 8px;
+}
+
+.cod-batch-section-heading h4 {
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+
+.cod-batch-section-heading > strong {
+  font-size: 16px;
+}
+
+.cod-batch-order-list {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid #eee2da;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.cod-batch-order-row {
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr) 120px;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 12px;
+  border-bottom: 1px solid #f1e9e4;
+}
+
+.cod-batch-order-row:last-child { border-bottom: 0; }
+
+.cod-batch-order-row small,
+.cod-batch-order-row strong { display: block; }
+
+.cod-batch-order-number small,
+.cod-batch-order-customer small,
+.cod-batch-order-payment small {
+  color: #99887f;
+  font-size: 8px;
+}
+
+.cod-batch-order-number strong,
+.cod-batch-order-customer strong,
+.cod-batch-order-payment strong {
+  margin-top: 2px;
+  font-size: 10px;
+}
+
+.cod-batch-order-customer small {
+  overflow: hidden;
+  margin-top: 3px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cod-batch-order-payment {
+  text-align: right;
+}
+
+.cod-batch-primary {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 14px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 12px;
+  background: #843722;
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(132, 55, 34, .17);
+  font-size: 10px;
+  font-weight: 820;
+  cursor: pointer;
+}
+
+.cod-batch-primary:disabled {
+  cursor: wait;
+  opacity: .68;
+}
+
+.cod-batch-loading,
+.cod-batch-empty {
+  display: grid;
+  min-height: 260px;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  color: #88766c;
+  text-align: center;
+  font-size: 10px;
+}
+
+.cod-batch-loading.small,
+.cod-batch-empty.compact {
+  min-height: 120px;
+  padding: 16px;
+}
+
+.cod-batch-empty > span {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 5px;
+  border-radius: 14px;
+  background: #f5e8de;
+  color: #9a5034;
+  font-size: 18px;
+}
+
+.cod-batch-empty strong { color: #4a3127; font-size: 13px; }
+.cod-batch-empty p { max-width: 360px; margin: 0; line-height: 1.5; }
+
+.cod-batch-driver-layout {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, .8fr);
+  flex: 1;
+  overflow: auto;
+}
+
+.cod-batch-driver-main {
+  padding: 18px 20px 24px;
+}
+
+.cod-batch-driver-summary {
+  padding: 18px;
+  border-left: 1px solid #eee3dc;
+  background: #fcf8f5;
+}
+
+.cod-batch-driver-summary form {
+  display: grid;
+  gap: 12px;
+}
+
+.cod-batch-driver-summary label {
+  display: grid;
+  gap: 6px;
+  color: #6b564b;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.cod-batch-driver-summary label small {
+  display: inline;
+  color: #9b8a82;
+  font-weight: 500;
+}
+
+.cod-batch-driver-summary input {
+  min-height: 42px;
+  width: 100%;
+  padding: 0 11px;
+  border: 1px solid #dfd0c7;
+  border-radius: 11px;
+  outline: none;
+  background: #fff;
+  color: #3b251c;
+  font: inherit;
+}
+
+.cod-batch-driver-summary input:focus {
+  border-color: #b46c4d;
+  box-shadow: 0 0 0 3px rgba(180, 108, 77, .1);
+}
+
+.cod-batch-driver-total,
+.cod-batch-qris-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+}
+
+.cod-batch-driver-total {
+  border: 1px solid #ebded6;
+  background: #fff;
+}
+
+.cod-batch-driver-total span { color: #806d63; font-size: 9px; }
+.cod-batch-driver-total strong { font-size: 16px; }
+
+.cod-batch-qris-note {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  margin-bottom: 14px;
+  border: 1px solid #dfe9f2;
+  background: #f5f9fc;
+  color: #445d70;
+}
+
+.cod-batch-qris-note span { font-size: 9px; font-weight: 750; }
+.cod-batch-qris-note strong { font-size: 12px; }
+.cod-batch-qris-note small { grid-column: 1 / -1; font-size: 8px; }
+
+/* Batch flow owns COD handoff. Keep old per-order submit/verify controls out of the way. */
+body.cod-batch-ui-driver .order > form.order-details:has(button[type="submit"]),
+body.cod-batch-ui-admin .order .actions > button.primary {
+  /* Role classes are added by the settlement center. Specific legacy payment buttons are hidden by JS where supported. */
+}
+
+@media (max-width: 860px) {
+  .cod-batch-overlay {
+    padding: 12px;
+  }
+
+  .cod-batch-modal,
+  .cod-batch-shell {
+    max-height: 94vh;
+  }
+
+  .cod-batch-admin-grid,
+  .cod-batch-driver-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .cod-batch-sidebar {
+    max-height: 230px;
+    border-right: 0;
+    border-bottom: 1px solid #eee3dc;
+  }
+
+  .cod-batch-driver-summary {
+    border-left: 0;
+    border-top: 1px solid #eee3dc;
+  }
+}
+
+@media (max-width: 560px) {
+  .cod-batch-overlay {
+    place-items: end center;
+    padding: 0;
+  }
+
+  .cod-batch-modal {
+    width: 100%;
+    max-height: 96vh;
+    border-radius: 22px 22px 0 0;
+  }
+
+  .cod-batch-shell {
+    max-height: 96vh;
+  }
+
+  .cod-batch-header {
+    padding: 17px 16px 14px;
+  }
+
+  .cod-batch-header h2 { font-size: 21px; }
+  .cod-batch-header p { max-width: 270px; }
+
+  .cod-batch-tabs { padding: 10px 14px; }
+  .cod-batch-tabs button { flex: 1; }
+
+  .cod-batch-sidebar {
+    padding: 12px;
+  }
+
+  .cod-batch-detail,
+  .cod-batch-driver-main {
+    padding: 14px;
+  }
+
+  .cod-batch-driver-summary { padding: 14px; }
+
+  .cod-batch-amount-grid {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .cod-batch-amount-grid article {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 10px;
+    align-items: center;
+    padding: 10px 11px;
+  }
+
+  .cod-batch-amount-grid article strong {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    margin: 0;
+    font-size: 15px;
+  }
+
+  .cod-batch-amount-grid article small { grid-column: 1; }
+
+  .cod-batch-meta-row {
+    grid-template-columns: 1fr;
+  }
+
+  .cod-batch-order-row {
+    grid-template-columns: 94px minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .cod-batch-order-customer small {
+    max-width: 130px;
+  }
+
+  .cod-batch-driver-launcher {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    min-width: 0;
+    width: auto;
+  }
+}

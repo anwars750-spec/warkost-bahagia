@@ -1,4 +1,4 @@
-import { defineConfig } from "@playwright/test";
+import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/uat",
@@ -22,10 +22,19 @@ export default defineConfig({
       name: "mobile-chromium",
       use: {
         browserName: "chromium",
-        viewport: { width: 390, height: 844 },
+        viewport: { width: 393, height: 852 },
         isMobile: true,
         hasTouch: true,
       },
     },
+    ...(process.env.WARKOST_UAT_IOS === "1"
+      ? [
+          {
+            name: "iphone-webkit",
+            testMatch: "customer-location-fallback.spec.mjs",
+            use: { ...devices["iPhone 13"], browserName: "webkit" },
+          },
+        ]
+      : []),
   ],
 });

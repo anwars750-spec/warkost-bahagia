@@ -1,0 +1,121 @@
+@media (max-width: 760px) {
+  .admin-notification-popover {
+    left: auto !important;
+    right: 12px !important;
+    width: min(318px, calc(100vw - 34px)) !important;
+    max-width: min(318px, calc(100vw - 34px)) !important;
+  }
+
+  .admin-notification-popover-card {
+    border-radius: 16px;
+    box-shadow: 0 16px 38px rgba(49, 31, 23, .18);
+  }
+
+  .admin-notification-head {
+    padding: 12px 12px 10px;
+  }
+
+  .admin-notification-head small {
+    font-size: 8px;
+    letter-spacing: .12em;
+  }
+
+  .admin-notification-title-row {
+    gap: 6px;
+    margin-top: 3px;
+  }
+
+  .admin-notification-title-row h2 {
+    font-size: 16px;
+  }
+
+  .admin-notification-title-row > span {
+    min-height: 19px;
+    padding: 0 7px;
+    font-size: 7px;
+  }
+
+  .admin-notification-mark-all {
+    min-width: 30px;
+    min-height: 30px;
+    padding: 0 7px;
+    border-radius: 9px;
+  }
+
+  .admin-notification-filters {
+    gap: 4px;
+    padding: 6px;
+  }
+
+  .admin-notification-filters button {
+    min-height: 31px;
+    border-radius: 9px;
+    font-size: 8px;
+  }
+
+  .admin-notification-list {
+    max-height: min(52vh, 360px);
+    padding: 4px;
+  }
+
+  .admin-notification-item {
+    grid-template-columns: 32px minmax(0, 1fr) 6px;
+    gap: 7px;
+    padding: 9px 7px;
+    border-radius: 11px;
+  }
+
+  .admin-notification-item-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+  }
+
+  .admin-notification-item-top strong {
+    font-size: 9px;
+  }
+
+  .admin-notification-item-top time {
+    font-size: 6.5px;
+  }
+
+  .admin-notification-item-body p {
+    margin-top: 3px;
+    font-size: 8px;
+    line-height: 1.4;
+  }
+
+  .admin-notification-item-body button {
+    margin-top: 5px;
+    font-size: 7px;
+  }
+
+  .admin-notification-state {
+    min-height: 155px;
+    padding: 20px 14px;
+  }
+
+  .admin-notification-state-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 13px;
+  }
+
+  .admin-notification-state strong {
+    margin-top: 8px;
+    font-size: 11px;
+  }
+
+  .admin-notification-state p {
+    max-width: 210px;
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 380px) {
+  .admin-notification-popover {
+    right: 10px !important;
+    width: min(300px, calc(100vw - 28px)) !important;
+    max-width: min(300px, calc(100vw - 28px)) !important;
+  }
+}

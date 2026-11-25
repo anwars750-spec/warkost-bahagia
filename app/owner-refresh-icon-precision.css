@@ -1,0 +1,80 @@
+/* Owner Dashboard refresh icon precision
+   Replaces the legacy asymmetric refresh paths visually while preserving the
+   existing buttons, click handlers, loading states, and accessible labels. */
+
+body.owner-dashboard-v3-active .owner-refresh-button,
+body.owner-dashboard-v3-active .ooh-refresh {
+  box-sizing: border-box;
+}
+
+body.owner-dashboard-v3-active .owner-refresh-button > svg,
+body.owner-dashboard-v3-active .ooh-refresh > svg {
+  display: none !important;
+}
+
+body.owner-dashboard-v3-active .owner-refresh-button::before,
+body.owner-dashboard-v3-active .ooh-refresh::before {
+  content: "";
+  display: block;
+  flex: 0 0 auto;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 11a8 8 0 0 0-14.9-4M4 4v5h5'/%3E%3Cpath d='M4 13a8 8 0 0 0 14.9 4M20 20v-5h-5'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 11a8 8 0 0 0-14.9-4M4 4v5h5'/%3E%3Cpath d='M4 13a8 8 0 0 0 14.9 4M20 20v-5h-5'/%3E%3C/svg%3E") center / contain no-repeat;
+  transform-origin: 50% 50%;
+}
+
+/* Sales refresh: icon + text must sit on one optical baseline. */
+body.owner-dashboard-v3-active .owner-refresh-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  line-height: 1 !important;
+}
+
+body.owner-dashboard-v3-active .owner-refresh-button::before {
+  width: 15px;
+  height: 15px;
+}
+
+/* Operational Health refresh: a true square icon button, centered to the pixel. */
+body.owner-dashboard-v3-active .ooh-refresh {
+  display: grid !important;
+  place-items: center !important;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  padding: 0 !important;
+  line-height: 0 !important;
+}
+
+body.owner-dashboard-v3-active .ooh-refresh::before {
+  width: 16px;
+  height: 16px;
+}
+
+body.owner-dashboard-v3-active .ooh-refresh.loading::before {
+  animation: owner-refresh-precision-spin 0.8s linear infinite;
+}
+
+@keyframes owner-refresh-precision-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 680px) {
+  body.owner-dashboard-v3-active .ooh-refresh {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+  }
+
+  body.owner-dashboard-v3-active .owner-refresh-button::before,
+  body.owner-dashboard-v3-active .ooh-refresh::before {
+    width: 15px;
+    height: 15px;
+  }
+}

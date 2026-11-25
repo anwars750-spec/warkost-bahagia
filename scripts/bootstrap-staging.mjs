@@ -1,13 +1,14 @@
 import * as store from "../lib/store.mjs";
 import { hashPassword } from "../lib/auth.mjs";
-import { validateHostingerEnvironment } from "../lib/hostinger.mjs";
+import { validateStagingEnvironment } from "../lib/staging-environment.mjs";
 
-const errors = validateHostingerEnvironment(process.env);
+const errors = validateStagingEnvironment(process.env);
 if (errors.length) throw Error(errors.join("; "));
 
 const password = process.env.STAGING_UAT_PASSWORD;
 const accounts = [
   ["admin@warkost.local", "Admin Warkost", "ADMIN"],
+  ["manager@warkost.local", "Manager Warkost", "MANAGER"],
   ["kitchen@warkost.local", "Kitchen Warkost", "KITCHEN"],
   ["owner@warkost.local", "Owner Warkost", "OWNER"],
   ["driver@warkost.local", "Driver Warkost", "DRIVER"],
@@ -30,9 +31,14 @@ try {
       ["business_whatsapp", "6281546407856"],
       ["business_latitude", "-6.9217"],
       ["business_longitude", "106.9272"],
-      ["delivery_free_km", "5"],
+      ["delivery_free_km", "3"],
       ["delivery_fee_per_km", "2500"],
-      ["delivery_max_km", "15"],
+      ["delivery_max_km", "10"],
+      ["cod_max_order_amount", "150000"],
+      ["store_open_time", "08:00"],
+      ["store_close_time", "22:00"],
+      ["store_manual_status", "OPEN"],
+      ["store_closed_reason", ""],
       ["printer_simulation", "true"],
       ["printer_admin", "LAN 80mm Admin (simulasi)"],
       ["printer_kitchen", "LAN 80mm Kitchen (simulasi)"],
@@ -55,14 +61,14 @@ try {
       "UPDATE users SET phone=? WHERE role='DRIVER' AND phone IS NULL",
       "6281546407856",
     );
-    const admin = await tx.get(
+    const manager = await tx.get(
       "SELECT id FROM users WHERE email=?",
-      "admin@warkost.local",
+      "manager@warkost.local",
     );
     if (
       !(await tx.get(
         "SELECT id FROM promotions WHERE title=?",
-        "Gratis Ongkir 5 KM",
+        "Gratis Ongkir 3 KM",
       ))
     ) {
       const startsAt = new Date(Date.now() - 86400000)
@@ -75,16 +81,16 @@ try {
           .replace("T", " ");
       await tx.run(
         "INSERT INTO promotions(title,description,badge,terms,cta_label,starts_at,ends_at,active,created_by,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?)",
-        "Gratis Ongkir 5 KM",
-        "Pesan menu favoritmu dan nikmati gratis ongkir untuk alamat dalam radius 5 km.",
+        "Gratis Ongkir 3 KM",
+        "Pesan menu favoritmu dan nikmati gratis ongkir untuk alamat dalam radius 3 km.",
         "PROMO BERLANGSUNG",
-        "Berlaku untuk alamat yang terverifikasi dalam radius maksimal 5 km.",
+        "Berlaku untuk alamat yang terverifikasi dalam radius maksimal 3 km.",
         "Pilih Menu",
         startsAt,
         endsAt,
         1,
-        admin.id,
-        admin.id,
+        manager.id,
+        manager.id,
       );
     }
 
@@ -169,7 +175,7 @@ try {
         106.9272,
       );
   });
-  console.log("Bootstrap staging siap untuk lima role UAT");
+  console.log("Bootstrap staging siap untuk enam role UAT");
 } finally {
   await store.close();
 }

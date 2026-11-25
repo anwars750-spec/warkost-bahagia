@@ -1,0 +1,336 @@
+{
+  "before": {
+    "registration": [
+      {
+        "stage": "request.parse",
+        "durationMs": 0.628
+      },
+      {
+        "stage": "request.rate_limit",
+        "durationMs": 1.343
+      },
+      {
+        "stage": "request.session_lookup",
+        "durationMs": 0.025
+      },
+      {
+        "stage": "register.validate",
+        "durationMs": 0.119
+      },
+      {
+        "stage": "register.customer_lookup",
+        "durationMs": 0.162
+      },
+      {
+        "stage": "register.password_hash",
+        "durationMs": 114.476
+      },
+      {
+        "stage": "register.customer_write",
+        "durationMs": 0.298
+      },
+      {
+        "stage": "register.customer_transaction",
+        "durationMs": 116.412
+      },
+      {
+        "stage": "otp.challenge_lookup",
+        "durationMs": 0.149
+      },
+      {
+        "stage": "otp.challenge_write",
+        "durationMs": 0.401
+      },
+      {
+        "stage": "otp.challenge_hash",
+        "durationMs": 0.138
+      },
+      {
+        "stage": "otp.challenge_transaction",
+        "durationMs": 1.767
+      },
+      {
+        "stage": "smtp.connect",
+        "durationMs": 0.938
+      },
+      {
+        "stage": "smtp.greeting",
+        "durationMs": 22.524
+      },
+      {
+        "stage": "smtp.ehlo",
+        "durationMs": 15.981
+      },
+      {
+        "stage": "smtp.starttls",
+        "durationMs": 15.972
+      },
+      {
+        "stage": "smtp.tls",
+        "durationMs": 5.209
+      },
+      {
+        "stage": "smtp.ehlo_tls",
+        "durationMs": 24.939
+      },
+      {
+        "stage": "smtp.auth",
+        "durationMs": 20.641
+      },
+      {
+        "stage": "smtp.mail_from",
+        "durationMs": 15.993
+      },
+      {
+        "stage": "smtp.rcpt_to",
+        "durationMs": 16.051
+      },
+      {
+        "stage": "smtp.data_ready",
+        "durationMs": 15.944
+      },
+      {
+        "stage": "smtp.data_accept",
+        "durationMs": 32.004
+      },
+      {
+        "stage": "smtp.quit",
+        "durationMs": 258.712
+      },
+      {
+        "stage": "api.register.total",
+        "durationMs": 587.688
+      }
+    ],
+    "verification": [
+      {
+        "stage": "request.parse",
+        "durationMs": 0.617
+      },
+      {
+        "stage": "request.rate_limit",
+        "durationMs": 1.416
+      },
+      {
+        "stage": "request.session_lookup",
+        "durationMs": 0.026
+      },
+      {
+        "stage": "verify.validation",
+        "durationMs": 0.016
+      },
+      {
+        "stage": "verify.lookup",
+        "durationMs": 0.257
+      },
+      {
+        "stage": "verify.hash_compare",
+        "durationMs": 0.142
+      },
+      {
+        "stage": "verify.activation",
+        "durationMs": 0.121
+      },
+      {
+        "stage": "verify.loyalty",
+        "durationMs": 0.05
+      },
+      {
+        "stage": "verify.consume",
+        "durationMs": 0.067
+      },
+      {
+        "stage": "verify.transaction",
+        "durationMs": 1.851
+      },
+      {
+        "stage": "session.account_check",
+        "durationMs": 0.212
+      },
+      {
+        "stage": "session.insert",
+        "durationMs": 1.291
+      },
+      {
+        "stage": "session.issue",
+        "durationMs": 1.729
+      },
+      {
+        "stage": "session.cookie",
+        "durationMs": 0.315
+      },
+      {
+        "stage": "api.otp-verify.total",
+        "durationMs": 6.457
+      }
+    ]
+  },
+  "after": {
+    "registration": [
+      {
+        "stage": "request.parse",
+        "durationMs": 0.653
+      },
+      {
+        "stage": "request.rate_limit",
+        "durationMs": 1.454
+      },
+      {
+        "stage": "request.session_lookup",
+        "durationMs": 0.028
+      },
+      {
+        "stage": "register.validate",
+        "durationMs": 0.123
+      },
+      {
+        "stage": "register.password_hash",
+        "durationMs": 99.683
+      },
+      {
+        "stage": "register.customer_lookup",
+        "durationMs": 0.24
+      },
+      {
+        "stage": "register.customer_write",
+        "durationMs": 0.253
+      },
+      {
+        "stage": "register.customer_transaction",
+        "durationMs": 3.206
+      },
+      {
+        "stage": "otp.challenge_lookup",
+        "durationMs": 0.142
+      },
+      {
+        "stage": "otp.challenge_write",
+        "durationMs": 0.496
+      },
+      {
+        "stage": "otp.challenge_hash",
+        "durationMs": 0.162
+      },
+      {
+        "stage": "otp.challenge_transaction",
+        "durationMs": 1.993
+      },
+      {
+        "stage": "smtp.connect",
+        "durationMs": 1.139
+      },
+      {
+        "stage": "smtp.greeting",
+        "durationMs": 26.426
+      },
+      {
+        "stage": "smtp.ehlo",
+        "durationMs": 24.184
+      },
+      {
+        "stage": "smtp.starttls",
+        "durationMs": 29.818
+      },
+      {
+        "stage": "smtp.tls",
+        "durationMs": 5.121
+      },
+      {
+        "stage": "smtp.ehlo_tls",
+        "durationMs": 24.066
+      },
+      {
+        "stage": "smtp.auth",
+        "durationMs": 29.817
+      },
+      {
+        "stage": "smtp.mail_from",
+        "durationMs": 20.702
+      },
+      {
+        "stage": "smtp.rcpt_to",
+        "durationMs": 15.935
+      },
+      {
+        "stage": "smtp.data_ready",
+        "durationMs": 15.951
+      },
+      {
+        "stage": "smtp.data_accept",
+        "durationMs": 31.728
+      },
+      {
+        "stage": "api.register.total",
+        "durationMs": 359.307
+      }
+    ],
+    "verification": [
+      {
+        "stage": "request.parse",
+        "durationMs": 0.628
+      },
+      {
+        "stage": "request.rate_limit",
+        "durationMs": 3.261
+      },
+      {
+        "stage": "request.session_lookup",
+        "durationMs": 0.033
+      },
+      {
+        "stage": "verify.validation",
+        "durationMs": 0.015
+      },
+      {
+        "stage": "verify.lookup",
+        "durationMs": 0.285
+      },
+      {
+        "stage": "verify.hash_compare",
+        "durationMs": 0.164
+      },
+      {
+        "stage": "verify.activation",
+        "durationMs": 0.128
+      },
+      {
+        "stage": "verify.loyalty",
+        "durationMs": 0.052
+      },
+      {
+        "stage": "verify.consume",
+        "durationMs": 0.085
+      },
+      {
+        "stage": "session.account_check",
+        "durationMs": 0.065
+      },
+      {
+        "stage": "session.insert",
+        "durationMs": 0.139
+      },
+      {
+        "stage": "session.issue",
+        "durationMs": 0.37
+      },
+      {
+        "stage": "verify.transaction",
+        "durationMs": 2.613
+      },
+      {
+        "stage": "session.cookie",
+        "durationMs": 0.302
+      },
+      {
+        "stage": "api.otp-verify.total",
+        "durationMs": 7.717
+      }
+    ],
+    "cleanup": [
+      {
+        "stage": "smtp.quit",
+        "durationMs": 253.205
+      }
+    ]
+  }
+}

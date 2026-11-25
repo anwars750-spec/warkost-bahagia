@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { stagingOrigin } from "../lib/hostinger.mjs";
+import { stagingOrigin } from "../lib/staging-environment.mjs";
 
 const origin = stagingOrigin(process.env.STAGING_ORIGIN);
 const password = process.env.STAGING_UAT_PASSWORD;
@@ -59,6 +59,7 @@ async function authenticated(path, cookie) {
 const sessions = [
   [await login("customer@warkost.local", "CUSTOMER"), "CUSTOMER"],
   [await login("admin@warkost.local", "ADMIN"), "ADMIN"],
+  [await login("manager@warkost.local", "MANAGER"), "MANAGER"],
   [await login("kitchen@warkost.local", "KITCHEN"), "KITCHEN"],
   [await login("driver@warkost.local", "DRIVER"), "DRIVER"],
   [await login("owner@warkost.local", "OWNER"), "OWNER"],
@@ -68,12 +69,14 @@ for (const [cookie, role] of sessions) {
   const me = await authenticated("/api/me", cookie);
   assert.equal(me.response.status, 200);
   assert.equal(me.value.user.role, role);
-  const orders = await authenticated("/api/orders", cookie);
-  assert.equal(orders.response.status, 200);
-  assert.ok(Array.isArray(orders.value.orders));
+  if (role !== "MANAGER") {
+    const orders = await authenticated("/api/orders", cookie);
+    assert.equal(orders.response.status, 200);
+    assert.ok(Array.isArray(orders.value.orders));
+  }
 }
 
-const [customer, admin, kitchen, driver, owner] = sessions.map(
+const [customer, admin, manager, kitchen, driver, owner] = sessions.map(
   ([cookie]) => cookie,
 );
 assert.equal(
@@ -88,7 +91,15 @@ assert.equal(
   (await authenticated("/api/inventory", customer)).response.status,
   403,
 );
-assert.equal((await authenticated("/api/stock", kitchen)).response.status, 403);
+const kitchenStock = await authenticated("/api/stock", kitchen);
+assert.equal(kitchenStock.response.status, 200);
+assert.ok(Array.isArray(kitchenStock.value.products));
+assert.ok(
+  kitchenStock.value.products.every(
+    (product) => product.category_name === "Makanan",
+  ),
+);
+assert.deepEqual(kitchenStock.value.movements, []);
 assert.equal(
   (await authenticated("/api/drivers", customer)).response.status,
   403,
@@ -99,6 +110,10 @@ assert.equal(
 );
 assert.equal(
   (await authenticated("/api/inventory", admin)).response.status,
+  403,
+);
+assert.equal(
+  (await authenticated("/api/inventory", manager)).response.status,
   200,
 );
 assert.equal(
@@ -125,5 +140,5 @@ for (const [cookie] of sessions) {
 }
 
 console.log(
-  "HOSTINGER STAGING PASS: HTTPS health, readiness, CSRF, login lima role, RBAC, catalog",
+  "STAGING PASS: HTTPS health, readiness, CSRF, login enam role, RBAC, catalog",
 );

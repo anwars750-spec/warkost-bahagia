@@ -1,0 +1,37 @@
+/* Explicit order identity in Admin order summaries. */
+.admin-order-number-v3 {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #ead8cc;
+  border-radius: 12px;
+  background: #fffaf6;
+}
+
+.admin-order-number-v3 span {
+  color: #9a7563;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .12em;
+}
+
+.admin-order-number-v3 strong {
+  color: #6f2f20;
+  font-size: 13px;
+  font-weight: 850;
+  letter-spacing: .025em;
+}
+
+@media (max-width: 760px) {
+  .admin-order-number-v3 {
+    margin-bottom: 8px;
+    padding: 9px 10px;
+  }
+
+  .admin-order-number-v3 strong {
+    font-size: 12px;
+  }
+}

@@ -1,0 +1,5 @@
+/* Owner Business Report V2 replaces the legacy report title. Keep the legacy
+   heading in the DOM for runtime view detection, but never show it while V2 is active. */
+.owner-business-report-v2-active main > .heading {
+  display: none !important;
+}

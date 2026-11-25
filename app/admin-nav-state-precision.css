@@ -1,0 +1,33 @@
+/* Admin navigation state precision
+   Only the current section may render as a filled pill. Hover stays neutral. */
+
+.admin-ui-mode .admin-nav button:not(.admin-nav-active),
+.admin-ui-mode .admin-nav button:not(.admin-nav-active):hover,
+.admin-ui-mode .admin-nav button:not(.admin-nav-active):active,
+.admin-ui-mode .admin-nav button:not(.admin-nav-active):focus {
+  color: #3f2b24 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.admin-ui-mode .admin-nav button:not(.admin-nav-active):hover {
+  color: #6f3b2b !important;
+}
+
+.admin-ui-mode .admin-nav button.admin-nav-active,
+.admin-ui-mode .admin-nav button.admin-nav-active:hover,
+.admin-ui-mode .admin-nav button.admin-nav-active:active,
+.admin-ui-mode .admin-nav button.admin-nav-active:focus {
+  color: #6a2d1f !important;
+  background: #f3e4d9 !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(132, 68, 45, 0.16),
+    0 6px 16px rgba(91, 48, 31, 0.06) !important;
+  transform: none !important;
+}
+
+.admin-ui-mode .admin-nav button:focus-visible {
+  outline: 2px solid rgba(157, 78, 50, 0.35);
+  outline-offset: 2px;
+}

@@ -14,7 +14,7 @@ Core MVP mencakup tiga peran berikut:
   dan menyelesaikan pengantaran.
 
 Hosting publik, domain, pembayaran gateway, maps/routing nyata, dan deployment
-Hostinger tidak termasuk milestone ini.
+hosting publik tidak termasuk milestone ini.
 
 ## Requirement traceability
 
@@ -55,7 +55,7 @@ Hostinger tidak termasuk milestone ini.
 - Rate limit IP/edge, audit observability penuh, reset-password recovery, dan
   performance/load review adalah gate production berikutnya, bukan penambahan
   fitur Core MVP pada release candidate lokal.
-- Migrasi Hostinger tetap ditunda sampai aplikasi disetujui pada UAT pengguna.
+- Migrasi hosting publik tetap ditunda sampai aplikasi disetujui pada UAT pengguna.
 
 ## Keputusan
 

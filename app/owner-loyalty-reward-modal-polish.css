@@ -1,0 +1,414 @@
+.olc-modal-backdrop{
+  background:rgba(36,27,22,.58)!important;
+  backdrop-filter:blur(7px)!important;
+  -webkit-backdrop-filter:blur(7px)!important;
+}
+
+.olc-modal{
+  width:min(780px,calc(100vw - 40px))!important;
+  max-height:min(820px,calc(100vh - 36px))!important;
+  overflow:auto!important;
+  border:1px solid #e6d5c8!important;
+  border-radius:24px!important;
+  background:#fffaf6!important;
+  box-shadow:0 34px 90px rgba(45,28,18,.34)!important;
+}
+
+.olc-modal>header{
+  position:relative!important;
+  display:flex!important;
+  align-items:flex-start!important;
+  justify-content:space-between!important;
+  gap:18px!important;
+  padding:24px 26px 16px!important;
+  border-bottom:0!important;
+}
+
+.olc-modal>header::before{
+  content:"♕";
+  display:grid;
+  place-items:center;
+  width:48px;
+  height:48px;
+  flex:0 0 48px;
+  border-radius:50%;
+  background:#f7e6d7;
+  color:#8b4827;
+  font-size:24px;
+  font-weight:800;
+  line-height:1;
+  box-shadow:inset 0 0 0 1px rgba(141,82,47,.08);
+}
+
+.olc-modal>header>div{
+  flex:1 1 auto;
+  min-width:0;
+  padding-top:1px;
+}
+
+.olc-modal>header>div>span{
+  display:block;
+  margin:0 0 5px!important;
+  color:#955b3b!important;
+  font-size:10px!important;
+  font-weight:900!important;
+  letter-spacing:.17em!important;
+}
+
+.olc-modal>header h2{
+  margin:0!important;
+  color:#2f211a!important;
+  font-size:28px!important;
+  line-height:1.08!important;
+  letter-spacing:-.025em!important;
+}
+
+.olc-modal>header>div::after{
+  content:"Atur reward loyalty yang dapat dipilih customer saat checkout.";
+  display:block;
+  margin-top:7px;
+  max-width:520px;
+  color:#806f64;
+  font-size:12px;
+  font-weight:500;
+  line-height:1.5;
+}
+
+.olc-modal>header>button{
+  flex:0 0 auto!important;
+  width:40px!important;
+  height:40px!important;
+  display:grid!important;
+  place-items:center!important;
+  border:1px solid #e4d4c8!important;
+  border-radius:12px!important;
+  background:#fffdfb!important;
+  color:#5f4537!important;
+  font-size:24px!important;
+  line-height:1!important;
+  box-shadow:0 4px 12px rgba(70,44,29,.04)!important;
+  transition:background .15s ease,border-color .15s ease,transform .15s ease!important;
+}
+
+.olc-modal>header>button:hover:not(:disabled){
+  background:#fff5ec!important;
+  border-color:#d8bda9!important;
+  transform:translateY(-1px)!important;
+}
+
+.olc-modal form{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:15px!important;
+  margin:0 20px 20px!important;
+  padding:20px!important;
+  border:1px solid #ecdfd4!important;
+  border-radius:18px!important;
+  background:linear-gradient(145deg,#fffdfb 0%,#fffaf6 100%)!important;
+  box-shadow:0 8px 24px rgba(71,45,29,.035)!important;
+}
+
+.olc-modal label:not(.olc-switch){
+  position:relative;
+  display:flex!important;
+  flex-direction:column!important;
+  gap:7px!important;
+  color:#55443a!important;
+  font-size:12px!important;
+  font-weight:800!important;
+  line-height:1.3!important;
+}
+
+.olc-modal label:not(.olc-switch)>input,
+.olc-modal label:not(.olc-switch)>select{
+  height:46px!important;
+  width:100%!important;
+  margin:0!important;
+  padding:0 14px!important;
+  border:1px solid #decec2!important;
+  border-radius:11px!important;
+  background:#fff!important;
+  color:#342820!important;
+  font-size:13px!important;
+  font-weight:650!important;
+  line-height:46px!important;
+  outline:none!important;
+  box-shadow:0 1px 2px rgba(68,43,27,.025)!important;
+  transition:border-color .15s ease,box-shadow .15s ease,background .15s ease!important;
+}
+
+.olc-modal label:not(.olc-switch)>input::placeholder{
+  color:#a0948c!important;
+  font-weight:550!important;
+}
+
+.olc-modal label:not(.olc-switch)>input:focus,
+.olc-modal label:not(.olc-switch)>select:focus{
+  border-color:#a66c4b!important;
+  box-shadow:0 0 0 3px rgba(139,72,39,.10)!important;
+  background:#fffefc!important;
+}
+
+.olc-modal form>label:first-child::after,
+.olc-form-grid>label::after{
+  display:block;
+  margin-top:-1px;
+  color:#8b7b71;
+  font-size:10px;
+  font-weight:500;
+  line-height:1.45;
+}
+
+.olc-modal form>label:first-child::after{
+  content:"Nama ini akan ditampilkan ke customer.";
+}
+
+.olc-form-grid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:16px 18px!important;
+}
+
+.olc-form-grid>label:nth-child(1)::after{
+  content:"Jumlah poin yang dibutuhkan untuk menukarkan reward.";
+}
+
+.olc-form-grid>label:nth-child(2)::after{
+  content:"Tentukan jenis perhitungan reward.";
+}
+
+.olc-form-grid>label:nth-child(3)::after{
+  content:"Nilai diskon sesuai tipe reward yang dipilih.";
+}
+
+.olc-form-grid>label:nth-child(4)::after{
+  content:"Minimum transaksi untuk dapat menggunakan reward.";
+}
+
+.olc-form-grid>label:nth-child(5){
+  grid-column:1/-1!important;
+}
+
+.olc-form-grid>label:nth-child(5)::after{
+  content:"Opsional. Kosongkan jika tidak ada batas maksimum diskon.";
+}
+
+.olc-switch{
+  position:relative!important;
+  display:grid!important;
+  grid-template-columns:52px minmax(0,1fr)!important;
+  align-items:center!important;
+  gap:12px!important;
+  min-height:58px!important;
+  padding:11px 14px!important;
+  border:1px solid #f0dfd0!important;
+  border-radius:13px!important;
+  background:#fbefe5!important;
+  color:#3f3028!important;
+  font-size:12px!important;
+  font-weight:800!important;
+  cursor:pointer!important;
+}
+
+.olc-switch::after{
+  content:"Nonaktifkan jika reward belum ingin ditampilkan ke customer.";
+  grid-column:2;
+  display:block;
+  margin-top:-7px;
+  color:#8a776b;
+  font-size:10px;
+  font-weight:500;
+  line-height:1.35;
+}
+
+.olc-switch input[type="checkbox"]{
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  width:48px!important;
+  height:28px!important;
+  min-width:48px!important;
+  margin:0!important;
+  border:0!important;
+  border-radius:999px!important;
+  background-color:#d8cbc2!important;
+  background-image:radial-gradient(circle at 14px 14px,#fff 0 9px,transparent 10px)!important;
+  box-shadow:inset 0 0 0 1px rgba(79,51,35,.08),0 1px 2px rgba(56,36,24,.06)!important;
+  cursor:pointer!important;
+  transition:background-color .18s ease,background-image .18s ease!important;
+}
+
+.olc-switch input[type="checkbox"]:checked{
+  background-color:#8a4424!important;
+  background-image:radial-gradient(circle at 34px 14px,#fff 0 9px,transparent 10px)!important;
+}
+
+.olc-switch input[type="checkbox"]:focus-visible{
+  outline:3px solid rgba(138,68,36,.16)!important;
+  outline-offset:2px!important;
+}
+
+.olc-modal-actions{
+  display:flex!important;
+  justify-content:flex-end!important;
+  align-items:center!important;
+  gap:10px!important;
+  margin:2px -20px -20px!important;
+  padding:14px 20px 2px!important;
+  border-top:1px solid #eee1d7!important;
+  background:#fffaf6!important;
+}
+
+.olc-modal-actions button{
+  min-height:44px!important;
+  padding:0 18px!important;
+  border:1px solid #d9c3b2!important;
+  border-radius:11px!important;
+  background:#fffdfb!important;
+  color:#714028!important;
+  font-size:13px!important;
+  font-weight:850!important;
+  box-shadow:none!important;
+  transition:transform .15s ease,background .15s ease,border-color .15s ease!important;
+}
+
+.olc-modal-actions button:hover:not(:disabled){
+  transform:translateY(-1px)!important;
+  background:#fff6ee!important;
+  border-color:#cfae98!important;
+}
+
+.olc-modal-actions button.primary{
+  min-width:162px!important;
+  border-color:#7a3c20!important;
+  background:linear-gradient(180deg,#874525 0%,#74371d 100%)!important;
+  color:#fff!important;
+  box-shadow:0 8px 18px rgba(116,55,29,.15)!important;
+}
+
+.olc-modal-actions button.primary::before{
+  content:"▣";
+  display:inline-block;
+  margin-right:8px;
+  font-size:11px;
+  opacity:.9;
+}
+
+.olc-modal-actions button:disabled,
+.olc-modal>header>button:disabled{
+  cursor:not-allowed!important;
+  opacity:.58!important;
+}
+
+@media(max-width:720px){
+  .olc-modal-backdrop{
+    padding:12px!important;
+    align-items:center!important;
+  }
+
+  .olc-modal{
+    width:100%!important;
+    max-height:calc(100vh - 24px)!important;
+    border-radius:20px!important;
+  }
+
+  .olc-modal>header{
+    padding:20px 18px 14px!important;
+  }
+
+  .olc-modal>header::before{
+    width:42px;
+    height:42px;
+    flex-basis:42px;
+    font-size:21px;
+  }
+
+  .olc-modal>header h2{
+    font-size:24px!important;
+  }
+
+  .olc-modal>header>div::after{
+    font-size:11px;
+  }
+
+  .olc-modal form{
+    margin:0 12px 12px!important;
+    padding:16px!important;
+  }
+
+  .olc-form-grid{
+    grid-template-columns:1fr!important;
+    gap:14px!important;
+  }
+
+  .olc-form-grid>label:nth-child(5){
+    grid-column:auto!important;
+  }
+
+  .olc-modal-actions{
+    position:sticky!important;
+    bottom:-16px!important;
+    z-index:2!important;
+    margin:2px -16px -16px!important;
+    padding:12px 16px 4px!important;
+  }
+}
+
+@media(max-width:460px){
+  .olc-modal-backdrop{
+    padding:0!important;
+    align-items:end!important;
+  }
+
+  .olc-modal{
+    max-height:94vh!important;
+    border-radius:22px 22px 0 0!important;
+  }
+
+  .olc-modal>header{
+    gap:12px!important;
+    padding:18px 16px 12px!important;
+  }
+
+  .olc-modal>header::before{
+    width:38px;
+    height:38px;
+    flex-basis:38px;
+    font-size:19px;
+  }
+
+  .olc-modal>header h2{
+    font-size:22px!important;
+  }
+
+  .olc-modal>header>button{
+    width:36px!important;
+    height:36px!important;
+  }
+
+  .olc-modal form{
+    gap:13px!important;
+    margin:0!important;
+    padding:14px 16px 18px!important;
+    border-left:0!important;
+    border-right:0!important;
+    border-bottom:0!important;
+    border-radius:18px 18px 0 0!important;
+  }
+
+  .olc-switch{
+    grid-template-columns:48px minmax(0,1fr)!important;
+    padding:10px 12px!important;
+  }
+
+  .olc-modal-actions{
+    gap:8px!important;
+    margin:2px -16px -18px!important;
+    padding:12px 16px 6px!important;
+  }
+
+  .olc-modal-actions button{
+    flex:1 1 0!important;
+    min-width:0!important;
+    padding:0 10px!important;
+  }
+}

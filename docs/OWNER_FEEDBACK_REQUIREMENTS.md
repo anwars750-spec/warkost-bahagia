@@ -37,18 +37,18 @@ security test, browser UAT desktop/mobile, dan rehearsal lintas role PASS.
   tarif yang digunakan; nilai ongkir dari browser tidak boleh dipercaya.
 - Checkout harus menolak alamat di luar radius layanan maksimum.
 
-## Kitchen dan Admin/Kasir
+## Kitchen dan Admin
 
 - Item makanan dirutekan ke Kitchen.
-- Item minuman dirutekan ke Admin/Kasir.
+- Item minuman dirutekan ke stasiun minuman Admin.
 - Order campuran baru menjadi READY setelah seluruh item makanan dan minuman
   selesai di stasiun masing-masing.
-- Admin/Kasir melihat keseluruhan order; Kitchen hanya melihat item makanan
+- Admin melihat keseluruhan order; Kitchen hanya melihat item makanan
   yang perlu disiapkan.
 
 ## Printer Otomatis
 
-- Order valid menghasilkan tiket Admin/Kasir dan tiket Kitchen makanan-only.
+- Order valid menghasilkan tiket Admin dan tiket Kitchen makanan-only.
 - Pencetakan harus idempotent: retry tidak boleh menghasilkan duplikasi tanpa
   penanda reprint.
 - Status print QUEUED, PRINTED, FAILED, dan REPRINTED dicatat beserta waktu,
@@ -92,5 +92,5 @@ security test, browser UAT desktop/mobile, dan rehearsal lintas role PASS.
 1. Tarif ongkir per kilometer atau tier setelah 5 km dan radius maksimum.
 2. Nomor WhatsApp Business Admin serta kebijakan menampilkan nomor Driver.
 3. Payment gateway yang digunakan dan alur CASH/transfer manual.
-4. Model, jumlah, dan koneksi printer Admin/Kasir dan Kitchen (USB/LAN).
+4. Model, jumlah, dan koneksi printer Admin dan Kitchen (USB/LAN).
 5. Penugasan Driver manual oleh Admin atau auto-dispatch.

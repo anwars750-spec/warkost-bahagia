@@ -1,0 +1,181 @@
+/* Manager Promotion Center — action alignment + icon precision */
+
+/* Keep desktop promo actions in a single clean row. */
+.promo-list-head,
+.promo-list > article {
+  grid-template-columns:
+    minmax(280px, 1.75fr)
+    minmax(120px, 0.72fr)
+    minmax(180px, 1fr)
+    minmax(105px, 0.58fr)
+    minmax(220px, 0.95fr) !important;
+}
+
+.promo-list article > div:last-child {
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
+  min-width: 0;
+}
+
+.promo-list article > div:last-child button {
+  min-height: 38px;
+  margin: 0;
+  padding: 0 13px;
+  border-radius: 11px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: none;
+}
+
+/* Edit = positive/manage action. */
+.promo-list article > div:last-child button:first-child {
+  border: 1px solid #bfe6cf !important;
+  background: #eaf8f0 !important;
+  color: #18734a !important;
+}
+
+.promo-list article > div:last-child button:first-child:hover {
+  border-color: #8fd1ac !important;
+  background: #ddf3e7 !important;
+  color: #125c3b !important;
+}
+
+/* Deactivate = destructive action. */
+.promo-list article > div:last-child button:last-child:not(:first-child) {
+  border: 1px solid #f0c5be !important;
+  background: #fff0ee !important;
+  color: #b53b2f !important;
+}
+
+.promo-list article > div:last-child button:last-child:not(:first-child):hover {
+  border-color: #e59e94 !important;
+  background: #ffe4e0 !important;
+  color: #922c23 !important;
+}
+
+/* Consistent line-icon system for the six promotion families. */
+.promo-family-guide i,
+.promo-family-grid i {
+  position: relative;
+  display: inline-grid !important;
+  place-items: center;
+  width: 42px !important;
+  height: 42px !important;
+  flex: 0 0 42px;
+  padding: 0 !important;
+  border: 1px solid #f1d8ca;
+  border-radius: 13px !important;
+  background: #fff0e8 !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  line-height: 1 !important;
+  overflow: hidden;
+}
+
+.promo-family-guide i::before,
+.promo-family-grid i::before {
+  content: "";
+  width: 20px;
+  height: 20px;
+  background: #b34829;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+}
+
+/* 1. Percentage discount */
+.promo-family-guide article:nth-child(1) i::before,
+.promo-family-grid button:nth-child(1) i::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='19' y1='5' x2='5' y2='19'/%3E%3Ccircle cx='6.5' cy='6.5' r='2.5'/%3E%3Ccircle cx='17.5' cy='17.5' r='2.5'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='19' y1='5' x2='5' y2='19'/%3E%3Ccircle cx='6.5' cy='6.5' r='2.5'/%3E%3Ccircle cx='17.5' cy='17.5' r='2.5'/%3E%3C/svg%3E");
+}
+
+/* 2. Fixed nominal discount */
+.promo-family-guide article:nth-child(2) i::before,
+.promo-family-grid button:nth-child(2) i::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Cpath d='M3 9h18M7 15h4'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Cpath d='M3 9h18M7 15h4'/%3E%3C/svg%3E");
+}
+
+/* 3. Free item */
+.promo-family-guide article:nth-child(3) i::before,
+.promo-family-grid button:nth-child(3) i::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='8' width='18' height='13' rx='2'/%3E%3Cpath d='M12 8v13M3 12h18M7.5 8C5 8 5 4 7.5 4 10 4 12 8 12 8M16.5 8C19 8 19 4 16.5 4 14 4 12 8 12 8'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='8' width='18' height='13' rx='2'/%3E%3Cpath d='M12 8v13M3 12h18M7.5 8C5 8 5 4 7.5 4 10 4 12 8 12 8M16.5 8C19 8 19 4 16.5 4 14 4 12 8 12 8'/%3E%3C/svg%3E");
+}
+
+/* 4. First member */
+.promo-family-guide article:nth-child(4) i::before,
+.promo-family-grid button:nth-child(4) i::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='10' cy='8' r='4'/%3E%3Cpath d='M3 21a7 7 0 0 1 14 0M19 8v6M16 11h6'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='10' cy='8' r='4'/%3E%3Cpath d='M3 21a7 7 0 0 1 14 0M19 8v6M16 11h6'/%3E%3C/svg%3E");
+}
+
+/* 5. Scheduled campaign */
+.promo-family-guide article:nth-child(5) i::before,
+.promo-family-grid button:nth-child(5) i::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M16 3v4M8 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M16 3v4M8 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01'/%3E%3C/svg%3E");
+}
+
+/* 6. Birthday */
+.promo-family-guide article:nth-child(6) i::before,
+.promo-family-grid button:nth-child(6) i::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 10h16v11H4zM2 10h20M12 10v11M7 10V7M12 10V6M17 10V7'/%3E%3Cpath d='M7 4c1 1 1 2 0 3M12 3c1 1 1 2 0 3M17 4c1 1 1 2 0 3'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 10h16v11H4zM2 10h20M12 10v11M7 10V7M12 10V6M17 10V7'/%3E%3Cpath d='M7 4c1 1 1 2 0 3M12 3c1 1 1 2 0 3M17 4c1 1 1 2 0 3'/%3E%3C/svg%3E");
+}
+
+.promo-family-guide article:hover i,
+.promo-family-grid button:hover i,
+.promo-family-grid button.active i {
+  border-color: #e7bca8;
+  background: #ffe8dd !important;
+}
+
+/* Tablet: preserve one-line actions while giving content enough breathing room. */
+@media (max-width: 1100px) and (min-width: 901px) {
+  .promo-list-head,
+  .promo-list > article {
+    grid-template-columns:
+      minmax(230px, 1.55fr)
+      minmax(112px, 0.7fr)
+      minmax(160px, 0.95fr)
+      minmax(96px, 0.55fr)
+      minmax(205px, 0.9fr) !important;
+    gap: 10px !important;
+  }
+
+  .promo-list article > div:last-child button {
+    padding-inline: 10px;
+    font-size: 0.74rem;
+  }
+}
+
+/* Mobile cards: actions stay side by side and occupy equal width. */
+@media (max-width: 900px) {
+  .promo-list > article {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  .promo-list article > div:last-child {
+    grid-column: 1 / -1 !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 8px !important;
+    margin-top: 4px;
+  }
+
+  .promo-list article > div:last-child button {
+    width: 100%;
+    min-width: 0;
+  }
+}

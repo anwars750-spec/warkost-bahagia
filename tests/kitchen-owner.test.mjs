@@ -10,13 +10,25 @@ process.env.DATABASE_PATH = path.join(
 );
 
 const { db } = await import("../lib/db.mjs");
-const { createOrder, changeStatus, updateStationStatus } =
-  await import("../lib/domain.mjs");
+const {
+  createOrder,
+  changeStatus,
+  claimDelivery,
+  listDriverOrders,
+  updateStationStatus,
+} = await import("../lib/domain.mjs");
 const { adjustStock, listAuditLogs, listStock } =
   await import("../lib/operations.mjs");
 
 const database = db();
-for (const role of ["ADMIN", "KITCHEN", "OWNER", "CUSTOMER", "DRIVER"])
+for (const role of [
+  "ADMIN",
+  "KITCHEN",
+  "OWNER",
+  "CUSTOMER",
+  "DRIVER",
+  "MANAGER",
+])
   database
     .prepare("INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,?)")
     .run(role, role.toLowerCase() + "@ops.test", "x", role);
@@ -39,6 +51,7 @@ const kitchen = { id: 2, role: "KITCHEN" };
 const owner = { id: 3, role: "OWNER" };
 const customer = { id: 4, role: "CUSTOMER" };
 const driver = { id: 5, role: "DRIVER" };
+const manager = { id: 6, role: "MANAGER" };
 
 test("mixed order menunggu kedua stasiun dan stok tercatat serta pulih saat batal", async () => {
   const order = await createOrder(customer, {
@@ -103,32 +116,40 @@ test("mixed order menunggu kedua stasiun dan stok tercatat serta pulih saat bata
   );
 });
 
-test("RBAC stok dan audit membatasi Admin dan Owner", async () => {
-  await adjustStock(admin, {
+test("RBAC stok memberi Manager hak adjustment, Owner audit, dan menolak role lain", async () => {
+  await assert.rejects(
+    adjustStock(admin, {
+      productId: 1,
+      quantity: 5,
+      reason: "Belanja harian",
+    }),
+    /Akses ditolak/,
+  );
+  await adjustStock(manager, {
     productId: 1,
     quantity: 5,
     reason: "Belanja harian",
   });
-  await assert.rejects(
-    adjustStock(admin, {
-      productId: 1,
-      quantity: -1,
-      reason: "Koreksi",
-    }),
-    /hanya dapat menambah/,
-  );
-  await adjustStock(owner, {
+  await adjustStock(manager, {
     productId: 1,
-    quantity: -2,
-    reason: "Bahan rusak",
+    quantity: -1,
+    reason: "Koreksi",
   });
+  await assert.rejects(
+    adjustStock(owner, {
+      productId: 1,
+      quantity: -2,
+      reason: "Bahan rusak",
+    }),
+    /Akses ditolak/,
+  );
   assert.equal((await listStock(owner)).products[1]?.stock_quantity >= 0, true);
   const audit = await listAuditLogs(owner);
   assert.ok(audit.logs.some((row) => row.action === "STOCK_ADJUSTED"));
   await assert.rejects(listAuditLogs(admin), /Akses ditolak/);
 });
 
-test("assignment serentak menolak pesanan keenam pada Driver yang sama", async () => {
+test("self-claim serentak menolak pesanan keenam pada Driver yang sama", async () => {
   const readyOrders = [];
   for (let index = 0; index < 6; index += 1) {
     const order = await createOrder(customer, {
@@ -142,9 +163,7 @@ test("assignment serentak menolak pesanan keenam pada Driver yang sama", async (
     readyOrders.push(order);
   }
   const outcomes = await Promise.allSettled(
-    readyOrders.map((order) =>
-      changeStatus(admin, order.id, "ASSIGNED", driver.id),
-    ),
+    readyOrders.map((order) => claimDelivery(driver, order.id)),
   );
   assert.equal(
     outcomes.filter((item) => item.status === "fulfilled").length,
@@ -160,5 +179,11 @@ test("assignment serentak menolak pesanan keenam pada Driver yang sama", async (
       .prepare("SELECT COUNT(*) count FROM orders WHERE status='ASSIGNED'")
       .get().count,
     5,
+  );
+  assert.equal(
+    (await listDriverOrders(driver)).some(
+      (entry) => entry.id === readyOrders[5].id && entry.available_to_claim,
+    ),
+    false,
   );
 });

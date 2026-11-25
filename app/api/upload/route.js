@@ -1,13 +1,14 @@
 import { currentUser } from "../../../lib/auth.mjs";
 import { uploadImage } from "../../../lib/media.mjs";
-import { DomainError, required } from "../../../lib/domain.mjs";
+import { DomainError, requiredCapability } from "../../../lib/domain.mjs";
 import { assertSameOrigin } from "../../../lib/request.mjs";
+import { CAPABILITIES } from "../../../lib/rbac.mjs";
 export const runtime = "nodejs";
 export async function POST(request) {
   try {
     assertSameOrigin(request);
     const user = await currentUser(request);
-    required(user, ["ADMIN"]);
+    requiredCapability(user, CAPABILITIES.CATALOG_WRITE);
     const limit = 9 * 1024 * 1024;
     const contentLength = Number(request.headers.get("content-length") || 0);
     if (contentLength > limit)
