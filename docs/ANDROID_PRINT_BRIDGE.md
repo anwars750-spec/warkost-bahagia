@@ -1,4 +1,4 @@
-# Android Print Bridge — vendor-neutral capability profiles (Issue 16 / PR 17)
+# Android Print Bridge â€” vendor-neutral capability profiles (Issue 16 / PR 17)
 
 This is a generic NETWORK ESC/POS adapter, not universal-all-hardware acceptance. There is no tablet/printer brand, model list, manufacturer SDK or PC dependency. Device model information is needed for physical compatibility evidence, not to begin coding or code review. Base RC a7260cf; staging/PR15/database/migration037/payment/Geoapify are outside this change.
 
@@ -7,13 +7,13 @@ This is a generic NETWORK ESC/POS adapter, not universal-all-hardware acceptance
 | Capability | Software support | Physical evidence |
 |---|---|---|
 | Android 8+ (minSdk26), LAN/Ethernet/Wi-Fi standard raw TCP ESC/POS, primary 80mm target | IMPLEMENTED, generic adapter | PENDING for each tablet/printer pair |
-| Configured private IPv4 + port 1–65535, bounded timeout | IMPLEMENTED; 9100 is only an existing default | Verify actual raw ESC/POS listener, firewall and network |
+| Configured private IPv4 + port 1â€“65535, bounded timeout | IMPLEMENTED; 9100 is only an existing default | Verify actual raw ESC/POS listener, firewall and network |
 | 80mm / 58mm, font A/B and configured columns | IMPLEMENTED; 58mm is an additional variant, not the primary release target | Verify printable dots, font pitch and wrapping |
 | Cutter NONE, FULL, PARTIAL; GS V mode0/1 or mode65/66 | IMPLEMENTED by explicit profile | Verify device supports selected operation; NONE emits no cut |
 | ASCII transliteration / CP437 / CP858, explicit ESC t index | IMPLEMENTED byte encoders | Verify printer table index/manual and representative characters |
 | UTF-8, CJK/raster glyphs, other codepages or arbitrary command dialects | UNSUPPORTED in this adapter; reject configuration/unsupported glyphs | Requires separately reviewed encoding/dialect adapter |
-| Intentional copies 1–5 | IMPLEMENTED in one labelled, bounded payload/lease | Count intended paper copies and cuts |
-| USB / Bluetooth-only printers | REQUIRES ADAPTER — NOT IMPLEMENTED | Android USB host/OTG, device permission or Bluetooth protocol/runtime permissions, reconnect and duplicate tests required |
+| Intentional copies 1â€“5 | IMPLEMENTED in one labelled, bounded payload/lease | Count intended paper copies and cuts |
+| USB / Bluetooth-only printers | REQUIRES ADAPTER â€” NOT IMPLEMENTED | Android USB host/OTG, device permission or Bluetooth protocol/runtime permissions, reconnect and duplicate tests required |
 | IPP/LPD, PCL/PostScript/PDF, vendor proprietary protocol | REQUIRES ADAPTER / may be unsupported | A configurable port does not implement another protocol |
 | Paper/cutter sensors or exact paper delivery ACK | NOT IMPLEMENTED / not universally available | SENT is not paper confirmation; human verification required |
 
@@ -42,9 +42,9 @@ Example capability declaration (not a model recommendation):
 
 Connection values remain existing host/port/timeoutMs fields. The renderer receives the normalized profile. Width and copies remain compatible with legacy top-level fields; contradictory duplicate values are rejected. Both the API and Android refuse unimplemented adapters and invalid capabilities. USB settings can remain stored for compatibility but do not report ready for this bridge.
 
-Limits: width58 fontA at most32 columns/fontB42; width80 fontA48/fontB64, minimum16 columns. These are software bounds for standard font commands, not automatic knowledge of a printer's actual pitch. Operator chooses a verified lower count if needed. Each copy initializes font with ESC M, then optional ESC t codepage. CP437/CP858 require an explicit 0–255 page index from the device manual; numeric indexes vary by firmware. Missing index or unrepresentable text is rejected before a lease is persisted. ASCII is explicitly transliterated/replaces unavailable glyphs, not Unicode support. C0/C1/ESC control input is removed; no free-form command bytes are accepted.
+Limits: width58 fontA at most32 columns/fontB42; width80 fontA48/fontB64, minimum16 columns. These are software bounds for standard font commands, not automatic knowledge of a printer's actual pitch. Operator chooses a verified lower count if needed. Each copy initializes font with ESC M, then optional ESC t codepage. CP437/CP858 require an explicit 0â€“255 page index from the device manual; numeric indexes vary by firmware. Missing index or unrepresentable text is rejected before a lease is persisted. ASCII is explicitly transliterated/replaces unavailable glyphs, not Unicode support. C0/C1/ESC control input is removed; no free-form command bytes are accepted.
 
-FULL/PARTIAL with GS_V emits modes0/1; GS_V_FEED emits65/66 with zero additional dot feed after the configured line feed. NONE emits no cutter instruction. A final line terminator is always sent, including feedLines=0; extra blank feed lines can be0–8. Every intentional copy is labelled SALINAN n/N and rendered into the same SHA256-protected payload (maximum64KiB). Lost ACK never resends the bundle. A partial bundle is UNKNOWN; the operator must count actual copies before an explicit manual reprint.
+FULL/PARTIAL with GS_V emits modes0/1; GS_V_FEED emits65/66 with zero additional dot feed after the configured line feed. NONE emits no cutter instruction. A final line terminator is always sent, including feedLines=0; extra blank feed lines can be0â€“8. Every intentional copy is labelled SALINAN n/N and rendered into the same SHA256-protected payload (maximum64KiB). Lost ACK never resends the bundle. A partial bundle is UNKNOWN; the operator must count actual copies before an explicit manual reprint.
 
 ## Protocol and security
 
