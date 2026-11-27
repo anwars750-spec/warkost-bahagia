@@ -275,8 +275,8 @@ test("database failure rolls claim back; no consumed job or dispatch token", asy
         database
           .prepare("SELECT payload_json FROM print_jobs WHERE station='ADMIN'")
           .get().payload_json,
-      )._bridge,
-      undefined,
+      )._bridge.state,
+      "QUEUED",
     );
   } finally {
     database.exec("DROP TRIGGER reject_bridge_audit");
@@ -408,4 +408,22 @@ test("MySQL JSON objects and SQLite JSON strings preserve the same protected sta
   assert.equal(payload._bridge.state, "SENT");
   assert.throws(() => parsePrintPayload(null));
   assert.throws(() => parsePrintPayload([]));
+});
+
+test("pre-bridge queued tickets are quarantined until explicit operator reconciliation", async () => {
+  await jobs();
+  const d = await device();
+  const row = database
+    .prepare("SELECT * FROM print_jobs WHERE station='ADMIN'")
+    .get();
+  const p = JSON.parse(row.payload_json);
+  delete p._bridge;
+  database
+    .prepare("UPDATE print_jobs SET payload_json=? WHERE id=?")
+    .run(JSON.stringify(p), row.id);
+  assert.equal((await bridgeAction(d.token, "claim", {}, 1000000)).job, null);
+  assert.equal((await listPrintJobs(admin))[0].status, "UNVERIFIED");
+  await assert.rejects(retryPrintJob(admin, row.id), (e) => e.status === 409);
+  await retryPrintJob(admin, row.id, { acknowledgeDuplicateRisk: true });
+  assert.ok((await bridgeAction(d.token, "claim", {}, 1001000)).job);
 });

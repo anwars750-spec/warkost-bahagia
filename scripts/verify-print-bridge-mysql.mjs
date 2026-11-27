@@ -50,6 +50,7 @@ try {
           orderId: 1,
           station,
           serviceType: "PICKUP",
+          _bridge: { state: "QUEUED", version: 1 },
           subtotal: 25000,
           deliveryFee: 0,
           total: 25000,

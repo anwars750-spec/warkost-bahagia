@@ -193,7 +193,7 @@ test("checkout menghitung ongkir di server dan print job idempotent per station"
     .prepare("SELECT id FROM print_jobs WHERE station='ADMIN'")
     .get();
   database
-    .prepare("UPDATE print_jobs SET status='FAILED' WHERE id=?")
+    .prepare("UPDATE print_jobs SET status='FAILED',payload_json=json_set(payload_json,'$._bridge.state','FAILED') WHERE id=?")
     .run(adminJob.id);
   assert.deepEqual(await retryPrintJob({ id: 1, role: "ADMIN" }, adminJob.id), {
     id: adminJob.id,

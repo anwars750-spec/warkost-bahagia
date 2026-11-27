@@ -8,13 +8,13 @@ One native Android app handles two independent station identities and encrypted 
 
 Owner explicitly confirmed routing: **Admin receives all items and transaction totals; Kitchen receives only prep_station=KITCHEN items, quantities and notes, without customer address/totals.** Every nonempty food-only order also gets an Admin receipt. Pickup/Delivery headers follow the persisted order. Non-Kitchen items are designated CASHIER on the Admin receipt. Existing payment replay keeps UNIQUE(order_id,station).
 
-States are stored in a private `_bridge` section of existing print_jobs.payload_json; credentials/enrollment hashes in existing settings rows. No migration or new operational table. MySQL JSON objects and SQLite JSON strings are decoded consistently. Nothing changes existing schema or migration 037. Private metadata is never returned by print-jobs or print-ticket. The legacy SQL status enum is preserved: effective bridge state is returned by the API. Tools inspecting raw SQL status must not interpret it alone as the full bridge lifecycle.
+States are stored in a private `_bridge` section of existing print_jobs.payload_json; credentials/enrollment hashes in existing settings rows. No migration or new operational table. MySQL JSON objects and SQLite JSON strings are decoded consistently. Nothing changes existing schema or migration 037. Pre-bridge jobs are quarantined as UNVERIFIED (including old QUEUED/FAILED) until explicit operator reconciliation; they might already have been printed manually. Private metadata is never returned by print-jobs or print-ticket. The legacy SQL status enum is preserved: effective bridge state is returned by the API. Tools inspecting raw SQL status must not interpret it alone as the full bridge lifecycle.
 
 | Effective state | Meaning / recovery |
 |---|---|
 | QUEUED | Eligible only when explicitly enabled by reviewed Owner configuration |
 | SIMULATED | No physical dispatch; not PRINTED; explicit manual requeue required for later hardware test |
-| UNVERIFIED | Historical RC PRINTED/REPRINTED has no physical evidence; not automatic success/requeue |
+| UNVERIFIED | Any historical RC job without bridge metadata has no proven paper outcome; not automatic success/requeue |
 | CLAIMED | Atomic station claim, 30-second lease. Crash before begin can be safely reclaimed with a new secret; old begin is fenced |
 | PRINTING | One begin authorization committed. Device durably records intent BEFORE requesting begin and sends once |
 | SENT | Bytes written to TCP stream; NOT proof of paper or cut |
