@@ -197,7 +197,7 @@ test("checkout menghitung ongkir di server dan print job idempotent per station"
     .run(adminJob.id);
   assert.deepEqual(await retryPrintJob({ id: 1, role: "ADMIN" }, adminJob.id), {
     id: adminJob.id,
-    status: "REPRINTED",
+    status: "QUEUED",
   });
   await assert.rejects(
     retryPrintJob({ id: 2, role: "KITCHEN" }, adminJob.id),

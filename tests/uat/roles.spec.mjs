@@ -180,13 +180,11 @@ async function signOut(page) {
 }
 
 function orderCard(page, orderId) {
-  return page
-    .getByRole("article")
-    .filter({
-      has: page.getByText(
-        new RegExp(`WB${String(orderId).padStart(6, "0")}\\s*$`),
-      ),
-    });
+  return page.getByRole("article").filter({
+    has: page.getByText(
+      new RegExp(`WB${String(orderId).padStart(6, "0")}\\s*$`),
+    ),
+  });
 }
 
 async function readLocalStockAsOwner(productId) {
@@ -1131,8 +1129,8 @@ test("OP-UAT-02 QRIS simulasi customer ke admin ke driver memberi poin", async (
   const jobs = (
     await (await authenticatedGet(page, "/api/print-jobs")).json()
   ).jobs.filter((j) => j.order_id === id);
-  expect(jobs).toHaveLength(1);
-  expect(jobs[0].station).toBe("KITCHEN");
+  expect(jobs).toHaveLength(2);
+  expect(jobs.map((j) => j.station).sort()).toEqual(["ADMIN", "KITCHEN"]);
   const stock = (
     await (await authenticatedGet(page, "/api/stock")).json()
   ).products.find((p) => p.id === 1);
@@ -1146,7 +1144,7 @@ test("OP-UAT-02 QRIS simulasi customer ke admin ke driver memberi poin", async (
         status: "DELIVERED",
         deliveryProof: "PASS",
         loyaltyEntries: 1,
-        printJobs: 1,
+        printJobs: 2,
       }),
     ),
     contentType: "application/json",

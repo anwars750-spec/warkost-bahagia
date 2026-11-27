@@ -239,7 +239,7 @@ test("sweep overlap tidak menggandakan stok, print job, notifikasi, atau audit",
       .get(order.id).count,
   };
   assert.equal(before.stock, 1);
-  assert.equal(before.print, 1);
+  assert.equal(before.print, 2);
 
   const overlapping = await Promise.all([
     sweepPaidQrisAutoConfirm(),
@@ -262,7 +262,7 @@ test("sweep overlap tidak menggandakan stok, print job, notifikasi, atau audit",
     database
       .prepare("SELECT COUNT(*) count FROM print_jobs WHERE order_id=?")
       .get(order.id).count,
-    1,
+    2,
   );
   assert.equal(
     database

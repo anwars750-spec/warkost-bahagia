@@ -174,7 +174,7 @@ test("provider PAID commit stock/fulfillment/notifikasi tepat sekali", async () 
     database
       .prepare("SELECT COUNT(*) count FROM print_jobs WHERE order_id=?")
       .get(created.id).count,
-    1,
+    2,
   );
   assert.equal(
     database
@@ -198,7 +198,7 @@ test("provider PAID commit stock/fulfillment/notifikasi tepat sekali", async () 
     database
       .prepare("SELECT COUNT(*) count FROM print_jobs WHERE order_id=?")
       .get(created.id).count,
-    1,
+    2,
   );
   assert.equal(
     database
@@ -443,13 +443,11 @@ for (const fulfillmentType of ["PICKUP", "DELIVERY"]) {
     const eventId = "evt-print-" + fulfillmentType;
     assert.equal((await webhook(created.payment, "PAID", eventId)).replayed, false);
     const jobs = readJobs();
-    assert.deepEqual(jobs.map(({ station, attempts }) => [station, attempts]), [["ADMIN", 1], ["KITCHEN", 1]]);
+    assert.deepEqual(jobs.map(({ station, attempts }) => [station, attempts]), [["ADMIN", 0], ["KITCHEN", 0]]);
     for (const job of jobs) {
       const ticket = JSON.parse(job.payload_json);
       assert.equal(ticket.serviceType, fulfillmentType);
-      assert.deepEqual(ticket.items.map(({ name }) => name), [
-        job.station === "ADMIN" ? "Teh Printer Fixture" : "Nasi QRIS",
-      ]);
+      assert.deepEqual(ticket.items.map(({ name }) => name), job.station === "ADMIN" ? ["Nasi QRIS", "Teh Printer Fixture"] : ["Nasi QRIS"]);
     }
 
     assert.equal((await webhook(created.payment, "PAID", eventId)).replayed, true);

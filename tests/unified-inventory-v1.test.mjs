@@ -448,7 +448,7 @@ test("mixed order dirutekan Food ke Kitchen dan Drink/Raw ke Admin", async () =>
   );
   assert.deepEqual(
     adminPayload.items.map((row) => row.name),
-    ["Kopi Susu Rumah", "Biji Kopi Arabica Sukabumi – Medium Roast"],
+    ["Nasi Goreng Warkost", "Kopi Susu Rumah", "Biji Kopi Arabica Sukabumi – Medium Roast"],
   );
   const raw = adminPayload.items.find((row) => row.stockUnit === "GRAM");
   assert.deepEqual(

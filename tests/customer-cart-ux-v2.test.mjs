@@ -151,6 +151,7 @@ test("checkout menyimpan note terpisah dan print job merutekannya per station", 
   assert.deepEqual(kitchen.items, [
     {
       name: "Nasi Goreng Warkost",
+      prepStation: "KITCHEN",
       price: 25000,
       quantity: 1,
       note: "Pedas, tidak pakai timun",
@@ -166,7 +167,7 @@ test("checkout menyimpan note terpisah dan print job merutekannya per station", 
   );
   assert.equal(
     admin.items.some((item) => item.name === "Nasi Goreng Warkost"),
-    false,
+    true,
   );
   assert.equal(
     admin.items.find((item) => item.name === "Kopi Susu Rumah").note,
@@ -232,6 +233,7 @@ test("operational API mempertahankan station filter dan mengirim note", () => {
     /user\.role === "KITCHEN" \? " AND prep_station='KITCHEN'"/,
   );
   const printer = source("lib/print-queue.mjs");
-  assert.match(printer, /item\.prep_station !== "KITCHEN"/);
+  assert.match(printer, /const adminItems = items;/);
+  assert.match(printer, /item\.prep_station === "KITCHEN"/);
   assert.match(printer, /item\.note \|\| null/);
 });

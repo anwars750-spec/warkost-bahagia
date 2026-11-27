@@ -2,17 +2,28 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AdminIcon } from "./AdminPresentation";
-const ACTIVE_STATES = new Set(["QUEUED", "PENDING", "PRINTING"]);
-const SUCCESS_STATES = new Set(["SUCCESS", "PRINTED", "DONE", "COMPLETED"]);
+const ACTIVE_STATES = new Set(["QUEUED", "PENDING", "CLAIMED", "PRINTING"]);
+const SUCCESS_STATES = new Set(["CONFIRMED"]);
 const FAILED_STATES = new Set(["FAILED", "ERROR"]);
 const HISTORY_STATES = new Set([
   ...SUCCESS_STATES,
   ...FAILED_STATES,
   "TIMEOUT",
+  "SENT",
+  "UNKNOWN",
+  "SIMULATED",
+  "UNVERIFIED",
+  "CONFIRMED",
 ]);
 
-const statusOf = (job) =>
-  String(job?.status || job?.state || "QUEUED").toUpperCase();
+const statusOf = (job) => {
+  const state = String(job?.status || job?.state || "QUEUED").toUpperCase();
+  return ["PRINTED", "REPRINTED", "SUCCESS", "DONE", "COMPLETED"].includes(
+    state,
+  )
+    ? "UNVERIFIED"
+    : state;
+};
 const printerOf = (job) =>
   String(
     job?.printer || job?.station || job?.target || job?.type || "ADMIN",
@@ -47,6 +58,11 @@ const statusMeta = (state) => {
   if (SUCCESS_STATES.has(state)) return ["BERHASIL", "success"];
   if (FAILED_STATES.has(state)) return ["GAGAL", "failed"];
   if (state === "TIMEOUT") return ["TIMEOUT", "timeout"];
+  if (state === "SENT") return ["TERKIRIM � CEK KERTAS", "queued"];
+  if (state === "UNKNOWN" || state === "UNVERIFIED")
+    return ["PERLU CEK KERTAS", "timeout"];
+  if (state === "SIMULATED") return ["SIMULASI � BELUM CETAK", "queued"];
+  if (state === "CLAIMED") return ["DIAMBIL BRIDGE", "queued"];
   if (state === "PRINTING") return ["MENCETAK", "printing"];
   return ["MENUNGGU", "queued"];
 };
@@ -109,7 +125,8 @@ export default function AdminPrinterView({ role = "ADMIN" }) {
         ) {
           throw new Error("Data tiket cetak tidak valid. Silakan coba lagi.");
         }
-        if (!controller.signal.aborted) setTicket({ id: selectedId, ...result });
+        if (!controller.signal.aborted)
+          setTicket({ id: selectedId, ...result });
       } catch (error) {
         if (!controller.signal.aborted) setTicketError(error.message);
       }
@@ -165,7 +182,16 @@ export default function AdminPrinterView({ role = "ADMIN" }) {
     if (retryingId !== null) return;
     setRetryingId(id);
     try {
-      await request("print-retry", { id: Number(id) || id });
+      if (
+        !window.confirm(
+          "Periksa kertas terlebih dahulu. Cetak ulang dapat menghasilkan duplikat. Lanjutkan?",
+        )
+      )
+        return;
+      await request("print-retry", {
+        id: Number(id) || id,
+        acknowledgeDuplicateRisk: true,
+      });
       const result = await request("print-jobs");
       setJobs(result.jobs || []);
       setLastSync(new Date());
@@ -177,17 +203,49 @@ export default function AdminPrinterView({ role = "ADMIN" }) {
       setRetryingId(null);
     }
   };
+  const confirmPaper = async (job) => {
+    if (
+      retryingId !== null ||
+      !window.confirm("Kertas tiket ini sudah benar-benar keluar dan terbaca?")
+    )
+      return;
+    setRetryingId(job.id);
+    try {
+      await request("print-bridge/confirm", {
+        id: Number(job.id),
+        paperVerified: true,
+      });
+      setJobs((await request("print-jobs")).jobs || []);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setRetryingId(null);
+    }
+  };
   const retryButton = (job, compact = false) =>
     ACTIVE_STATES.has(statusOf(job)) ? null : (
-      <button
-        type="button"
-        className={`admin-printer-retry ${compact ? "compact" : ""}`}
-        data-printer-retry={job.id}
-        disabled={retryingId !== null}
-        onClick={() => retryJob(job.id)}
-      >
-        {String(retryingId) === String(job.id) ? "Mengirim..." : "Cetak ulang"}
-      </button>
+      <span>
+        {["SENT", "UNKNOWN"].includes(statusOf(job)) && (
+          <button
+            type="button"
+            disabled={retryingId !== null}
+            onClick={() => confirmPaper(job)}
+          >
+            Konfirmasi kertas tercetak
+          </button>
+        )}
+        <button
+          type="button"
+          className={`admin-printer-retry ${compact ? "compact" : ""}`}
+          data-printer-retry={job.id}
+          disabled={retryingId !== null}
+          onClick={() => retryJob(job.id)}
+        >
+          {String(retryingId) === String(job.id)
+            ? "Mengirim..."
+            : "Cetak ulang"}
+        </button>
+      </span>
     );
   const scopedJobs = role === "KITCHEN" ? jobs.filter(isKitchen) : jobs;
   const states = scopedJobs.map(statusOf);
@@ -514,7 +572,11 @@ export default function AdminPrinterView({ role = "ADMIN" }) {
               </section>
               {selectedTicket && (
                 <section
-                  className={selectedTicket.station === "KITCHEN" ? "kitchen-print-sheet" : "admin-order-print-sheet"}
+                  className={
+                    selectedTicket.station === "KITCHEN"
+                      ? "kitchen-print-sheet"
+                      : "admin-order-print-sheet"
+                  }
                   data-fulfillment-type={selectedTicket.fulfillmentType}
                   aria-label="Tiket pesanan"
                 >
@@ -529,17 +591,36 @@ export default function AdminPrinterView({ role = "ADMIN" }) {
                   </ul>
                   {selectedTicket.station === "ADMIN" && (
                     <>
-                      {selectedTicket.address && <p>{selectedTicket.address}</p>}
-                      <p>Subtotal Rp{Number(selectedTicket.subtotal).toLocaleString("id-ID")}</p>
-                      <p>Ongkir Rp{Number(selectedTicket.deliveryFee).toLocaleString("id-ID")}</p>
-                      <p>Total Rp{Number(selectedTicket.total).toLocaleString("id-ID")}</p>
+                      {selectedTicket.address && (
+                        <p>{selectedTicket.address}</p>
+                      )}
+                      <p>
+                        Subtotal Rp
+                        {Number(selectedTicket.subtotal).toLocaleString(
+                          "id-ID",
+                        )}
+                      </p>
+                      <p>
+                        Ongkir Rp
+                        {Number(selectedTicket.deliveryFee).toLocaleString(
+                          "id-ID",
+                        )}
+                      </p>
+                      <p>
+                        Total Rp
+                        {Number(selectedTicket.total).toLocaleString("id-ID")}
+                      </p>
                     </>
                   )}
                 </section>
               )}
               {ticketError && <p role="alert">{ticketError}</p>}
               {selectedTicket && (
-                <button type="button" className="admin-printer-detail" onClick={() => window.print()}>
+                <button
+                  type="button"
+                  className="admin-printer-detail"
+                  onClick={() => window.print()}
+                >
                   Cetak tiket
                 </button>
               )}

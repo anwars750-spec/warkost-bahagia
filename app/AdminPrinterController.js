@@ -17,19 +17,32 @@ const alertIcon = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.
 const searchIcon = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>`;
 const pulseIcon = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2-5 4 10 2-5h6"/></svg>`;
 
-const ACTIVE_STATES = new Set(["QUEUED", "PENDING", "PRINTING"]);
-const SUCCESS_STATES = new Set(["SUCCESS", "PRINTED", "DONE", "COMPLETED"]);
+const ACTIVE_STATES = new Set(["QUEUED", "PENDING", "CLAIMED", "PRINTING"]);
+const SUCCESS_STATES = new Set(["CONFIRMED"]);
 const FAILED_STATES = new Set(["FAILED", "ERROR"]);
 const HISTORY_STATES = new Set([
   ...SUCCESS_STATES,
   ...FAILED_STATES,
   "TIMEOUT",
+  "SENT",
+  "UNKNOWN",
+  "SIMULATED",
+  "UNVERIFIED",
+  "CONFIRMED",
 ]);
 
-const statusOf = (job) =>
-  String(job?.status || job?.state || "QUEUED").toUpperCase();
+const statusOf = (job) => {
+  const state = String(job?.status || job?.state || "QUEUED").toUpperCase();
+  return ["PRINTED", "REPRINTED", "SUCCESS", "DONE", "COMPLETED"].includes(
+    state,
+  )
+    ? "UNVERIFIED"
+    : state;
+};
 const printerOf = (job) =>
-  String(job?.printer || job?.station || job?.target || job?.type || "ADMIN").toUpperCase();
+  String(
+    job?.printer || job?.station || job?.target || job?.type || "ADMIN",
+  ).toUpperCase();
 const orderOf = (job) =>
   job?.order_number || job?.order_no || job?.order_id || job?.orderId || "";
 const isKitchen = (job) => /KITCHEN|DAPUR/.test(printerOf(job));
@@ -45,7 +58,9 @@ const displayOrder = (job) => {
 const fmt = (value) => {
   if (!value) return "—";
   const raw = String(value);
-  const parsed = new Date(raw.replace(" ", "T") + (raw.includes("Z") ? "" : "Z"));
+  const parsed = new Date(
+    raw.replace(" ", "T") + (raw.includes("Z") ? "" : "Z"),
+  );
   if (Number.isNaN(parsed.getTime())) return raw;
   return parsed.toLocaleString("id-ID", {
     day: "2-digit",
@@ -58,6 +73,11 @@ const statusMeta = (state) => {
   if (SUCCESS_STATES.has(state)) return ["BERHASIL", "success"];
   if (FAILED_STATES.has(state)) return ["GAGAL", "failed"];
   if (state === "TIMEOUT") return ["TIMEOUT", "timeout"];
+  if (state === "SENT") return ["TERKIRIM � CEK KERTAS", "queued"];
+  if (state === "UNKNOWN" || state === "UNVERIFIED")
+    return ["PERLU CEK KERTAS", "timeout"];
+  if (state === "SIMULATED") return ["SIMULASI � BELUM CETAK", "queued"];
+  if (state === "CLAIMED") return ["DIAMBIL BRIDGE", "queued"];
   if (state === "PRINTING") return ["MENCETAK", "printing"];
   return ["MENUNGGU", "queued"];
 };
@@ -66,9 +86,17 @@ const numericOrder = (job) => {
   return Number(raw || job?.id || 0);
 };
 const timeValue = (job) => {
-  const value = job?.updated_at || job?.completed_at || job?.created_at || job?.queued_at;
-  const parsed = value ? new Date(String(value).replace(" ", "T") + (String(value).includes("Z") ? "" : "Z")) : null;
-  return parsed && !Number.isNaN(parsed.getTime()) ? parsed.getTime() : Number(job?.id || 0);
+  const value =
+    job?.updated_at || job?.completed_at || job?.created_at || job?.queued_at;
+  const parsed = value
+    ? new Date(
+        String(value).replace(" ", "T") +
+          (String(value).includes("Z") ? "" : "Z"),
+      )
+    : null;
+  return parsed && !Number.isNaN(parsed.getTime())
+    ? parsed.getTime()
+    : Number(job?.id || 0);
 };
 
 export default function AdminPrinterController() {
@@ -88,8 +116,7 @@ export default function AdminPrinterController() {
     let lastSync = null;
 
     const portal = () => document.getElementById("admin-ui-portal-root");
-    const roleJobs = () =>
-      role === "KITCHEN" ? jobs.filter(isKitchen) : jobs;
+    const roleJobs = () => (role === "KITCHEN" ? jobs.filter(isKitchen) : jobs);
     const canRetry = () => role !== "OWNER";
 
     const summary = () => {
@@ -135,8 +162,12 @@ export default function AdminPrinterController() {
           role === "KITCHEN" ||
           target === "all" ||
           (target === "kitchen" ? isKitchen(job) : !isKitchen(job));
-        const tabOk = tab === "history" ? HISTORY_STATES.has(state) : ACTIVE_STATES.has(state);
-        const haystack = `${displayOrder(job)} ${kindOf(job)} ${printerOf(job)} ${state}`.toLowerCase();
+        const tabOk =
+          tab === "history"
+            ? HISTORY_STATES.has(state)
+            : ACTIVE_STATES.has(state);
+        const haystack =
+          `${displayOrder(job)} ${kindOf(job)} ${printerOf(job)} ${state}`.toLowerCase();
         return targetOk && tabOk && (!needle || haystack.includes(needle));
       });
       return source.sort((a, b) =>
@@ -164,7 +195,10 @@ export default function AdminPrinterController() {
     };
 
     const statusMarkup = () => {
-      const cards = role === "KITCHEN" ? deviceCard("kitchen") : `${deviceCard("admin")}${deviceCard("kitchen")}`;
+      const cards =
+        role === "KITCHEN"
+          ? deviceCard("kitchen")
+          : `${deviceCard("admin")}${deviceCard("kitchen")}`;
       return `<div class="admin-printer-device-grid ${role === "KITCHEN" ? "single" : ""}">${cards}</div>
         <div class="admin-printer-routing-note">
           <strong>Routing cetak</strong>
@@ -366,15 +400,20 @@ export default function AdminPrinterController() {
           ]);
           const meData = await meResponse.json();
           const jobsData = await jobsResponse.json();
-          if (!meResponse.ok) throw new Error(meData.error || "Gagal membaca role");
-          if (!jobsResponse.ok) throw new Error(jobsData.error || "Gagal memuat print job");
+          if (!meResponse.ok)
+            throw new Error(meData.error || "Gagal membaca role");
+          if (!jobsResponse.ok)
+            throw new Error(jobsData.error || "Gagal memuat print job");
           role = String(meData.user?.role || "").toUpperCase();
           jobs = Array.isArray(jobsData.jobs) ? jobsData.jobs : [];
           if (role === "KITCHEN") target = "kitchen";
         } else {
-          const response = await fetch("/api/print-jobs", { cache: "no-store" });
+          const response = await fetch("/api/print-jobs", {
+            cache: "no-store",
+          });
           const data = await response.json();
-          if (!response.ok) throw new Error(data.error || "Gagal memuat print job");
+          if (!response.ok)
+            throw new Error(data.error || "Gagal memuat print job");
           jobs = Array.isArray(data.jobs) ? data.jobs : [];
         }
         error = "";
@@ -390,16 +429,26 @@ export default function AdminPrinterController() {
 
     const retryJob = async (id) => {
       if (!id || retryingId || !canRetry()) return;
+      if (
+        !window.confirm(
+          "Periksa kertas. Cetak ulang dapat menghasilkan duplikat. Lanjutkan?",
+        )
+      )
+        return;
       retryingId = id;
       render();
       try {
         const response = await fetch("/api/print-retry", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: Number(id) || id }),
+          body: JSON.stringify({
+            id: Number(id) || id,
+            acknowledgeDuplicateRisk: true,
+          }),
         });
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || "Gagal mengirim cetak ulang");
+        if (!response.ok)
+          throw new Error(data.error || "Gagal mengirim cetak ulang");
         modal?.remove();
         modal = null;
         await load({ silent: true });
