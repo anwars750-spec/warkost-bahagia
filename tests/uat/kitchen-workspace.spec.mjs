@@ -322,7 +322,19 @@ test("Kitchen station transitions and food-only Printer retry retain existing re
   await expect(page.locator(".admin-printer-job")).toContainText(
     "Kitchen Ticket",
   );
-  await page.getByRole("button", { name: "Cetak ulang", exact: true }).click();
+  const retry = page.getByRole("button", { name: "Cetak ulang", exact: true });
+  page.once("dialog", async (d) => {
+    expect(d.type()).toBe("confirm");
+    await d.dismiss();
+  });
+  await retry.click();
+  expect(writes.filter((item) => item.key === "print-retry")).toHaveLength(0);
+  await expect(page.locator(".admin-printer-job")).toContainText("GAGAL");
+  page.once("dialog", async (d) => {
+    expect(d.message()).toContain("duplikat");
+    await d.accept();
+  });
+  await retry.click();
   await page.getByRole("button", { name: /^Antrean/ }).click();
   await expect(page.locator(".admin-printer-job")).toContainText("MENUNGGU");
   await page
@@ -342,7 +354,7 @@ test("Kitchen station transitions and food-only Printer retry retain existing re
     writes
       .filter((item) => item.key === "print-retry")
       .map((item) => item.body),
-  ).toEqual([{ id: 1 }]);
+  ).toEqual([{ id: 1, acknowledgeDuplicateRisk: true }]);
 });
 
 test("late/failed stock requests cannot restore legacy content or overwrite current navigation", async ({
@@ -392,7 +404,9 @@ test("Kitchen stock realtime refresh keeps the modern workspace and correct acti
   await healthy(page);
 });
 
-test("print branding labels Admin and Kitchen sheets by fulfillment type", async ({ page }) => {
+test("print branding labels Admin and Kitchen sheets by fulfillment type", async ({
+  page,
+}) => {
   await fixture(page);
   await page.goto("/");
   await page.evaluate(() => {
@@ -415,12 +429,18 @@ test("print branding labels Admin and Kitchen sheets by fulfillment type", async
 
   for (const station of ["ADMIN", "KITCHEN"]) {
     for (const type of ["PICKUP", "DELIVERY"]) {
-      await expect(page.locator("#" + station + "-" + type + " .warkost-print-brand span")).toHaveText(type);
+      await expect(
+        page.locator("#" + station + "-" + type + " .warkost-print-brand span"),
+      ).toHaveText(type);
     }
   }
 
   const reused = page.locator("#ADMIN-PICKUP");
-  await reused.evaluate((sheet) => { sheet.dataset.fulfillmentType = "DELIVERY"; });
-  await expect(reused.locator(".warkost-print-brand span")).toHaveText("DELIVERY");
+  await reused.evaluate((sheet) => {
+    sheet.dataset.fulfillmentType = "DELIVERY";
+  });
+  await expect(reused.locator(".warkost-print-brand span")).toHaveText(
+    "DELIVERY",
+  );
   await expect(reused.locator(".warkost-print-brand")).toHaveCount(1);
 });

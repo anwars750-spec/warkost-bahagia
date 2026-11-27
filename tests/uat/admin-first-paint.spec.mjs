@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 // notification or print job is mutated by this UI regression suite.
 async function installFixture(
   page,
-  { failCustomers = false, badTicket = false } = {},
+  { failCustomers = false, badTicket = false, printerState = "FAILED" } = {},
 ) {
   const writes = [];
   const order = {
@@ -55,7 +55,7 @@ async function installFixture(
       id: 7,
       order_id: 101,
       station: "ADMIN",
-      status: "FAILED",
+      status: printerState,
       attempts: 1,
       retry_count: 0,
       created_at: "2026-10-27 03:00:00",
@@ -68,6 +68,13 @@ async function installFixture(
     if (request.method() === "POST") {
       writes.push(key);
       if (key === "status") order.status = request.postDataJSON().status;
+      if (key === "print-bridge/confirm") {
+        expect(request.postDataJSON()).toEqual({ id: 7, paperVerified: true });
+        jobs[0] = { ...jobs[0], status: "CONFIRMED" };
+      }
+      if (key === "print-retry") {
+        expect(request.postDataJSON().acknowledgeDuplicateRisk).toBe(true);
+      }
       if (key === "print-retry") jobs[0] = { ...jobs[0], status: "QUEUED" };
     }
     if (
@@ -371,10 +378,23 @@ test("Admin existing controls retain order, customer, stock, printer, notificati
   await expect(
     page.locator('.admin-printer-modal [data-fulfillment-type="DELIVERY"]'),
   ).toContainText("Total Rp25.000");
-  await page
+  const reprint = page
     .getByRole("dialog", { name: "Detail cetakan" })
-    .getByRole("button", { name: "Cetak ulang", exact: true })
-    .click();
+    .getByRole("button", { name: "Cetak ulang", exact: true });
+  page.once("dialog", async (dialog) => {
+    expect(dialog.type()).toBe("confirm");
+    await dialog.dismiss();
+  });
+  await reprint.click();
+  await expect(
+    page.getByRole("dialog", { name: "Detail cetakan" }),
+  ).toBeVisible();
+  expect(writes).not.toContain("print-retry");
+  page.once("dialog", async (dialog) => {
+    expect(dialog.message()).toContain("duplikat");
+    await dialog.accept();
+  });
+  await reprint.click();
   await page.getByRole("button", { name: /^Antrean/ }).click();
   await expect(page.locator(".admin-printer-job")).toContainText("MENUNGGU");
   await openView(page, "Operasional", "orders");
@@ -522,4 +542,49 @@ test("invalid print ticket response preserves Admin dialog and workspace", async
   await dialog.getByRole("button", { name: "Tutup", exact: true }).click();
   await expect(page.locator(".admin-printer-job")).toContainText("WB000101");
   expect(errors).toEqual([]);
+});
+
+for (const state of ["SIMULATED", "PRINTED"]) {
+  test(`printer ${state} is never presented as confirmed physical paper`, async ({
+    page,
+  }) => {
+    const { writes } = await installFixture(page, { printerState: state });
+    await page.goto("/");
+    await expect(page.locator(".admin-card-preview-v2")).toBeVisible();
+    await openView(page, "Printer", "printing");
+    await page.getByRole("button", { name: "Riwayat", exact: true }).click();
+    const row = page.locator(".admin-printer-job");
+    await expect(row).toContainText(
+      state === "SIMULATED" ? "SIMULASI" : "PERLU CEK KERTAS",
+    );
+    await expect(row).not.toContainText("BERHASIL");
+    await expect(
+      page.getByRole("button", { name: "Konfirmasi kertas tercetak" }),
+    ).toHaveCount(0);
+    expect(writes).not.toContain("print-bridge/confirm");
+  });
+}
+test("sent transport needs explicit operator paper confirmation", async ({
+  page,
+}) => {
+  const { writes } = await installFixture(page, { printerState: "SENT" });
+  await page.goto("/");
+  await expect(page.locator(".admin-card-preview-v2")).toBeVisible();
+  await openView(page, "Printer", "printing");
+  await page.getByRole("button", { name: "Riwayat", exact: true }).click();
+  await expect(page.locator(".admin-printer-job")).toContainText("TERKIRIM");
+  await expect(page.locator(".admin-printer-job")).not.toContainText(
+    "BERHASIL",
+  );
+  const confirm = page.getByRole("button", {
+    name: "Konfirmasi kertas tercetak",
+    exact: true,
+  });
+  page.once("dialog", (d) => d.dismiss());
+  await confirm.click();
+  expect(writes).not.toContain("print-bridge/confirm");
+  page.once("dialog", (d) => d.accept());
+  await confirm.click();
+  await expect(page.locator(".admin-printer-job")).toContainText("BERHASIL");
+  expect(writes.filter((x) => x === "print-bridge/confirm")).toHaveLength(1);
 });

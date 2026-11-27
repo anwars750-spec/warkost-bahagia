@@ -834,7 +834,7 @@ async function postAction(request, { params }) {
       );
     if (action === "print-retry")
       return mutation(action, user, body, () =>
-        retryPrintJob(user, integer(body.id)),
+        retryPrintJob(user, integer(body.id), body),
       );
     if (action === "settings")
       return mutation(action, user, body, () => saveSettings(user, body));

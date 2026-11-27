@@ -123,6 +123,14 @@ test("persisted order tickets print from Admin and Kitchen workspaces", async ({
       orders.some((order) => order.id === job.order_id),
     );
     expect(jobs).toHaveLength(2);
+    expect(
+      jobs.every(
+        (job) =>
+          job.status === "SIMULATED" &&
+          job.printed_at === null &&
+          job.attempts === 0,
+      ),
+    ).toBe(true);
     expect(jobs.every((job) => job.station === station)).toBe(true);
     if (station === "ADMIN") adminJob = jobs[0].id;
     else kitchenJob = jobs[0].id;
@@ -154,8 +162,10 @@ test("persisted order tickets print from Admin and Kitchen workspaces", async ({
         ".admin-printer-modal > [data-fulfillment-type]",
       );
       await expect(sheet).toHaveAttribute("data-fulfillment-type", type);
-      await expect(sheet.locator("li")).toHaveCount(1);
-      await expect(sheet.locator("li")).toContainText(
+      await expect(sheet.locator("li")).toHaveCount(
+        station === "ADMIN" ? 2 : 1,
+      );
+      await expect(sheet).toContainText(
         station === "ADMIN" ? "Kopi Susu Rumah" : "Nasi Goreng Warkost",
       );
       await dialog

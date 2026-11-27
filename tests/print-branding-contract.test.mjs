@@ -68,7 +68,7 @@ for (const serviceType of ["PICKUP", "DELIVERY"]) {
     const kitchen = inserted.find((row) => row.station === "KITCHEN");
     assert.equal(admin.payload.documentTitle, `${serviceType} ORDER`);
     assert.equal(admin.printerKey, "printer_admin");
-    assert.deepEqual(admin.payload.items.map(({ name }) => name), ["Es Kopi"]);
+    assert.deepEqual(admin.payload.items.map(({ name }) => name), ["Es Kopi", "Nasi Goreng"]);
     assert.equal(admin.payload.address, "Sukabumi");
     assert.equal(kitchen.payload.documentTitle, `KITCHEN ${serviceType}`);
     assert.equal(kitchen.printerKey, "printer_kitchen");
