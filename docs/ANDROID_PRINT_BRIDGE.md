@@ -24,7 +24,7 @@ States are stored in a private `_bridge` section of existing print_jobs.payload_
 
 The exact bytes-to-paper boundary cannot be an atomic transaction with a commodity printer. **Exactly-once paper is not claimed.** Ambiguous writes are intentionally held for human reconciliation rather than automatically risking duplicates. A malicious/compromised station device can lie about transport outcomes but cannot self-confirm paper or access the other station. Confirmation is authenticated human attestation, not hardware telemetry.
 
-Android stores write-ahead intent/outcome using synchronously committed AES-GCM ciphertext with Android Keystore key and per-record AAD. Pending journals store only job ID, lease and outcome, not ticket bytes. A restart retries ACK only. Lost ACK after SENT does not resend bytes. Stale retired leases are discarded without another write. Do not clear application data/uninstall while journals remain unresolved.
+Android stores write-ahead intent/outcome using fsynced atomic AES-GCM ciphertext in Android no-backup storage with Android Keystore key and per-record AAD. Explicit manifest rules exclude cloud backup/device transfer as defense in depth; no-backup storage also stays outside newer transfer modes. Pending journals store only job ID, lease and outcome, not ticket bytes. A restart retries ACK only. Lost ACK after SENT does not resend bytes. Stale retired leases are discarded without another write. Do not clear application data/uninstall while journals remain unresolved.
 
 ## Security / API contract
 
@@ -69,4 +69,4 @@ Physical checklist — all PENDING until model/tablet evidence exists:
 
 No schema/037 migration, VPS/service/DNS change, staging settings change or printer activation is performed by this source delivery. No Midtrans Production or external Geoapify transport.
 
-References: [Android foreground service types](https://developer.android.com/develop/background-work/services/fgs/service-types), [background start restrictions](https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start), [AGP 8.7 requirements](https://developer.android.com/build/releases/agp-8-7-0-release-notes).
+References: [Android foreground service types](https://developer.android.com/develop/background-work/services/fgs/service-types), [background start restrictions](https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start), [AGP 8.7 requirements](https://developer.android.com/build/releases/agp-8-7-0-release-notes), [Android backup exclusions](https://developer.android.com/identity/data/autobackup).
