@@ -1,7 +1,7 @@
 name: Android Print Bridge
 on:
   pull_request:
-    paths: ['android-print-bridge/**', 'lib/**', 'app/**', 'tests/**', '.github/workflows/android-print-bridge.yml']
+    paths: ['android-print-bridge/**', 'lib/**', 'app/**', 'tests/**', 'scripts/verify-print-bridge-mysql.mjs', '.github/workflows/android-print-bridge.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -9,6 +9,19 @@ jobs:
   isolated-bridge:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: mysql-print-ci-only
+          MYSQL_DATABASE: warkost_print_bridge_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pmysql-print-ci-only"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -21,6 +34,11 @@ jobs:
           DATABASE_URL: ''
           GEOLOCATION_EXTERNAL_ENABLED: 'false'
           GEOLOCATION_TRUST_PROXY: 'false'
+      - name: Verify real MySQL JSON and station transactions (disposable only)
+        run: node scripts/verify-print-bridge-mysql.mjs
+        env:
+          CI: 'true'
+          PRINT_BRIDGE_MYSQL_URL: mysql://root:mysql-print-ci-only@127.0.0.1:3306/warkost_print_bridge_ci
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
         with:
           distribution: temurin

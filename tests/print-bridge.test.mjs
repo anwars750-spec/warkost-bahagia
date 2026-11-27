@@ -22,6 +22,7 @@ const {
   bridgeAction,
   confirmPaper,
   bridgeState,
+  parsePrintPayload,
 } = await import("../lib/print-bridge.mjs");
 const { enqueueOrderPrintJobs } = await import("../lib/print-queue.mjs");
 const { listPrintJobs, retryPrintJob } = await import("../lib/printer.mjs");
@@ -388,4 +389,23 @@ test("invalid public printer configuration refuses claim without touching job", 
     .get();
   assert.equal(bridgeState(job), "QUEUED");
   assert.equal(job.attempts, 0);
+});
+
+test("MySQL JSON objects and SQLite JSON strings preserve the same protected state", () => {
+  const payload = {
+    station: "ADMIN",
+    items: [{ name: "Fixture" }],
+    _bridge: { state: "SENT" },
+  };
+  assert.deepEqual(parsePrintPayload(JSON.stringify(payload)), payload);
+  assert.deepEqual(parsePrintPayload(payload), payload);
+  assert.equal(
+    bridgeState({ status: "QUEUED", payload_json: payload }),
+    "SENT",
+  );
+  const clone = parsePrintPayload(payload);
+  clone._bridge.state = "UNKNOWN";
+  assert.equal(payload._bridge.state, "SENT");
+  assert.throws(() => parsePrintPayload(null));
+  assert.throws(() => parsePrintPayload([]));
 });
