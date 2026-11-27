@@ -19,7 +19,7 @@ public class MainActivity extends Activity {
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
         getWindow().setFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE,android.view.WindowManager.LayoutParams.FLAG_SECURE);
-        ScrollView scroll=new ScrollView(this); LinearLayout box=new LinearLayout(this); box.setOrientation(1); box.setPadding(24,24,24,24); scroll.addView(box); setContentView(scroll);
+        ScrollView scroll=new ScrollView(this); LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(24,24,24,24); scroll.addView(box); setContentView(scroll);
         TextView title=new TextView(this); title.setText("Warkost Print Bridge UAT\n80mm LAN • Admin + Kitchen\nPengiriman bukan bukti kertas tercetak."); box.addView(title);
         status=new TextView(this); box.addView(status); status.setText(BridgeService.status);
         for(String station:new String[]{"ADMIN","KITCHEN"}) {
