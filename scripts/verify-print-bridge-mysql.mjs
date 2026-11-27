@@ -28,12 +28,12 @@ try {
   for (const station of ["admin", "kitchen"])
     for (const [key, value] of Object.entries({
       host: station === "admin" ? "192.168.10.21" : "192.168.10.22",
-      port: "9100",
+      port: station === "admin" ? "515" : "9200",
       enabled: "true",
       auto_print: "true",
       transport: "NETWORK_AGENT",
-      paper_width: "80",
-      copies: "1",
+      paper_width: station === "admin" ? "58" : "80",
+      copies: station === "admin" ? "2" : "1",
     })) {
       await db.execute("INSERT INTO settings(`key`,value) VALUES(?,?)", [
         `printer_${station}_${key}`,
@@ -58,14 +58,52 @@ try {
         }),
       ],
     );
+  for (const [station, profile] of [
+    ["admin", { columns: 32, cutMode: "NONE" }],
+    [
+      "kitchen",
+      {
+        font: "B",
+        columns: 64,
+        characterSet: "CP858",
+        codePage: 19,
+        cutMode: "PARTIAL",
+        cutCommand: "GS_V_FEED",
+      },
+    ],
+  ])
+    await db.execute("INSERT INTO settings(`key`,value) VALUES(?,?)", [
+      "printer_" + station + "_profile",
+      JSON.stringify(profile),
+    ]);
   const [payloads] = await db.query("SELECT payload_json FROM print_jobs");
   assert.equal(
     typeof payloads[0].payload_json,
     "object",
     "Exercise real mysql2 JSON auto-decoding",
   );
-  const { enrollment, enroll, bridgeAction, confirmPaper, bridgeState } =
-    await import("../lib/print-bridge.mjs");
+  const {
+    enrollment,
+    enroll,
+    bridgeAction: rawBridgeAction,
+    confirmPaper,
+    bridgeState,
+  } = await import("../lib/print-bridge.mjs");
+  const bridgeAction = (token, action, body = {}, now) =>
+    rawBridgeAction(
+      token,
+      action,
+      action === "claim"
+        ? {
+            protocol: 2,
+            profileVersion: 1,
+            adapters: ["ESC_POS_NETWORK"],
+            ...body,
+          }
+        : body,
+      now,
+    );
+
   const owner = { id: 1, role: "OWNER" },
     admin = { id: 2, role: "ADMIN" };
   const now = Date.now();
@@ -80,6 +118,9 @@ try {
   assert.equal(claims.filter((c) => c.job).length, 1);
   const winner = claims[0].job ? a : b;
   const job = claims.find((c) => c.job).job;
+  assert.equal(job.connection.port, 515);
+  assert.equal(job.profile.paperWidth, 58);
+  assert.equal(job.profile.copies, 2);
   await assert.rejects(
     bridgeAction(k.token, "begin", job, now + 1),
     (e) => e.status === 404,
@@ -112,6 +153,9 @@ try {
   assert.ok(rows[0].printed_at);
   const kitchen = (await bridgeAction(k.token, "claim", {}, now + 1000)).job;
   assert.equal(kitchen.station, "KITCHEN");
+  assert.equal(kitchen.connection.port, 9200);
+  assert.equal(kitchen.profile.characterSet, "CP858");
+  assert.equal(kitchen.profile.cutMode, "PARTIAL");
   await bridgeAction(
     k.token,
     "ack",

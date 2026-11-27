@@ -36,7 +36,7 @@ test("Owner printer settings expose operational sync configuration", () => {
   const backend = read("lib/owner-device-settings.mjs");
   assert.match(ui, /Sinkronisasi printer dengan sistem/);
   assert.match(ui, /LAN \/ Network Agent/);
-  assert.match(ui, /USB melalui Local Agent/);
+  assert.match(ui, /USB.*memerlukan adapter terpisah/);
   assert.match(ui, /Alamat printer \/ host/);
   assert.match(ui, /Lebar kertas/);
   assert.match(ui, /Timeout koneksi/);

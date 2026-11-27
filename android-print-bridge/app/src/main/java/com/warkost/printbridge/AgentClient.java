@@ -32,11 +32,16 @@ public final class AgentClient implements OnceSender.Backend {
         } finally { c.disconnect(); }
     }
     public OnceSender.Job claim() throws Exception {
-        JSONObject r=call("claim",new JSONObject()); if(r.isNull("job")) return null;
+        JSONObject r=call("claim",new JSONObject().put("protocol",2).put("profileVersion",1).put("adapters",new org.json.JSONArray().put("ESC_POS_NETWORK"))); if(r.isNull("job")) return null;
         JSONObject j=r.getJSONObject("job");
         if(!station.equals(j.getString("station")) || !("printer_"+station.toLowerCase(java.util.Locale.ROOT)).equals(j.getString("printerKey"))) throw new java.io.IOException("Station mismatch");
-        OnceSender.verifyPrinter(expectedPrinter,j.getString("printerHost"));
-        return new OnceSender.Job(j.getLong("id"),j.getString("lease"),Base64.getDecoder().decode(j.getString("bytes")),j.getString("sha256"));
+        if(j.getInt("protocol")!=2 || j.getInt("profileVersion")!=1) throw new java.io.IOException("Unsupported protocol");
+        JSONObject connection=j.getJSONObject("connection"), profile=j.getJSONObject("profile");
+        OnceSender.verifyPrinter(expectedPrinter,connection.getString("host"));
+        OnceSender.verifyProfile(profile.getInt("paperWidth"),profile.getInt("columns"),profile.getString("font"),profile.getString("characterSet"),profile.isNull("codePage")?-1:profile.getInt("codePage"),profile.getString("cutMode"),profile.getString("cutCommand"),profile.getInt("feedLines"),profile.getInt("copies"));
+        OnceSender.Job job=new OnceSender.Job(j.getLong("id"),j.getString("lease"),Base64.getDecoder().decode(j.getString("bytes")),j.getString("sha256"));
+        job.endpoint=new OnceSender.Endpoint(connection.getString("adapter"),connection.getString("host"),connection.getInt("port"),connection.getInt("timeoutMs"));
+        return job;
     }
     private JSONObject request(OnceSender.Job j) throws Exception { return new JSONObject().put("id",j.id).put("lease",j.lease); }
     public void begin(OnceSender.Job j) throws Exception { call("begin",request(j)); }

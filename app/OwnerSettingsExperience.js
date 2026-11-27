@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { DEFAULT_PRINT_PROFILE } from "../lib/printer-profile.mjs";
 import { createPortal } from "react-dom";
 
 const TABS = [
@@ -40,7 +41,8 @@ const DEVICE_EMPTY = {
 };
 
 function sectionKey(section) {
-  const heading = section.querySelector("h2")?.textContent?.trim().toLowerCase() || "";
+  const heading =
+    section.querySelector("h2")?.textContent?.trim().toLowerCase() || "";
   if (heading.includes("identitas")) return "business";
   if (heading.includes("titik asal")) return "location";
   if (heading.includes("radius")) return "delivery";
@@ -83,11 +85,21 @@ async function deviceRequest(body) {
 }
 
 function DeviceCard({ title, subtitle, value, onChange }) {
-  const patch = (key, next) => onChange({ ...value, [key]: next });
+  const patch = (key, next) =>
+    onChange({
+      ...value,
+      [key]: next,
+      ...(["paperWidth", "copies"].includes(key)
+        ? { profile: { ...profile, [key]: next } }
+        : {}),
+    });
+  const profile = { ...DEFAULT_PRINT_PROFILE, ...(value.profile || {}) };
+  const patchProfile = (key, next) =>
+    patch("profile", { ...profile, [key]: next });
   const ready =
     value.enabled &&
-    (value.transport === "USB_AGENT" ||
-      (value.transport === "NETWORK_AGENT" && String(value.host || "").trim()));
+    value.transport === "NETWORK_AGENT" &&
+    String(value.host || "").trim();
 
   return (
     <article className="osx-device-card">
@@ -109,10 +121,12 @@ function DeviceCard({ title, subtitle, value, onChange }) {
       </header>
 
       <div className={`osx-device-status ${ready ? "ready" : "setup"}`}>
-        <b>{ready ? "Siap untuk print agent" : "Konfigurasi belum lengkap"}</b>
+        <b>
+          {ready ? "Konfigurasi LAN tersedia" : "Konfigurasi belum lengkap"}
+        </b>
         <span>
           {ready
-            ? "Queue sistem sudah memiliki endpoint perangkat yang dapat dibaca print agent lokal."
+            ? "Kemampuan printer tetap memerlukan verifikasi UAT. USB/Bluetooth memerlukan adapter terpisah."
             : "Lengkapi koneksi perangkat sebelum mode simulasi dimatikan."}
         </span>
       </div>
@@ -125,7 +139,7 @@ function DeviceCard({ title, subtitle, value, onChange }) {
             onChange={(event) => patch("transport", event.target.value)}
           >
             <option value="NETWORK_AGENT">LAN / Network Agent</option>
-            <option value="USB_AGENT">USB melalui Local Agent</option>
+            <option value="USB_AGENT">USB - memerlukan adapter terpisah</option>
           </select>
         </label>
         <label>
@@ -154,7 +168,18 @@ function DeviceCard({ title, subtitle, value, onChange }) {
           <span>Lebar kertas</span>
           <select
             value={value.paperWidth}
-            onChange={(event) => patch("paperWidth", Number(event.target.value))}
+            onChange={(event) => {
+              const width = Number(event.target.value);
+              onChange({
+                ...value,
+                paperWidth: width,
+                profile: {
+                  ...profile,
+                  paperWidth: width,
+                  columns: width === 58 ? 32 : 48,
+                },
+              });
+            }}
           >
             <option value={80}>80 mm</option>
             <option value={58}>58 mm</option>
@@ -182,6 +207,98 @@ function DeviceCard({ title, subtitle, value, onChange }) {
             <option value={15000}>15 detik</option>
           </select>
         </label>
+        <label>
+          <span>Font ESC/POS</span>
+          <select
+            value={profile.font}
+            onChange={(e) => patchProfile("font", e.target.value)}
+          >
+            <option>A</option>
+            <option>B</option>
+          </select>
+        </label>
+        <label>
+          <span>Kolom teks / density</span>
+          <input
+            type="number"
+            min="16"
+            max={
+              value.paperWidth === 58
+                ? profile.font === "B"
+                  ? 42
+                  : 32
+                : profile.font === "B"
+                  ? 64
+                  : 48
+            }
+            value={profile.columns}
+            onChange={(e) => patchProfile("columns", Number(e.target.value))}
+          />
+        </label>
+        <label>
+          <span>Karakter ESC/POS</span>
+          <select
+            value={profile.characterSet}
+            onChange={(e) =>
+              patch("profile", {
+                ...profile,
+                characterSet: e.target.value,
+                codePage: null,
+              })
+            }
+          >
+            <option value="ASCII">ASCII transliterasi</option>
+            <option>CP437</option>
+            <option>CP858</option>
+          </select>
+        </label>
+        <label>
+          <span>Indeks codepage ESC t (sesuai manual)</span>
+          <input
+            type="number"
+            min="0"
+            max="255"
+            value={profile.codePage ?? ""}
+            onChange={(e) =>
+              patchProfile(
+                "codePage",
+                e.target.value === "" ? null : Number(e.target.value),
+              )
+            }
+          />
+        </label>
+        <label>
+          <span>Cutter</span>
+          <select
+            value={profile.cutMode}
+            onChange={(e) => patchProfile("cutMode", e.target.value)}
+          >
+            <option value="NONE">Tidak ada / manual</option>
+            <option value="FULL">Full cut</option>
+            <option value="PARTIAL">Partial cut</option>
+          </select>
+        </label>
+        <label>
+          <span>Varian perintah cutter</span>
+          <select
+            value={profile.cutCommand}
+            disabled={profile.cutMode === "NONE"}
+            onChange={(e) => patchProfile("cutCommand", e.target.value)}
+          >
+            <option value="GS_V">GS V - mode 0/1</option>
+            <option value="GS_V_FEED">GS V - mode 65/66</option>
+          </select>
+        </label>
+        <label>
+          <span>Feed akhir (baris)</span>
+          <input
+            type="number"
+            min="0"
+            max="8"
+            value={profile.feedLines}
+            onChange={(e) => patchProfile("feedLines", Number(e.target.value))}
+          />
+        </label>
       </div>
 
       <button
@@ -189,7 +306,9 @@ function DeviceCard({ title, subtitle, value, onChange }) {
         className={`osx-auto-print ${value.autoPrint ? "active" : ""}`}
         onClick={() => patch("autoPrint", !value.autoPrint)}
       >
-        <span className="osx-mini-switch-static"><i /></span>
+        <span className="osx-mini-switch-static">
+          <i />
+        </span>
         <span>
           <b>Auto print order baru</b>
           <small>
@@ -274,7 +393,8 @@ export default function OwnerSettingsExperience() {
         if (inputs.length >= 2) {
           const lat = Number(inputs[0].value);
           const lng = Number(inputs[1].value);
-          if (Number.isFinite(lat) && Number.isFinite(lng)) setCoords({ lat, lng });
+          if (Number.isFinite(lat) && Number.isFinite(lng))
+            setCoords({ lat, lng });
         }
       }
 
@@ -411,7 +531,8 @@ export default function OwnerSettingsExperience() {
     async function refresh() {
       try {
         const response = await fetch("/api/owner-geo-usage", {
-          cache: "no-store", signal: controller.signal,
+          cache: "no-store",
+          signal: controller.signal,
         });
         if (!response.ok) throw new Error();
         const data = await response.json();
@@ -452,7 +573,10 @@ export default function OwnerSettingsExperience() {
 
   const location = locationHost
     ? createPortal(
-        <section className="osx-map-card" aria-label="Titik lokasi outlet pada peta">
+        <section
+          className="osx-map-card"
+          aria-label="Titik lokasi outlet pada peta"
+        >
           <div className="osx-map-copy">
             <div>
               <span>TITIK MAPS OUTLET</span>
@@ -472,19 +596,36 @@ export default function OwnerSettingsExperience() {
               </a>
             </div>
           </div>
-          <div className="osx-map-copy"><p>LAT {coords.lat} · LNG {coords.lng}</p></div>
+          <div className="osx-map-copy">
+            <p>
+              LAT {coords.lat} · LNG {coords.lng}
+            </p>
+          </div>
           <div className="osx-map-copy">
             <div>
               <h3>Penggunaan Geoapify</h3>
               {geoUsage ? (
                 <>
-                  <p>{geoUsage.externalEnabled ? "Aktif" : "Nonaktif"} · {geoUsage.estimatedCredits.reserved} / {geoUsage.allowance} estimasi kredit dalam {geoUsage.windowHours} jam.</p>
-                  <p>Pencarian {geoUsage.estimatedCredits.autocomplete} · Rute {geoUsage.estimatedCredits.routing} · Tile {geoUsage.estimatedCredits.tiles}</p>
+                  <p>
+                    {geoUsage.externalEnabled ? "Aktif" : "Nonaktif"} ·{" "}
+                    {geoUsage.estimatedCredits.reserved} / {geoUsage.allowance}{" "}
+                    estimasi kredit dalam {geoUsage.windowHours} jam.
+                  </p>
+                  <p>
+                    Pencarian {geoUsage.estimatedCredits.autocomplete} · Rute{" "}
+                    {geoUsage.estimatedCredits.routing} · Tile{" "}
+                    {geoUsage.estimatedCredits.tiles}
+                  </p>
                   {geoUsage.alerts.length > 0 && (
-                    <p role="status">Penggunaan mencapai {geoUsage.alerts.at(-1)}% dari batas internal.</p>
+                    <p role="status">
+                      Penggunaan mencapai {geoUsage.alerts.at(-1)}% dari batas
+                      internal.
+                    </p>
                   )}
                 </>
-              ) : <p>Data penggunaan belum tersedia.</p>}
+              ) : (
+                <p>Data penggunaan belum tersedia.</p>
+              )}
             </div>
           </div>
           {geoMessage && <p className="osx-map-message">{geoMessage}</p>}
@@ -495,7 +636,10 @@ export default function OwnerSettingsExperience() {
 
   const printer = printerHost
     ? createPortal(
-        <section className="osx-printer-sync" aria-label="Printer Device Sync Settings">
+        <section
+          className="osx-printer-sync"
+          aria-label="Printer Device Sync Settings"
+        >
           <header className="osx-printer-sync-head">
             <div>
               <span>DEVICE SYNC</span>
@@ -503,7 +647,8 @@ export default function OwnerSettingsExperience() {
               <p>
                 Print job sistem memakai key <b>printer_admin</b> dan
                 <b> printer_kitchen</b>. Konfigurasi ini menjadi endpoint device
-                yang dibaca local print agent melalui <code>/api/printer-config</code>.
+                yang dibaca local print agent melalui{" "}
+                <code>/api/printer-config</code>.
               </p>
             </div>
             <label>
@@ -526,11 +671,17 @@ export default function OwnerSettingsExperience() {
             </label>
           </header>
 
-          {deviceError && <div className="osx-device-feedback error">{deviceError}</div>}
-          {deviceMessage && <div className="osx-device-feedback success">{deviceMessage}</div>}
+          {deviceError && (
+            <div className="osx-device-feedback error">{deviceError}</div>
+          )}
+          {deviceMessage && (
+            <div className="osx-device-feedback success">{deviceMessage}</div>
+          )}
 
           {deviceLoading ? (
-            <div className="osx-device-loading">Memuat konfigurasi printer…</div>
+            <div className="osx-device-loading">
+              Memuat konfigurasi printer…
+            </div>
           ) : (
             <div className="osx-device-grid">
               <DeviceCard
@@ -555,9 +706,9 @@ export default function OwnerSettingsExperience() {
           <div className="osx-printer-note">
             <b>Arsitektur aman:</b>
             <span>
-              website membuat print job → local print agent membaca queue + config
-              → agent mengirim ESC/POS ke printer LAN/USB. Hosting tidak mencoba
-              membuka koneksi langsung ke printer di jaringan toko.
+              website membuat print job → local print agent membaca queue +
+              config → agent mengirim ESC/POS ke printer LAN/USB. Hosting tidak
+              mencoba membuka koneksi langsung ke printer di jaringan toko.
             </span>
           </div>
 

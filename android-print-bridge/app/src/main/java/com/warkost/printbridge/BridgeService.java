@@ -48,7 +48,7 @@ public class BridgeService extends Service {
                     public void finish(String key) throws Exception { vault.write(slot,new JSONObject().put("completed",key).toString()); }
                 };
                 AgentClient api=new AgentClient(config.getString("origin"),config.getString("token"),station,config.getString("ip"));
-                try { new OnceSender(journal,api,OnceSender.tcp(config.getString("ip"),9100)).tick(); }
+                try { new OnceSender(journal,api,OnceSender.tcp()).tick(); }
                 catch(AgentClient.StaleLease e) {
                     // Server rejects retired lease after manual intervention; never resend it.
                     OnceSender.Pending p=journal.pending(); if(p!=null) journal.finish(p.job.key());

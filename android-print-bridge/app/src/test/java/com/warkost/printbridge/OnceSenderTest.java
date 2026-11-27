@@ -23,7 +23,7 @@ public class OnceSenderTest {
     }
     static class Printer implements OnceSender.Printer {
         int writes=0; boolean offline=false,partial=false;
-        public OnceSender.Connection connect() throws Exception {
+        public OnceSender.Connection connect(OnceSender.Job job) throws Exception {
             if(offline) throw new IOException();
             return new OnceSender.Connection() {
                 public void write(byte[] b) throws Exception { writes++; if(partial) throw new IOException(); }
@@ -71,7 +71,7 @@ public class OnceSenderTest {
             ExecutorService worker=Executors.newSingleThreadExecutor();
             Future<byte[]> received=worker.submit(() -> {try(Socket s=server.accept()) {return s.getInputStream().readAllBytes();}});
             Journal j=new Journal();API api=new API();
-            OnceSender.Printer printer=() -> {
+            OnceSender.Printer printer=job -> {
                 Socket s=new Socket(InetAddress.getLoopbackAddress(),server.getLocalPort());
                 return new OnceSender.Connection() { public void write(byte[] b)throws Exception{s.getOutputStream().write(b);}public void close()throws IOException{s.close();}};
             };
@@ -89,5 +89,33 @@ public class OnceSenderTest {
             try { OnceSender.verifyPrinter("192.168.1.10",ip);fail(); }catch(IOException expected){}
         }
         try { OnceSender.verifyPrinter(null,"192.168.1.10");fail(); }catch(IOException expected){}
+    }
+    @Test public void configuredPortAndTimeoutReachRealTcpAdapterWithoutReplay() throws Exception {
+        try(ServerSocket server=new ServerSocket(0,1,InetAddress.getLoopbackAddress())) {
+            ExecutorService worker=Executors.newSingleThreadExecutor();
+            Future<byte[]> got=worker.submit(()->{try(Socket s=server.accept()){return s.getInputStream().readAllBytes();}});
+            Journal journal=new Journal();API api=new API();
+            api.job.endpoint=new OnceSender.Endpoint("ESC_POS_NETWORK","192.168.2.50",server.getLocalPort(),3000);
+            OnceSender.Printer printer=OnceSender.tcp((host,port,timeout)->{
+                assertEquals("192.168.2.50",host);assertEquals(server.getLocalPort(),port);assertEquals(3000,timeout);
+                return new Socket(InetAddress.getLoopbackAddress(),port);
+            });
+            new OnceSender(journal,api,printer).tick();new OnceSender(journal,api,printer).tick();
+            assertArrayEquals(api.job.bytes,got.get(5,TimeUnit.SECONDS));assertEquals(1,api.begins);worker.shutdownNow();
+        }
+    }
+    @Test public void capabilityProfilesAreExplicitAndUnsupportedFeaturesAreRejected() throws Exception {
+        OnceSender.verifyProfile(58,32,"A","CP437",0,"NONE","GS_V",3,2);
+        OnceSender.verifyProfile(80,64,"B","CP858",19,"PARTIAL","GS_V_FEED",0,5);
+        for(int port:new int[]{1,515,9200,65535}) assertEquals(port,new OnceSender.Endpoint("ESC_POS_NETWORK","10.0.0.2",port,5000).port);
+        for(int port:new int[]{0,-1,65536}) {try{new OnceSender.Endpoint("ESC_POS_NETWORK","10.0.0.2",port,5000);fail();}catch(IllegalArgumentException expected){}}
+        try{new OnceSender.Endpoint("USB","10.0.0.2",1234,5000);fail();}catch(IllegalArgumentException expected){}
+        try{OnceSender.verifyProfile(58,64,"B","UTF8",-1,"FULL","RAW",4,1);fail();}catch(IOException expected){}
+    }
+    @Test public void copyBundleAndLostAckNeverResendTheConfiguredCopies() throws Exception {
+        Journal journal=new Journal();API api=new API();Printer printer=new Printer();
+        api.job.bytes="SALINAN 1/2\nSALINAN 2/2\n".getBytes(java.nio.charset.StandardCharsets.US_ASCII);api.job.digest=OnceSender.sha(api.job.bytes);
+        api.lostAck=true;try{new OnceSender(journal,api,printer).tick();fail();}catch(IOException expected){}
+        api.lostAck=false;new OnceSender(journal,api,printer).tick();assertEquals(1,printer.writes);assertEquals(1,api.begins);
     }
 }

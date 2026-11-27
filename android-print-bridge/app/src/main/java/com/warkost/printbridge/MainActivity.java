@@ -20,12 +20,12 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         getWindow().setFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE,android.view.WindowManager.LayoutParams.FLAG_SECURE);
         ScrollView scroll=new ScrollView(this); LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(24,24,24,24); scroll.addView(box); setContentView(scroll);
-        TextView title=new TextView(this); title.setText("Warkost Print Bridge UAT\n80mm LAN • Admin + Kitchen\nPengiriman bukan bukti kertas tercetak."); box.addView(title);
+        TextView title=new TextView(this); title.setText("Warkost Print Bridge UAT\nESC/POS LAN • Admin + Kitchen\nPengiriman bukan bukti kertas tercetak."); box.addView(title);
         status=new TextView(this); box.addView(status); status.setText(BridgeService.status);
         for(String station:new String[]{"ADMIN","KITCHEN"}) {
             TextView label=new TextView(this); label.setText(station); box.addView(label);
             EditText origin=field(box,"HTTPS origin aplikasi yang disetujui",false);
-            EditText ip=field(box,"IP LAN printer "+station+" (port 9100)",false);
+            EditText ip=field(box,"IP LAN printer "+station+" (port dari profil Owner)",false);
             EditText code=field(box,"Kode pairing Owner (5 menit)",true);
             Button pair=new Button(this); pair.setText("Pasangkan "+station); box.addView(pair);
             try {
@@ -44,14 +44,14 @@ public class MainActivity extends Activity {
                         JSONObject pending=new JSONObject(vault.read("journal-"+station));
                         if(pending.has("id")) throw new IllegalStateException("Selesaikan jurnal lama dahulu");
                         if(!OnceSender.privateIPv4(printer)) throw new IllegalArgumentException();
-                        JSONObject other=new JSONObject(vault.read("config-"+(station.equals("ADMIN")?"KITCHEN":"ADMIN")));
-                        if(printer.equals(other.optString("ip"))) throw new IllegalArgumentException();
+
+
                         JSONObject response=new AgentClient(host,null,station).call("enroll",new JSONObject().put("code",enrollment));
                         if(!station.equals(response.getString("station"))) throw new IllegalArgumentException();
                         response.put("origin",host).put("ip",printer);
                         vault.write("config-"+station,response.toString());
                         message(station+" dipasangkan. Device ID: "+response.getString("deviceId")+"\nBerlaku 7 hari; mulai bridge secara manual.");
-                    } catch(Exception e) { message("Pairing gagal. Periksa origin HTTPS, kode/stasiun, IP berbeda, dan jurnal lama. Tidak ada cetak."); }
+                    } catch(Exception e) { message("Pairing gagal. Periksa origin HTTPS, kode/stasiun, profil Owner, dan jurnal lama. Tidak ada cetak."); }
                     finally { pairing.set(false); runOnUiThread(() -> pair.setEnabled(true)); }
                 }).start();
             });

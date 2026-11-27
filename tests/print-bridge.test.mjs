@@ -19,11 +19,26 @@ const {
   enrollment,
   enroll,
   revokeDevice,
-  bridgeAction,
+  bridgeAction: rawBridgeAction,
   confirmPaper,
   bridgeState,
   parsePrintPayload,
 } = await import("../lib/print-bridge.mjs");
+const bridgeAction = (token, action, body = {}, now) =>
+  rawBridgeAction(
+    token,
+    action,
+    action === "claim"
+      ? {
+          protocol: 2,
+          profileVersion: 1,
+          adapters: ["ESC_POS_NETWORK"],
+          ...body,
+        }
+      : body,
+    now,
+  );
+
 const { enqueueOrderPrintJobs } = await import("../lib/print-queue.mjs");
 const { listPrintJobs, retryPrintJob } = await import("../lib/printer.mjs");
 const { renderEscPos } = await import("../lib/print-escpos.mjs");
@@ -293,7 +308,7 @@ test("ESC/POS strips command injection and wraps text to 48 columns", () => {
     ],
   };
   const b = renderEscPos(p, "KITCHEN");
-  assert.equal(b.subarray(2, -3).includes(27), false);
+  assert.equal(b.subarray(5, -3).includes(27), false);
   assert.ok(
     b
       .subarray(2, -3)
@@ -327,7 +342,16 @@ test("real route enforces HTTPS, Owner session, Origin, bounded JSON and station
           ...(token ? { authorization: "Bearer " + token } : {}),
           ...(origin ? { origin } : {}),
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(
+          action === "claim"
+            ? {
+                protocol: 2,
+                profileVersion: 1,
+                adapters: ["ESC_POS_NETWORK"],
+                ...body,
+              }
+            : body,
+        ),
       },
     );
     req.cookies = { get: () => (cookie ? { value: cookie } : undefined) };
@@ -426,4 +450,165 @@ test("pre-bridge queued tickets are quarantined until explicit operator reconcil
   await assert.rejects(retryPrintJob(admin, row.id), (e) => e.status === 409);
   await retryPrintJob(admin, row.id, { acknowledgeDuplicateRisk: true });
   assert.ok((await bridgeAction(d.token, "claim", {}, 1001000)).job);
+});
+
+for (const port of [515, 9200, 65535])
+  test(`Owner port ${port} and 58mm/copies profile reach station claim`, async () => {
+    await jobs();
+    const d = await device();
+    database
+      .prepare("UPDATE settings SET value=? WHERE key='printer_admin_port'")
+      .run(String(port));
+    database
+      .prepare(
+        "UPDATE settings SET value='58' WHERE key='printer_admin_paper_width'",
+      )
+      .run();
+    database
+      .prepare("UPDATE settings SET value='2' WHERE key='printer_admin_copies'")
+      .run();
+    database
+      .prepare(
+        "INSERT INTO settings(key,value) VALUES('printer_admin_profile',?)",
+      )
+      .run(JSON.stringify({ columns: 32, cutMode: "NONE" }));
+    const j = (await bridgeAction(d.token, "claim", {}, 1000000)).job;
+    assert.equal(j.connection.port, port);
+    assert.equal(j.connection.host, "192.168.10.21");
+    assert.equal(j.protocol, 2);
+    assert.equal(j.profile.paperWidth, 58);
+    assert.equal(j.profile.copies, 2);
+    assert.equal(j.profile.cutMode, "NONE");
+    const bytes = Buffer.from(j.bytes, "base64");
+    assert.equal(bytes.includes(Buffer.from([29, 86])), false);
+    assert.match(bytes.toString(), /SALINAN 2\/2/);
+    await bridgeAction(d.token, "begin", j, 1000001);
+    await bridgeAction(d.token, "ack", { ...j, outcome: "SENT" }, 1000002);
+    assert.equal((await bridgeAction(d.token, "claim", {}, 1001000)).job, null);
+  });
+test("obsolete agent handshake and unimplemented adapter cannot consume a lease", async () => {
+  await jobs();
+  const d = await device();
+  await assert.rejects(
+    rawBridgeAction(d.token, "claim", {}, 1000000),
+    (e) => e.status === 409,
+  );
+  database
+    .prepare(
+      "UPDATE settings SET value='USB_AGENT' WHERE key='printer_admin_transport'",
+    )
+    .run();
+  await assert.rejects(
+    bridgeAction(d.token, "claim", {}, 1000000),
+    (e) => e.status === 409,
+  );
+  assert.equal(
+    database
+      .prepare("SELECT attempts FROM print_jobs WHERE station='ADMIN'")
+      .get().attempts,
+    0,
+  );
+});
+test("Owner config changes after claim fence begin without printing or weakening journal ACK", async () => {
+  await jobs();
+  const d = await device();
+  const j = (await bridgeAction(d.token, "claim", {}, 1000000)).job;
+  database
+    .prepare("UPDATE settings SET value='9201' WHERE key='printer_admin_port'")
+    .run();
+  await assert.rejects(
+    bridgeAction(d.token, "begin", j, 1000001),
+    (e) => e.status === 409,
+  );
+  assert.equal(
+    database
+      .prepare("SELECT attempts FROM print_jobs WHERE station='ADMIN'")
+      .get().attempts,
+    0,
+  );
+});
+test("Owner capability profiles persist per station through existing settings API", async () => {
+  const { saveOwnerDeviceSettings, getPrinterRuntimeConfig } =
+    await import("../lib/owner-device-settings.mjs");
+  const saved = await saveOwnerDeviceSettings(owner, {
+    admin: {
+      host: "192.168.10.21",
+      port: 515,
+      paperWidth: 58,
+      copies: 2,
+      profile: {
+        columns: 32,
+        cutMode: "NONE",
+        characterSet: "CP437",
+        codePage: 0,
+      },
+    },
+    kitchen: {
+      host: "192.168.10.22",
+      port: 9200,
+      profile: {
+        font: "B",
+        columns: 64,
+        characterSet: "CP858",
+        codePage: 19,
+        cutMode: "PARTIAL",
+      },
+    },
+  });
+  assert.equal(saved.admin.profile.copies, 2);
+  assert.equal(saved.admin.profile.paperWidth, 58);
+  assert.equal(saved.kitchen.profile.columns, 64);
+  const runtime = await getPrinterRuntimeConfig(kitchen);
+  assert.equal(runtime.devices.length, 1);
+  assert.equal(runtime.devices[0].port, 9200);
+  assert.equal(runtime.devices[0].profile.characterSet, "CP858");
+  await assert.rejects(
+    saveOwnerDeviceSettings(admin, {}),
+    (e) => e.status === 403,
+  );
+});
+
+test("unrepresentable text refuses claim without reserving or printing job", async () => {
+  await jobs();
+  const d = await device();
+  const row = database
+    .prepare("SELECT * FROM print_jobs WHERE station='ADMIN'")
+    .get();
+  const p = JSON.parse(row.payload_json);
+  p.items[0].name = "\u6f22";
+  database
+    .prepare("UPDATE print_jobs SET payload_json=? WHERE id=?")
+    .run(JSON.stringify(p), row.id);
+  database
+    .prepare(
+      "INSERT INTO settings(key,value) VALUES('printer_admin_profile',?)",
+    )
+    .run(JSON.stringify({ characterSet: "CP437", codePage: 0 }));
+  await assert.rejects(
+    bridgeAction(d.token, "claim", {}, 1000000),
+    (e) => e.status === 400,
+  );
+  const result = database
+    .prepare("SELECT * FROM print_jobs WHERE id=?")
+    .get(row.id);
+  assert.equal(bridgeState(result), "QUEUED");
+  assert.equal(result.attempts, 0);
+});
+
+test("network profiles allow one private host with distinct ports but refuse identical station endpoints", async () => {
+  const { saveOwnerDeviceSettings } =
+    await import("../lib/owner-device-settings.mjs");
+  const input = {
+    admin: { host: "192.168.10.50", port: 9200 },
+    kitchen: { host: "192.168.10.50", port: 9201 },
+  };
+  const saved = await saveOwnerDeviceSettings(owner, input);
+  assert.equal(saved.admin.host, saved.kitchen.host);
+  assert.notEqual(saved.admin.port, saved.kitchen.port);
+  await assert.rejects(
+    saveOwnerDeviceSettings(owner, {
+      ...input,
+      kitchen: { ...input.kitchen, port: 9200 },
+    }),
+  );
 });

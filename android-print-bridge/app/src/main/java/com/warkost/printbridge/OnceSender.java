@@ -9,7 +9,7 @@ import java.util.concurrent.*;
 /** Write-ahead intent, not exactly-once paper delivery. Ambiguity never auto-reprints. */
 public final class OnceSender {
     public static final class Job {
-        public long id; public String lease, digest; public byte[] bytes;
+        public long id; public String lease, digest; public byte[] bytes; public Endpoint endpoint;
         public Job(long i, String l, byte[] b, String h) { id=i; lease=l; bytes=b; digest=h; }
         public String key() { return id + ":" + lease; }
     }
@@ -29,7 +29,7 @@ public final class OnceSender {
         void ack(Job j, String outcome) throws Exception;
     }
     public interface Connection extends AutoCloseable { void write(byte[] b) throws Exception; void close() throws IOException; }
-    public interface Printer { Connection connect() throws Exception; }
+    public interface Printer { Connection connect(Job job) throws Exception; }
     public static String sha(byte[] b) throws Exception {
         StringBuilder out=new StringBuilder();
         for(byte x:MessageDigest.getInstance("SHA-256").digest(b)) out.append(String.format("%02x", x & 255));
@@ -44,20 +44,34 @@ public final class OnceSender {
     public static void verifyPrinter(String expected,String actual) throws IOException {
         if(!privateIPv4(expected) || !expected.equals(actual)) throw new IOException("Station printer mapping mismatch");
     }
-    public static Printer tcp(String ip, int port) {
-        if(!privateIPv4(ip) || port!=9100) throw new IllegalArgumentException("Printer harus IP LAN privat:9100");
-        return () -> {
-            Socket s=new Socket();
-            try { s.connect(new InetSocketAddress(ip,port),5000); }
-            catch(Exception e) { s.close(); throw e; }
+    public static final class Endpoint {
+        public final String host; public final int port, timeoutMs;
+        public Endpoint(String adapter,String ip,int p,int timeout) {
+            if(!"ESC_POS_NETWORK".equals(adapter) || !privateIPv4(ip) || p<1 || p>65535 || timeout<1000 || timeout>30000) throw new IllegalArgumentException("Unsupported network endpoint");
+            host=ip;port=p;timeoutMs=timeout;
+        }
+    }
+    public static void verifyProfile(int width,int columns,String font,String charset,int page,String cut,String command,int feed,int copies) throws IOException {
+        if((width!=58 && width!=80) || columns<16 || columns>(width==58?("B".equals(font)?42:32):("B".equals(font)?64:48)) || !("A".equals(font)||"B".equals(font)) ||
+          !("ASCII".equals(charset)||"CP437".equals(charset)||"CP858".equals(charset)) || page< -1 || page>255 || (!"ASCII".equals(charset) && page<0) ||
+          !("NONE".equals(cut)||"FULL".equals(cut)||"PARTIAL".equals(cut)) || !("GS_V".equals(command)||"GS_V_FEED".equals(command)) || feed<0 || feed>8 || copies<1 || copies>5) throw new IOException("Unsupported printer profile");
+    }
+    interface Dialer { Socket open(String host,int port,int timeout) throws Exception; }
+    public static Printer tcp() {
+        return tcp((host,port,timeout) -> {Socket s=new Socket();try{s.connect(new InetSocketAddress(host,port),timeout);return s;}catch(Exception e){s.close();throw e;}});
+    }
+    static Printer tcp(Dialer dialer) {
+        return job -> {
+            Endpoint endpoint=job.endpoint;
+            if(endpoint==null) throw new IOException("Missing endpoint");
+            Socket s=dialer.open(endpoint.host,endpoint.port,endpoint.timeoutMs);
             return new Connection() {
                 public void write(byte[] b) throws Exception {
                     ScheduledExecutorService timer=Executors.newSingleThreadScheduledExecutor();
-                    ScheduledFuture<?> timeout=timer.schedule(() -> { try { s.close(); } catch(IOException ignored) {} },10,TimeUnit.SECONDS);
-                    try { s.getOutputStream().write(b); s.getOutputStream().flush(); }
-                    finally { timeout.cancel(false); timer.shutdownNow(); }
+                    ScheduledFuture<?> timeout=timer.schedule(() -> {try{s.close();}catch(IOException ignored){}},endpoint.timeoutMs,TimeUnit.MILLISECONDS);
+                    try{s.getOutputStream().write(b);s.getOutputStream().flush();}finally{timeout.cancel(false);timer.shutdownNow();}
                 }
-                public void close() throws IOException { s.close(); }
+                public void close() throws IOException {s.close();}
             };
         };
     }
@@ -71,7 +85,7 @@ public final class OnceSender {
         if(job.key().equals(journal.completed())) return;
         if(job.bytes.length>65536 || !sha(job.bytes).equals(job.digest)) throw new IOException("Payload integrity");
         Connection c;
-        try { c=printer.connect(); }
+        try { c=printer.connect(job); }
         catch(Exception e) {
             journal.save(new Pending(job,"OFFLINE"));
             backend.ack(job,"OFFLINE"); journal.finish(job.key()); return;
