@@ -83,4 +83,11 @@ public class OnceSenderTest {
         Journal a=new Journal(),k=new Journal();API aa=new API(),ka=new API();Printer ap=new Printer(),kp=new Printer();
         new OnceSender(a,aa,ap).tick();new OnceSender(k,ka,kp).tick();assertEquals(1,ap.writes);assertEquals(1,kp.writes);
     }
+    @Test public void stationMappingMustMatchOwnerPrivateAddress() throws Exception {
+        OnceSender.verifyPrinter("192.168.1.10","192.168.1.10");
+        for(String ip:new String[]{"192.168.1.11","8.8.8.8","localhost"}) {
+            try { OnceSender.verifyPrinter("192.168.1.10",ip);fail(); }catch(IOException expected){}
+        }
+        try { OnceSender.verifyPrinter(null,"192.168.1.10");fail(); }catch(IOException expected){}
+    }
 }

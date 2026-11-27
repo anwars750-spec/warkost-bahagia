@@ -40,6 +40,8 @@ beforeEach(() => {
   );
   for (const station of ["admin", "kitchen"])
     for (const [k, v] of Object.entries({
+      host: station === "admin" ? "192.168.10.21" : "192.168.10.22",
+      port: "9100",
       enabled: "true",
       auto_print: "true",
       paper_width: "80",
@@ -152,6 +154,7 @@ test("concurrent devices atomically claim once; stations cannot begin or ack oth
     bridgeAction(a2.token, "ack", { ...j, outcome: "SENT" }, 1000001),
   );
   assert.equal(j.station, "ADMIN");
+  assert.equal(j.printerHost, "192.168.10.21");
 });
 test("expired pre-send lease recovers; old authorization is fenced", async () => {
   await jobs();
@@ -366,4 +369,23 @@ test("real route enforces HTTPS, Owner session, Origin, bounded JSON and station
   const claimed = await call("claim", {}, { token: d.token });
   assert.equal(claimed.status, 200);
   assert.equal((await claimed.json()).job.station, "KITCHEN");
+});
+
+test("invalid public printer configuration refuses claim without touching job", async () => {
+  await jobs();
+  const d = await device();
+  database
+    .prepare(
+      "UPDATE settings SET value='8.8.8.8' WHERE key='printer_admin_host'",
+    )
+    .run();
+  await assert.rejects(
+    bridgeAction(d.token, "claim", {}, 1000000),
+    (e) => e.status === 409,
+  );
+  const job = database
+    .prepare("SELECT * FROM print_jobs WHERE station='ADMIN'")
+    .get();
+  assert.equal(bridgeState(job), "QUEUED");
+  assert.equal(job.attempts, 0);
 });

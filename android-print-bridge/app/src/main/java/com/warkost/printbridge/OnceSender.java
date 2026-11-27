@@ -41,6 +41,9 @@ public final class OnceSender {
         try { for(int k=0;k<4;k++) { n[k]=Integer.parseInt(x[k]); if(n[k]>255 || !x[k].equals(Integer.toString(n[k]))) return false; } } catch(Exception e) { return false; }
         return n[0]==10 || (n[0]==172 && n[1]>=16 && n[1]<=31) || (n[0]==192 && n[1]==168);
     }
+    public static void verifyPrinter(String expected,String actual) throws IOException {
+        if(!privateIPv4(expected) || !expected.equals(actual)) throw new IOException("Station printer mapping mismatch");
+    }
     public static Printer tcp(String ip, int port) {
         if(!privateIPv4(ip) || port!=9100) throw new IllegalArgumentException("Printer harus IP LAN privat:9100");
         return () -> {

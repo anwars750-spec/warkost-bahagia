@@ -7,11 +7,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 public final class AgentClient implements OnceSender.Backend {
-    private final String origin, token, station;
-    public AgentClient(String base,String bearer,String s) throws Exception {
+    private final String origin, token, station, expectedPrinter;
+    public AgentClient(String base,String bearer,String s) throws Exception { this(base,bearer,s,null); }
+    public AgentClient(String base,String bearer,String s,String ip) throws Exception {
         URI u=new URI(base);
         if(!"https".equals(u.getScheme()) || u.getHost()==null || u.getUserInfo()!=null || u.getQuery()!=null || u.getFragment()!=null || !(u.getPath().isEmpty() || u.getPath().equals("/"))) throw new IllegalArgumentException("HTTPS origin required");
-        origin=base.replaceAll("/$",""); token=bearer; station=s;
+        origin=base.replaceAll("/$",""); token=bearer; station=s; expectedPrinter=ip;
     }
     public static class StaleLease extends java.io.IOException {}
     public JSONObject call(String action,JSONObject body) throws Exception {
@@ -34,6 +35,7 @@ public final class AgentClient implements OnceSender.Backend {
         JSONObject r=call("claim",new JSONObject()); if(r.isNull("job")) return null;
         JSONObject j=r.getJSONObject("job");
         if(!station.equals(j.getString("station")) || !("printer_"+station.toLowerCase(java.util.Locale.ROOT)).equals(j.getString("printerKey"))) throw new java.io.IOException("Station mismatch");
+        OnceSender.verifyPrinter(expectedPrinter,j.getString("printerHost"));
         return new OnceSender.Job(j.getLong("id"),j.getString("lease"),Base64.getDecoder().decode(j.getString("bytes")),j.getString("sha256"));
     }
     private JSONObject request(OnceSender.Job j) throws Exception { return new JSONObject().put("id",j.id).put("lease",j.lease); }
